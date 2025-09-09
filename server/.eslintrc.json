@@ -1,0 +1,20 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "rules": {
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-console": "warn",
+    "prefer-const": "error",
+    "no-var": "error",
+    "object-shorthand": "error",
+    "prefer-template": "error",
+    "consistent-return": "error",
+    "no-magic-numbers": ["warn", { "ignore": [0, 1, -1, 200, 400, 401, 403, 404, 500] }]
+  }
+}

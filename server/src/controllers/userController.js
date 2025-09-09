@@ -1,0 +1,263 @@
+const UserProfile = require("../models/UserProfile");
+const { clerkClient } = require("@clerk/clerk-sdk-node");
+
+// Get or create user profile
+const getProfile = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+
+    let userProfile = await UserProfile.findOne({ clerkUserId: userId });
+
+    // If profile doesn't exist, create one from Clerk data
+    if (!userProfile) {
+      const clerkUser = await clerkClient.users.getUser(userId);
+
+      userProfile = new UserProfile({
+        clerkUserId: userId,
+        email: clerkUser.emailAddresses[0]?.emailAddress,
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        profileImage: clerkUser.profileImageUrl,
+      });
+
+      await userProfile.save();
+    }
+
+    res.json({
+      success: true,
+      data: userProfile,
+    });
+  } catch (error) {
+    console.error("Get profile error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch user profile",
+    });
+  }
+};
+
+// Update user profile
+const updateProfile = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const updates = req.body;
+
+    // Remove sensitive fields that shouldn't be updated directly
+    delete updates.clerkUserId;
+    delete updates.email;
+    delete updates.analytics;
+    delete updates.subscription;
+
+    const userProfile = await UserProfile.findOneAndUpdate(
+      { clerkUserId: userId },
+      {
+        ...updates,
+        lastModified: new Date(),
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!userProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found",
+      });
+    }
+
+    // Recalculate completeness
+    userProfile.calculateCompleteness();
+    await userProfile.save();
+
+    res.json({
+      success: true,
+      data: userProfile,
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update profile",
+    });
+  }
+};
+
+// Complete onboarding
+const completeOnboarding = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { professionalInfo, preferences } = req.body;
+
+    const userProfile = await UserProfile.findOneAndUpdate(
+      { clerkUserId: userId },
+      {
+        professionalInfo,
+        preferences,
+        onboardingCompleted: true,
+        lastModified: new Date(),
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!userProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found",
+      });
+    }
+
+    // Calculate completeness after onboarding
+    userProfile.calculateCompleteness();
+    await userProfile.save();
+
+    res.json({
+      success: true,
+      message: "Onboarding completed successfully",
+      data: userProfile,
+    });
+  } catch (error) {
+    console.error("Complete onboarding error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to complete onboarding",
+    });
+  }
+};
+
+// Get user analytics
+const getAnalytics = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+
+    const userProfile = await UserProfile.findOne(
+      { clerkUserId: userId },
+      { analytics: 1, subscription: 1 }
+    );
+
+    if (!userProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        analytics: userProfile.analytics,
+        subscription: userProfile.subscription,
+      },
+    });
+  } catch (error) {
+    console.error("Get analytics error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch analytics",
+    });
+  }
+};
+
+// Update user analytics (internal use)
+const updateAnalytics = async (userId, analyticsUpdate) => {
+  try {
+    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
+
+    if (!userProfile) {
+      throw new Error("User profile not found");
+    }
+
+    // Update analytics
+    Object.keys(analyticsUpdate).forEach((key) => {
+      if (userProfile.analytics[key] !== undefined) {
+        userProfile.analytics[key] = analyticsUpdate[key];
+      }
+    });
+
+    // Update streak if it's a new interview
+    if (analyticsUpdate.lastInterviewDate) {
+      const today = new Date();
+      const lastDate = new Date(userProfile.analytics.streak.lastInterviewDate);
+      const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+
+      if (daysDiff === 1) {
+        // Consecutive day
+        userProfile.analytics.streak.current += 1;
+        userProfile.analytics.streak.longest = Math.max(
+          userProfile.analytics.streak.longest,
+          userProfile.analytics.streak.current
+        );
+      } else if (daysDiff > 1) {
+        // Streak broken
+        userProfile.analytics.streak.current = 1;
+      }
+      // Same day, no change needed
+
+      userProfile.analytics.streak.lastInterviewDate = today;
+    }
+
+    await userProfile.save();
+    return userProfile;
+  } catch (error) {
+    console.error("Update analytics error:", error);
+    throw error;
+  }
+};
+
+// Upload resume
+const uploadResume = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded",
+      });
+    }
+
+    const userProfile = await UserProfile.findOneAndUpdate(
+      { clerkUserId: userId },
+      {
+        "professionalInfo.resume": {
+          filename: req.file.originalname,
+          url: req.file.path, // This would be S3 URL in production
+          uploadedAt: new Date(),
+        },
+      },
+      { new: true }
+    );
+
+    if (!userProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Resume uploaded successfully",
+      data: userProfile.professionalInfo.resume,
+    });
+  } catch (error) {
+    console.error("Upload resume error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to upload resume",
+    });
+  }
+};
+
+module.exports = {
+  getProfile,
+  updateProfile,
+  completeOnboarding,
+  getAnalytics,
+  updateAnalytics,
+  uploadResume,
+};

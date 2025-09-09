@@ -1,0 +1,66 @@
+{
+  "name": "mockmate-client",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@clerk/clerk-react": "^5.46.0",
+    "@headlessui/react": "^1.7.17",
+    "@heroicons/react": "^2.0.18",
+    "@monaco-editor/react": "^4.6.0",
+    "@tailwindcss/aspect-ratio": "^0.4.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.6.2",
+    "chart.js": "^4.4.1",
+    "date-fns": "^4.1.0",
+    "face-api.js": "^0.22.2",
+    "framer-motion": "^10.16.16",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.48.2",
+    "react-hot-toast": "^2.4.1",
+    "react-query": "^3.39.3",
+    "react-router-dom": "^6.20.1",
+    "react-scripts": "5.0.1",
+    "react-webcam": "^7.1.1",
+    "recharts": "^2.15.4",
+    "tailwindcss": "^3.3.6",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "build:prod": "NODE_ENV=production npm run build",
+    "analyze": "npm run build && npx serve -s build",
+    "clean": "rm -rf build node_modules && npm install"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32"
+  },
+  "proxy": "http://localhost:5000"
+}
