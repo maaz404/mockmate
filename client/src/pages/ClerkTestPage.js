@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { useAuth, useUser } from "@clerk/clerk-react";
+import React, { useEffect, useState } from 'react';
+import { useAuth, useUser } from '@clerk/clerk-react';
+import OnboardingTester from '../components/debug/OnboardingTester';
 
 const ClerkTestPage = () => {
   const { isLoaded: authLoaded, isSignedIn, userId, getToken } = useAuth();
@@ -155,6 +156,9 @@ const ClerkTestPage = () => {
             <div>Cookies Enabled: {navigator.cookieEnabled ? "✅" : "❌"}</div>
           </div>
         </div>
+
+        {/* Onboarding Tester */}
+        <OnboardingTester />
 
         {/* Console Logs */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">

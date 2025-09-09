@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import { apiService } from "../../services/api";
 
 const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
@@ -48,18 +49,73 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
 
   const handleSubmit = async () => {
     setLoading(true);
+    
+    const loadingToast = toast.loading("Saving your preferences...");
+    
     try {
-      await apiService.post("/users/onboarding", formData);
+      // Log the data being sent for debugging
+      // eslint-disable-next-line no-console
+      console.log("Submitting onboarding data:", formData);
+      
+      const response = await apiService.post("/users/onboarding/complete", formData);
+      
+      // eslint-disable-next-line no-console
+      console.log("Onboarding response:", response.data);
+      
+      toast.success("Profile setup completed successfully!", { id: loadingToast });
+      
+      // Call onComplete with the form data
       onComplete(formData);
+      
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error("Onboarding error:", error);
+      console.error("Onboarding submission failed:", error);
+      
+      // Show user-friendly error message
+      const errorMessage = error.response?.data?.message || "Failed to save preferences. Please try again.";
+      toast.error(errorMessage, { id: loadingToast });
+      
+      // Don't close the modal on error
+      return;
+      
     } finally {
       setLoading(false);
     }
   };
 
+  const validateForm = () => {
+    if (currentStep === 1) {
+      const { currentRole, industry, company } = formData.professionalInfo;
+      if (!currentRole.trim() || !industry.trim() || !company.trim()) {
+        toast.error("Please fill in all required fields in Step 1");
+        return false;
+      }
+    }
+    
+    if (currentStep === 2) {
+      const { skills, targetRoles } = formData.professionalInfo;
+      if (skills.length === 0 || targetRoles.length === 0) {
+        toast.error("Please add at least one skill and target role");
+        return false;
+      }
+    }
+    
+    if (currentStep === 3) {
+      const { interviewTypes } = formData.preferences;
+      if (interviewTypes.length === 0) {
+        toast.error("Please select at least one interview type");
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const nextStep = () => {
+    if (!validateForm()) {
+      return;
+    }
+    
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
