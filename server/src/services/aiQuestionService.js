@@ -1,13 +1,21 @@
 const OpenAI = require("openai");
+const Logger = require("../utils/logger");
 
 class AIQuestionService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
+    this.openai = null;
     // Fallback questions in case API fails
     this.fallbackQuestions = require("./fallbackQuestions");
+  }
+
+  // Lazy initialization of OpenAI client
+  getOpenAIClient() {
+    if (!this.openai) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    }
+    return this.openai;
   }
 
   /**
@@ -33,7 +41,7 @@ class AIQuestionService {
         !process.env.OPENAI_API_KEY ||
         process.env.OPENAI_API_KEY === "your_openai_api_key_here"
       ) {
-        console.log("OpenAI API key not configured, using fallback questions");
+        // OpenAI API key not configured, using fallback questions
         return this.getFallbackQuestions(params);
       }
 
@@ -48,9 +56,9 @@ class AIQuestionService {
         userProfile,
       });
 
-      console.log("🤖 Generating questions with OpenAI...");
+      Logger.debug("Generating questions with OpenAI...");
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.getOpenAIClient().chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
@@ -75,13 +83,13 @@ class AIQuestionService {
       // Parse the response and structure the questions
       const questions = this.parseGeneratedQuestions(generatedContent, params);
 
-      console.log(`✅ Generated ${questions.length} questions successfully`);
+      Logger.success(`Generated ${questions.length} questions successfully`);
       return questions;
     } catch (error) {
-      console.error("OpenAI API error:", error.message);
+      Logger.error("OpenAI API error:", error.message);
 
       // Use fallback questions if API fails
-      console.log("🔄 Falling back to curated questions");
+      Logger.debug("Falling back to curated questions");
       return this.getFallbackQuestions(params);
     }
   }
@@ -285,7 +293,7 @@ Generate a follow-up question that:
 
 Return only the follow-up question text, no additional formatting.`;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.getOpenAIClient().chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
@@ -301,7 +309,7 @@ Return only the follow-up question text, no additional formatting.`;
 
       return response.choices[0]?.message?.content?.trim();
     } catch (error) {
-      console.error("Follow-up generation error:", error);
+      Logger.error("Follow-up generation error:", error);
       return null;
     }
   }
@@ -335,7 +343,7 @@ Please provide evaluation in JSON format:
   "feedback": "Detailed feedback paragraph"
 }`;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.getOpenAIClient().chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
@@ -356,7 +364,7 @@ Please provide evaluation in JSON format:
         return JSON.parse(jsonMatch[0]);
       }
     } catch (error) {
-      console.error("Answer evaluation error:", error);
+      Logger.error("Answer evaluation error:", error);
     }
 
     return this.getBasicEvaluation(question, answer);

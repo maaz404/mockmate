@@ -1,0 +1,582 @@
+import React, { useState } from "react";
+import { useAuthContext } from "../../context/AuthContext";
+import api from "../../services/api";
+import { X, User, Briefcase, Target, Settings } from "lucide-react";
+
+const OnboardingModal = ({ isOpen, onClose }) => {
+  const { refreshProfile } = useAuthContext();
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    professionalInfo: {
+      title: "",
+      company: "",
+      experience: "",
+      skills: [],
+      industry: "",
+      careerGoals: "",
+    },
+    preferences: {
+      interviewTypes: [],
+      difficulty: "intermediate",
+      focusAreas: [],
+      notifications: {
+        email: true,
+        push: true,
+        interviews: true,
+        progress: true,
+      },
+    },
+  });
+
+  const industries = [
+    "Technology",
+    "Finance",
+    "Healthcare",
+    "Education",
+    "Manufacturing",
+    "Consulting",
+    "Retail",
+    "Media",
+    "Government",
+    "Nonprofit",
+    "Other",
+  ];
+
+  const interviewTypes = [
+    "Technical",
+    "Behavioral",
+    "System Design",
+    "Case Study",
+    "Leadership",
+    "Sales",
+  ];
+
+  const focusAreas = [
+    "Problem Solving",
+    "Communication",
+    "Leadership",
+    "Technical Skills",
+    "Industry Knowledge",
+    "Presentation Skills",
+  ];
+
+  const handleInputChange = (section, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleArrayToggle = (section, field, value) => {
+    setFormData((prev) => {
+      const currentArray = prev[section][field];
+      const newArray = currentArray.includes(value)
+        ? currentArray.filter((item) => item !== value)
+        : [...currentArray, value];
+
+      return {
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: newArray,
+        },
+      };
+    });
+  };
+
+  const handleNotificationChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        notifications: {
+          ...prev.preferences.notifications,
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const handleNext = () => {
+    if (step < 4) {
+      setStep(step + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const handleComplete = async () => {
+    setLoading(true);
+    try {
+      await api.post("/users/onboarding/complete", formData);
+      await refreshProfile();
+      onClose();
+    } catch (error) {
+      // Handle error silently
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <User className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900">
+          Professional Information
+        </h3>
+        <p className="text-gray-600">
+          Tell us about your professional background
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Job Title
+          </label>
+          <input
+            type="text"
+            value={formData.professionalInfo.title}
+            onChange={(e) =>
+              handleInputChange("professionalInfo", "title", e.target.value)
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., Software Engineer, Product Manager"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Company
+          </label>
+          <input
+            type="text"
+            value={formData.professionalInfo.company}
+            onChange={(e) =>
+              handleInputChange("professionalInfo", "company", e.target.value)
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., Google, Microsoft, Startup"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Years of Experience
+          </label>
+          <select
+            value={formData.professionalInfo.experience}
+            onChange={(e) =>
+              handleInputChange(
+                "professionalInfo",
+                "experience",
+                e.target.value
+              )
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Select experience level</option>
+            <option value="0-1">0-1 years</option>
+            <option value="2-3">2-3 years</option>
+            <option value="4-6">4-6 years</option>
+            <option value="7-10">7-10 years</option>
+            <option value="10+">10+ years</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Industry
+          </label>
+          <select
+            value={formData.professionalInfo.industry}
+            onChange={(e) =>
+              handleInputChange("professionalInfo", "industry", e.target.value)
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Select industry</option>
+            {industries.map((industry) => (
+              <option key={industry} value={industry}>
+                {industry}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <Briefcase className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900">Skills & Goals</h3>
+        <p className="text-gray-600">What skills do you want to improve?</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Key Skills (comma separated)
+          </label>
+          <input
+            type="text"
+            value={formData.professionalInfo.skills.join(", ")}
+            onChange={(e) =>
+              handleInputChange(
+                "professionalInfo",
+                "skills",
+                e.target.value.split(", ").filter(Boolean)
+              )
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., React, Python, Leadership, Communication"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Career Goals
+          </label>
+          <textarea
+            value={formData.professionalInfo.careerGoals}
+            onChange={(e) =>
+              handleInputChange(
+                "professionalInfo",
+                "careerGoals",
+                e.target.value
+              )
+            }
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Describe your career aspirations and what you want to achieve..."
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <Target className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900">
+          Interview Preferences
+        </h3>
+        <p className="text-gray-600">Customize your interview practice</p>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Interview Types (select multiple)
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {interviewTypes.map((type) => (
+              <label
+                key={type}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.preferences.interviewTypes.includes(type)}
+                  onChange={() =>
+                    handleArrayToggle("preferences", "interviewTypes", type)
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{type}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Difficulty Level
+          </label>
+          <select
+            value={formData.preferences.difficulty}
+            onChange={(e) =>
+              handleInputChange("preferences", "difficulty", e.target.value)
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+            <option value="expert">Expert</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Focus Areas (select multiple)
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {focusAreas.map((area) => (
+              <label
+                key={area}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.preferences.focusAreas.includes(area)}
+                  onChange={() =>
+                    handleArrayToggle("preferences", "focusAreas", area)
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{area}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep4 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <Settings className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900">
+          Notification Preferences
+        </h3>
+        <p className="text-gray-600">Choose how you want to stay updated</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-900">Email Notifications</p>
+            <p className="text-sm text-gray-600">Receive updates via email</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.preferences.notifications.email}
+              onChange={(e) =>
+                handleNotificationChange("email", e.target.checked)
+              }
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 bg-gray-200 rounded-full peer ${
+                formData.preferences.notifications.email
+                  ? "peer-checked:bg-blue-600"
+                  : ""
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  formData.preferences.notifications.email
+                    ? "translate-x-5"
+                    : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-900">Push Notifications</p>
+            <p className="text-sm text-gray-600">Browser notifications</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.preferences.notifications.push}
+              onChange={(e) =>
+                handleNotificationChange("push", e.target.checked)
+              }
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 bg-gray-200 rounded-full peer ${
+                formData.preferences.notifications.push
+                  ? "peer-checked:bg-blue-600"
+                  : ""
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  formData.preferences.notifications.push
+                    ? "translate-x-5"
+                    : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-900">Interview Reminders</p>
+            <p className="text-sm text-gray-600">
+              Get reminded about scheduled interviews
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.preferences.notifications.interviews}
+              onChange={(e) =>
+                handleNotificationChange("interviews", e.target.checked)
+              }
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 bg-gray-200 rounded-full peer ${
+                formData.preferences.notifications.interviews
+                  ? "peer-checked:bg-blue-600"
+                  : ""
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  formData.preferences.notifications.interviews
+                    ? "translate-x-5"
+                    : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-900">Progress Updates</p>
+            <p className="text-sm text-gray-600">Weekly progress summaries</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.preferences.notifications.progress}
+              onChange={(e) =>
+                handleNotificationChange("progress", e.target.checked)
+              }
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 bg-gray-200 rounded-full peer ${
+                formData.preferences.notifications.progress
+                  ? "peer-checked:bg-blue-600"
+                  : ""
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  formData.preferences.notifications.progress
+                    ? "translate-x-5"
+                    : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Welcome to MockMate!
+              </h2>
+              <p className="text-gray-600">Step {step} of 4</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex justify-between mb-2">
+              {[1, 2, 3, 4].map((s) => (
+                <div
+                  key={s}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    s <= step
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {s}
+                </div>
+              ))}
+            </div>
+            <div className="h-2 bg-gray-200 rounded-full">
+              <div
+                className="h-2 bg-blue-600 rounded-full transition-all duration-300"
+                style={{ width: `${(step / 4) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Step Content */}
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+          {step === 4 && renderStep4()}
+
+          {/* Navigation */}
+          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
+            <button
+              onClick={handlePrevious}
+              disabled={step === 1}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                step === 1
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Previous
+            </button>
+
+            {step < 4 ? (
+              <button
+                onClick={handleNext}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={handleComplete}
+                disabled={loading}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {loading ? "Completing..." : "Complete Setup"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OnboardingModal;

@@ -1,36 +1,53 @@
 const { clerkClient } = require("@clerk/clerk-sdk-node");
+const UserProfile = require("../models/UserProfile");
 
 /**
- * Middleware to get user information from Clerk
- * Adds user data to req.user for use in route handlers
+ * Middleware to get current user information
+ * Attaches user profile to req.user for use in routes
  */
 const getUser = async (req, res, next) => {
   try {
-    // The user ID is available from Clerk's auth middleware
-    if (req.auth && req.auth.userId) {
-      // Get full user information from Clerk
-      const user = await clerkClient.users.getUser(req.auth.userId);
-
-      // Add user data to request object
-      req.user = {
-        id: user.id,
-        email: user.emailAddresses[0]?.emailAddress,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        fullName: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-        profileImageUrl: user.profileImageUrl,
-        createdAt: user.createdAt,
-        lastSignInAt: user.lastSignInAt,
-        // Add any custom metadata
-        publicMetadata: user.publicMetadata,
-        privateMetadata: user.privateMetadata,
-      };
+    if (!req.auth?.userId) {
+      return next();
     }
 
+    const { userId } = req.auth;
+
+    // Get user profile from database
+    let userProfile = await UserProfile.findOne({ clerkUserId: userId });
+
+    // If no profile exists, create one from Clerk data
+    if (!userProfile) {
+      try {
+        const clerkUser = await clerkClient.users.getUser(userId);
+
+        userProfile = new UserProfile({
+          clerkUserId: userId,
+          email: clerkUser.emailAddresses[0]?.emailAddress || "",
+          firstName: clerkUser.firstName || "",
+          lastName: clerkUser.lastName || "",
+          profileImage: clerkUser.profileImageUrl || "",
+          lastLoginAt: new Date(),
+        });
+
+        await userProfile.save();
+      } catch (clerkError) {
+        // Log error but continue without user profile
+        req.user = null;
+        return next();
+      }
+    } else {
+      // Update last login time
+      userProfile.lastLoginAt = new Date();
+      await userProfile.save();
+    }
+
+    // Attach user to request
+    req.user = userProfile;
     next();
   } catch (error) {
-    console.error("Error fetching user from Clerk:", error);
-    // Don't fail the request, just log the error
+    // Log error but continue
+    req.user = null;
     next();
   }
 };

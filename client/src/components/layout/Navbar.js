@@ -1,100 +1,185 @@
-import React from "react";
+import React, { useState } from "react";
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X } from "lucide-react";
 
 const Navbar = () => {
   const { user } = useUser();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navigation = [
+    { name: "Features", href: "#features" },
+    { name: "Pricing", href: "#pricing" },
+    { name: "About", href: "#about" },
+    { name: "Contact", href: "#contact" },
+  ];
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <motion.nav
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      className="fixed top-0 left-0 right-0 z-50 bg-surface-900/95 backdrop-blur-lg border-b border-surface-700"
+    >
+      <div className="max-w-7xl mx-auto container-padding">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link to="/" className="text-2xl font-bold text-gradient">
-              MockMate
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">M</span>
+              </div>
+              <span className="text-xl font-bold text-white">MockMate</span>
             </Link>
           </div>
 
-          {/* Navigation Links */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/"
-              className="text-gray-600 hover:text-primary-600 transition-colors"
-            >
-              Home
-            </Link>
-            <a
-              href="/features"
-              className="text-gray-600 hover:text-primary-600 transition-colors"
-            >
-              Features
-            </a>
-            <a
-              href="/pricing"
-              className="text-gray-600 hover:text-primary-600 transition-colors"
-            >
-              Pricing
-            </a>
-            <a
-              href="/about"
-              className="text-gray-600 hover:text-primary-600 transition-colors"
-            >
-              About
-            </a>
+            <SignedOut>
+              {navigation.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  className="text-surface-300 hover:text-white transition-colors duration-200 font-medium"
+                >
+                  {item.name}
+                </a>
+              ))}
+            </SignedOut>
 
-            {/* Dashboard link for authenticated users */}
             <SignedIn>
               <Link
                 to="/dashboard"
-                className="text-gray-600 hover:text-primary-600 transition-colors"
+                className="text-surface-300 hover:text-white transition-colors duration-200 font-medium"
               >
                 Dashboard
+              </Link>
+              <Link
+                to="/mock-interview"
+                className="text-surface-300 hover:text-white transition-colors duration-200 font-medium"
+              >
+                Practice
               </Link>
             </SignedIn>
           </div>
 
-          {/* Auth Section */}
-          <div className="flex items-center space-x-4">
-            {/* Show when user is NOT signed in */}
+          {/* CTA & User Actions */}
+          <div className="hidden md:flex items-center space-x-4">
             <SignedOut>
               <Link
                 to="/login"
-                className="text-gray-600 hover:text-primary-600 transition-colors"
+                className="text-surface-300 hover:text-white transition-colors duration-200 font-medium"
               >
                 Sign In
               </Link>
-              <Link to="/register" className="btn-primary">
+              <Link
+                to="/register"
+                className="btn-primary"
+              >
                 Get Started
               </Link>
             </SignedOut>
 
-            {/* Show when user IS signed in */}
             <SignedIn>
               <div className="flex items-center space-x-3">
-                {/* Welcome message */}
-                <span className="text-sm text-gray-600 hidden sm:block">
-                  Welcome, {user?.firstName || "User"}!
+                <span className="text-surface-300 text-sm">
+                  Welcome, {user?.firstName}
                 </span>
-
-                {/* User button with dropdown menu */}
                 <UserButton
-                  afterSignOutUrl="/"
                   appearance={{
                     elements: {
-                      avatarBox: "w-10 h-10",
-                      userButtonPopoverCard: "shadow-lg",
-                      userButtonPopoverActionButton:
-                        "text-gray-700 hover:bg-gray-100",
+                      avatarBox: "w-8 h-8",
                     },
                   }}
                 />
               </div>
             </SignedIn>
           </div>
+
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-surface-300 hover:text-white transition-colors p-2"
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Navigation */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden border-t border-surface-700"
+            >
+              <div className="py-4 space-y-4">
+                <SignedOut>
+                  {navigation.map((item) => (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      className="block text-surface-300 hover:text-white transition-colors duration-200 font-medium py-2"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {item.name}
+                    </a>
+                  ))}
+                  <div className="pt-4 space-y-3">
+                    <Link
+                      to="/login"
+                      className="block text-surface-300 hover:text-white transition-colors duration-200 font-medium py-2"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="block btn-primary text-center"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Get Started
+                    </Link>
+                  </div>
+                </SignedOut>
+
+                <SignedIn>
+                  <Link
+                    to="/dashboard"
+                    className="block text-surface-300 hover:text-white transition-colors duration-200 font-medium py-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    to="/mock-interview"
+                    className="block text-surface-300 hover:text-white transition-colors duration-200 font-medium py-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Practice
+                  </Link>
+                  <div className="pt-4 flex items-center space-x-3">
+                    <UserButton
+                      appearance={{
+                        elements: {
+                          avatarBox: "w-8 h-8",
+                        },
+                      }}
+                    />
+                    <span className="text-surface-300 text-sm">
+                      {user?.firstName}
+                    </span>
+                  </div>
+                </SignedIn>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </nav>
+    </motion.nav>
   );
 };
 

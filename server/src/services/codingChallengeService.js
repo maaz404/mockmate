@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require("uuid");
 const fs = require("fs").promises;
 const path = require("path");
 
+const Logger = require("../utils/logger");
+
 class CodingChallengeService {
   constructor() {
     this.challenges = new Map(); // In-memory storage for active challenges
@@ -16,7 +18,7 @@ function solution() {
 }
 
 // Test your solution
-console.log(solution());`,
+// console.log(solution()); // Uncomment to test locally`,
         testTemplate: `const assert = require('assert');
 
 // Import the solution (this will be replaced with actual code)
@@ -340,7 +342,7 @@ You must write an algorithm with O(log n) runtime complexity.`,
         currentChallenge: this.getCurrentChallenge(sessionId),
       };
     } catch (error) {
-      console.error("Failed to create challenge session:", error);
+      Logger.error("Failed to create challenge session:", error);
       return {
         success: false,
         error: "Failed to create coding challenge session",
