@@ -271,6 +271,30 @@ const Sidebar = () => {
         />
       )}
 
+      {/* Sidebar Slider (always visible on desktop) */}
+      <div className="hidden lg:flex fixed top-1/2 left-0 z-60 -translate-y-1/2">
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="group flex items-center justify-center w-6 h-20 bg-white border border-gray-200 rounded-r-2xl shadow-md hover:bg-gray-50 transition-colors"
+          style={{ outline: 'none' }}
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <svg
+            className={`w-5 h-5 text-gray-500 group-hover:text-orange-600 transition-transform ${isCollapsed ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
+      </div>
+
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
@@ -321,28 +345,7 @@ const Sidebar = () => {
               MockMate
             </Link>
           )}
-
-          {/* Collapse button (desktop only) */}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden lg:flex p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <svg
-              className={`w-4 h-4 transition-transform ${
-                isCollapsed ? "rotate-180" : ""
-              }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
+          {/* Collapse button removed from here; now handled by slider */}
         </div>
 
         {/* Navigation */}

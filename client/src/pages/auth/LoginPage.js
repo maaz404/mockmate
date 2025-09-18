@@ -6,26 +6,28 @@ import AuthLoadingSpinner from "../../components/ui/AuthLoadingSpinner";
 const LoginPage = () => {
   const { isLoaded, isSignedIn, userId } = useAuth();
   const navigate = useNavigate();
-  const [debugInfo, setDebugInfo] = useState(null);
+  const [showTimeout, setShowTimeout] = useState(false);
+
+  // Add timeout for Clerk loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTimeout(true);
+    }, 2000); // 2 second timeout
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    // Debug information
-    setDebugInfo({
-      isLoaded,
-      isSignedIn,
-      userId,
-      clerkKey: process.env.REACT_APP_CLERK_PUBLISHABLE_KEY?.substring(0, 20),
-      timestamp: new Date().toISOString(),
-    });
-
     // Redirect if already signed in
     if (isLoaded && isSignedIn) {
       navigate("/dashboard");
     }
   }, [isLoaded, isSignedIn, userId, navigate]);
 
-  // Show loading while Clerk initializes
-  if (!isLoaded) {
+  // Show the SignIn component if Clerk is loaded OR after timeout
+  const shouldShowSignIn = isLoaded || showTimeout;
+
+  if (!shouldShowSignIn) {
     return <AuthLoadingSpinner message="Initializing authentication..." />;
   }
 
@@ -89,21 +91,6 @@ const LoginPage = () => {
               },
             }}
           />
-
-          {/* Development debug info */}
-          {process.env.NODE_ENV === "development" && debugInfo && (
-            <div className="mt-4 p-3 bg-surface-800 border border-surface-700 rounded text-xs text-surface-300">
-              <strong>Debug Info:</strong>
-              <br />
-              Loaded: {debugInfo.isLoaded ? "✅" : "❌"}
-              <br />
-              Signed In: {debugInfo.isSignedIn ? "✅" : "❌"}
-              <br />
-              User ID: {debugInfo.userId || "None"}
-              <br />
-              Time: {debugInfo.timestamp}
-            </div>
-          )}
         </div>
 
         {/* Additional info */}

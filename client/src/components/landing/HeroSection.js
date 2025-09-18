@@ -1,5 +1,5 @@
 import React from "react";
-import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import { SignedIn } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
@@ -69,19 +69,17 @@ const HeroSection = () => {
               transition={{ delay: 0.5 }}
               className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8"
             >
-              <SignedOut>
-                <Link to="/register" className="btn-primary group">
-                  Explore Platform
-                  <ArrowRight
-                    size={20}
-                    className="ml-2 group-hover:translate-x-1 transition-transform"
-                  />
-                </Link>
-                <button className="btn-secondary group">
-                  <Play size={20} className="mr-2" />
-                  View Demo
-                </button>
-              </SignedOut>
+              <Link to="/register" className="btn-primary group">
+                Get Started Free
+                <ArrowRight
+                  size={20}
+                  className="ml-2 group-hover:translate-x-1 transition-transform"
+                />
+              </Link>
+              <button className="btn-secondary group">
+                <Play size={20} className="mr-2" />
+                View Demo
+              </button>
 
               <SignedIn>
                 <Link to="/dashboard" className="btn-primary group">

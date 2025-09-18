@@ -1,13 +1,25 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { SignUp, useAuth } from "@clerk/clerk-react";
 import AuthLoadingSpinner from "../../components/ui/AuthLoadingSpinner";
 
 const RegisterPage = () => {
   const { isLoaded } = useAuth();
+  const [showTimeout, setShowTimeout] = useState(false);
 
-  // Show loading while Clerk initializes
-  if (!isLoaded) {
-    return <AuthLoadingSpinner message="Setting up your account..." />;
+  // Add a reasonable timeout to show content even if Clerk is slow to load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTimeout(true);
+    }, 2000); // 2 second timeout - much shorter
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show the SignUp component if Clerk is loaded OR after timeout
+  const shouldShowSignUp = isLoaded || showTimeout;
+
+  if (!shouldShowSignUp) {
+    return <AuthLoadingSpinner message="Initializing authentication..." />;
   }
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

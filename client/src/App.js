@@ -29,23 +29,24 @@ import { AuthProvider } from "./context/AuthContext";
 // Get the Clerk publishable key
 const clerkPubKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 
-// Check if Clerk key is valid (not placeholder)
-const isValidClerkKey =
-  clerkPubKey &&
-  clerkPubKey !== "pk_test_your_publishable_key_here" &&
-  clerkPubKey !== "pk_test_cmVhbC1rZXktcGxhY2Vob2xkZXI.mockmate_development" &&
-  !clerkPubKey.includes("placeholder") &&
-  !clerkPubKey.includes("your_clerk");
-
 function App() {
-  // Use production or development key
-  const clerkKey = isValidClerkKey
-    ? clerkPubKey
-    : "pk_test_dGVuZGVyLWRydW0tNC5jbGVyay5hY2NvdW50cy5kZXYk";
+  // Use the environment key
+  const clerkKey =
+    clerkPubKey || "pk_test_bGF6eS1waWxsLTYxLmNsZXJrLmFjY291bnRzLmRldiQ";
 
   if (!clerkKey) {
-    throw new Error(
-      "Clerk publishable key is required. Please add REACT_APP_CLERK_PUBLISHABLE_KEY to your .env file."
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-red-400 mb-4">
+            Configuration Error
+          </h1>
+          <p className="text-white">
+            Clerk publishable key is required. Please add
+            REACT_APP_CLERK_PUBLISHABLE_KEY to your .env file.
+          </p>
+        </div>
+      </div>
     );
   }
 

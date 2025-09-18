@@ -65,17 +65,15 @@ const Navbar = () => {
 
           {/* CTA & User Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <SignedOut>
-              <Link
-                to="/login"
-                className="text-surface-300 hover:text-white transition-colors duration-200 font-medium"
-              >
-                Sign In
-              </Link>
-              <Link to="/register" className="btn-primary">
-                Explore Demo
-              </Link>
-            </SignedOut>
+            <Link
+              to="/login"
+              className="text-surface-300 hover:text-white transition-colors duration-200 font-medium"
+            >
+              Sign In
+            </Link>
+            <Link to="/register" className="btn-primary">
+              Sign Up Free
+            </Link>
 
             <SignedIn>
               <div className="flex items-center space-x-3">
@@ -114,34 +112,32 @@ const Navbar = () => {
               className="md:hidden border-t border-surface-700"
             >
               <div className="py-4 space-y-4">
-                <SignedOut>
-                  {navigation.map((item) => (
-                    <a
-                      key={item.name}
-                      href={item.href}
-                      className="block text-surface-300 hover:text-white transition-colors duration-200 font-medium py-2"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      {item.name}
-                    </a>
-                  ))}
-                  <div className="pt-4 space-y-3">
-                    <Link
-                      to="/login"
-                      className="block text-surface-300 hover:text-white transition-colors duration-200 font-medium py-2"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      to="/register"
-                      className="block btn-primary text-center"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Get Started
-                    </Link>
-                  </div>
-                </SignedOut>
+                {navigation.map((item) => (
+                  <a
+                    key={item.name}
+                    href={item.href}
+                    className="block text-surface-300 hover:text-white transition-colors duration-200 font-medium py-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {item.name}
+                  </a>
+                ))}
+                <div className="pt-4 space-y-3">
+                  <Link
+                    to="/login"
+                    className="block text-surface-300 hover:text-white transition-colors duration-200 font-medium py-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="block btn-primary text-center"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign Up Free
+                  </Link>
+                </div>
 
                 <SignedIn>
                   <Link
