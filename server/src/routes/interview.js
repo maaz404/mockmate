@@ -9,6 +9,7 @@ const {
   submitAnswer,
   generateFollowUp,
   completeInterview,
+  getAdaptiveQuestion,
 } = require("../controllers/interviewController");
 
 // @desc    Create interview session
@@ -45,6 +46,11 @@ router.post("/:id/answer/:questionIndex", requireAuth, submitAnswer);
 // @route   POST /api/interviews/:id/followup/:questionIndex
 // @access  Private
 router.post("/:id/followup/:questionIndex", requireAuth, generateFollowUp);
+
+// @desc    Get next adaptive question
+// @route   POST /api/interviews/:id/adaptive-question
+// @access  Private
+router.post("/:id/adaptive-question", requireAuth, getAdaptiveQuestion);
 
 // @desc    Complete interview with final submission
 // @route   POST /api/interviews/:id/complete
