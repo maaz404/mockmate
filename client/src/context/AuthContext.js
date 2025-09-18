@@ -15,10 +15,27 @@ export const AuthProvider = ({ children }) => {
     setAuthToken(getToken);
   }, [getToken]);
 
+  // Add a timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+      }
+    }, 5000); // 5 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
   // Sync user data when authenticated
   useEffect(() => {
     const syncUserData = async () => {
-      if (isLoaded && isSignedIn && user) {
+      // If Clerk is not loaded yet, wait
+      if (!isLoaded) {
+        return;
+      }
+
+      // If user is signed in, sync data
+      if (isSignedIn && user) {
         try {
           // Sync with backend
           await api.post("/auth/sync");
@@ -32,7 +49,8 @@ export const AuthProvider = ({ children }) => {
         } finally {
           setLoading(false);
         }
-      } else if (isLoaded) {
+      } else {
+        // User is not signed in, stop loading
         setLoading(false);
         setUserProfile(null);
       }
