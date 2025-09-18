@@ -43,15 +43,18 @@ const RegisterPage = () => {
                 socialButtonsBlockButtonText: "text-white font-medium",
                 formFieldInput:
                   "bg-surface-700 border-surface-600 text-white placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
-                footerActionLink: "text-primary-400 hover:text-primary-300 transition-colors duration-200",
+                footerActionLink:
+                  "text-primary-400 hover:text-primary-300 transition-colors duration-200",
                 formFieldLabel: "text-surface-200",
-                formResendCodeLink: "text-primary-400 hover:text-primary-300 transition-colors duration-200",
+                formResendCodeLink:
+                  "text-primary-400 hover:text-primary-300 transition-colors duration-200",
                 identityPreviewText: "text-surface-300",
                 identityPreviewEditButtonIcon: "text-surface-400",
                 formFieldSuccessText: "text-green-400",
                 formFieldErrorText: "text-red-400",
                 identityPreview: "bg-surface-700 border-surface-600",
-                otpCodeFieldInput: "bg-surface-700 border-surface-600 text-white transition-all duration-200",
+                otpCodeFieldInput:
+                  "bg-surface-700 border-surface-600 text-white transition-all duration-200",
                 spinner: "text-primary-500",
                 formFieldAction: "text-primary-400 hover:text-primary-300",
               },
@@ -92,19 +95,27 @@ const RegisterPage = () => {
           <div className="space-y-3">
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-              <span className="text-surface-300 text-sm">AI-powered interview questions</span>
+              <span className="text-surface-300 text-sm">
+                AI-powered interview questions
+              </span>
             </div>
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-              <span className="text-surface-300 text-sm">Real-time feedback and analysis</span>
+              <span className="text-surface-300 text-sm">
+                Real-time feedback and analysis
+              </span>
             </div>
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-              <span className="text-surface-300 text-sm">Progress tracking and insights</span>
+              <span className="text-surface-300 text-sm">
+                Progress tracking and insights
+              </span>
             </div>
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-              <span className="text-surface-300 text-sm">Industry-specific practice sessions</span>
+              <span className="text-surface-300 text-sm">
+                Industry-specific practice sessions
+              </span>
             </div>
           </div>
         </div>

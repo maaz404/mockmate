@@ -45,8 +45,8 @@ const HeroSection = () => {
               transition={{ delay: 0.3 }}
               className="hero-title text-white mb-6"
             >
-              Land Your Next Job in{" "}
-              <span className="gradient-text">30 Days</span> with MockMate AI
+              MockMate: <span className="gradient-text">AI-Powered</span>{" "}
+              Interview Practice Platform
             </motion.h1>
 
             {/* Subheadline */}
@@ -56,9 +56,10 @@ const HeroSection = () => {
               transition={{ delay: 0.4 }}
               className="hero-subtitle text-surface-400 mb-8 max-w-2xl mx-auto lg:mx-0"
             >
-              AI-powered tools to help you ace interviews, apply faster, and
-              land offers with confidence. Practice with real interview
-              questions from top companies.
+              A comprehensive full-stack application built with React, Node.js,
+              and MongoDB. Features intelligent question generation, real-time
+              feedback systems, and advanced user analytics for interview
+              preparation and skill assessment.
             </motion.p>
 
             {/* CTA Buttons */}
@@ -70,7 +71,7 @@ const HeroSection = () => {
             >
               <SignedOut>
                 <Link to="/register" className="btn-primary group">
-                  Get Started Free
+                  Explore Platform
                   <ArrowRight
                     size={20}
                     className="ml-2 group-hover:translate-x-1 transition-transform"
@@ -78,13 +79,13 @@ const HeroSection = () => {
                 </Link>
                 <button className="btn-secondary group">
                   <Play size={20} className="mr-2" />
-                  Watch Demo
+                  View Demo
                 </button>
               </SignedOut>
 
               <SignedIn>
                 <Link to="/dashboard" className="btn-primary group">
-                  Continue to Dashboard
+                  Access Dashboard
                   <ArrowRight
                     size={20}
                     className="ml-2 group-hover:translate-x-1 transition-transform"
@@ -114,7 +115,7 @@ const HeroSection = () => {
                     </div>
                   ))}
                 </div>
-                <span>Join 50,000+ success stories</span>
+                <span>Built with modern web technologies</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="flex text-yellow-400">
@@ -128,7 +129,7 @@ const HeroSection = () => {
                     </svg>
                   ))}
                 </div>
-                <span>4.9/5 from 2,000+ reviews</span>
+                <span>Full-stack development project</span>
               </div>
             </motion.div>
           </motion.div>

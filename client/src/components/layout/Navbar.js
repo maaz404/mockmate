@@ -10,9 +10,9 @@ const Navbar = () => {
 
   const navigation = [
     { name: "Features", href: "#features" },
-    { name: "Pricing", href: "#pricing" },
-    { name: "About", href: "#about" },
-    { name: "Contact", href: "#contact" },
+    { name: "Architecture", href: "#architecture" },
+    { name: "Documentation", href: "#faq" },
+    { name: "Project Info", href: "#about" },
   ];
 
   return (
@@ -73,7 +73,7 @@ const Navbar = () => {
                 Sign In
               </Link>
               <Link to="/register" className="btn-primary">
-                Get Started
+                Explore Demo
               </Link>
             </SignedOut>
 

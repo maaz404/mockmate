@@ -1,22 +1,22 @@
 import React from "react";
 import HeroSection from "../components/landing/HeroSection";
-import TrustBarSection from "../components/landing/TrustBarSection";
+import TechStackSection from "../components/landing/TrustBarSection";
 import FeaturesSection from "../components/landing/FeaturesSection";
-import TestimonialsSection from "../components/landing/TestimonialsSection";
-import PricingSection from "../components/landing/PricingSection";
+import ProjectInfoSection from "../components/landing/TestimonialsSection";
+import SystemArchitectureSection from "../components/landing/SystemArchitectureSection";
 import FAQSection from "../components/landing/FAQSection";
-import CTASection from "../components/landing/CTASection";
+import ProjectShowcaseSection from "../components/landing/CTASection";
 
 const HomePage = () => {
   return (
     <div className="min-h-screen bg-slate-950">
       <HeroSection />
-      <TrustBarSection />
+      <TechStackSection />
       <FeaturesSection />
-      <TestimonialsSection />
-      <PricingSection />
+      <ProjectInfoSection />
+      <SystemArchitectureSection />
       <FAQSection />
-      <CTASection />
+      <ProjectShowcaseSection />
     </div>
   );
 };

@@ -7,55 +7,54 @@ const FAQSection = () => {
 
   const faqs = [
     {
-      question: "How does MockMate's AI interview coaching work?",
+      question: "What technologies power the MockMate platform?",
       answer:
-        "MockMate uses advanced AI to analyze your responses, body language, and speech patterns during practice interviews. It provides real-time feedback on areas like content quality, confidence, pacing, and eye contact. The AI learns from thousands of successful interviews to give you personalized recommendations for improvement.",
+        "MockMate is built using a modern full-stack architecture: React 18.2.0 with hooks for the frontend, Node.js with Express.js for the backend, MongoDB as the database, Clerk for authentication, and Tailwind CSS for responsive styling. The platform also integrates with AI APIs for natural language processing and feedback generation.",
     },
     {
-      question: "What types of interviews can I practice with MockMate?",
+      question: "How does the AI feedback system work technically?",
       answer:
-        "You can practice various interview types including behavioral interviews, technical interviews, case studies, and industry-specific scenarios. We have questions from top companies across tech, finance, consulting, healthcare, and more. You can also practice different formats like phone interviews, video calls, and in-person simulations.",
+        "The AI system processes user responses through natural language processing APIs, analyzing semantic content, coherence, and technical accuracy. The backend implements asynchronous processing with Node.js streams to handle real-time analysis, storing results in MongoDB and returning structured feedback through RESTful endpoints.",
     },
     {
-      question:
-        "How is MockMate different from other interview prep platforms?",
+      question: "What database design patterns are implemented?",
       answer:
-        "MockMate stands out with its advanced AI coaching that provides instant, personalized feedback. Unlike generic practice platforms, our AI adapts to your specific industry, experience level, and target companies. We also offer real-time analysis, video recording capabilities, and comprehensive analytics to track your progress over time.",
+        "The system uses MongoDB with Mongoose ODM for schema validation and data modeling. Key patterns include document embedding for related data, aggregation pipelines for analytics, proper indexing for query optimization, and data normalization where appropriate to maintain referential integrity.",
     },
     {
-      question: "Can I practice interviews for specific companies?",
+      question: "How is user authentication and security handled?",
       answer:
-        "Yes! MockMate has curated question banks from hundreds of top companies including Google, Amazon, Microsoft, Goldman Sachs, McKinsey, and many more. You can filter questions by company, role, and difficulty level to practice exactly what you might encounter in your target interviews.",
+        "Authentication is managed through Clerk, providing JWT-based session management, role-based access control, and secure user registration/login flows. The backend implements security middleware for API protection, input validation, and error handling to prevent common security vulnerabilities.",
     },
     {
-      question: "Is there a free trial available?",
+      question: "What development methodologies were followed?",
       answer:
-        "Yes, we offer a 7-day free trial of our Professional plan, giving you full access to all features including unlimited practice sessions, AI feedback, and industry-specific questions. No credit card is required to start your trial. You can also use our Starter plan for free with limited features.",
+        "The project follows modern software development practices including component-based architecture, RESTful API design, responsive web design principles, version control with Git, modular code organization, and comprehensive error handling throughout the application stack.",
     },
     {
-      question: "How much does MockMate cost?",
+      question: "How does the real-time processing work?",
       answer:
-        "We offer three plans: Starter (free with basic features), Professional ($29/month or $24/month annually), and Enterprise ($99/month or $79/month annually). The Professional plan is our most popular option, offering unlimited practice sessions and advanced AI feedback.",
+        "Real-time features are implemented using Node.js event-driven architecture with asynchronous processing. The system handles concurrent user sessions through non-blocking I/O operations, maintains state consistency, and provides immediate feedback through optimized API response times.",
     },
     {
-      question: "Can I cancel my subscription anytime?",
+      question: "What are the system's scalability considerations?",
       answer:
-        "Absolutely! You can cancel your subscription at any time through your account settings. There are no long-term commitments or cancellation fees. If you cancel, you'll continue to have access to your plan features until the end of your current billing period.",
+        "The architecture is designed for scalability with stateless backend services, database indexing for performance, component reusability in the frontend, efficient API design, and modular code structure that allows for easy feature expansion and maintenance.",
     },
     {
-      question: "Does MockMate work on mobile devices?",
+      question: "How is data visualization implemented?",
       answer:
-        "Yes, MockMate is fully optimized for mobile devices. You can practice interviews, receive AI feedback, and track your progress on both iOS and Android devices through our responsive web app. We also have dedicated mobile apps available for download.",
+        "The dashboard uses Chart.js integration with React components to visualize user performance metrics. Data is processed through MongoDB aggregation pipelines and served via API endpoints, with responsive charts that adapt to different screen sizes and provide interactive user analytics.",
     },
     {
-      question: "How do I get started with MockMate?",
+      question: "What were the main technical challenges?",
       answer:
-        "Getting started is easy! Simply sign up for a free account, complete a brief profile setup to tell us about your goals and experience, and you can immediately start practicing with our AI coach. The platform will recommend a personalized learning path based on your information.",
+        "Key challenges included implementing real-time AI processing, managing asynchronous data flows, creating responsive UI components, integrating multiple APIs efficiently, designing scalable database schemas, and ensuring consistent user experience across different devices and browsers.",
     },
     {
-      question: "What kind of support does MockMate provide?",
+      question: "How can the project be extended or improved?",
       answer:
-        "We provide comprehensive support including email support for all users, live chat for Professional plan users, and dedicated account management for Enterprise customers. We also have extensive documentation, video tutorials, and a community forum where you can connect with other job seekers.",
+        "Future enhancements could include implementing WebSocket connections for real-time updates, adding microservices architecture, incorporating machine learning models, expanding API functionality, adding comprehensive testing suites, and implementing DevOps practices for automated deployment.",
     },
   ];
 
@@ -77,18 +76,18 @@ const FAQSection = () => {
           <div className="inline-flex items-center space-x-2 bg-white border border-surface-200 rounded-full px-4 py-2 mb-6">
             <HelpCircle size={16} className="text-primary-600" />
             <span className="text-surface-700 text-sm font-medium">
-              Frequently Asked Questions
+              Technical Documentation
             </span>
           </div>
 
           <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 mb-6">
-            Got Questions? We've Got{" "}
-            <span className="gradient-text">Answers</span>
+            Technical <span className="gradient-text">Overview</span>
           </h2>
 
           <p className="text-xl text-surface-600">
-            Find answers to common questions about MockMate's AI interview
-            preparation platform.
+            Comprehensive answers to technical questions about the system
+            architecture, implementation details, and development methodologies
+            used in the MockMate project.
           </p>
         </motion.div>
 

@@ -1,15 +1,47 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, CheckCircle } from "lucide-react";
+import {
+  ExternalLink,
+  Code,
+  FileText,
+  Play,
+  Award,
+  Star,
+  BookOpen,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
 
-const CTASection = () => {
-  const benefits = [
-    "Start practicing in under 2 minutes",
-    "Get instant AI feedback on your responses",
-    "Access 1000+ interview questions",
-    "Join 50,000+ successful candidates",
+const ProjectShowcaseSection = () => {
+  const projectHighlights = [
+    "Full-stack development with modern technologies",
+    "Advanced AI integration and real-time processing",
+    "Responsive design with comprehensive user experience",
+    "Academic project demonstrating technical expertise",
+  ];
+
+  const projectLinks = [
+    {
+      title: "Live Demo",
+      description: "Experience the platform",
+      icon: Play,
+      link: "/register",
+      type: "primary",
+    },
+    {
+      title: "Technical Documentation",
+      description: "View system architecture",
+      icon: FileText,
+      link: "#architecture",
+      type: "secondary",
+    },
+    {
+      title: "Project Overview",
+      description: "Academic documentation",
+      icon: BookOpen,
+      link: "#features",
+      type: "outline",
+    },
   ];
 
   return (
@@ -29,9 +61,9 @@ const CTASection = () => {
           transition={{ duration: 0.6 }}
           className="inline-flex items-center space-x-2 bg-surface-800/50 backdrop-blur-sm border border-surface-700 rounded-full px-4 py-2 mb-8"
         >
-          <Sparkles size={16} className="text-primary-400" />
+          <Award size={16} className="text-primary-400" />
           <span className="text-surface-300 text-sm font-medium">
-            Ready to Transform Your Career?
+            Final Year Academic Project
           </span>
         </motion.div>
 
@@ -43,7 +75,7 @@ const CTASection = () => {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-4xl lg:text-6xl font-bold text-white mb-6"
         >
-          Start Your Success Story <span className="gradient-text">Today</span>
+          Explore the <span className="gradient-text">Project</span>
         </motion.h2>
 
         {/* Subheadline */}
@@ -54,12 +86,12 @@ const CTASection = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-xl text-surface-400 mb-8 max-w-2xl mx-auto"
         >
-          Join thousands of candidates who've landed their dream jobs with
-          MockMate's AI-powered interview preparation. Your next opportunity is
-          just one practice session away.
+          A comprehensive demonstration of modern web development practices,
+          showcasing full-stack architecture, AI integration, and sophisticated
+          user interface design in an interview preparation platform.
         </motion.p>
 
-        {/* Benefits List */}
+        {/* Project Highlights */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -67,15 +99,15 @@ const CTASection = () => {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="grid md:grid-cols-2 gap-4 mb-10 max-w-2xl mx-auto"
         >
-          {benefits.map((benefit, index) => (
+          {projectHighlights.map((highlight, index) => (
             <div key={index} className="flex items-center space-x-3 text-left">
-              <CheckCircle size={20} className="text-green-400 flex-shrink-0" />
-              <span className="text-surface-300">{benefit}</span>
+              <Star size={20} className="text-primary-400 flex-shrink-0" />
+              <span className="text-surface-300">{highlight}</span>
             </div>
           ))}
         </motion.div>
 
-        {/* CTA Buttons */}
+        {/* Project Links */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -83,82 +115,110 @@ const CTASection = () => {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="flex flex-col sm:flex-row gap-4 justify-center mb-8"
         >
-          <SignedOut>
-            <Link
-              to="/register"
-              className="btn-primary text-lg py-4 px-8 group"
-            >
-              Start Free Trial
-              <ArrowRight
-                size={20}
-                className="ml-2 group-hover:translate-x-1 transition-transform"
-              />
-            </Link>
+          {projectLinks.map((link, index) => {
+            const Icon = link.icon;
+            const buttonClass =
+              link.type === "primary"
+                ? "btn-primary text-lg py-4 px-8 group"
+                : link.type === "secondary"
+                ? "btn-secondary text-lg py-4 px-8"
+                : "btn-outline text-lg py-4 px-8";
 
-            <Link to="/login" className="btn-secondary text-lg py-4 px-8">
-              Sign In
-            </Link>
-          </SignedOut>
-
-          <SignedIn>
-            <Link
-              to="/dashboard"
-              className="btn-primary text-lg py-4 px-8 group"
-            >
-              Continue to Dashboard
-              <ArrowRight
-                size={20}
-                className="ml-2 group-hover:translate-x-1 transition-transform"
-              />
-            </Link>
-
-            <Link
-              to="/mock-interview"
-              className="btn-secondary text-lg py-4 px-8"
-            >
-              Start Practice Session
-            </Link>
-          </SignedIn>
+            return (
+              <motion.div
+                key={link.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+              >
+                {link.link.startsWith("#") ? (
+                  <a href={link.link} className={buttonClass}>
+                    <Icon size={20} className="mr-2" />
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{link.title}</span>
+                      <span className="text-sm opacity-75">
+                        {link.description}
+                      </span>
+                    </div>
+                  </a>
+                ) : (
+                  <Link to={link.link} className={buttonClass}>
+                    <Icon size={20} className="mr-2" />
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{link.title}</span>
+                      <span className="text-sm opacity-75">
+                        {link.description}
+                      </span>
+                    </div>
+                  </Link>
+                )}
+              </motion.div>
+            );
+          })}
         </motion.div>
 
-        {/* Trust Indicators */}
+        {/* Authentication-specific CTAs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.5 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="mb-8"
+        >
+          <SignedOut>
+            <div className="bg-surface-800/30 backdrop-blur-sm border border-surface-700 rounded-xl p-6 max-w-md mx-auto">
+              <p className="text-surface-300 mb-4">
+                Experience the full platform capabilities
+              </p>
+              <Link to="/register" className="btn-primary w-full group">
+                Access Platform Demo
+                <ExternalLink
+                  size={16}
+                  className="ml-2 group-hover:translate-x-1 transition-transform"
+                />
+              </Link>
+            </div>
+          </SignedOut>
+
+          <SignedIn>
+            <div className="bg-surface-800/30 backdrop-blur-sm border border-surface-700 rounded-xl p-6 max-w-md mx-auto">
+              <p className="text-surface-300 mb-4">
+                Continue exploring the platform
+              </p>
+              <Link to="/dashboard" className="btn-primary w-full group">
+                Go to Dashboard
+                <ExternalLink
+                  size={16}
+                  className="ml-2 group-hover:translate-x-1 transition-transform"
+                />
+              </Link>
+            </div>
+          </SignedIn>
+        </motion.div>
+
+        {/* Technical Specifications */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.8 }}
           className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 text-surface-400 text-sm"
         >
           <div className="flex items-center space-x-2">
-            <div className="flex -space-x-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 bg-gradient-to-r from-primary-400 to-accent-400 rounded-full border-2 border-surface-800 flex items-center justify-center text-xs font-bold text-white"
-                >
-                  {String.fromCharCode(64 + i)}
-                </div>
-              ))}
-            </div>
-            <span>Trusted by 50,000+ users</span>
+            <Code size={16} className="text-primary-400" />
+            <span>React + Node.js + MongoDB</span>
           </div>
 
-          <div className="flex items-center space-x-1">
-            <div className="flex text-yellow-400">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <svg
-                  key={star}
-                  className="w-4 h-4 fill-current"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              ))}
-            </div>
-            <span>4.9/5 rating</span>
+          <div className="flex items-center space-x-2">
+            <Award size={16} className="text-green-400" />
+            <span>Academic Excellence</span>
           </div>
 
-          <div className="text-green-400">✓ No credit card required</div>
+          <div className="flex items-center space-x-2">
+            <Star size={16} className="text-yellow-400" />
+            <span>Full-Stack Implementation</span>
+          </div>
         </motion.div>
 
         {/* Final Note */}
@@ -166,15 +226,15 @@ const CTASection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          transition={{ duration: 0.6, delay: 0.9 }}
           className="text-surface-500 text-sm mt-8"
         >
-          Free 7-day trial • Cancel anytime • Used by candidates at Google,
-          Apple, Microsoft, and 500+ companies
+          Developed as a comprehensive final year project demonstrating advanced
+          web development skills and modern software engineering practices.
         </motion.p>
       </div>
     </section>
   );
 };
 
-export default CTASection;
+export default ProjectShowcaseSection;

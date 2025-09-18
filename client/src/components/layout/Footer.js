@@ -5,41 +5,41 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   const footerLinks = {
-    product: [
+    project: [
       { name: "Features", href: "#features" },
-      { name: "Pricing", href: "#pricing" },
-      { name: "Mock Interviews", href: "/mock-interview" },
-      { name: "Practice Questions", href: "/practice" },
+      { name: "Architecture", href: "#architecture" },
+      { name: "Live Demo", href: "/register" },
+      { name: "Technical Docs", href: "#faq" },
     ],
-    company: [
-      { name: "About Us", href: "#about" },
-      { name: "Contact", href: "#contact" },
-      { name: "Blog", href: "/blog" },
-      { name: "Careers", href: "/careers" },
+    information: [
+      { name: "Project Overview", href: "#about" },
+      { name: "Technologies Used", href: "#features" },
+      { name: "System Design", href: "#architecture" },
+      { name: "Academic Goals", href: "#about" },
     ],
     resources: [
-      { name: "Documentation", href: "/docs" },
-      { name: "Help Center", href: "/help" },
-      { name: "Community", href: "/community" },
-      { name: "API", href: "/api" },
+      { name: "Technical FAQ", href: "#faq" },
+      { name: "User Guide", href: "/help" },
+      { name: "API Documentation", href: "/api" },
+      { name: "Source Code", href: "#" },
     ],
-    legal: [
-      { name: "Privacy Policy", href: "/privacy" },
-      { name: "Terms of Service", href: "/terms" },
-      { name: "Cookie Policy", href: "/cookies" },
-      { name: "GDPR", href: "/gdpr" },
+    academic: [
+      { name: "Project Report", href: "#" },
+      { name: "Development Log", href: "#" },
+      { name: "Learning Outcomes", href: "#about" },
+      { name: "Future Enhancements", href: "#faq" },
     ],
   };
 
   const socialLinks = [
-    { name: "GitHub", icon: Github, href: "https://github.com/mockmate" },
-    { name: "Twitter", icon: Twitter, href: "https://twitter.com/mockmate" },
+    { name: "GitHub", icon: Github, href: "#" },
+    { name: "Project Demo", icon: Twitter, href: "/register" },
     {
-      name: "LinkedIn",
+      name: "Technical Docs",
       icon: Linkedin,
-      href: "https://linkedin.com/company/mockmate",
+      href: "#faq",
     },
-    { name: "Email", icon: Mail, href: "mailto:contact@mockmate.com" },
+    { name: "Contact", icon: Mail, href: "mailto:project@mockmate.dev" },
   ];
 
   return (
@@ -56,9 +56,9 @@ const Footer = () => {
               <span className="text-xl font-bold text-white">MockMate</span>
             </div>
             <p className="text-surface-400 mb-6 max-w-md">
-              AI-powered interview preparation platform helping candidates ace
-              their dream job interviews with personalized practice sessions and
-              detailed feedback.
+              A comprehensive full-stack web application demonstrating modern
+              development practices, AI integration, and sophisticated system
+              architecture as a final year academic project.
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((social) => {
@@ -80,11 +80,11 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Product Links */}
+          {/* Project Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Product</h3>
+            <h3 className="text-white font-semibold mb-4">Project</h3>
             <ul className="space-y-3">
-              {footerLinks.product.map((link) => (
+              {footerLinks.project.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
@@ -97,11 +97,11 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Company Links */}
+          {/* Information Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Company</h3>
+            <h3 className="text-white font-semibold mb-4">Information</h3>
             <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
+              {footerLinks.information.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
@@ -131,11 +131,11 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Legal Links */}
+          {/* Academic Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Legal</h3>
+            <h3 className="text-white font-semibold mb-4">Academic</h3>
             <ul className="space-y-3">
-              {footerLinks.legal.map((link) => (
+              {footerLinks.academic.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
@@ -153,21 +153,21 @@ const Footer = () => {
         <div className="border-t border-surface-800 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-surface-400 text-sm">
-              © {currentYear} MockMate. All rights reserved. Built with ❤️ by
-              Maaz Sheikh
+              © {currentYear} MockMate Academic Project. Developed as final year
+              computer science project by Maaz Sheikh.
             </div>
             <div className="flex items-center space-x-6 text-sm">
               <a
-                href="/privacy"
+                href="#faq"
                 className="text-surface-400 hover:text-white transition-colors duration-200"
               >
-                Privacy
+                Technical Docs
               </a>
               <a
-                href="/terms"
+                href="#about"
                 className="text-surface-400 hover:text-white transition-colors duration-200"
               >
-                Terms
+                Project Info
               </a>
               <a
                 href="/cookies"

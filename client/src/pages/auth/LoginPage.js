@@ -65,9 +65,11 @@ const LoginPage = () => {
                 socialButtonsBlockButtonText: "text-white font-medium",
                 formFieldInput:
                   "bg-surface-700 border-surface-600 text-white placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
-                footerActionLink: "text-primary-400 hover:text-primary-300 transition-colors duration-200",
+                footerActionLink:
+                  "text-primary-400 hover:text-primary-300 transition-colors duration-200",
                 formFieldLabel: "text-surface-200",
-                formResendCodeLink: "text-primary-400 hover:text-primary-300 transition-colors duration-200",
+                formResendCodeLink:
+                  "text-primary-400 hover:text-primary-300 transition-colors duration-200",
                 identityPreviewText: "text-surface-300",
                 identityPreviewEditButtonIcon: "text-surface-400",
                 spinner: "text-primary-500",
