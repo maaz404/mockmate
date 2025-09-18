@@ -26,6 +26,8 @@ import SupportPage from "./pages/SupportPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 
+import VideoRecordingDemo from "./components/VideoRecordingDemo";
+
 // Get the Clerk publishable key
 const clerkPubKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 
@@ -71,6 +73,10 @@ function App() {
     >
       <AuthProvider>
         <Router>
+          <Routes>
+            {/* Standalone Video Demo Route (no layout wrapper) */}
+            <Route path="/video-demo" element={<VideoRecordingDemo />} />
+          </Routes>
           <Layout>
             <Routes>
               {/* Public Routes */}
