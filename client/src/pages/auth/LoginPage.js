@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { SignIn, useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
+import AuthLoadingSpinner from "../../components/ui/AuthLoadingSpinner";
 
 const LoginPage = () => {
   const { isLoaded, isSignedIn, userId } = useAuth();
@@ -25,23 +26,7 @@ const LoginPage = () => {
 
   // Show loading while Clerk initializes
   if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-          </div>
-          <p className="mt-4 text-center text-sm text-surface-300">
-            Initializing authentication...
-          </p>
-          {process.env.NODE_ENV === "development" && (
-            <div className="mt-4 p-2 bg-surface-800 border border-surface-700 rounded text-xs text-surface-300">
-              <strong>Debug:</strong> Clerk Key: {debugInfo?.clerkKey}...
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return <AuthLoadingSpinner message="Initializing authentication..." />;
   }
 
   return (
@@ -71,20 +56,22 @@ const LoginPage = () => {
             appearance={{
               elements: {
                 formButtonPrimary:
-                  "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3",
+                  "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
                 card: "shadow-none bg-transparent",
                 headerTitle: "hidden",
                 headerSubtitle: "hidden",
                 socialButtonsBlockButton:
-                  "border border-surface-600 hover:bg-surface-700 bg-surface-800 text-white rounded-lg",
+                  "border border-surface-600 hover:bg-surface-700 bg-surface-800 text-white rounded-lg transition-all duration-200",
                 socialButtonsBlockButtonText: "text-white font-medium",
                 formFieldInput:
-                  "bg-surface-700 border-surface-600 text-white placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg",
-                footerActionLink: "text-primary-400 hover:text-primary-300",
+                  "bg-surface-700 border-surface-600 text-white placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
+                footerActionLink: "text-primary-400 hover:text-primary-300 transition-colors duration-200",
                 formFieldLabel: "text-surface-200",
-                formResendCodeLink: "text-primary-400 hover:text-primary-300",
+                formResendCodeLink: "text-primary-400 hover:text-primary-300 transition-colors duration-200",
                 identityPreviewText: "text-surface-300",
                 identityPreviewEditButtonIcon: "text-surface-400",
+                spinner: "text-primary-500",
+                formFieldAction: "text-primary-400 hover:text-primary-300",
               },
               variables: {
                 colorPrimary: "#3b82f6",
@@ -93,6 +80,10 @@ const LoginPage = () => {
                 colorInputText: "#ffffff",
                 colorText: "#ffffff",
                 colorTextSecondary: "#cbd5e1",
+                colorNeutral: "#64748b",
+                colorSuccess: "#10b981",
+                colorWarning: "#f59e0b",
+                colorDanger: "#ef4444",
               },
             }}
           />

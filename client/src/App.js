@@ -54,12 +54,17 @@ function App() {
       publishableKey={clerkKey}
       afterSignInUrl="/dashboard"
       afterSignUpUrl="/dashboard"
-      signInUrl="/sign-in"
-      signUpUrl="/sign-up"
+      signInUrl="/login"
+      signUpUrl="/register"
       appearance={{
         baseTheme: undefined,
         variables: {
-          colorPrimary: "#2563eb",
+          colorPrimary: "#3b82f6",
+          colorBackground: "#0f172a",
+          colorInputBackground: "#334155",
+          colorInputText: "#ffffff",
+          colorText: "#ffffff",
+          colorTextSecondary: "#cbd5e1",
         },
       }}
     >

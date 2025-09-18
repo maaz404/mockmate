@@ -34,25 +34,34 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // If user is signed in, sync data
-      if (isSignedIn && user) {
+      // If user is not signed in, stop loading immediately
+      if (!isSignedIn) {
+        setLoading(false);
+        setUserProfile(null);
+        return;
+      }
+
+      // If user is signed in, set loading to false first for faster UI
+      setLoading(false);
+
+      // Then sync data in background (non-blocking)
+      if (user) {
         try {
-          // Sync with backend
+          // Sync with backend (background operation)
           await api.post("/auth/sync");
 
           // Get user profile
           const response = await api.get("/users/profile");
           setUserProfile(response.data.data);
         } catch (error) {
-          // Error handled silently in production
-          setUserProfile(null);
-        } finally {
-          setLoading(false);
+          // Error handled silently - set basic profile from Clerk user
+          setUserProfile({
+            firstName: user?.firstName || "",
+            lastName: user?.lastName || "",
+            email: user?.primaryEmailAddress?.emailAddress || "",
+            onboardingCompleted: false, // Default for new users
+          });
         }
-      } else {
-        // User is not signed in, stop loading
-        setLoading(false);
-        setUserProfile(null);
       }
     };
 

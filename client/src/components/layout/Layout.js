@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import EnhancedOnboardingModal from "../onboarding/EnhancedOnboardingModal";
-import LoadingSpinner from "../ui/LoadingSpinner";
+import AuthLoadingSpinner from "../ui/AuthLoadingSpinner";
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -21,11 +21,7 @@ const Layout = ({ children }) => {
 
   // Show loading spinner while auth is loading
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    );
+    return <AuthLoadingSpinner message="Loading your dashboard..." />;
   }
 
   // Define routes that should show the sidebar (authenticated pages)
