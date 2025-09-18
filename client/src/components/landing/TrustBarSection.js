@@ -24,7 +24,7 @@ const TrustBarSection = () => {
           <p className="text-surface-600 font-medium mb-8">
             Trusted by candidates at top companies worldwide
           </p>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center">
             {companies.map((company, index) => (
               <motion.div
@@ -70,25 +70,19 @@ const TrustBarSection = () => {
             <div className="text-3xl lg:text-4xl font-bold text-surface-900 mb-2">
               89%
             </div>
-            <div className="text-surface-600 font-medium">
-              Success Rate
-            </div>
+            <div className="text-surface-600 font-medium">Success Rate</div>
           </div>
           <div>
             <div className="text-3xl lg:text-4xl font-bold text-surface-900 mb-2">
               500+
             </div>
-            <div className="text-surface-600 font-medium">
-              Companies
-            </div>
+            <div className="text-surface-600 font-medium">Companies</div>
           </div>
           <div>
             <div className="text-3xl lg:text-4xl font-bold text-surface-900 mb-2">
               4.9/5
             </div>
-            <div className="text-surface-600 font-medium">
-              User Rating
-            </div>
+            <div className="text-surface-600 font-medium">User Rating</div>
           </div>
         </motion.div>
       </div>

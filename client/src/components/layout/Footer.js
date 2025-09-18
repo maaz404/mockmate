@@ -34,7 +34,11 @@ const Footer = () => {
   const socialLinks = [
     { name: "GitHub", icon: Github, href: "https://github.com/mockmate" },
     { name: "Twitter", icon: Twitter, href: "https://twitter.com/mockmate" },
-    { name: "LinkedIn", icon: Linkedin, href: "https://linkedin.com/company/mockmate" },
+    {
+      name: "LinkedIn",
+      icon: Linkedin,
+      href: "https://linkedin.com/company/mockmate",
+    },
     { name: "Email", icon: Mail, href: "mailto:contact@mockmate.com" },
   ];
 
@@ -52,7 +56,9 @@ const Footer = () => {
               <span className="text-xl font-bold text-white">MockMate</span>
             </div>
             <p className="text-surface-400 mb-6 max-w-md">
-              AI-powered interview preparation platform helping candidates ace their dream job interviews with personalized practice sessions and detailed feedback.
+              AI-powered interview preparation platform helping candidates ace
+              their dream job interviews with personalized practice sessions and
+              detailed feedback.
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((social) => {
@@ -64,7 +70,10 @@ const Footer = () => {
                     className="w-10 h-10 bg-surface-800 rounded-lg flex items-center justify-center hover:bg-surface-700 transition-colors duration-200 group"
                     aria-label={social.name}
                   >
-                    <Icon size={18} className="text-surface-400 group-hover:text-white transition-colors" />
+                    <Icon
+                      size={18}
+                      className="text-surface-400 group-hover:text-white transition-colors"
+                    />
                   </a>
                 );
               })}
@@ -144,7 +153,8 @@ const Footer = () => {
         <div className="border-t border-surface-800 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-surface-400 text-sm">
-              © {currentYear} MockMate. All rights reserved. Built with ❤️ by Maaz Sheikh
+              © {currentYear} MockMate. All rights reserved. Built with ❤️ by
+              Maaz Sheikh
             </div>
             <div className="flex items-center space-x-6 text-sm">
               <a

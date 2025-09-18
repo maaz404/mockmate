@@ -8,44 +8,55 @@ const FAQSection = () => {
   const faqs = [
     {
       question: "How does MockMate's AI interview coaching work?",
-      answer: "MockMate uses advanced AI to analyze your responses, body language, and speech patterns during practice interviews. It provides real-time feedback on areas like content quality, confidence, pacing, and eye contact. The AI learns from thousands of successful interviews to give you personalized recommendations for improvement."
+      answer:
+        "MockMate uses advanced AI to analyze your responses, body language, and speech patterns during practice interviews. It provides real-time feedback on areas like content quality, confidence, pacing, and eye contact. The AI learns from thousands of successful interviews to give you personalized recommendations for improvement.",
     },
     {
       question: "What types of interviews can I practice with MockMate?",
-      answer: "You can practice various interview types including behavioral interviews, technical interviews, case studies, and industry-specific scenarios. We have questions from top companies across tech, finance, consulting, healthcare, and more. You can also practice different formats like phone interviews, video calls, and in-person simulations."
+      answer:
+        "You can practice various interview types including behavioral interviews, technical interviews, case studies, and industry-specific scenarios. We have questions from top companies across tech, finance, consulting, healthcare, and more. You can also practice different formats like phone interviews, video calls, and in-person simulations.",
     },
     {
-      question: "How is MockMate different from other interview prep platforms?",
-      answer: "MockMate stands out with its advanced AI coaching that provides instant, personalized feedback. Unlike generic practice platforms, our AI adapts to your specific industry, experience level, and target companies. We also offer real-time analysis, video recording capabilities, and comprehensive analytics to track your progress over time."
+      question:
+        "How is MockMate different from other interview prep platforms?",
+      answer:
+        "MockMate stands out with its advanced AI coaching that provides instant, personalized feedback. Unlike generic practice platforms, our AI adapts to your specific industry, experience level, and target companies. We also offer real-time analysis, video recording capabilities, and comprehensive analytics to track your progress over time.",
     },
     {
       question: "Can I practice interviews for specific companies?",
-      answer: "Yes! MockMate has curated question banks from hundreds of top companies including Google, Amazon, Microsoft, Goldman Sachs, McKinsey, and many more. You can filter questions by company, role, and difficulty level to practice exactly what you might encounter in your target interviews."
+      answer:
+        "Yes! MockMate has curated question banks from hundreds of top companies including Google, Amazon, Microsoft, Goldman Sachs, McKinsey, and many more. You can filter questions by company, role, and difficulty level to practice exactly what you might encounter in your target interviews.",
     },
     {
       question: "Is there a free trial available?",
-      answer: "Yes, we offer a 7-day free trial of our Professional plan, giving you full access to all features including unlimited practice sessions, AI feedback, and industry-specific questions. No credit card is required to start your trial. You can also use our Starter plan for free with limited features."
+      answer:
+        "Yes, we offer a 7-day free trial of our Professional plan, giving you full access to all features including unlimited practice sessions, AI feedback, and industry-specific questions. No credit card is required to start your trial. You can also use our Starter plan for free with limited features.",
     },
     {
       question: "How much does MockMate cost?",
-      answer: "We offer three plans: Starter (free with basic features), Professional ($29/month or $24/month annually), and Enterprise ($99/month or $79/month annually). The Professional plan is our most popular option, offering unlimited practice sessions and advanced AI feedback."
+      answer:
+        "We offer three plans: Starter (free with basic features), Professional ($29/month or $24/month annually), and Enterprise ($99/month or $79/month annually). The Professional plan is our most popular option, offering unlimited practice sessions and advanced AI feedback.",
     },
     {
       question: "Can I cancel my subscription anytime?",
-      answer: "Absolutely! You can cancel your subscription at any time through your account settings. There are no long-term commitments or cancellation fees. If you cancel, you'll continue to have access to your plan features until the end of your current billing period."
+      answer:
+        "Absolutely! You can cancel your subscription at any time through your account settings. There are no long-term commitments or cancellation fees. If you cancel, you'll continue to have access to your plan features until the end of your current billing period.",
     },
     {
       question: "Does MockMate work on mobile devices?",
-      answer: "Yes, MockMate is fully optimized for mobile devices. You can practice interviews, receive AI feedback, and track your progress on both iOS and Android devices through our responsive web app. We also have dedicated mobile apps available for download."
+      answer:
+        "Yes, MockMate is fully optimized for mobile devices. You can practice interviews, receive AI feedback, and track your progress on both iOS and Android devices through our responsive web app. We also have dedicated mobile apps available for download.",
     },
     {
       question: "How do I get started with MockMate?",
-      answer: "Getting started is easy! Simply sign up for a free account, complete a brief profile setup to tell us about your goals and experience, and you can immediately start practicing with our AI coach. The platform will recommend a personalized learning path based on your information."
+      answer:
+        "Getting started is easy! Simply sign up for a free account, complete a brief profile setup to tell us about your goals and experience, and you can immediately start practicing with our AI coach. The platform will recommend a personalized learning path based on your information.",
     },
     {
       question: "What kind of support does MockMate provide?",
-      answer: "We provide comprehensive support including email support for all users, live chat for Professional plan users, and dedicated account management for Enterprise customers. We also have extensive documentation, video tutorials, and a community forum where you can connect with other job seekers."
-    }
+      answer:
+        "We provide comprehensive support including email support for all users, live chat for Professional plan users, and dedicated account management for Enterprise customers. We also have extensive documentation, video tutorials, and a community forum where you can connect with other job seekers.",
+    },
   ];
 
   const toggleFAQ = (index) => {
@@ -69,14 +80,15 @@ const FAQSection = () => {
               Frequently Asked Questions
             </span>
           </div>
-          
+
           <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 mb-6">
             Got Questions? We've Got{" "}
             <span className="gradient-text">Answers</span>
           </h2>
-          
+
           <p className="text-xl text-surface-600">
-            Find answers to common questions about MockMate's AI interview preparation platform.
+            Find answers to common questions about MockMate's AI interview
+            preparation platform.
           </p>
         </motion.div>
 
@@ -143,19 +155,14 @@ const FAQSection = () => {
               Still have questions?
             </h3>
             <p className="text-surface-600 mb-6">
-              Our team is here to help you succeed. Reach out and we'll get back to you within 24 hours.
+              Our team is here to help you succeed. Reach out and we'll get back
+              to you within 24 hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="mailto:support@mockmate.com"
-                className="btn-primary"
-              >
+              <a href="mailto:support@mockmate.com" className="btn-primary">
                 Contact Support
               </a>
-              <a
-                href="/help"
-                className="btn-secondary"
-              >
+              <a href="/help" className="btn-secondary">
                 Help Center
               </a>
             </div>

@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 
 const HeroSection = () => {
-
   return (
     <section className="relative min-h-screen bg-gradient-to-br from-surface-900 via-surface-800 to-surface-900 flex items-center overflow-hidden">
       {/* Background Elements */}
@@ -57,7 +56,9 @@ const HeroSection = () => {
               transition={{ delay: 0.4 }}
               className="hero-subtitle text-surface-400 mb-8 max-w-2xl mx-auto lg:mx-0"
             >
-              AI-powered tools to help you ace interviews, apply faster, and land offers with confidence. Practice with real interview questions from top companies.
+              AI-powered tools to help you ace interviews, apply faster, and
+              land offers with confidence. Practice with real interview
+              questions from top companies.
             </motion.p>
 
             {/* CTA Buttons */}
@@ -70,7 +71,10 @@ const HeroSection = () => {
               <SignedOut>
                 <Link to="/register" className="btn-primary group">
                   Get Started Free
-                  <ArrowRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight
+                    size={20}
+                    className="ml-2 group-hover:translate-x-1 transition-transform"
+                  />
                 </Link>
                 <button className="btn-secondary group">
                   <Play size={20} className="mr-2" />
@@ -81,7 +85,10 @@ const HeroSection = () => {
               <SignedIn>
                 <Link to="/dashboard" className="btn-primary group">
                   Continue to Dashboard
-                  <ArrowRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight
+                    size={20}
+                    className="ml-2 group-hover:translate-x-1 transition-transform"
+                  />
                 </Link>
                 <Link to="/mock-interview" className="btn-secondary">
                   Start Practice Session
@@ -112,7 +119,11 @@ const HeroSection = () => {
               <div className="flex items-center space-x-1">
                 <div className="flex text-yellow-400">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <svg key={star} className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <svg
+                      key={star}
+                      className="w-4 h-4 fill-current"
+                      viewBox="0 0 20 20"
+                    >
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
                   ))}
@@ -140,8 +151,12 @@ const HeroSection = () => {
                         <span className="text-white font-bold">M</span>
                       </div>
                       <div>
-                        <div className="text-white font-semibold">Mock Interview</div>
-                        <div className="text-surface-400 text-sm">Software Engineer</div>
+                        <div className="text-white font-semibold">
+                          Mock Interview
+                        </div>
+                        <div className="text-surface-400 text-sm">
+                          Software Engineer
+                        </div>
                       </div>
                     </div>
                     <div className="flex space-x-2">
@@ -153,9 +168,12 @@ const HeroSection = () => {
 
                   {/* Question */}
                   <div className="bg-surface-800 rounded-lg p-4 mb-4">
-                    <div className="text-primary-400 text-sm font-medium mb-2">Question 1 of 5</div>
+                    <div className="text-primary-400 text-sm font-medium mb-2">
+                      Question 1 of 5
+                    </div>
                     <div className="text-white text-lg leading-relaxed">
-                      "Tell me about a challenging project you worked on and how you overcame the obstacles."
+                      "Tell me about a challenging project you worked on and how
+                      you overcame the obstacles."
                     </div>
                   </div>
 
@@ -163,10 +181,13 @@ const HeroSection = () => {
                   <div className="bg-primary-500/10 border border-primary-500/20 rounded-lg p-4">
                     <div className="flex items-center space-x-2 mb-2">
                       <Sparkles size={16} className="text-primary-400" />
-                      <span className="text-primary-400 font-medium text-sm">AI Feedback</span>
+                      <span className="text-primary-400 font-medium text-sm">
+                        AI Feedback
+                      </span>
                     </div>
                     <div className="text-surface-300 text-sm">
-                      Great structure! Consider adding more specific metrics about the project impact...
+                      Great structure! Consider adding more specific metrics
+                      about the project impact...
                     </div>
                   </div>
                 </div>
@@ -178,7 +199,9 @@ const HeroSection = () => {
                 transition={{ duration: 3, repeat: Infinity }}
                 className="absolute -top-4 -right-4 bg-accent-500/20 backdrop-blur-sm border border-accent-500/30 rounded-lg p-3"
               >
-                <div className="text-accent-400 text-sm font-medium">+89% Success Rate</div>
+                <div className="text-accent-400 text-sm font-medium">
+                  +89% Success Rate
+                </div>
               </motion.div>
 
               <motion.div
@@ -186,7 +209,9 @@ const HeroSection = () => {
                 transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
                 className="absolute -bottom-4 -left-4 bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-lg p-3"
               >
-                <div className="text-green-400 text-sm font-medium">Real-time Analysis</div>
+                <div className="text-green-400 text-sm font-medium">
+                  Real-time Analysis
+                </div>
               </motion.div>
             </div>
           </motion.div>

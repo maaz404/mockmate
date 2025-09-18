@@ -1,14 +1,14 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { 
-  Brain, 
-  Video, 
-  BarChart3, 
-  Users, 
-  Clock, 
+import {
+  Brain,
+  Video,
+  BarChart3,
+  Users,
+  Clock,
   Target,
   Sparkles,
-  MessageSquare 
+  MessageSquare,
 } from "lucide-react";
 
 const FeaturesSection = () => {
@@ -16,39 +16,45 @@ const FeaturesSection = () => {
     {
       icon: Brain,
       title: "AI-Powered Practice",
-      description: "Advanced AI analyzes your responses and provides personalized feedback to improve your interview performance.",
-      color: "primary"
+      description:
+        "Advanced AI analyzes your responses and provides personalized feedback to improve your interview performance.",
+      color: "primary",
     },
     {
       icon: Video,
       title: "Mock Video Interviews",
-      description: "Practice with realistic video interviews that simulate real company interview environments.",
-      color: "accent"
+      description:
+        "Practice with realistic video interviews that simulate real company interview environments.",
+      color: "accent",
     },
     {
       icon: BarChart3,
       title: "Performance Analytics",
-      description: "Track your progress with detailed analytics and insights to identify areas for improvement.",
-      color: "green"
+      description:
+        "Track your progress with detailed analytics and insights to identify areas for improvement.",
+      color: "green",
     },
     {
       icon: Users,
       title: "Industry-Specific Questions",
-      description: "Access curated questions from top companies across different industries and roles.",
-      color: "blue"
+      description:
+        "Access curated questions from top companies across different industries and roles.",
+      color: "blue",
     },
     {
       icon: Clock,
       title: "Real-Time Feedback",
-      description: "Get instant feedback on your answers, body language, and communication skills during practice.",
-      color: "orange"
+      description:
+        "Get instant feedback on your answers, body language, and communication skills during practice.",
+      color: "orange",
     },
     {
       icon: Target,
       title: "Personalized Learning Path",
-      description: "AI creates a customized learning path based on your goals, experience, and target companies.",
-      color: "purple"
-    }
+      description:
+        "AI creates a customized learning path based on your goals, experience, and target companies.",
+      color: "purple",
+    },
   ];
 
   const getColorClasses = (color) => {
@@ -58,7 +64,7 @@ const FeaturesSection = () => {
       green: "bg-green-500/10 text-green-600 border-green-500/20",
       blue: "bg-blue-500/10 text-blue-600 border-blue-500/20",
       orange: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-      purple: "bg-purple-500/10 text-purple-600 border-purple-500/20"
+      purple: "bg-purple-500/10 text-purple-600 border-purple-500/20",
     };
     return colors[color] || colors.primary;
   };
@@ -80,14 +86,16 @@ const FeaturesSection = () => {
               Powerful Features
             </span>
           </div>
-          
+
           <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 mb-6">
             Everything You Need to{" "}
             <span className="gradient-text">Ace Interviews</span>
           </h2>
-          
+
           <p className="text-xl text-surface-600 max-w-3xl mx-auto">
-            MockMate combines cutting-edge AI technology with proven interview techniques to give you the confidence and skills needed to land your dream job.
+            MockMate combines cutting-edge AI technology with proven interview
+            techniques to give you the confidence and skills needed to land your
+            dream job.
           </p>
         </motion.div>
 
@@ -105,14 +113,18 @@ const FeaturesSection = () => {
                 className="group"
               >
                 <div className="card hover:shadow-surface-xl group-hover:-translate-y-1 transition-all duration-300">
-                  <div className={`w-12 h-12 rounded-xl border ${getColorClasses(feature.color)} flex items-center justify-center mb-4`}>
+                  <div
+                    className={`w-12 h-12 rounded-xl border ${getColorClasses(
+                      feature.color
+                    )} flex items-center justify-center mb-4`}
+                  >
                     <Icon size={24} />
                   </div>
-                  
+
                   <h3 className="text-xl font-semibold text-surface-900 mb-3">
                     {feature.title}
                   </h3>
-                  
+
                   <p className="text-surface-600 leading-relaxed">
                     {feature.description}
                   </p>
@@ -138,21 +150,23 @@ const FeaturesSection = () => {
                 AI Interview Coach
               </span>
             </div>
-            
+
             <h3 className="text-3xl lg:text-4xl font-bold text-surface-900 mb-6">
               Get Personalized Feedback from Your AI Interview Coach
             </h3>
-            
+
             <p className="text-lg text-surface-600 mb-8">
-              Our advanced AI analyzes your responses in real-time, providing specific feedback on content, delivery, and body language to help you improve with every practice session.
+              Our advanced AI analyzes your responses in real-time, providing
+              specific feedback on content, delivery, and body language to help
+              you improve with every practice session.
             </p>
 
             <div className="space-y-4">
               {[
                 "Real-time speech analysis and feedback",
-                "Body language and confidence scoring", 
+                "Body language and confidence scoring",
                 "Personalized improvement recommendations",
-                "Progress tracking across sessions"
+                "Progress tracking across sessions",
               ].map((item, index) => (
                 <div key={index} className="flex items-center space-x-3">
                   <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center">
@@ -173,20 +187,30 @@ const FeaturesSection = () => {
                     <Brain size={20} className="text-white" />
                   </div>
                   <div>
-                    <div className="font-semibold text-surface-900">AI Coach</div>
-                    <div className="text-surface-500 text-sm">Analyzing response...</div>
+                    <div className="font-semibold text-surface-900">
+                      AI Coach
+                    </div>
+                    <div className="text-surface-500 text-sm">
+                      Analyzing response...
+                    </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="text-green-700 font-medium text-sm">✓ Strong opening</div>
+                    <div className="text-green-700 font-medium text-sm">
+                      ✓ Strong opening
+                    </div>
                   </div>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <div className="text-yellow-700 font-medium text-sm">⚠ Add specific examples</div>
+                    <div className="text-yellow-700 font-medium text-sm">
+                      ⚠ Add specific examples
+                    </div>
                   </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="text-blue-700 font-medium text-sm">💡 Improve eye contact</div>
+                    <div className="text-blue-700 font-medium text-sm">
+                      💡 Improve eye contact
+                    </div>
                   </div>
                 </div>
               </div>
@@ -198,7 +222,9 @@ const FeaturesSection = () => {
               transition={{ duration: 2, repeat: Infinity }}
               className="absolute -top-4 -right-4 bg-white rounded-lg shadow-surface-md p-3 border border-surface-200"
             >
-              <div className="text-surface-900 font-semibold text-sm">89% Confidence</div>
+              <div className="text-surface-900 font-semibold text-sm">
+                89% Confidence
+              </div>
             </motion.div>
           </div>
         </motion.div>

@@ -72,10 +72,7 @@ const Navbar = () => {
               >
                 Sign In
               </Link>
-              <Link
-                to="/register"
-                className="btn-primary"
-              >
+              <Link to="/register" className="btn-primary">
                 Get Started
               </Link>
             </SignedOut>

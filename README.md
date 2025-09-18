@@ -10,8 +10,9 @@ MockMate is a comprehensive AI-powered interview practice application that helps
 ## 🎨 Recent Updates
 
 **NEW**: Complete UI redesign to match FinalRound AI's modern dark aesthetic! The landing page now features:
+
 - Professional dark theme with gradients
-- Interactive animations and micro-interactions  
+- Interactive animations and micro-interactions
 - Mobile-responsive design with smooth transitions
 - Enhanced typography using Inter font family
 - Modular component architecture

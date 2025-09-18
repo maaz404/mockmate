@@ -7,9 +7,9 @@ import { SignedIn, SignedOut } from "@clerk/clerk-react";
 const CTASection = () => {
   const benefits = [
     "Start practicing in under 2 minutes",
-    "Get instant AI feedback on your responses", 
+    "Get instant AI feedback on your responses",
     "Access 1000+ interview questions",
-    "Join 50,000+ successful candidates"
+    "Join 50,000+ successful candidates",
   ];
 
   return (
@@ -43,8 +43,7 @@ const CTASection = () => {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-4xl lg:text-6xl font-bold text-white mb-6"
         >
-          Start Your Success Story{" "}
-          <span className="gradient-text">Today</span>
+          Start Your Success Story <span className="gradient-text">Today</span>
         </motion.h2>
 
         {/* Subheadline */}
@@ -55,7 +54,9 @@ const CTASection = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-xl text-surface-400 mb-8 max-w-2xl mx-auto"
         >
-          Join thousands of candidates who've landed their dream jobs with MockMate's AI-powered interview preparation. Your next opportunity is just one practice session away.
+          Join thousands of candidates who've landed their dream jobs with
+          MockMate's AI-powered interview preparation. Your next opportunity is
+          just one practice session away.
         </motion.p>
 
         {/* Benefits List */}
@@ -83,33 +84,36 @@ const CTASection = () => {
           className="flex flex-col sm:flex-row gap-4 justify-center mb-8"
         >
           <SignedOut>
-            <Link 
-              to="/register" 
+            <Link
+              to="/register"
               className="btn-primary text-lg py-4 px-8 group"
             >
               Start Free Trial
-              <ArrowRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight
+                size={20}
+                className="ml-2 group-hover:translate-x-1 transition-transform"
+              />
             </Link>
-            
-            <Link 
-              to="/login" 
-              className="btn-secondary text-lg py-4 px-8"
-            >
+
+            <Link to="/login" className="btn-secondary text-lg py-4 px-8">
               Sign In
             </Link>
           </SignedOut>
 
           <SignedIn>
-            <Link 
-              to="/dashboard" 
+            <Link
+              to="/dashboard"
               className="btn-primary text-lg py-4 px-8 group"
             >
               Continue to Dashboard
-              <ArrowRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight
+                size={20}
+                className="ml-2 group-hover:translate-x-1 transition-transform"
+              />
             </Link>
-            
-            <Link 
-              to="/mock-interview" 
+
+            <Link
+              to="/mock-interview"
               className="btn-secondary text-lg py-4 px-8"
             >
               Start Practice Session
@@ -138,11 +142,15 @@ const CTASection = () => {
             </div>
             <span>Trusted by 50,000+ users</span>
           </div>
-          
+
           <div className="flex items-center space-x-1">
             <div className="flex text-yellow-400">
               {[1, 2, 3, 4, 5].map((star) => (
-                <svg key={star} className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                <svg
+                  key={star}
+                  className="w-4 h-4 fill-current"
+                  viewBox="0 0 20 20"
+                >
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                 </svg>
               ))}
@@ -150,9 +158,7 @@ const CTASection = () => {
             <span>4.9/5 rating</span>
           </div>
 
-          <div className="text-green-400">
-            ✓ No credit card required
-          </div>
+          <div className="text-green-400">✓ No credit card required</div>
         </motion.div>
 
         {/* Final Note */}
@@ -163,7 +169,8 @@ const CTASection = () => {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="text-surface-500 text-sm mt-8"
         >
-          Free 7-day trial • Cancel anytime • Used by candidates at Google, Apple, Microsoft, and 500+ companies
+          Free 7-day trial • Cancel anytime • Used by candidates at Google,
+          Apple, Microsoft, and 500+ companies
         </motion.p>
       </div>
     </section>

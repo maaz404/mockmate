@@ -90,7 +90,7 @@ function App() {
                 }
               />
               <Route
-                path="/interview/create"
+                path="/interview/new"
                 element={
                   <ProtectedRoute>
                     <InterviewCreationPage />

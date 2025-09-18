@@ -18,18 +18,18 @@ const PricingSection = () => {
         "Basic performance analytics",
         "General interview questions",
         "Email support",
-        "Mobile app access"
+        "Mobile app access",
       ],
       limitations: [
         "No industry-specific questions",
         "No video recording",
-        "Limited feedback detail"
+        "Limited feedback detail",
       ],
       cta: "Get Started Free",
-      popular: false
+      popular: false,
     },
     {
-      name: "Professional", 
+      name: "Professional",
       description: "Most popular choice for serious job seekers",
       price: { monthly: 29, annual: 24 },
       badge: "Most Popular",
@@ -43,11 +43,11 @@ const PricingSection = () => {
         "Personalized learning paths",
         "Priority email & chat support",
         "Interview scheduling assistant",
-        "Resume optimization tips"
+        "Resume optimization tips",
       ],
       limitations: [],
       cta: "Start Free Trial",
-      popular: true
+      popular: true,
     },
     {
       name: "Enterprise",
@@ -57,7 +57,7 @@ const PricingSection = () => {
       icon: Crown,
       features: [
         "Everything in Professional",
-        "Team management dashboard", 
+        "Team management dashboard",
         "Custom question creation",
         "Advanced analytics & reporting",
         "White-label options",
@@ -65,12 +65,12 @@ const PricingSection = () => {
         "Dedicated account manager",
         "Custom integrations",
         "24/7 phone support",
-        "Onboarding & training"
+        "Onboarding & training",
       ],
       limitations: [],
       cta: "Contact Sales",
-      popular: false
-    }
+      popular: false,
+    },
   ];
 
   const getPrice = (plan) => {
@@ -98,12 +98,12 @@ const PricingSection = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 mb-6">
-            Choose Your{" "}
-            <span className="gradient-text">Success Plan</span>
+            Choose Your <span className="gradient-text">Success Plan</span>
           </h2>
-          
+
           <p className="text-xl text-surface-600 max-w-3xl mx-auto mb-8">
-            Invest in your career with plans designed to help you land your dream job faster and with more confidence.
+            Invest in your career with plans designed to help you land your
+            dream job faster and with more confidence.
           </p>
 
           {/* Billing Toggle */}
@@ -127,7 +127,9 @@ const PricingSection = () => {
               }`}
             >
               Annual
-              <span className="ml-1 text-xs text-green-600 font-semibold">Save 20%</span>
+              <span className="ml-1 text-xs text-green-600 font-semibold">
+                Save 20%
+              </span>
             </button>
           </div>
         </motion.div>
@@ -154,11 +156,13 @@ const PricingSection = () => {
                   </div>
                 )}
 
-                <div className={`card h-full flex flex-col ${
-                  plan.popular 
-                    ? "border-primary-200 shadow-surface-xl" 
-                    : "border-surface-200"
-                }`}>
+                <div
+                  className={`card h-full flex flex-col ${
+                    plan.popular
+                      ? "border-primary-200 shadow-surface-xl"
+                      : "border-surface-200"
+                  }`}
+                >
                   {/* Header */}
                   <div className="text-center mb-6">
                     <div className="flex items-center justify-center mb-4">
@@ -173,10 +177,8 @@ const PricingSection = () => {
                         </h3>
                       </div>
                     </div>
-                    
-                    <p className="text-surface-600 mb-4">
-                      {plan.description}
-                    </p>
+
+                    <p className="text-surface-600 mb-4">{plan.description}</p>
 
                     {/* Price */}
                     <div className="mb-2">
@@ -202,7 +204,10 @@ const PricingSection = () => {
                   <div className="flex-grow mb-6">
                     <ul className="space-y-3">
                       {plan.features.map((feature, featureIndex) => (
-                        <li key={featureIndex} className="flex items-start space-x-3">
+                        <li
+                          key={featureIndex}
+                          className="flex items-start space-x-3"
+                        >
                           <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                             <Check size={12} className="text-green-600" />
                           </div>
@@ -219,13 +224,14 @@ const PricingSection = () => {
                     <Link
                       to={plan.name === "Enterprise" ? "/contact" : "/register"}
                       className={`w-full inline-flex items-center justify-center py-3 px-6 rounded-xl font-semibold transition-all duration-200 group ${
-                        plan.popular
-                          ? "btn-primary"
-                          : "btn-secondary"
+                        plan.popular ? "btn-primary" : "btn-secondary"
                       }`}
                     >
                       {plan.cta}
-                      <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                      <ArrowRight
+                        size={16}
+                        className="ml-2 group-hover:translate-x-1 transition-transform"
+                      />
                     </Link>
                   </div>
                 </div>
@@ -244,11 +250,17 @@ const PricingSection = () => {
         >
           <p className="text-surface-600">
             Have questions about our plans?{" "}
-            <a href="#faq" className="text-primary-600 hover:text-primary-700 font-medium">
+            <a
+              href="#faq"
+              className="text-primary-600 hover:text-primary-700 font-medium"
+            >
               Check our FAQ
             </a>{" "}
             or{" "}
-            <a href="#contact" className="text-primary-600 hover:text-primary-700 font-medium">
+            <a
+              href="#contact"
+              className="text-primary-600 hover:text-primary-700 font-medium"
+            >
               contact our team
             </a>
           </p>
