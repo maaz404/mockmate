@@ -1,11 +1,10 @@
 import React from "react";
-import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
+import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 
 const HeroSection = () => {
-  const { user } = useUser();
 
   return (
     <section className="relative min-h-screen bg-gradient-to-br from-surface-900 via-surface-800 to-surface-900 flex items-center overflow-hidden">

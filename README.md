@@ -1,10 +1,22 @@
 # MockMate - AI-Powered Interview Practice Platform
 
-![MockMate Logo](https://img.shields.io/badge/MockMate-v1.0.0-blue.svg)
+![MockMate Logo](https://img.shields.io/badge/MockMate-v2.0.0-blue.svg)
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
+![UI Status](https://img.shields.io/badge/UI-FinalRound%20Style-purple.svg)
 
 MockMate is a comprehensive AI-powered interview practice application that helps job seekers prepare for technical and behavioral interviews through realistic simulations and detailed feedback.
+
+## 🎨 Recent Updates
+
+**NEW**: Complete UI redesign to match FinalRound AI's modern dark aesthetic! The landing page now features:
+- Professional dark theme with gradients
+- Interactive animations and micro-interactions  
+- Mobile-responsive design with smooth transitions
+- Enhanced typography using Inter font family
+- Modular component architecture
+
+📖 **[View Complete Redesign Summary](UI_REDESIGN_SUMMARY.md)**
 
 ## 🚀 Features
 
@@ -55,14 +67,30 @@ mockmate/
 │   ├── public/            # Public assets
 │   ├── src/
 │   │   ├── components/    # Reusable UI components
+│   │   │   ├── landing/   # 🆕 Landing page sections
+│   │   │   │   ├── HeroSection.js
+│   │   │   │   ├── TrustBarSection.js
+│   │   │   │   ├── FeaturesSection.js
+│   │   │   │   ├── TestimonialsSection.js
+│   │   │   │   ├── PricingSection.js
+│   │   │   │   ├── FAQSection.js
+│   │   │   │   └── CTASection.js
+│   │   │   ├── layout/    # 🔄 Redesigned layout components
+│   │   │   │   ├── Navbar.js (dark theme)
+│   │   │   │   └── Footer.js (professional)
+│   │   │   ├── auth/      # Authentication components
+│   │   │   ├── dashboard/ # Dashboard components
+│   │   │   └── ui/        # Shared UI components
 │   │   ├── pages/         # Page components
+│   │   │   └── HomePage.js # 🆕 Complete redesign
 │   │   ├── hooks/         # Custom React hooks
 │   │   ├── context/       # React context providers
 │   │   ├── services/      # API service functions
 │   │   ├── utils/         # Utility functions
 │   │   └── assets/        # Static assets
 │   ├── package.json
-│   └── tailwind.config.js
+│   ├── tailwind.config.js # 🔄 Enhanced with dark theme
+│   └── index.css         # 🔄 Updated with Inter font
 ├── server/                # Node.js backend
 │   ├── src/
 │   │   ├── controllers/   # Request handlers
@@ -75,8 +103,11 @@ mockmate/
 │   ├── package.json
 │   └── .env.example
 ├── package.json           # Root package.json for workspace management
-└── README.md
+├── README.md
+└── UI_REDESIGN_SUMMARY.md # 🆕 Detailed redesign documentation
 ```
+
+🆕 = New files | 🔄 = Recently updated
 
 ## 🏃‍♂️ Quick Start
 
