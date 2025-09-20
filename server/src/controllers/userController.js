@@ -1,3 +1,4 @@
+/* eslint-disable no-console, consistent-return, no-magic-numbers */
 const UserProfile = require("../models/UserProfile");
 const { clerkClient } = require("@clerk/clerk-sdk-node");
 
@@ -90,26 +91,31 @@ const completeOnboarding = async (req, res) => {
     const { userId } = req.auth;
     const { professionalInfo, preferences } = req.body;
 
+    // Ensure a profile exists; if not, create it from Clerk data on the fly
+    const clerkUser = await clerkClient.users.getUser(userId);
+
     const userProfile = await UserProfile.findOneAndUpdate(
       { clerkUserId: userId },
       {
-        professionalInfo,
-        preferences,
-        onboardingCompleted: true,
-        lastModified: new Date(),
+        $set: {
+          professionalInfo,
+          preferences,
+          onboardingCompleted: true,
+          lastModified: new Date(),
+        },
+        $setOnInsert: {
+          email: clerkUser.emailAddresses[0]?.emailAddress,
+          firstName: clerkUser.firstName,
+          lastName: clerkUser.lastName,
+          profileImage: clerkUser.profileImageUrl,
+        },
       },
       {
         new: true,
         runValidators: true,
+        upsert: true,
       }
     );
-
-    if (!userProfile) {
-      return res.status(404).json({
-        success: false,
-        message: "User profile not found",
-      });
-    }
 
     // Calculate completeness after onboarding
     userProfile.calculateCompleteness();

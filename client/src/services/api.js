@@ -22,7 +22,33 @@ api.interceptors.request.use(
   async (config) => {
     try {
       if (getTokenFunction) {
-        const token = await getTokenFunction();
+        // Try to get a backend-ready JWT via multiple strategies
+        let token = null;
+        const templateFromEnv = process.env.REACT_APP_CLERK_JWT_TEMPLATE;
+        const tryGet = async (args) => {
+          try {
+            return await getTokenFunction(args);
+          } catch (_) {
+            return null;
+          }
+        };
+
+        // 1) Env-configured template (recommended)
+        if (!token && templateFromEnv) {
+          token = await tryGet({ template: templateFromEnv });
+        }
+        // 2) Common template name 'backend'
+        if (!token) {
+          token = await tryGet({ template: "backend" });
+        }
+        // 3) Alternate common template name 'server'
+        if (!token) {
+          token = await tryGet({ template: "server" });
+        }
+        // 4) Default token as last resort
+        if (!token) {
+          token = await tryGet();
+        }
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }

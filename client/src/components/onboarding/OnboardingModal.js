@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { apiService } from "../../services/api";
 
 const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [languageInput, setLanguageInput] = useState("");
+  const modalRef = useRef(null);
   const [formData, setFormData] = useState({
     professionalInfo: {
       currentRole: "",
@@ -23,6 +25,26 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
   });
 
   const totalSteps = 3;
+
+  // Prevent closing with Escape key unintentionally
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        // Block default ESC close behavior while modal is open
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown, true);
+      // Prevent background scroll
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
 
   const handleInputChange = (section, field, value) => {
     setFormData((prev) => ({
@@ -49,35 +71,41 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
 
   const handleSubmit = async () => {
     setLoading(true);
-    
+
     const loadingToast = toast.loading("Saving your preferences...");
-    
+
     try {
       // Log the data being sent for debugging
       // eslint-disable-next-line no-console
       console.log("Submitting onboarding data:", formData);
-      
-      const response = await apiService.post("/users/onboarding/complete", formData);
-      
+
+      // apiService.post returns already-unwrapped data
+      const result = await apiService.post(
+        "/users/onboarding/complete",
+        formData
+      );
+
       // eslint-disable-next-line no-console
-      console.log("Onboarding response:", response.data);
-      
-      toast.success("Profile setup completed successfully!", { id: loadingToast });
-      
-      // Call onComplete with the form data
-      onComplete(formData);
-      
+      console.log("Onboarding response:", result);
+
+      toast.success("Profile setup completed successfully!", {
+        id: loadingToast,
+      });
+
+      // Call onComplete with the server result (fallback to local form data)
+      onComplete?.(result?.data || formData);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Onboarding submission failed:", error);
-      
+
       // Show user-friendly error message
-      const errorMessage = error.response?.data?.message || "Failed to save preferences. Please try again.";
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to save preferences. Please try again.";
       toast.error(errorMessage, { id: loadingToast });
-      
+
       // Don't close the modal on error
       return;
-      
     } finally {
       setLoading(false);
     }
@@ -85,13 +113,13 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
 
   const validateForm = () => {
     if (currentStep === 1) {
-      const { currentRole, industry, company } = formData.professionalInfo;
-      if (!currentRole.trim() || !industry.trim() || !company.trim()) {
-        toast.error("Please fill in all required fields in Step 1");
+      const { currentRole, industry } = formData.professionalInfo;
+      if (!currentRole.trim() || !industry.trim()) {
+        toast.error("Please provide your current role and industry");
         return false;
       }
     }
-    
+
     if (currentStep === 2) {
       const { skills, targetRoles } = formData.professionalInfo;
       if (skills.length === 0 || targetRoles.length === 0) {
@@ -99,7 +127,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
         return false;
       }
     }
-    
+
     if (currentStep === 3) {
       const { interviewTypes } = formData.preferences;
       if (interviewTypes.length === 0) {
@@ -107,7 +135,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -115,7 +143,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
     if (!validateForm()) {
       return;
     }
-    
+
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -132,27 +160,30 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-surface-900/70 backdrop-blur-sm flex items-center justify-center z-50">
+      <div
+        ref={modalRef}
+        className="bg-white rounded-2xl shadow-2xl border border-surface-200 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+      >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-surface-200 bg-surface-50 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-surface-900">
                 Welcome to MockMate! 🎯
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-surface-600 mt-1">
                 Let's personalize your interview experience
               </p>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-surface-500">
               Step {currentStep} of {totalSteps}
             </div>
           </div>
 
           {/* Progress Bar */}
           <div className="mt-4">
-            <div className="bg-gray-200 rounded-full h-2">
+            <div className="bg-surface-200 rounded-full h-2">
               <div
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
@@ -166,13 +197,13 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
           {currentStep === 1 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                <h3 className="text-lg font-medium text-surface-900 mb-4">
                   Tell us about your professional background
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-surface-700">
                       Current Role
                     </label>
                     <input
@@ -185,13 +216,13 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="e.g., Software Developer"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-surface-700">
                       Experience Level
                     </label>
                     <select
@@ -203,7 +234,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="entry">Entry Level (0-2 years)</option>
                       <option value="junior">Junior (2-4 years)</option>
@@ -215,7 +246,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-surface-700">
                       Industry
                     </label>
                     <input
@@ -228,13 +259,13 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="e.g., Technology, Finance, Healthcare"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-surface-700">
                       Current Company
                     </label>
                     <input
@@ -247,7 +278,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Optional"
                     />
                   </div>
@@ -259,13 +290,13 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
           {currentStep === 2 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                <h3 className="text-lg font-medium text-surface-900 mb-4">
                   What are your skills and target roles?
                 </h3>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-surface-700">
                       Skills (comma separated)
                     </label>
                     <textarea
@@ -277,14 +308,14 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       rows={3}
                       placeholder="e.g., JavaScript, React, Node.js, Python, AWS, Leadership"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-surface-700">
                       Target Roles (comma separated)
                     </label>
                     <textarea
@@ -296,7 +327,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       rows={2}
                       placeholder="e.g., Senior Developer, Tech Lead, Product Manager"
                     />
@@ -309,13 +340,14 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
           {currentStep === 3 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                <h3 className="text-lg font-medium text-surface-900 mb-4">
                   Interview preferences
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Interview Types */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <label className="block text-sm font-medium text-surface-700 mb-3">
                       Interview Types (select all that apply)
                     </label>
                     <div className="space-y-2">
@@ -337,7 +369,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                                 handleInputChange(
                                   "preferences",
                                   "interviewTypes",
-                                  [...types, type]
+                                  Array.from(new Set([...types, type]))
                                 );
                               } else {
                                 handleInputChange(
@@ -347,9 +379,9 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                                 );
                               }
                             }}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-surface-300 text-blue-600 focus:ring-blue-500"
                           />
-                          <span className="ml-2 text-sm text-gray-700 capitalize">
+                          <span className="ml-2 text-sm text-surface-700 capitalize">
                             {type.replace("-", " ")}
                           </span>
                         </label>
@@ -357,32 +389,132 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                     </div>
                   </div>
 
+                  {/* Difficulty Segmented Control */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-surface-700 mb-2">
                       Preferred Difficulty
                     </label>
-                    <select
-                      value={formData.preferences.difficulty}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "preferences",
-                          "difficulty",
-                          e.target.value
-                        )
-                      }
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
+                    <div className="flex rounded-lg overflow-hidden border border-surface-300">
+                      {["beginner", "intermediate", "advanced"].map((level) => (
+                        <button
+                          type="button"
+                          key={level}
+                          onClick={() =>
+                            handleInputChange(
+                              "preferences",
+                              "difficulty",
+                              level
+                            )
+                          }
+                          className={`flex-1 px-3 py-2 text-sm ${
+                            formData.preferences.difficulty === level
+                              ? "bg-blue-600 text-white"
+                              : "bg-white text-surface-700 hover:bg-surface-50"
+                          } transition-colors`}
+                        >
+                          {level.charAt(0).toUpperCase() + level.slice(1)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
+                  {/* Languages chips */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Preferred Session Duration
+                    <label className="block text-sm font-medium text-surface-700 mb-2">
+                      Preferred Languages
                     </label>
-                    <select
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {formData.preferences.preferredLanguages.map(
+                        (lang, idx) => (
+                          <span
+                            key={`${lang}-${idx}`}
+                            className="inline-flex items-center gap-2 px-2 py-1 bg-surface-100 text-surface-800 rounded-full text-sm border border-surface-300"
+                          >
+                            {lang}
+                            <button
+                              type="button"
+                              className="text-surface-500 hover:text-red-600"
+                              onClick={() =>
+                                handleInputChange(
+                                  "preferences",
+                                  "preferredLanguages",
+                                  formData.preferences.preferredLanguages.filter(
+                                    (l) => l !== lang
+                                  )
+                                )
+                              }
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={languageInput}
+                        onChange={(e) => setLanguageInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (
+                            (e.key === "Enter" || e.key === ",") &&
+                            languageInput.trim()
+                          ) {
+                            e.preventDefault();
+                            const next = Array.from(
+                              new Set([
+                                ...formData.preferences.preferredLanguages,
+                                languageInput.trim(),
+                              ])
+                            );
+                            handleInputChange(
+                              "preferences",
+                              "preferredLanguages",
+                              next
+                            );
+                            setLanguageInput("");
+                          }
+                        }}
+                        className="flex-1 border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Add a language and press Enter"
+                      />
+                      <button
+                        type="button"
+                        className="btn-primary px-4"
+                        onClick={() => {
+                          if (!languageInput.trim()) return;
+                          const next = Array.from(
+                            new Set([
+                              ...formData.preferences.preferredLanguages,
+                              languageInput.trim(),
+                            ])
+                          );
+                          handleInputChange(
+                            "preferences",
+                            "preferredLanguages",
+                            next
+                          );
+                          setLanguageInput("");
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Duration slider */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-surface-700 mb-2">
+                      Preferred Session Duration:{" "}
+                      <span className="font-semibold">
+                        {formData.preferences.sessionDuration} min
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min={15}
+                      max={120}
+                      step={15}
                       value={formData.preferences.sessionDuration}
                       onChange={(e) =>
                         handleInputChange(
@@ -391,13 +523,18 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           parseInt(e.target.value)
                         )
                       }
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value={15}>15 minutes</option>
-                      <option value={30}>30 minutes</option>
-                      <option value={45}>45 minutes</option>
-                      <option value={60}>1 hour</option>
-                    </select>
+                      className="w-full accent-blue-600"
+                    />
+                    <div className="flex justify-between text-xs text-surface-500 mt-1">
+                      <span>15</span>
+                      <span>30</span>
+                      <span>45</span>
+                      <span>60</span>
+                      <span>75</span>
+                      <span>90</span>
+                      <span>105</span>
+                      <span>120</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -406,10 +543,11 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-surface-200 bg-surface-50 rounded-b-2xl flex items-center justify-between">
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            disabled={loading}
+            className="text-surface-500 hover:text-surface-700 disabled:opacity-50"
           >
             Skip for now
           </button>
@@ -418,7 +556,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
             {currentStep > 1 && (
               <button
                 onClick={prevStep}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-surface-300 rounded-md text-surface-700 hover:bg-surface-50"
               >
                 Previous
               </button>

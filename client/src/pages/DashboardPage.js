@@ -6,7 +6,6 @@ import StatsCard from "../components/dashboard/StatsCard";
 import RecentInterviews from "../components/dashboard/RecentInterviews";
 import QuickActions from "../components/dashboard/QuickActions";
 import ProgressChart from "../components/dashboard/ProgressChart";
-import OnboardingModal from "../components/onboarding/OnboardingModal";
 import { apiService } from "../services/api";
 
 const DashboardPage = () => {
@@ -16,7 +15,6 @@ const DashboardPage = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [recentInterviews, setRecentInterviews] = useState([]);
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -32,10 +30,7 @@ const DashboardPage = () => {
       const profileResponse = await apiService.get("/users/profile");
       setUserProfile(profileResponse.data || {});
 
-      // Show onboarding if not completed
-      if (!profileResponse.data?.onboardingCompleted) {
-        setShowOnboarding(true);
-      }
+      // Layout will handle showing onboarding modal if not completed
 
       // Fetch analytics
       const analyticsResponse = await apiService.get("/users/analytics");
@@ -54,15 +49,7 @@ const DashboardPage = () => {
     }
   };
 
-  const handleOnboardingComplete = (onboardingData) => {
-    // Update user profile with onboarding data
-    setUserProfile((prev) => ({
-      ...prev,
-      ...onboardingData,
-      onboardingCompleted: true,
-    }));
-    setShowOnboarding(false);
-  };
+  // Onboarding modal handled by Layout
 
   const startQuickInterview = async (type) => {
     try {
@@ -201,14 +188,7 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Onboarding Modal */}
-        {showOnboarding && (
-          <OnboardingModal
-            isOpen={showOnboarding}
-            onComplete={handleOnboardingComplete}
-            onClose={() => setShowOnboarding(false)}
-          />
-        )}
+        {/* Onboarding modal is rendered by Layout when required */}
       </div>
     </div>
   );

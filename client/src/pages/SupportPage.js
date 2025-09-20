@@ -1,4 +1,3 @@
-
 import Sidebar from "../components/layout/Sidebar";
 import Navbar from "../components/layout/Navbar";
 
@@ -12,7 +11,9 @@ const SupportPage = () => {
         <Navbar />
         <main className="flex-1 pt-20 px-6 pb-8 max-w-5xl mx-auto w-full">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-surface-900">Help & Support</h1>
+            <h1 className="text-3xl font-bold text-surface-900">
+              Help & Support
+            </h1>
             <p className="mt-2 text-surface-500">
               Get help with MockMate and find answers to common questions.
             </p>

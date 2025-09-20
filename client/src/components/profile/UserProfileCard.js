@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import { Briefcase, Award, Camera, Edit3, Save, X } from "lucide-react";
-import api from "../../services/api";
+import { apiService } from "../../services/api";
 
 const UserProfileCard = () => {
   const { user, userProfile, updateProfile, loading } = useAuthContext();
@@ -15,9 +15,9 @@ const UserProfileCard = () => {
         firstName: userProfile.firstName || "",
         lastName: userProfile.lastName || "",
         professionalInfo: {
-          title: userProfile.professionalInfo?.title || "",
+          currentRole: userProfile.professionalInfo?.currentRole || "",
           company: userProfile.professionalInfo?.company || "",
-          experience: userProfile.professionalInfo?.experience || "",
+          experience: userProfile.professionalInfo?.experience || "entry",
           industry: userProfile.professionalInfo?.industry || "",
           skills: userProfile.professionalInfo?.skills || [],
           careerGoals: userProfile.professionalInfo?.careerGoals || "",
@@ -29,8 +29,8 @@ const UserProfileCard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await api.get("/users/stats");
-        setStats(response.data);
+        const data = await apiService.get("/users/stats");
+        setStats(data?.data || data);
       } catch (error) {
         // Handle error silently
       }
@@ -89,9 +89,9 @@ const UserProfileCard = () => {
         firstName: userProfile.firstName || "",
         lastName: userProfile.lastName || "",
         professionalInfo: {
-          title: userProfile.professionalInfo?.title || "",
+          currentRole: userProfile.professionalInfo?.currentRole || "",
           company: userProfile.professionalInfo?.company || "",
-          experience: userProfile.professionalInfo?.experience || "",
+          experience: userProfile.professionalInfo?.experience || "entry",
           industry: userProfile.professionalInfo?.industry || "",
           skills: userProfile.professionalInfo?.skills || [],
           careerGoals: userProfile.professionalInfo?.careerGoals || "",
@@ -207,21 +207,24 @@ const UserProfileCard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Job Title
+              Current Role
             </label>
             {isEditing ? (
               <input
                 type="text"
-                value={editForm.professionalInfo.title}
+                value={editForm.professionalInfo.currentRole}
                 onChange={(e) =>
-                  handleInputChange("professionalInfo.title", e.target.value)
+                  handleInputChange(
+                    "professionalInfo.currentRole",
+                    e.target.value
+                  )
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., Software Engineer"
               />
             ) : (
               <p className="text-gray-900">
-                {userProfile.professionalInfo?.title || "Not specified"}
+                {userProfile.professionalInfo?.currentRole || "Not specified"}
               </p>
             )}
           </div>
@@ -262,12 +265,12 @@ const UserProfileCard = () => {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Select experience</option>
-                <option value="0-1">0-1 years</option>
-                <option value="2-3">2-3 years</option>
-                <option value="4-6">4-6 years</option>
-                <option value="7-10">7-10 years</option>
-                <option value="10+">10+ years</option>
+                <option value="entry">Entry (0-2y)</option>
+                <option value="junior">Junior (2-4y)</option>
+                <option value="mid">Mid (4-7y)</option>
+                <option value="senior">Senior (7+y)</option>
+                <option value="lead">Lead</option>
+                <option value="executive">Executive</option>
               </select>
             ) : (
               <p className="text-gray-900">
@@ -397,13 +400,13 @@ const UserProfileCard = () => {
             Profile Completeness
           </span>
           <span className="text-sm text-gray-600">
-            {userProfile.completeness || 0}%
+            {userProfile.profileCompleteness || 0}%
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${userProfile.completeness || 0}%` }}
+            style={{ width: `${userProfile.profileCompleteness || 0}%` }}
           />
         </div>
       </div>

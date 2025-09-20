@@ -4,12 +4,12 @@ import { useAuthContext } from "../../context/AuthContext";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import EnhancedOnboardingModal from "../onboarding/EnhancedOnboardingModal";
+import OnboardingModal from "../onboarding/OnboardingModal";
 import AuthLoadingSpinner from "../ui/AuthLoadingSpinner";
 
 const Layout = ({ children }) => {
   const location = useLocation();
-  const { isSignedIn, userProfile, loading } = useAuthContext();
+  const { isSignedIn, userProfile, loading, refreshProfile } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Check if user needs onboarding
@@ -67,8 +67,12 @@ const Layout = ({ children }) => {
         </div>
 
         {/* Onboarding Modal */}
-        <EnhancedOnboardingModal
+        <OnboardingModal
           isOpen={showOnboarding}
+          onComplete={async () => {
+            await refreshProfile();
+            setShowOnboarding(false);
+          }}
           onClose={() => setShowOnboarding(false)}
         />
       </div>
