@@ -1,6 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
+import HybridQuestionGenerator from "../components/ui/HybridQuestionGenerator";
 
 const QuestionBankPage = () => {
+  const [showGenerator, setShowGenerator] = useState(false);
+
+  const handleQuestionsGenerated = (questions) => {
+    console.log("Generated questions:", questions);
+    // Here you could navigate to interview or handle questions as needed
+  };
   const questionCategories = [
     {
       name: "Behavioral Questions",
@@ -110,17 +117,28 @@ const QuestionBankPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Need Custom Questions?
+                  Hybrid Question Generation
                 </h3>
                 <p className="text-gray-600">
-                  Our AI can generate personalized questions based on your job
-                  role and experience level.
+                  Generate a mix of template-based and AI-created questions tailored to your interview needs.
                 </p>
               </div>
-              <button className="btn-primary">Generate Questions</button>
+              <button 
+                onClick={() => setShowGenerator(!showGenerator)}
+                className="btn-primary"
+              >
+                {showGenerator ? "Hide Generator" : "Generate Questions"}
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Hybrid Question Generator */}
+        {showGenerator && (
+          <div className="mt-8">
+            <HybridQuestionGenerator onQuestionsGenerated={handleQuestionsGenerated} />
+          </div>
+        )}
       </div>
     </div>
   );

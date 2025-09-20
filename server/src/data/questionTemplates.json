@@ -1,0 +1,390 @@
+{
+  "software-engineer": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "Explain the difference between let, const, and var in JavaScript.",
+          "category": "javascript",
+          "tags": ["DSA", "Programming Fundamentals"],
+          "difficulty": "beginner",
+          "estimatedTime": 180,
+          "type": "technical"
+        },
+        {
+          "text": "What is the difference between == and === in JavaScript?",
+          "category": "javascript", 
+          "tags": ["Programming Fundamentals"],
+          "difficulty": "beginner",
+          "estimatedTime": 120,
+          "type": "technical"
+        },
+        {
+          "text": "Explain what a REST API is and its main principles.",
+          "category": "web-development",
+          "tags": ["System Design", "API"],
+          "difficulty": "beginner",
+          "estimatedTime": 240,
+          "type": "technical"
+        },
+        {
+          "text": "What is the difference between SQL and NoSQL databases?",
+          "category": "database",
+          "tags": ["DB", "System Design"],
+          "difficulty": "beginner", 
+          "estimatedTime": 200,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about a challenging project you worked on. How did you overcome the obstacles?",
+          "category": "problem-solving",
+          "tags": ["Behavioral", "Problem Solving"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        },
+        {
+          "text": "Describe a time when you had to learn a new technology quickly. How did you approach it?",
+          "category": "adaptability",
+          "tags": ["Behavioral", "Learning"],
+          "difficulty": "beginner",
+          "estimatedTime": 240,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "Explain how JavaScript closures work and provide a practical example.",
+          "category": "javascript",
+          "tags": ["DSA", "Programming Fundamentals"],
+          "difficulty": "intermediate",
+          "estimatedTime": 300,
+          "type": "technical"
+        },
+        {
+          "text": "What are React Hooks and why were they introduced? Explain useState and useEffect.",
+          "category": "react",
+          "tags": ["Frontend", "React"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "technical"
+        },
+        {
+          "text": "Describe the differences between synchronous and asynchronous programming in JavaScript.",
+          "category": "javascript",
+          "tags": ["DSA", "Programming Fundamentals"],
+          "difficulty": "intermediate",
+          "estimatedTime": 300,
+          "type": "technical"
+        },
+        {
+          "text": "Explain database indexing and how it improves query performance.",
+          "category": "database",
+          "tags": ["DB", "Performance"],
+          "difficulty": "intermediate",
+          "estimatedTime": 320,
+          "type": "technical"
+        },
+        {
+          "text": "Design a basic URL shortener service like bit.ly. What components would you need?",
+          "category": "system-design",
+          "tags": ["System Design", "Architecture"],
+          "difficulty": "intermediate", 
+          "estimatedTime": 600,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about a time when you had to work with a difficult team member. How did you handle the situation?",
+          "category": "teamwork",
+          "tags": ["Behavioral", "Teamwork"],
+          "difficulty": "intermediate",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        },
+        {
+          "text": "Describe a situation where you had to make a decision with incomplete information.",
+          "category": "decision-making",
+          "tags": ["Behavioral", "Leadership"],
+          "difficulty": "intermediate",
+          "estimatedTime": 280,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Explain the event loop in JavaScript and how it handles asynchronous operations.",
+          "category": "javascript",
+          "tags": ["DSA", "Performance", "Programming Fundamentals"],
+          "difficulty": "advanced",
+          "estimatedTime": 420,
+          "type": "technical"
+        },
+        {
+          "text": "Design a distributed caching system. How would you handle cache invalidation and consistency?",
+          "category": "system-design",
+          "tags": ["System Design", "Architecture", "Performance"],
+          "difficulty": "advanced",
+          "estimatedTime": 900,
+          "type": "technical"
+        },
+        {
+          "text": "Implement a rate limiter for an API. What algorithms would you consider?",
+          "category": "algorithms",
+          "tags": ["DSA", "System Design", "Algorithms"],
+          "difficulty": "advanced",
+          "estimatedTime": 600,
+          "type": "technical"
+        },
+        {
+          "text": "Explain database sharding strategies and their trade-offs.",
+          "category": "database",
+          "tags": ["DB", "System Design", "Scalability"],
+          "difficulty": "advanced",
+          "estimatedTime": 480,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about a time when you had to lead a technical decision that was controversial within your team.",
+          "category": "leadership",
+          "tags": ["Behavioral", "Leadership", "Technical Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 360,
+          "type": "behavioral"
+        },
+        {
+          "text": "Describe a situation where you had to balance technical debt with feature delivery pressure.",
+          "category": "technical-leadership",
+          "tags": ["Behavioral", "Technical Leadership", "Decision Making"],
+          "difficulty": "advanced",
+          "estimatedTime": 400,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "frontend-developer": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "What is the difference between HTML, CSS, and JavaScript?",
+          "category": "web-development",
+          "tags": ["Frontend", "Programming Fundamentals"],
+          "difficulty": "beginner",
+          "estimatedTime": 180,
+          "type": "technical"
+        },
+        {
+          "text": "Explain the CSS box model.",
+          "category": "css",
+          "tags": ["Frontend", "CSS"],
+          "difficulty": "beginner",
+          "estimatedTime": 200,
+          "type": "technical"
+        },
+        {
+          "text": "What are the different ways to select elements in CSS?",
+          "category": "css",
+          "tags": ["Frontend", "CSS"],
+          "difficulty": "beginner",
+          "estimatedTime": 150,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "How do you stay updated with the latest frontend technologies and trends?",
+          "category": "learning",
+          "tags": ["Behavioral", "Learning", "Growth"],
+          "difficulty": "beginner",
+          "estimatedTime": 240,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "Explain the virtual DOM in React and why it's beneficial.",
+          "category": "react",
+          "tags": ["Frontend", "React", "Performance"],
+          "difficulty": "intermediate",
+          "estimatedTime": 300,
+          "type": "technical"
+        },
+        {
+          "text": "What are the differences between controlled and uncontrolled components in React?",
+          "category": "react",
+          "tags": ["Frontend", "React"],
+          "difficulty": "intermediate",
+          "estimatedTime": 280,
+          "type": "technical"
+        },
+        {
+          "text": "How would you optimize the performance of a React application?",
+          "category": "react",
+          "tags": ["Frontend", "React", "Performance"],
+          "difficulty": "intermediate",
+          "estimatedTime": 400,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe a time when you had to implement a complex UI component. What challenges did you face?",
+          "category": "problem-solving",
+          "tags": ["Behavioral", "Frontend", "Problem Solving"],
+          "difficulty": "intermediate",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Explain how you would implement server-side rendering (SSR) with React.",
+          "category": "react",
+          "tags": ["Frontend", "React", "SSR", "Performance"],
+          "difficulty": "advanced",
+          "estimatedTime": 500,
+          "type": "technical"
+        },
+        {
+          "text": "Design a frontend architecture for a large-scale web application.",
+          "category": "architecture",
+          "tags": ["Frontend", "Architecture", "System Design"],
+          "difficulty": "advanced",
+          "estimatedTime": 600,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "How do you approach making architectural decisions for frontend applications?",
+          "category": "technical-leadership",
+          "tags": ["Behavioral", "Frontend", "Architecture", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 350,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "backend-developer": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "What is an API and what are the different types of APIs?",
+          "category": "api",
+          "tags": ["Backend", "API", "Programming Fundamentals"],
+          "difficulty": "beginner",
+          "estimatedTime": 200,
+          "type": "technical"
+        },
+        {
+          "text": "Explain the difference between HTTP and HTTPS.",
+          "category": "web-development",
+          "tags": ["Backend", "Security", "Networking"],
+          "difficulty": "beginner",
+          "estimatedTime": 180,
+          "type": "technical"
+        },
+        {
+          "text": "What is a database schema and why is it important?",
+          "category": "database",
+          "tags": ["DB", "Backend"],
+          "difficulty": "beginner",
+          "estimatedTime": 180,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "How do you ensure the code you write is maintainable and scalable?",
+          "category": "code-quality",
+          "tags": ["Behavioral", "Backend", "Code Quality"],
+          "difficulty": "beginner",
+          "estimatedTime": 280,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "Explain the differences between SQL joins (INNER, LEFT, RIGHT, FULL OUTER).",
+          "category": "database",
+          "tags": ["DB", "SQL"],
+          "difficulty": "intermediate",
+          "estimatedTime": 320,
+          "type": "technical"
+        },
+        {
+          "text": "What are microservices and what are their advantages and disadvantages?",
+          "category": "architecture",
+          "tags": ["Backend", "Architecture", "Microservices"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "technical"
+        },
+        {
+          "text": "How would you implement authentication and authorization in a REST API?",
+          "category": "security",
+          "tags": ["Backend", "Security", "API"],
+          "difficulty": "intermediate",
+          "estimatedTime": 400,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe a time when you had to debug a complex backend issue. What was your approach?",
+          "category": "problem-solving",
+          "tags": ["Behavioral", "Backend", "Debugging"],
+          "difficulty": "intermediate",
+          "estimatedTime": 320,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Design a high-availability backend system for an e-commerce platform.",
+          "category": "system-design",
+          "tags": ["Backend", "System Design", "High Availability"],
+          "difficulty": "advanced",
+          "estimatedTime": 900,
+          "type": "technical"
+        },
+        {
+          "text": "Explain different caching strategies and when you would use each one.",
+          "category": "performance",
+          "tags": ["Backend", "Performance", "Caching"],
+          "difficulty": "advanced",
+          "estimatedTime": 420,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "How do you approach system design decisions when scalability and performance are critical?",
+          "category": "technical-leadership",
+          "tags": ["Behavioral", "Backend", "System Design", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 380,
+          "type": "behavioral"
+        }
+      ]
+    }
+  }
+}

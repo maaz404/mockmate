@@ -2,6 +2,7 @@ const Interview = require("../models/Interview");
 const Question = require("../models/Question");
 const UserProfile = require("../models/UserProfile");
 const aiQuestionService = require("../services/aiQuestionService");
+const hybridQuestionService = require("../services/hybridQuestionService");
 const { updateAnalytics } = require("./userController");
 
 // Create new interview session
@@ -423,24 +424,51 @@ const getInterviewDetails = async (req, res) => {
   }
 };
 
-// Helper function to get suitable questions using AI
+// Helper function to get suitable questions using hybrid approach
 const getQuestionsForInterview = async (config, userProfile) => {
   try {
-    console.log("Generating AI-powered questions for config:", config);
+    console.log("Generating hybrid questions for config:", config);
 
-    // Use AI service to generate questions
-    const aiQuestions = await aiQuestionService.generateQuestions(
-      config,
-      userProfile
+    // Use hybrid service to generate questions (70% templates, 30% AI)
+    const hybridQuestions = await hybridQuestionService.generateHybridQuestions(config);
+
+    if (hybridQuestions && hybridQuestions.length > 0) {
+      console.log(`Generated ${hybridQuestions.length} hybrid questions`);
+
+      // Transform hybrid questions to match our interview schema
+      return hybridQuestions.map((question, index) => ({
+        _id: question.id || `hybrid_${Date.now()}_${index}`,
+        text: question.text,
+        category: question.category,
+        difficulty: question.difficulty,
+        type: question.type,
+        tags: question.tags || [],
+        experienceLevel: [config.experienceLevel],
+        estimatedTime: Math.floor(question.estimatedTime / 60) || 3, // Convert to minutes
+        source: question.source || 'hybrid',
+        generatedAt: question.generatedAt || new Date(),
+        isHybridGenerated: true,
+        stats: { timesUsed: 0, avgScore: 0 },
+        status: "active",
+      }));
+    }
+  } catch (error) {
+    console.error(
+      "Hybrid question generation failed, falling back to AI service:",
+      error
     );
+  }
 
+  // Fallback to AI service if hybrid fails
+  try {
+    const aiQuestions = await aiQuestionService.generateQuestions(config, userProfile);
+    
     if (aiQuestions && aiQuestions.length > 0) {
-      console.log(`Generated ${aiQuestions.length} AI questions`);
-
-      // Transform AI questions to match our schema
+      console.log(`Generated ${aiQuestions.length} AI fallback questions`);
+      
       return aiQuestions.map((question, index) => ({
         _id: `ai_${Date.now()}_${index}`,
-        text: question.question,
+        text: question.question || question.text,
         category: question.category || config.interviewType,
         difficulty: question.difficulty || config.difficulty,
         type: config.interviewType,
@@ -452,14 +480,11 @@ const getQuestionsForInterview = async (config, userProfile) => {
         status: "active",
       }));
     }
-  } catch (error) {
-    console.error(
-      "AI question generation failed, falling back to database:",
-      error
-    );
+  } catch (aiError) {
+    console.error("AI question generation also failed, falling back to database:", aiError);
   }
 
-  // Fallback to database questions if AI fails
+  // Final fallback to database questions
   const query = {
     status: "active",
     difficulty: config.difficulty,
