@@ -55,6 +55,23 @@ const interviewSchema = new mongoose.Schema(
         min: 5,
         max: 50,
       },
+      // Adaptive difficulty settings
+      adaptiveDifficulty: {
+        enabled: {
+          type: Boolean,
+          default: false,
+        },
+        initialDifficulty: String, // Store original difficulty
+        currentDifficulty: String, // Track current adaptive difficulty
+        difficultyHistory: [
+          {
+            questionIndex: Number,
+            difficulty: String,
+            score: Number,
+            timestamp: Date,
+          },
+        ],
+      },
     },
 
     // Interview Status
