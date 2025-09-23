@@ -195,6 +195,29 @@ const interviewSchema = new mongoose.Schema(
             min: 0,
             max: 100,
           },
+          // 1-5 scale rubric scores as per requirements
+          rubricScores: {
+            relevance: {
+              type: Number,
+              min: 1,
+              max: 5,
+            },
+            clarity: {
+              type: Number,
+              min: 1,
+              max: 5,
+            },
+            depth: {
+              type: Number,
+              min: 1,
+              max: 5,
+            },
+            structure: {
+              type: Number,
+              min: 1,
+              max: 5,
+            },
+          },
           breakdown: {
             relevance: Number,
             clarity: Number,
@@ -206,6 +229,8 @@ const interviewSchema = new mongoose.Schema(
           strengths: [String],
           improvements: [String],
           suggestions: String,
+          // AI-generated model answer as per requirements
+          modelAnswer: String,
         },
       },
     ],
