@@ -207,6 +207,20 @@ const interviewSchema = new mongoose.Schema(
           improvements: [String],
           suggestions: String,
         },
+        followUpQuestions: [
+          {
+            text: String,
+            type: {
+              type: String,
+              enum: ["clarification", "example", "technical", "challenge"],
+              default: "clarification"
+            },
+            generatedAt: {
+              type: Date,
+              default: Date.now
+            }
+          }
+        ],
       },
     ],
 
