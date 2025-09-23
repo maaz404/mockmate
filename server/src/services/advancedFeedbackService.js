@@ -71,21 +71,40 @@ class AdvancedFeedbackService {
    * Build prompt for advanced feedback generation
    */
   buildAdvancedFeedbackPrompt(question, answer, config, videoAnalysis) {
+    // Language mapping for better prompts
+    const languageNames = {
+      en: "English",
+      es: "Spanish", 
+      fr: "French",
+      de: "German",
+      it: "Italian",
+      pt: "Portuguese",
+      zh: "Chinese",
+      ja: "Japanese",
+      ko: "Korean",
+      hi: "Hindi",
+      ar: "Arabic",
+      ru: "Russian"
+    };
+
+    const feedbackLanguage = languageNames[config.language] || "English";
+
     let prompt = `
-Please provide comprehensive feedback for this interview response:
+Please provide comprehensive feedback for this interview response in ${feedbackLanguage}:
 
 **Interview Configuration:**
 - Job Role: ${config.jobRole}
 - Experience Level: ${config.experienceLevel}
 - Interview Type: ${config.interviewType}
 - Difficulty: ${config.difficulty}
+- Language: ${feedbackLanguage}
 
 **Question:** ${question.questionText || question}
 
 **Candidate's Answer:** ${answer}
 
 **Analysis Request:**
-Please analyze this response across these dimensions:
+Please analyze this response across these dimensions and provide feedback in ${feedbackLanguage}:
 
 1. **Technical Accuracy** (${this.criteria.technical * 100}% weight):
    - Correctness of concepts and solutions
@@ -123,7 +142,7 @@ Please analyze this response across these dimensions:
 
     prompt += `
 
-**Required Output Format:**
+**Required Output Format (all text content in ${feedbackLanguage}):**
 {
   "overallScore": [0-100],
   "breakdown": {
@@ -132,11 +151,11 @@ Please analyze this response across these dimensions:
     "problemSolving": [0-100],
     "behavioral": [0-100]
   },
-  "strengths": ["strength1", "strength2", "strength3"],
-  "improvements": ["area1", "area2", "area3"],
-  "detailedFeedback": "comprehensive paragraph analysis",
-  "actionableAdvice": ["tip1", "tip2", "tip3"],
-  "industryBenchmark": "comparison to industry standards",
+  "strengths": ["strength1 in ${feedbackLanguage}", "strength2 in ${feedbackLanguage}", "strength3 in ${feedbackLanguage}"],
+  "improvements": ["area1 in ${feedbackLanguage}", "area2 in ${feedbackLanguage}", "area3 in ${feedbackLanguage}"],
+  "detailedFeedback": "comprehensive paragraph analysis in ${feedbackLanguage}",
+  "actionableAdvice": ["tip1 in ${feedbackLanguage}", "tip2 in ${feedbackLanguage}", "tip3 in ${feedbackLanguage}"],
+  "industryBenchmark": "comparison to industry standards in ${feedbackLanguage}",
   "confidenceLevel": "low/medium/high"
 }`;
 

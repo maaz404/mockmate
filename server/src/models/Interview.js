@@ -55,6 +55,12 @@ const interviewSchema = new mongoose.Schema(
         min: 5,
         max: 50,
       },
+      // Language configuration for multilingual support
+      language: {
+        type: String,
+        default: "en",
+        enum: ["en", "es", "fr", "de", "it", "pt", "zh", "ja", "ko", "hi", "ar", "ru"], // Common languages supported by OpenAI
+      },
       // Adaptive difficulty settings
       adaptiveDifficulty: {
         enabled: {
@@ -90,12 +96,19 @@ const interviewSchema = new mongoose.Schema(
           required: true,
         },
         questionText: String, // cached for performance
+        // Multilingual support for questions
+        questionTextOriginal: String, // original language question
+        questionTextTranslated: String, // translated question if different from original
+        questionLanguage: String, // language of the question
         category: String,
         difficulty: String,
         timeAllocated: Number, // seconds
         timeSpent: Number, // seconds
         response: {
           text: String,
+          textOriginal: String, // original response text
+          textTranslated: String, // translated response if needed
+          responseLanguage: String, // detected/provided language of response
           audioUrl: String, // for future voice responses
           submittedAt: Date,
         },
@@ -107,6 +120,9 @@ const interviewSchema = new mongoose.Schema(
           size: Number, // file size in bytes
           transcript: {
             text: String,
+            textOriginal: String, // original language transcript
+            textTranslated: String, // translated transcript if needed
+            detectedLanguage: String, // language detected by Whisper
             generatedAt: Date,
             status: {
               type: String,
@@ -206,6 +222,14 @@ const interviewSchema = new mongoose.Schema(
           strengths: [String],
           improvements: [String],
           suggestions: String,
+          // Multilingual feedback support
+          strengthsOriginal: [String], // feedback in original language
+          improvementsOriginal: [String],
+          suggestionsOriginal: String,
+          strengthsTranslated: [String], // translated feedback if needed
+          improvementsTranslated: [String],
+          suggestionsTranslated: String,
+          feedbackLanguage: String, // language of the feedback
         },
       },
     ],
@@ -242,6 +266,16 @@ const interviewSchema = new mongoose.Schema(
         strengths: [String],
         improvements: [String],
         recommendations: [String],
+        // Multilingual feedback support
+        summaryOriginal: String, // feedback in original language
+        strengthsOriginal: [String],
+        improvementsOriginal: [String],
+        recommendationsOriginal: [String],
+        summaryTranslated: String, // translated feedback if needed
+        strengthsTranslated: [String],
+        improvementsTranslated: [String], 
+        recommendationsTranslated: [String],
+        feedbackLanguage: String, // language of the feedback
       },
     },
 
