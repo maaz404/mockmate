@@ -43,35 +43,35 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-surface-900 text-surface-300">
-      <div className="max-w-7xl mx-auto container-padding section-padding">
+    <footer className="bg-surface-900 dark:bg-surface-950 text-surface-300 border-t border-surface-800 dark:border-surface-800">
+      <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           {/* Company Info */}
           <div className="lg:col-span-2">
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">M</span>
+            <div className="flex items-center space-x-2 mb-2">
+              <div className="w-6 h-6 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xs">M</span>
               </div>
-              <span className="text-xl font-bold text-white">MockMate</span>
+              <span className="text-base font-bold text-white">MockMate</span>
             </div>
-            <p className="text-surface-400 mb-6 max-w-md">
+            <p className="text-surface-400 mb-3 max-w-md text-xs leading-relaxed">
               A comprehensive full-stack web application demonstrating modern
               development practices, AI integration, and sophisticated system
               architecture as a final year academic project.
             </p>
-            <div className="flex space-x-4">
+            <div className="flex space-x-2">
               {socialLinks.map((social) => {
                 const Icon = social.icon;
                 return (
                   <a
                     key={social.name}
                     href={social.href}
-                    className="w-10 h-10 bg-surface-800 rounded-lg flex items-center justify-center hover:bg-surface-700 transition-colors duration-200 group"
+                    className="w-7 h-7 bg-surface-800 dark:bg-surface-700 rounded-lg flex items-center justify-center hover:bg-surface-700 dark:hover:bg-surface-600 transition-colors duration-200 group"
                     aria-label={social.name}
                   >
                     <Icon
-                      size={18}
+                      size={14}
                       className="text-surface-400 group-hover:text-white transition-colors"
                     />
                   </a>
@@ -82,13 +82,13 @@ const Footer = () => {
 
           {/* Project Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Project</h3>
-            <ul className="space-y-3">
+            <h3 className="text-white font-medium mb-2 text-xs">Project</h3>
+            <ul className="space-y-1.5">
               {footerLinks.project.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-surface-400 hover:text-white transition-colors duration-200"
+                    className="text-surface-400 hover:text-white transition-colors duration-200 text-xs"
                   >
                     {link.name}
                   </a>
@@ -99,13 +99,13 @@ const Footer = () => {
 
           {/* Information Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Information</h3>
-            <ul className="space-y-3">
+            <h3 className="text-white font-medium mb-2 text-xs">Information</h3>
+            <ul className="space-y-1.5">
               {footerLinks.information.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-surface-400 hover:text-white transition-colors duration-200"
+                    className="text-surface-400 hover:text-white transition-colors duration-200 text-xs"
                   >
                     {link.name}
                   </a>
@@ -116,13 +116,13 @@ const Footer = () => {
 
           {/* Resources Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Resources</h3>
-            <ul className="space-y-3">
+            <h3 className="text-white font-medium mb-2 text-xs">Resources</h3>
+            <ul className="space-y-1.5">
               {footerLinks.resources.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-surface-400 hover:text-white transition-colors duration-200"
+                    className="text-surface-400 hover:text-white transition-colors duration-200 text-xs"
                   >
                     {link.name}
                   </a>
@@ -133,13 +133,13 @@ const Footer = () => {
 
           {/* Academic Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Academic</h3>
-            <ul className="space-y-3">
+            <h3 className="text-white font-medium mb-2 text-xs">Academic</h3>
+            <ul className="space-y-1.5">
               {footerLinks.academic.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-surface-400 hover:text-white transition-colors duration-200"
+                    className="text-surface-400 hover:text-white transition-colors duration-200 text-xs"
                   >
                     {link.name}
                   </a>
@@ -150,13 +150,13 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-surface-800 mt-12 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-surface-400 text-sm">
+        <div className="border-t border-surface-800 dark:border-surface-700 mt-4 pt-3">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-1.5 md:space-y-0">
+            <div className="text-surface-400 text-[11px]">
               © {currentYear} MockMate Academic Project. Developed as final year
               computer science project by Maaz Sheikh.
             </div>
-            <div className="flex items-center space-x-6 text-sm">
+            <div className="flex items-center space-x-3 text-[11px]">
               <a
                 href="#faq"
                 className="text-surface-400 hover:text-white transition-colors duration-200"

@@ -116,16 +116,16 @@ const DashboardPage = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-surface-900 py-8">
+    <div className="min-h-screen bg-white dark:bg-surface-900 py-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className="text-3xl font-bold text-surface-900 dark:text-white">
                 Welcome back, {user?.firstName || "there"}! 👋
               </h1>
-              <p className="mt-2 text-surface-300">
+              <p className="mt-2 text-surface-600 dark:text-surface-300">
                 {userProfile?.onboardingCompleted
                   ? "Ready for your next interview practice session?"
                   : "Let's get your profile set up first!"}
@@ -134,20 +134,20 @@ const DashboardPage = () => {
 
             {/* Profile Completeness */}
             {userProfile && userProfile.profileCompleteness < 100 && (
-              <div className="bg-primary-500/10 border border-primary-500/20 rounded-xl p-4 backdrop-blur-sm">
+              <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-500/20 rounded-xl p-4">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-primary-500/20 rounded-full flex items-center justify-center">
-                      <span className="text-primary-400 text-sm font-medium">
+                    <div className="w-8 h-8 bg-primary-100 dark:bg-primary-500/20 rounded-full flex items-center justify-center">
+                      <span className="text-primary-600 dark:text-primary-400 text-sm font-medium">
                         {userProfile.profileCompleteness}%
                       </span>
                     </div>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-primary-300">
+                    <p className="text-sm font-medium text-primary-900 dark:text-primary-300">
                       Complete your profile
                     </p>
-                    <p className="text-xs text-primary-400">
+                    <p className="text-xs text-primary-600 dark:text-primary-400">
                       Get better interview recommendations
                     </p>
                   </div>

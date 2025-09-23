@@ -25,34 +25,32 @@ const Layout = ({ children }) => {
   }
 
   // Routes that should show only navbar + footer (legacy public pages without sidebar)
-  const legacyNavbarOnlyRoutes = [
-    "/demo",
-    "/coding-demo",
-    "/video-demo"
-  ];
+  const legacyNavbarOnlyRoutes = ["/demo", "/coding-demo", "/video-demo"];
 
   // Routes that should use sidebar layout (all pages except legacy demo pages)
   const useSidebarLayout = !legacyNavbarOnlyRoutes.includes(location.pathname);
 
   if (useSidebarLayout) {
     return (
-      <div className="flex h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
+      <div className="flex min-h-screen bg-white dark:bg-surface-900 transition-colors duration-200">
         <Sidebar />
         {/* Main content area with sidebar */}
-        <div className="flex-1 flex flex-col ml-0 lg:ml-64">
+        <div className="flex-1 flex flex-col ml-0 lg:ml-56">
           {/* Show navbar on public pages within sidebar layout */}
-          {(location.pathname === "/" || location.pathname === "/login" || location.pathname === "/register") && (
+          {(location.pathname === "/" ||
+            location.pathname === "/login" ||
+            location.pathname === "/register") && (
             <div className="lg:hidden">
               <Navbar />
             </div>
           )}
-          <main className="flex-1 overflow-y-auto bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
-            <div className="h-full pt-16 lg:pt-0">{children}</div>
+          <main className="flex-1 bg-white dark:bg-surface-900 transition-colors duration-200">
+            <div className="pt-16 lg:pt-0">{children}</div>
           </main>
           {/* Show footer on public pages within sidebar layout */}
-          {(location.pathname === "/" || location.pathname === "/login" || location.pathname === "/register") && (
-            <Footer />
-          )}
+          {(location.pathname === "/" ||
+            location.pathname === "/login" ||
+            location.pathname === "/register") && <Footer />}
         </div>
 
         {/* Onboarding Modal */}
@@ -70,12 +68,9 @@ const Layout = ({ children }) => {
 
   // Legacy layout for demo pages only
   return (
-    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
       {/* Skip navigation link for accessibility */}
-      <a 
-        href="#main-content" 
-        className="skip-link"
-      >
+      <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
       <Navbar />

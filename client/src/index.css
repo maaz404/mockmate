@@ -6,22 +6,25 @@
 
 /* Custom base styles */
 @layer base {
+  * {
+    @apply transition-colors duration-200;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply font-sans antialiased bg-surface-50 dark:bg-surface-900 text-surface-900 dark:text-surface-50 transition-colors duration-200;
+    @apply font-sans antialiased bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-50 transition-colors duration-200;
   }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-display font-semibold text-surface-900 dark:text-surface-50;
   }
 
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
-
   /* Focus visible for better accessibility */
   *:focus-visible {
-    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+    @apply outline-none ring-2 ring-orange-500 ring-offset-2 ring-offset-white dark:ring-offset-surface-900;
   }
 
   /* High contrast mode support */
@@ -46,6 +49,19 @@
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-100 dark:bg-surface-800;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-300 dark:bg-surface-600 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-surface-400 dark:bg-surface-500;
   }
   
   ::-webkit-scrollbar-track {

@@ -32,7 +32,7 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl" />
@@ -40,16 +40,16 @@ const LoginPage = () => {
       </div>
 
       <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-bold text-white">
+        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
           Sign in to MockMate
         </h2>
-        <p className="mt-2 text-center text-sm text-surface-300">
+        <p className="mt-2 text-center text-sm text-gray-600 dark:text-surface-300">
           Welcome back to your interview preparation journey
         </p>
       </div>
 
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-surface-800/50 backdrop-blur-sm border border-surface-700 py-8 px-4 shadow-xl sm:rounded-xl sm:px-10">
+        <div className="bg-white/90 dark:bg-surface-800/50 backdrop-blur-sm border border-gray-200 dark:border-surface-700 py-8 px-4 shadow-xl sm:rounded-xl sm:px-10">
           <SignIn
             afterSignInUrl="/dashboard"
             signUpUrl="/register"

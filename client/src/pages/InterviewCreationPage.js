@@ -160,22 +160,22 @@ const InterviewCreationPage = () => {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-900">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-surface-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface-900 py-8">
+    <div className="min-h-screen bg-white dark:bg-surface-900 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700">
+        <div className="bg-white dark:bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-lg dark:shadow-surface-lg border border-gray-200 dark:border-surface-700">
           {/* Header */}
-          <div className="px-8 py-6 border-b border-surface-700">
-            <h1 className="text-3xl font-bold text-white">
+          <div className="px-8 py-6 border-b border-gray-200 dark:border-surface-700">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Create New Interview
             </h1>
-            <p className="text-surface-300 mt-2">
+            <p className="text-gray-600 dark:text-surface-300 mt-2">
               Customize your interview practice session based on your goals and
               preferences.
             </p>
@@ -187,7 +187,7 @@ const InterviewCreationPage = () => {
               <div>
                 <label
                   htmlFor="jobRole"
-                  className="block text-sm font-medium text-surface-300 mb-2"
+                  className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2"
                 >
                   Job Role/Position
                 </label>
@@ -198,7 +198,7 @@ const InterviewCreationPage = () => {
                   value={formData.jobRole}
                   onChange={handleInputChange}
                   placeholder="e.g., Software Engineer, Product Manager"
-                  className="w-full px-4 py-3 bg-surface-700 border border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white placeholder-surface-400 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-white dark:bg-surface-700 border border-gray-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-400 transition-all duration-200"
                   required
                 />
               </div>
@@ -206,7 +206,7 @@ const InterviewCreationPage = () => {
               <div>
                 <label
                   htmlFor="experienceLevel"
-                  className="block text-sm font-medium text-surface-300 mb-2"
+                  className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2"
                 >
                   Experience Level
                 </label>
@@ -215,7 +215,7 @@ const InterviewCreationPage = () => {
                   name="experienceLevel"
                   value={formData.experienceLevel}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-surface-700 border border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-white transition-all duration-200"
+                  className="w-full px-4 py-3 bg-white dark:bg-surface-700 border border-gray-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white transition-all duration-200"
                 >
                   {experienceLevels.map((level) => (
                     <option key={level.value} value={level.value}>
@@ -228,7 +228,7 @@ const InterviewCreationPage = () => {
 
             {/* Interview Type */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-4">
                 Interview Type
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -238,7 +238,7 @@ const InterviewCreationPage = () => {
                     className={`p-4 border rounded-lg cursor-pointer transition-all ${
                       formData.interviewType === type.value
                         ? "border-primary-500 bg-primary-500/10 ring-2 ring-primary-500/50"
-                        : "border-surface-600 hover:border-surface-500 bg-surface-700/30"
+                        : "border-gray-300 dark:border-surface-600 hover:border-gray-400 dark:hover:border-surface-500 bg-gray-50 dark:bg-surface-700/30"
                     }`}
                     onClick={() =>
                       setFormData((prev) => ({
@@ -253,13 +253,13 @@ const InterviewCreationPage = () => {
                         value={type.value}
                         checked={formData.interviewType === type.value}
                         onChange={() => {}}
-                        className="mr-3 text-primary-500 bg-surface-700 border-surface-600 focus:ring-primary-500"
+                        className="mr-3 text-primary-500 bg-white dark:bg-surface-700 border-gray-300 dark:border-surface-600 focus:ring-primary-500"
                       />
                       <div>
-                        <h4 className="font-medium text-white">
+                        <h4 className="font-medium text-gray-900 dark:text-white">
                           {type.label}
                         </h4>
-                        <p className="text-sm text-surface-400 mt-1">
+                        <p className="text-sm text-gray-600 dark:text-surface-400 mt-1">
                           {type.description}
                         </p>
                       </div>
@@ -274,7 +274,7 @@ const InterviewCreationPage = () => {
               <div>
                 <label
                   htmlFor="duration"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2"
                 >
                   Duration (minutes)
                 </label>
@@ -367,11 +367,11 @@ const InterviewCreationPage = () => {
             </div>
 
             {/* Form Actions */}
-            <div className="flex justify-between items-center pt-6 border-t border-surface-700">
+            <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-surface-700">
               <button
                 type="button"
                 onClick={() => navigate("/dashboard")}
-                className="px-6 py-3 text-surface-300 bg-surface-700 rounded-lg hover:bg-surface-600 transition-colors"
+                className="px-6 py-3 text-gray-600 dark:text-surface-300 bg-gray-100 dark:bg-surface-700 rounded-lg hover:bg-gray-200 dark:hover:bg-surface-600 transition-colors"
               >
                 Cancel
               </button>
