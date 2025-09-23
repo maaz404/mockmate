@@ -4,8 +4,8 @@ import HybridQuestionGenerator from "../components/ui/HybridQuestionGenerator";
 const QuestionBankPage = () => {
   const [showGenerator, setShowGenerator] = useState(false);
 
-  const handleQuestionsGenerated = (questions) => {
-    console.log("Generated questions:", questions);
+  const handleQuestionsGenerated = (_questions) => {
+    // console.log("Generated questions:", _questions);
     // Here you could navigate to interview or handle questions as needed
   };
   const questionCategories = [
