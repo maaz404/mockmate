@@ -238,10 +238,10 @@ const InterviewResultsPage = () => {
                       <div className="text-right ml-4">
                         <div
                           className={`text-2xl font-bold ${getScoreColor(
-                            qa.score
+                            typeof qa.score === 'object' ? qa.score.overall : qa.score
                           )}`}
                         >
-                          {qa.score}%
+                          {typeof qa.score === 'object' ? qa.score.overall : qa.score}%
                         </div>
                         <div className="text-xs text-gray-500">
                           {qa.timeSpent}s
@@ -256,28 +256,78 @@ const InterviewResultsPage = () => {
                       <p className="text-gray-700 text-sm">{qa.userAnswer}</p>
                     </div>
 
-                    <div className="space-y-2">
-                      <div>
-                        <h5 className="font-medium text-green-800 mb-1">
-                          ✅ Strengths:
-                        </h5>
-                        <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                          {qa.feedback.strengths.map((strength, i) => (
-                            <li key={i}>{strength}</li>
-                          ))}
-                        </ul>
+                    <div className="space-y-4">
+                      {/* Rubric Scores Section */}
+                      {qa.score && typeof qa.score === 'object' && qa.score.rubricScores && (
+                        <div className="bg-blue-50 rounded-lg p-4">
+                          <h5 className="font-medium text-blue-900 mb-3 flex items-center">
+                            📊 Rubric Scores (1-5 Scale):
+                          </h5>
+                          <div className="grid grid-cols-2 gap-3">
+                            {Object.entries(qa.score.rubricScores).map(([criterion, score]) => (
+                              <div key={criterion} className="space-y-1">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium capitalize text-gray-700">
+                                    {criterion}
+                                  </span>
+                                  <span className="text-sm font-bold text-blue-700">
+                                    {score}/5
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className={`h-2 rounded-full transition-all duration-500 ${
+                                      score >= 4
+                                        ? "bg-green-500"
+                                        : score >= 3
+                                        ? "bg-yellow-500"
+                                        : "bg-red-500"
+                                    }`}
+                                    style={{ width: `${(score / 5) * 100}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Feedback Section */}
+                      <div className="space-y-2">
+                        <div>
+                          <h5 className="font-medium text-green-800 mb-1">
+                            ✅ Strengths:
+                          </h5>
+                          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                            {qa.feedback.strengths.map((strength, i) => (
+                              <li key={i}>{strength}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <h5 className="font-medium text-red-800 mb-1">
+                            ❌ Areas for Improvement:
+                          </h5>
+                          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                            {qa.feedback.improvements.map((improvement, i) => (
+                              <li key={i}>{improvement}</li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
 
-                      <div>
-                        <h5 className="font-medium text-red-800 mb-1">
-                          ❌ Areas for Improvement:
-                        </h5>
-                        <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                          {qa.feedback.improvements.map((improvement, i) => (
-                            <li key={i}>{improvement}</li>
-                          ))}
-                        </ul>
-                      </div>
+                      {/* Model Answer Section */}
+                      {qa.feedback && qa.feedback.modelAnswer && (
+                        <div className="bg-green-50 rounded-lg p-4">
+                          <h5 className="font-medium text-green-900 mb-2 flex items-center">
+                            💡 Model Answer:
+                          </h5>
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            {qa.feedback.modelAnswer}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Video Transcript Section */}

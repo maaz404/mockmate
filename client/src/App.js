@@ -25,6 +25,7 @@ import ReportsPage from "./pages/ReportsPage";
 import SessionSummaryPage from "./pages/SessionSummaryPage";
 import SupportPage from "./pages/SupportPage";
 import HybridQuestionDemo from "./pages/HybridQuestionDemo";
+import CodingChallengeDemo from "./pages/CodingChallengeDemo";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -86,6 +87,7 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/demo" element={<HybridQuestionDemo />} />
+              <Route path="/coding-demo" element={<CodingChallengeDemo />} />
 
               {/* Protected Routes */}
               <Route

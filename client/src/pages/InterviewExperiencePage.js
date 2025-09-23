@@ -4,6 +4,9 @@ import { useUser } from "@clerk/clerk-react";
 import { apiService } from "../services/api";
 import { interviewService } from "../services/mockmate";
 import FollowUpQuestions from "../components/FollowUpQuestions";
+=======
+import CodeEditor from "../components/ui/CodeEditor";
+import CodeExecutionResults from "../components/ui/CodeExecutionResults";
 
 const InterviewExperiencePage = () => {
   const { interviewId } = useParams();
@@ -23,6 +26,10 @@ const InterviewExperiencePage = () => {
   const [followUpQuestions, setFollowUpQuestions] = useState({});
   const [loadingFollowUps, setLoadingFollowUps] = useState({});
   const [showFollowUps, setShowFollowUps] = useState({});
+  // Coding challenge state
+  const [codingLanguage, setCodingLanguage] = useState("javascript");
+  const [codeExecutionResult, setCodeExecutionResult] = useState(null);
+  const [isExecutingCode, setIsExecutingCode] = useState(false);
 
   // Function to fetch interview data
   const fetchInterview = useCallback(async () => {
@@ -135,8 +142,48 @@ const InterviewExperiencePage = () => {
     }
   }, [isLoaded, user, interviewId, fetchInterview]);
 
-  const handleAnswerChange = (e) => {
-    setCurrentAnswer(e.target.value);
+  const handleAnswerChange = (value) => {
+    // Handle both event objects (from textarea) and direct values (from Monaco Editor)
+    const newValue = typeof value === 'string' ? value : value.target.value;
+    setCurrentAnswer(newValue);
+  };
+
+  // Handle code execution for coding questions
+  const handleCodeExecution = async () => {
+    if (!currentAnswer.trim()) {
+      alert('Please write some code before running it.');
+      return;
+    }
+
+    setIsExecutingCode(true);
+    setCodeExecutionResult(null);
+
+    try {
+      const currentQuestion = interview.questions[currentQuestionIndex];
+      
+      // Create a temporary coding session for testing
+      const response = await apiService.post('/coding/test', {
+        code: currentAnswer,
+        language: codingLanguage,
+        challengeId: currentQuestion.challengeId || 'default-challenge'
+      });
+
+      if (response.success) {
+        setCodeExecutionResult(response.data);
+      } else {
+        setCodeExecutionResult({
+          success: false,
+          error: response.message || 'Code execution failed'
+        });
+      }
+    } catch (error) {
+      setCodeExecutionResult({
+        success: false,
+        error: 'Failed to execute code. Please try again.'
+      });
+    } finally {
+      setIsExecutingCode(false);
+    }
   };
 
   const handleNextQuestion = () => {
@@ -302,16 +349,25 @@ const InterviewExperiencePage = () => {
             {currentQuestion.type === "technical" &&
             currentQuestion.category === "coding" ? (
               <div className="space-y-4">
-                <textarea
-                  id="answer"
+                {/* Monaco Code Editor */}
+                <CodeEditor
                   value={currentAnswer}
                   onChange={handleAnswerChange}
-                  placeholder="Write your code solution here..."
-                  className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm resize-none"
-                  style={{ fontFamily: "Monaco, Menlo, monospace" }}
+                  language={codingLanguage}
+                  onLanguageChange={setCodingLanguage}
+                  onRun={handleCodeExecution}
+                  loading={isExecutingCode}
+                  height="400px"
                 />
+                
+                {/* Code Execution Results */}
+                <CodeExecutionResults 
+                  result={codeExecutionResult}
+                  loading={isExecutingCode}
+                />
+                
                 <p className="text-sm text-gray-600">
-                  💡 Tip: Explain your thought process and consider edge cases
+                  💡 Tip: Write clean, readable code and consider edge cases. Press Ctrl+Enter to run your code.
                 </p>
               </div>
             ) : (

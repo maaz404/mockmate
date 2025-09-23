@@ -345,7 +345,7 @@ Return in JSON format:
   }
 
   /**
-   * Evaluate answer using AI
+   * Evaluate answer using AI with enhanced rubric scoring and model answer
    */
   async evaluateAnswer(question, answer, params) {
     if (!process.env.OPENAI_API_KEY) {
@@ -353,25 +353,42 @@ Return in JSON format:
     }
 
     try {
-      const prompt = `Evaluate this interview answer and provide detailed feedback.
+      const prompt = `Evaluate this interview answer and provide comprehensive feedback with rubric scoring and model answer.
 
 Question: "${question.text}"
 Answer: "${answer}"
 Job Role: ${params.jobRole}
 Experience Level: ${params.experienceLevel}
+Question Category: ${question.category || 'general'}
+Question Type: ${question.type || 'general'}
 
 Please provide evaluation in JSON format:
 {
   "score": 0-100,
+  "rubricScores": {
+    "relevance": 1-5,
+    "clarity": 1-5,
+    "depth": 1-5,
+    "structure": 1-5
+  },
   "breakdown": {
     "technical": 0-100,
     "communication": 0-100,
     "problemSolving": 0-100
   },
   "strengths": ["strength 1", "strength 2"],
-  "improvements": ["area 1", "area 2"],
-  "feedback": "Detailed feedback paragraph"
-}`;
+  "improvements": ["improvement suggestion 1", "improvement suggestion 2"],
+  "feedback": "Detailed feedback paragraph",
+  "modelAnswer": "A concise model answer demonstrating what a strong response would include"
+}
+
+Scoring Guidelines:
+- Relevance (1-5): How well the answer addresses the question
+- Clarity (1-5): How clear and well-articulated the response is
+- Depth (1-5): How thorough and insightful the answer is
+- Structure (1-5): How well-organized and logical the response is
+
+Provide exactly 2 specific, actionable improvement suggestions.`;
 
       const response = await this.getOpenAIClient().chat.completions.create({
         model: "gpt-3.5-turbo",
@@ -379,19 +396,29 @@ Please provide evaluation in JSON format:
           {
             role: "system",
             content:
-              "You are an expert interviewer providing constructive feedback.",
+              "You are an expert interviewer providing constructive feedback. Always provide rubric scores on a 1-5 scale and include a concise model answer.",
           },
           { role: "user", content: prompt },
         ],
         temperature: 0.3,
-        max_tokens: 500,
+        max_tokens: 800,
       });
 
       const content = response.choices[0]?.message?.content;
       const jsonMatch = content.match(/\{[\s\S]*\}/);
 
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsedResult = JSON.parse(jsonMatch[0]);
+        
+        // Ensure rubric scores are within 1-5 range
+        if (parsedResult.rubricScores) {
+          Object.keys(parsedResult.rubricScores).forEach(key => {
+            const score = parsedResult.rubricScores[key];
+            parsedResult.rubricScores[key] = Math.max(1, Math.min(5, Math.round(score)));
+          });
+        }
+        
+        return parsedResult;
       }
     } catch (error) {
       Logger.error("Answer evaluation error:", error);
@@ -401,7 +428,7 @@ Please provide evaluation in JSON format:
   }
 
   /**
-   * Basic evaluation fallback
+   * Basic evaluation fallback with enhanced rubric scoring
    */
   getBasicEvaluation(question, answer) {
     const wordCount = answer.split(" ").length;
@@ -411,8 +438,20 @@ Please provide evaluation in JSON format:
 
     const baseScore = Math.min(90, 40 + wordCount * 2 + (hasKeywords ? 20 : 0));
 
+    // Generate basic rubric scores based on answer analysis
+    const rubricScores = {
+      relevance: hasKeywords ? Math.min(5, Math.floor(baseScore / 20) + 1) : Math.max(1, Math.floor(baseScore / 25)),
+      clarity: wordCount > 20 ? Math.min(5, Math.floor(baseScore / 20)) : Math.max(1, Math.floor(baseScore / 30)),
+      depth: wordCount > 50 ? Math.min(5, Math.floor(baseScore / 18)) : Math.max(1, Math.floor(baseScore / 30)),
+      structure: /[.!?]/.test(answer) ? Math.min(5, Math.floor(baseScore / 20)) : Math.max(1, Math.floor(baseScore / 35))
+    };
+
+    // Generate basic model answer based on question type
+    const modelAnswer = this.generateBasicModelAnswer(question);
+
     return {
       score: baseScore,
+      rubricScores,
       breakdown: {
         technical: baseScore,
         communication: Math.min(100, baseScore + 5),
@@ -424,14 +463,34 @@ Please provide evaluation in JSON format:
           : ["Direct answer"],
       improvements:
         wordCount < 30
-          ? ["Provide more detail", "Add examples"]
-          : ["Consider edge cases"],
+          ? ["Provide more specific details and examples", "Structure your response with clear points"]
+          : ["Consider addressing potential edge cases", "Add concrete examples to strengthen your answer"],
       feedback: `Your answer ${
         wordCount > 50
           ? "shows good detail and understanding"
           : "could benefit from more elaboration and examples"
       }.`,
+      modelAnswer
     };
+  }
+
+  /**
+   * Generate a basic model answer for fallback scenarios
+   */
+  generateBasicModelAnswer(question) {
+    const questionType = question.type || 'general';
+    const category = question.category || 'general';
+    
+    switch (questionType) {
+      case 'technical':
+        return `A strong technical answer would include: 1) Clear explanation of the concept, 2) Practical implementation details, 3) Relevant examples or use cases, 4) Consideration of alternatives or trade-offs.`;
+      case 'behavioral':
+        return `A strong behavioral answer would follow the STAR method: 1) Situation - context and background, 2) Task - what needed to be accomplished, 3) Action - specific steps taken, 4) Result - outcomes and lessons learned.`;
+      case 'system-design':
+        return `A strong system design answer would cover: 1) Requirements clarification, 2) High-level architecture, 3) Component design and data flow, 4) Scalability and performance considerations.`;
+      default:
+        return `A strong answer would be well-structured, directly address the question, provide specific examples, and demonstrate clear understanding of ${category} concepts.`;
+    }
   }
 }
 

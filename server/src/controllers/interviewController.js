@@ -188,22 +188,49 @@ const submitAnswer = async (req, res) => {
     };
     interview.questions[qIndex].timeSpent = timeSpent || 0;
 
-    // AI-powered scoring
-    let score;
+    // AI-powered scoring with enhanced feedback
+    let evaluation;
     try {
       console.log("Evaluating answer with AI for question:", qIndex);
-      score = await aiQuestionService.evaluateAnswer(
-        interview.questions[qIndex].questionText,
+      
+      // Create question object with necessary fields for AI evaluation
+      const questionObj = {
+        text: interview.questions[qIndex].questionText,
+        category: interview.questions[qIndex].category,
+        type: interview.questions[qIndex].type || 'general',
+        difficulty: interview.questions[qIndex].difficulty
+      };
+      
+      evaluation = await aiQuestionService.evaluateAnswer(
+        questionObj,
         answer,
         interview.config
       );
-      console.log("AI evaluation completed:", score);
+      console.log("AI evaluation completed:", evaluation);
     } catch (error) {
       console.error("AI evaluation failed, using basic scoring:", error);
-      score = calculateBasicScore(answer, interview.questions[qIndex]);
+      const questionObj = {
+        text: interview.questions[qIndex].questionText,
+        category: interview.questions[qIndex].category,
+        type: interview.questions[qIndex].type || 'general',
+        difficulty: interview.questions[qIndex].difficulty
+      };
+      evaluation = aiQuestionService.getBasicEvaluation(questionObj, answer);
     }
 
-    interview.questions[qIndex].score = score;
+    // Update question with enhanced scoring and feedback
+    interview.questions[qIndex].score = {
+      overall: evaluation.score,
+      rubricScores: evaluation.rubricScores || {},
+      breakdown: evaluation.breakdown || {}
+    };
+    
+    interview.questions[qIndex].feedback = {
+      strengths: evaluation.strengths || [],
+      improvements: evaluation.improvements || [],
+      suggestions: evaluation.feedback || "",
+      modelAnswer: evaluation.modelAnswer || ""
+    };
 
     // Track score for adaptive difficulty if enabled
     if (interview.config.adaptiveDifficulty?.enabled) {
@@ -222,7 +249,7 @@ const submitAnswer = async (req, res) => {
       const historyEntry = {
         questionIndex: qIndex,
         difficulty: currentDifficulty,
-        score: score.overall,
+        score: evaluation.score || 0,
         timestamp: new Date(),
       };
       
