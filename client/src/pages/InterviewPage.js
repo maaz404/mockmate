@@ -193,12 +193,12 @@ const InterviewPage = () => {
           <div className="space-y-6">
             <div className="bg-gray-800 rounded-lg p-6">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-lg font-semibold text-blue-400">
+                <h2 className="text-lg font-semibold text-primary-400">
                   Current Question
                 </h2>
                 <div className="text-right text-sm">
                   <span className="text-gray-400">Category: </span>
-                  <span className="text-blue-400">{currentQuestion.category}</span>
+                  <span className="text-primary-400">{currentQuestion.category}</span>
                   <br />
                   <span className="text-gray-400">Difficulty: </span>
                   <span className="text-yellow-400">{currentQuestion.difficulty}</span>
@@ -236,7 +236,7 @@ const InterviewPage = () => {
               </button>
               <button 
                 onClick={handleNext}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 py-3 px-6 rounded-lg font-medium transition-colors"
+                className="flex-1 bg-primary-600 hover:bg-primary-700 py-3 px-6 rounded-lg font-medium transition-colors"
               >
                 {currentQuestionIndex === interview.questions.length - 1 ? 'Finish Interview' : 'Next Question'}
               </button>
