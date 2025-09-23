@@ -52,7 +52,31 @@
   }
   
   .form-input {
-    @apply block w-full px-4 py-3 border border-surface-300 rounded-xl shadow-sm placeholder-surface-400 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200;
+    @apply block w-full px-4 py-3 bg-surface-700 border border-surface-600 rounded-xl shadow-sm placeholder-surface-400 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200;
+  }
+  
+  .form-select {
+    @apply block w-full px-4 py-3 bg-surface-700 border border-surface-600 rounded-xl shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-surface-300 mb-2;
+  }
+
+  .form-radio-card {
+    @apply p-4 border rounded-xl cursor-pointer transition-all duration-200 bg-surface-700/30 border-surface-600 hover:border-surface-500;
+  }
+
+  .form-radio-card.selected {
+    @apply border-primary-500 bg-primary-500/10 ring-2 ring-primary-500/50;
+  }
+
+  .form-checkbox-card {
+    @apply px-4 py-3 rounded-lg border cursor-pointer text-sm transition-all bg-surface-700/30 text-surface-300 border-surface-600 hover:border-surface-500;
+  }
+
+  .form-checkbox-card.selected {
+    @apply bg-green-500/20 text-green-300 border-green-500/50;
   }
   
   .card {

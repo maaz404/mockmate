@@ -8,15 +8,15 @@ const LoadingSpinner = ({ size = "medium", message = "Loading..." }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-surface-900">
       <div className="text-center">
         {/* Spinner */}
         <div
-          className={`${sizeClasses[size]} border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4`}
+          className={`${sizeClasses[size]} border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin mx-auto mb-4`}
         ></div>
 
         {/* Message */}
-        <p className="text-gray-600 font-medium">{message}</p>
+        <p className="text-surface-300 font-medium">{message}</p>
       </div>
     </div>
   );
