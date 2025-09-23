@@ -73,10 +73,14 @@ const ComprehensiveDashboard = () => {
         setShowOnboarding(false);
         // Refresh data
         fetchUserData();
+      } else {
+        throw new Error(response.message || "Failed to complete onboarding");
       }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Error completing onboarding:", error);
+      // Re-throw the error so the onboarding modal can handle it
+      throw error;
     }
   };
 

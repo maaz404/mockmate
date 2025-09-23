@@ -2,11 +2,16 @@ const OpenAI = require("openai");
 
 class AdvancedFeedbackService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
     this.isConfigured = !!process.env.OPENAI_API_KEY;
+    
+    if (this.isConfigured) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    } else {
+      console.warn("OpenAI API key not configured. Advanced feedback features will be disabled.");
+      this.openai = null;
+    }
 
     // Feedback criteria weights
     this.criteria = {

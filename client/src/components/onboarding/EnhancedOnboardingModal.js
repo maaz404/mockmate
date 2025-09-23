@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
 import { X, User, Briefcase, Target, Settings } from "lucide-react";
+import toast from "react-hot-toast";
 
 const OnboardingModal = ({ isOpen, onClose }) => {
   const { refreshProfile } = useAuthContext();
@@ -9,7 +10,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     professionalInfo: {
-      title: "",
+      currentRole: "",
       company: "",
       experience: "",
       skills: [],
@@ -116,11 +117,17 @@ const OnboardingModal = ({ isOpen, onClose }) => {
   const handleComplete = async () => {
     setLoading(true);
     try {
-      await api.post("/users/onboarding/complete", formData);
-      await refreshProfile();
-      onClose();
+      const response = await api.post("/users/onboarding/complete", formData);
+      if (response.data && response.data.success) {
+        await refreshProfile();
+        onClose();
+        toast.success("Profile setup completed successfully!");
+      } else {
+        throw new Error(response.data?.message || "Failed to complete setup");
+      }
     } catch (error) {
-      // Handle error silently
+      console.error("Onboarding completion failed:", error); // eslint-disable-line no-console
+      toast.error(error.response?.data?.message || "Failed to complete setup. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -147,9 +154,9 @@ const OnboardingModal = ({ isOpen, onClose }) => {
           </label>
           <input
             type="text"
-            value={formData.professionalInfo.title}
+            value={formData.professionalInfo.currentRole}
             onChange={(e) =>
-              handleInputChange("professionalInfo", "title", e.target.value)
+              handleInputChange("professionalInfo", "currentRole", e.target.value)
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="e.g., Software Engineer, Product Manager"
