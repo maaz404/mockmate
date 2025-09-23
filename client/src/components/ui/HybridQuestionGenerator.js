@@ -51,11 +51,11 @@ const HybridQuestionGenerator = ({ onQuestionsGenerated }) => {
           onQuestionsGenerated(response.data.questions);
         }
       } else {
-        console.error("Failed to generate questions:", response.message);
+        // Failed to generate questions
         alert("Failed to generate questions. Please try again.");
       }
     } catch (error) {
-      console.error("Error generating questions:", error);
+      // Error generating questions
       alert("An error occurred while generating questions. Please try again.");
     } finally {
       setLoading(false);
