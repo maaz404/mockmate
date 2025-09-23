@@ -14,6 +14,7 @@ const InterviewCreationPage = () => {
     duration: 30,
     difficulty: "medium",
     focusAreas: [],
+    language: "en", // Add language field with default English
   });
   const [loading, setLoading] = useState(false);
 
@@ -22,6 +23,21 @@ const InterviewCreationPage = () => {
     { value: "intermediate", label: "Intermediate (2-5 years)" },
     { value: "senior", label: "Senior (5-10 years)" },
     { value: "expert", label: "Expert (10+ years)" },
+  ];
+
+  const languages = [
+    { value: "en", label: "English", flag: "🇺🇸" },
+    { value: "es", label: "Español", flag: "🇪🇸" },
+    { value: "fr", label: "Français", flag: "🇫🇷" },
+    { value: "de", label: "Deutsch", flag: "🇩🇪" },
+    { value: "it", label: "Italiano", flag: "🇮🇹" },
+    { value: "pt", label: "Português", flag: "🇵🇹" },
+    { value: "zh", label: "中文", flag: "🇨🇳" },
+    { value: "ja", label: "日本語", flag: "🇯🇵" },
+    { value: "ko", label: "한국어", flag: "🇰🇷" },
+    { value: "hi", label: "हिन्दी", flag: "🇮🇳" },
+    { value: "ar", label: "العربية", flag: "🇸🇦" },
+    { value: "ru", label: "Русский", flag: "🇷🇺" },
   ];
 
   const interviewTypes = [
@@ -224,6 +240,48 @@ const InterviewCreationPage = () => {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Language Selection */}
+            <div>
+              <label className="block text-sm font-medium text-surface-300 mb-4">
+                Interview Language
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {languages.map((lang) => (
+                  <div
+                    key={lang.value}
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                      formData.language === lang.value
+                        ? "border-primary-500 bg-primary-500/10 ring-2 ring-primary-500/50"
+                        : "border-surface-600 hover:border-surface-500 bg-surface-700/30"
+                    }`}
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        language: lang.value,
+                      }))
+                    }
+                  >
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        value={lang.value}
+                        checked={formData.language === lang.value}
+                        onChange={() => {}}
+                        className="text-primary-500 bg-surface-700 border-surface-600 focus:ring-primary-500"
+                      />
+                      <span className="text-lg">{lang.flag}</span>
+                      <span className="text-sm font-medium text-white truncate">
+                        {lang.label}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-surface-400 mt-2">
+                Questions and feedback will be generated in the selected language. Voice transcription will auto-detect the spoken language.
+              </p>
             </div>
 
             {/* Interview Type */}

@@ -107,12 +107,32 @@ class AIQuestionService {
       difficulty,
       questionCount,
       userProfile,
+      language = "en", // Add language parameter with default
     } = params;
+
+    // Language mapping for better prompts
+    const languageNames = {
+      en: "English",
+      es: "Spanish", 
+      fr: "French",
+      de: "German",
+      it: "Italian",
+      pt: "Portuguese",
+      zh: "Chinese",
+      ja: "Japanese",
+      ko: "Korean",
+      hi: "Hindi",
+      ar: "Arabic",
+      ru: "Russian"
+    };
+
+    const targetLanguage = languageNames[language] || "English";
 
     let prompt = `Generate ${questionCount} interview questions for a ${jobRole} position with ${experienceLevel} experience level.\n\n`;
 
     prompt += `Interview Type: ${interviewType}\n`;
-    prompt += `Difficulty Level: ${difficulty}\n\n`;
+    prompt += `Difficulty Level: ${difficulty}\n`;
+    prompt += `Target Language: ${targetLanguage}\n\n`;
 
     if (skills.length > 0) {
       prompt += `Relevant Skills/Technologies: ${skills.join(", ")}\n`;
@@ -127,25 +147,26 @@ class AIQuestionService {
       prompt += `\nCandidate has ${userProfile.professionalInfo.yearsOfExperience} years of experience.\n`;
     }
 
-    prompt += `\nPlease provide questions in the following JSON format:
+    prompt += `\nPlease provide questions in the following JSON format in ${targetLanguage}:
 [
   {
-    "text": "Question text here",
+    "text": "Question text here in ${targetLanguage}",
     "type": "technical|behavioral|coding|system-design",
     "category": "specific technology or skill area",
     "difficulty": "easy|medium|hard",
-    "followUp": "Optional follow-up question",
+    "followUp": "Optional follow-up question in ${targetLanguage}",
     "evaluationCriteria": {
       "technical": ["criterion 1", "criterion 2"],
       "communication": ["criterion 1", "criterion 2"],
       "problemSolving": ["criterion 1", "criterion 2"]
     },
-    "expectedAnswer": "Brief outline of what a good answer should cover",
+    "expectedAnswer": "Brief outline of what a good answer should cover in ${targetLanguage}",
     "timeEstimate": "estimated time to answer in minutes"
   }
 ]
 
 Requirements:
+- Generate all questions and content in ${targetLanguage}
 - Mix question types appropriately based on interview type
 - Ensure questions are relevant to the job role and experience level
 - Include both broad conceptual questions and specific technical questions

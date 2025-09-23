@@ -20,9 +20,12 @@ class TranscriptionService {
    * Transcribe a video file using OpenAI Whisper API
    * @param {string} videoFilePath - Path to the video file
    * @param {string} filename - Original filename for context
+   * @param {Object} options - Transcription options
+   * @param {string} options.language - Language code (optional, auto-detect if not provided)
+   * @param {string} options.expectedLanguage - Expected interview language for validation
    * @returns {Promise<Object>} - Transcription result
    */
-  async transcribeVideo(videoFilePath, filename) {
+  async transcribeVideo(videoFilePath, filename, options = {}) {
     try {
       if (!this.isConfigured) {
         console.warn("OpenAI not configured, skipping transcription");
@@ -56,23 +59,32 @@ class TranscriptionService {
       // Create a readable stream for the video file
       const audioFile = fs.createReadStream(videoFilePath);
       
-      // Call OpenAI Whisper API
-      const transcription = await this.openai.audio.transcriptions.create({
+      // Prepare transcription options
+      const transcriptionOptions = {
         file: audioFile,
         model: "whisper-1",
-        language: "en", // Assuming English for now, could be made configurable
         response_format: "verbose_json", // Get detailed response with timestamps
         temperature: 0.2 // Lower temperature for more consistent transcription
-      });
+      };
 
-      console.log(`Transcription completed for ${filename}`);
+      // Use auto-detection if no language specified, otherwise use provided language
+      if (options.language && options.language !== 'auto') {
+        transcriptionOptions.language = options.language;
+      }
+      // If no language specified, Whisper will auto-detect
+
+      // Call OpenAI Whisper API
+      const transcription = await this.openai.audio.transcriptions.create(transcriptionOptions);
+
+      console.log(`Transcription completed for ${filename}. Detected language: ${transcription.language}`);
 
       return {
         success: true,
         transcript: {
           text: transcription.text,
           duration: transcription.duration,
-          language: transcription.language,
+          detectedLanguage: transcription.language, // Language detected by Whisper
+          expectedLanguage: options.expectedLanguage, // Expected interview language
           segments: transcription.segments || [],
           generatedAt: new Date()
         }
