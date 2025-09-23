@@ -69,27 +69,44 @@ const HeroSection = () => {
               transition={{ delay: 0.5 }}
               className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8"
             >
-              <Link to="/register" className="btn-primary group">
+              <Link 
+                to="/register" 
+                className="btn-primary group"
+                aria-label="Get started with MockMate free account"
+              >
                 Get Started Free
                 <ArrowRight
                   size={20}
                   className="ml-2 group-hover:translate-x-1 transition-transform"
+                  aria-hidden="true"
                 />
               </Link>
-              <button className="btn-secondary group">
-                <Play size={20} className="mr-2" />
+              <button 
+                className="btn-secondary group"
+                aria-label="Watch MockMate demo video"
+              >
+                <Play size={20} className="mr-2" aria-hidden="true" />
                 View Demo
               </button>
 
               <SignedIn>
-                <Link to="/dashboard" className="btn-primary group">
+                <Link 
+                  to="/dashboard" 
+                  className="btn-primary group"
+                  aria-label="Access your MockMate dashboard"
+                >
                   Access Dashboard
                   <ArrowRight
                     size={20}
                     className="ml-2 group-hover:translate-x-1 transition-transform"
+                    aria-hidden="true"
                   />
                 </Link>
-                <Link to="/mock-interview" className="btn-secondary">
+                <Link 
+                  to="/mock-interview" 
+                  className="btn-secondary"
+                  aria-label="Start a new practice interview session"
+                >
                   Start Practice Session
                 </Link>
               </SignedIn>
@@ -103,11 +120,12 @@ const HeroSection = () => {
               className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-3 sm:space-y-0 sm:space-x-6 text-surface-400 text-sm"
             >
               <div className="flex items-center space-x-2">
-                <div className="flex -space-x-2">
+                <div className="flex -space-x-2" role="img" aria-label="Technology stack represented by letters A through E">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div
                       key={i}
                       className="w-8 h-8 bg-gradient-to-r from-primary-400 to-accent-400 rounded-full border-2 border-surface-800 flex items-center justify-center text-xs font-bold text-white"
+                      aria-hidden="true"
                     >
                       {String.fromCharCode(64 + i)}
                     </div>
@@ -116,12 +134,13 @@ const HeroSection = () => {
                 <span>Built with modern web technologies</span>
               </div>
               <div className="flex items-center space-x-1">
-                <div className="flex text-yellow-400">
+                <div className="flex text-yellow-400" role="img" aria-label="5 star rating">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <svg
                       key={star}
                       className="w-4 h-4 fill-current"
                       viewBox="0 0 20 20"
+                      aria-hidden="true"
                     >
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
