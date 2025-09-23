@@ -26,7 +26,6 @@ import SessionSummaryPage from "./pages/SessionSummaryPage";
 import SupportPage from "./pages/SupportPage";
 import HybridQuestionDemo from "./pages/HybridQuestionDemo";
 import CodingChallengeDemo from "./pages/CodingChallengeDemo";
-import SidebarTestPage from "./pages/SidebarTestPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -91,7 +90,6 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/demo" element={<HybridQuestionDemo />} />
               <Route path="/coding-demo" element={<CodingChallengeDemo />} />
-              <Route path="/sidebar-test" element={<SidebarTestPage />} />
 
               {/* Protected Routes */}
               <Route
