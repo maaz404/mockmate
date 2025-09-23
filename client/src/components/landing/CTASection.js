@@ -45,11 +45,11 @@ const ProjectShowcaseSection = () => {
   ];
 
   return (
-    <section className="relative section-padding bg-gradient-to-br from-surface-900 via-surface-800 to-surface-900 overflow-hidden">
+    <section className="relative section-padding bg-surface-50 dark:bg-gradient-to-br dark:from-surface-900 dark:via-surface-800 dark:to-surface-900 overflow-hidden transition-colors duration-200">
       {/* Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/5 dark:bg-primary-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/5 dark:bg-accent-500/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto container-padding text-center">
@@ -59,10 +59,10 @@ const ProjectShowcaseSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center space-x-2 bg-surface-800/50 backdrop-blur-sm border border-surface-700 rounded-full px-4 py-2 mb-8"
+          className="inline-flex items-center space-x-2 bg-surface-200/50 dark:bg-surface-800/50 backdrop-blur-sm border border-surface-300 dark:border-surface-700 rounded-full px-4 py-2 mb-8"
         >
-          <Award size={16} className="text-primary-400" />
-          <span className="text-surface-300 text-sm font-medium">
+          <Award size={16} className="text-primary-600 dark:text-primary-400" />
+          <span className="text-surface-700 dark:text-surface-300 text-sm font-medium">
             Final Year Academic Project
           </span>
         </motion.div>
@@ -73,7 +73,7 @@ const ProjectShowcaseSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-4xl lg:text-6xl font-bold text-white mb-6"
+          className="text-4xl lg:text-6xl font-bold text-surface-900 dark:text-white mb-6"
         >
           Explore the <span className="gradient-text">Project</span>
         </motion.h2>
@@ -84,7 +84,7 @@ const ProjectShowcaseSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-xl text-surface-400 mb-8 max-w-2xl mx-auto"
+          className="text-xl text-surface-600 dark:text-surface-400 mb-8 max-w-2xl mx-auto"
         >
           A comprehensive demonstration of modern web development practices,
           showcasing full-stack architecture, AI integration, and sophisticated
@@ -101,8 +101,8 @@ const ProjectShowcaseSection = () => {
         >
           {projectHighlights.map((highlight, index) => (
             <div key={index} className="flex items-center space-x-3 text-left">
-              <Star size={20} className="text-primary-400 flex-shrink-0" />
-              <span className="text-surface-300">{highlight}</span>
+              <Star size={20} className="text-primary-600 dark:text-primary-400 flex-shrink-0" />
+              <span className="text-surface-700 dark:text-surface-300">{highlight}</span>
             </div>
           ))}
         </motion.div>
