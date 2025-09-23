@@ -22,6 +22,7 @@ import MockInterviewPage from "./pages/MockInterviewPage";
 import PracticePage from "./pages/PracticePage";
 import ResourcesPage from "./pages/ResourcesPage";
 import ReportsPage from "./pages/ReportsPage";
+import SessionSummaryPage from "./pages/SessionSummaryPage";
 import SupportPage from "./pages/SupportPage";
 import HybridQuestionDemo from "./pages/HybridQuestionDemo";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -188,6 +189,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ReportsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/session-summary/:interviewId"
+                element={
+                  <ProtectedRoute>
+                    <SessionSummaryPage />
                   </ProtectedRoute>
                 }
               />

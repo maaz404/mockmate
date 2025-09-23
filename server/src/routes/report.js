@@ -449,4 +449,124 @@ ${
 For detailed analysis, please view the full JSON report.`;
 }
 
+// Import new services
+const sessionSummaryService = require("../services/sessionSummaryService");
+const pdfGenerationService = require("../services/pdfGenerationService");
+const { requireProPlan, checkProPlan } = require("../middleware/proPlan");
+
+// @desc    Get session summary
+// @route   GET /api/reports/:interviewId/session-summary
+// @access  Private
+router.get("/:interviewId/session-summary", requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { interviewId } = req.params;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      userId,
+    });
+
+    if (!interview) {
+      return res.status(404).json({
+        success: false,
+        message: "Interview not found",
+      });
+    }
+
+    const summary = await sessionSummaryService.generateSessionSummary(
+      interviewId,
+      userId
+    );
+
+    if (!summary.success) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate session summary",
+        error: summary.error,
+      });
+    }
+
+    // Check if user has pro plan for enhanced features
+    const hasProPlan = await checkProPlan(userId);
+
+    res.json({
+      success: true,
+      message: "Session summary generated successfully",
+      data: {
+        summary: summary.summary,
+        hasProAccess: hasProPlan,
+        availableExports: hasProPlan ? ["json", "pdf"] : ["json"],
+      },
+    });
+  } catch (error) {
+    console.error("Get session summary error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve session summary",
+    });
+  }
+});
+
+// @desc    Export session summary as PDF
+// @route   GET /api/reports/:interviewId/export-pdf
+// @access  Private (Pro plan required)
+router.get("/:interviewId/export-pdf", requireAuth, requireProPlan, async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { interviewId } = req.params;
+
+    // Get interview and user profile
+    const [interview, userProfile] = await Promise.all([
+      Interview.findOne({ _id: interviewId, userId }),
+      UserProfile.findOne({ clerkUserId: userId })
+    ]);
+
+    if (!interview) {
+      return res.status(404).json({
+        success: false,
+        message: "Interview not found",
+      });
+    }
+
+    // Generate session summary
+    const summaryResult = await sessionSummaryService.generateSessionSummary(
+      interviewId,
+      userId
+    );
+
+    if (!summaryResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate session summary for PDF export",
+        error: summaryResult.error,
+      });
+    }
+
+    // Generate PDF
+    const pdfBuffer = await pdfGenerationService.generateSessionSummaryPDF(
+      summaryResult.summary,
+      userProfile
+    );
+
+    // Set headers for PDF download
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="interview-summary-${interviewId}.pdf"`
+    );
+    res.setHeader("Content-Length", pdfBuffer.length);
+
+    // Send PDF
+    res.end(pdfBuffer);
+  } catch (error) {
+    console.error("Export PDF error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to export PDF",
+      error: error.message,
+    });
+  }
+});
+
 module.exports = router;
