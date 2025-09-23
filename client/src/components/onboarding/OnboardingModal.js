@@ -197,7 +197,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
           <div className="mt-4">
             <div className="bg-surface-200 rounded-full h-2">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               ></div>
             </div>
@@ -228,7 +228,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="e.g., Software Developer"
                     />
                   </div>
@@ -246,7 +246,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     >
                       <option value="entry">Entry Level (0-2 years)</option>
                       <option value="junior">Junior (2-4 years)</option>
@@ -271,7 +271,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="e.g., Technology, Finance, Healthcare"
                     />
                   </div>
@@ -290,7 +290,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Optional"
                     />
                   </div>
@@ -320,7 +320,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       rows={3}
                       placeholder="e.g., JavaScript, React, Node.js, Python, AWS, Leadership"
                     />
@@ -339,7 +339,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           e.target.value
                         )
                       }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       rows={2}
                       placeholder="e.g., Senior Developer, Tech Lead, Product Manager"
                     />
@@ -391,7 +391,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                                 );
                               }
                             }}
-                            className="rounded border-surface-300 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-surface-300 text-primary-600 focus:ring-primary-500"
                           />
                           <span className="ml-2 text-sm text-surface-700 capitalize">
                             {type.replace("-", " ")}
@@ -420,7 +420,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                           }
                           className={`flex-1 px-3 py-2 text-sm ${
                             formData.preferences.difficulty === level
-                              ? "bg-blue-600 text-white"
+                              ? "bg-primary-600 text-white"
                               : "bg-white text-surface-700 hover:bg-surface-50"
                           } transition-colors`}
                         >
@@ -487,7 +487,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
                             setLanguageInput("");
                           }
                         }}
-                        className="flex-1 border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         placeholder="Add a language and press Enter"
                       />
                       <button
@@ -576,7 +576,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
             <button
               onClick={nextStep}
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
             >
               {loading
                 ? "Saving..."

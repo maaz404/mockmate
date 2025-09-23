@@ -112,7 +112,7 @@ const SettingsPage = () => {
                       onClick={() => setActiveTab(tab.id)}
                       className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                         activeTab === tab.id
-                          ? "bg-blue-50 text-blue-600 border border-blue-200"
+                          ? "bg-primary-50 text-primary-600 border border-primary-200"
                           : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
@@ -141,7 +141,7 @@ const SettingsPage = () => {
                   </p>
                   <button
                     onClick={() => setShowOnboarding(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                   >
                     Restart Onboarding
                   </button>
@@ -177,7 +177,7 @@ const SettingsPage = () => {
                       <div
                         className={`w-11 h-6 rounded-full transition-colors ${
                           preferences.notifications?.email
-                            ? "bg-blue-600"
+                            ? "bg-primary-600"
                             : "bg-gray-200"
                         }`}
                       >
@@ -213,7 +213,7 @@ const SettingsPage = () => {
                       <div
                         className={`w-11 h-6 rounded-full transition-colors ${
                           preferences.notifications?.push
-                            ? "bg-blue-600"
+                            ? "bg-primary-600"
                             : "bg-gray-200"
                         }`}
                       >
@@ -252,7 +252,7 @@ const SettingsPage = () => {
                       <div
                         className={`w-11 h-6 rounded-full transition-colors ${
                           preferences.notifications?.interviews
-                            ? "bg-blue-600"
+                            ? "bg-primary-600"
                             : "bg-gray-200"
                         }`}
                       >
@@ -288,7 +288,7 @@ const SettingsPage = () => {
                       <div
                         className={`w-11 h-6 rounded-full transition-colors ${
                           preferences.notifications?.progress
-                            ? "bg-blue-600"
+                            ? "bg-primary-600"
                             : "bg-gray-200"
                         }`}
                       >
@@ -392,7 +392,7 @@ const SettingsPage = () => {
                             <div
                               className={`w-11 h-6 rounded-full transition-colors ${
                                 preferences.facialAnalysis?.enabled
-                                  ? "bg-blue-600"
+                                  ? "bg-primary-600"
                                   : "bg-gray-200"
                               }`}
                             >
@@ -429,7 +429,7 @@ const SettingsPage = () => {
                                 <div
                                   className={`w-9 h-5 rounded-full transition-colors ${
                                     preferences.facialAnalysis?.autoCalibration !== false
-                                      ? "bg-blue-500"
+                                      ? "bg-primary-500"
                                       : "bg-gray-200"
                                   }`}
                                 >
@@ -464,7 +464,7 @@ const SettingsPage = () => {
                                 <div
                                   className={`w-9 h-5 rounded-full transition-colors ${
                                     preferences.facialAnalysis?.showConfidenceMeter !== false
-                                      ? "bg-blue-500"
+                                      ? "bg-primary-500"
                                       : "bg-gray-200"
                                   }`}
                                 >
@@ -499,7 +499,7 @@ const SettingsPage = () => {
                                 <div
                                   className={`w-9 h-5 rounded-full transition-colors ${
                                     preferences.facialAnalysis?.showRealtimeFeedback !== false
-                                      ? "bg-blue-500"
+                                      ? "bg-primary-500"
                                       : "bg-gray-200"
                                   }`}
                                 >
@@ -547,9 +547,9 @@ const SettingsPage = () => {
 
                         {/* Consent Status */}
                         {preferences.facialAnalysis?.consentGiven && (
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
                             <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                              <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
                               <span className="text-sm text-blue-800">
                                 Consent given on {new Date(preferences.facialAnalysis.consentDate).toLocaleDateString()}
                               </span>
@@ -595,7 +595,7 @@ const SettingsPage = () => {
                       <button
                         onClick={handleExportData}
                         disabled={loading}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
                       >
                         <Download className="h-4 w-4" />
                         <span>{loading ? "Exporting..." : "Export Data"}</span>

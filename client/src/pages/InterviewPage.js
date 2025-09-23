@@ -141,7 +141,7 @@ const InterviewPage = () => {
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2">
             <div
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              className="bg-primary-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             ></div>
           </div>
@@ -251,7 +251,7 @@ const InterviewPage = () => {
                   <button 
                     onClick={() => toggleSetting('videoRecording')}
                     className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      settings.videoRecording ? 'bg-blue-600' : 'bg-gray-600'
+                      settings.videoRecording ? 'bg-primary-600' : 'bg-gray-600'
                     }`}
                   >
                     <div className={`bg-white w-4 h-4 rounded-full transition-transform ${
@@ -264,7 +264,7 @@ const InterviewPage = () => {
                   <button 
                     onClick={() => toggleSetting('audioRecording')}
                     className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      settings.audioRecording ? 'bg-blue-600' : 'bg-gray-600'
+                      settings.audioRecording ? 'bg-primary-600' : 'bg-gray-600'
                     }`}
                   >
                     <div className={`bg-white w-4 h-4 rounded-full transition-transform ${
@@ -277,7 +277,7 @@ const InterviewPage = () => {
                   <button 
                     onClick={() => toggleSetting('questionAudio')}
                     className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      settings.questionAudio ? 'bg-blue-600' : 'bg-gray-600'
+                      settings.questionAudio ? 'bg-primary-600' : 'bg-gray-600'
                     }`}
                   >
                     <div className={`bg-white w-4 h-4 rounded-full transition-transform ${
