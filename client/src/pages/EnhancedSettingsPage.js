@@ -4,9 +4,10 @@ import UserProfileCard from "../components/profile/UserProfileCard";
 import EnhancedOnboardingModal from "../components/onboarding/EnhancedOnboardingModal";
 import { Settings, Bell, Shield, Eye, Trash2, Download } from "lucide-react";
 import api from "../services/api";
+import toast from "react-hot-toast";
 
 const SettingsPage = () => {
-  const { userProfile } = useAuthContext();
+  const { userProfile, refreshProfile } = useAuthContext();
   const [activeTab, setActiveTab] = useState("profile");
   const [preferences, setPreferences] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -32,10 +33,17 @@ const SettingsPage = () => {
     setPreferences(updatedPreferences);
 
     try {
-      await api.put("/users/profile", { preferences: updatedPreferences });
+      const response = await api.put("/users/profile", { preferences: updatedPreferences });
+      if (response.data && response.data.success) {
+        // Refresh the profile context to sync the updated data
+        await refreshProfile();
+        toast.success("Preferences updated successfully");
+      }
     } catch (error) {
-      // Handle error silently
+      console.error("Error updating preferences:", error); // eslint-disable-line no-console
+      // Revert the local state on error
       setPreferences(userProfile.preferences);
+      toast.error("Failed to save preferences. Please try again.");
     }
   };
 

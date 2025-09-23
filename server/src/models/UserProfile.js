@@ -115,6 +115,12 @@ const userProfileSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
+    profileCompletenessPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
   },
   {
     timestamps: true,
@@ -143,6 +149,7 @@ userProfileSchema.methods.calculateCompleteness = function () {
   });
 
   this.profileCompleteness = Math.round(completeness);
+  this.profileCompletenessPercentage = this.profileCompleteness; // For frontend compatibility
   return this.profileCompleteness;
 };
 
