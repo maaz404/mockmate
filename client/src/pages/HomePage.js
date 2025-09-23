@@ -10,7 +10,7 @@ import CTASection from "../components/landing/CTASection";
 
 const HomePage = () => {
   return (
-    <div className="min-h-screen bg-gradient-dark">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
       <HeroSection />
       <TrustBarSection />
       <FeaturesSection />

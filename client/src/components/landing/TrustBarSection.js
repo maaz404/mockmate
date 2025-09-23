@@ -66,7 +66,7 @@ const TechStackSection = () => {
   ];
 
   return (
-    <section className="py-16 bg-surface-50 border-b border-surface-200">
+    <section className="py-16 bg-surface-50 dark:bg-surface-900 border-b border-surface-200 dark:border-surface-700 transition-colors duration-200">
       <div className="max-w-7xl mx-auto container-padding">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -75,7 +75,7 @@ const TechStackSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <p className="text-surface-600 font-medium mb-8">
+          <p className="text-surface-600 dark:text-surface-400 font-medium mb-8">
             Built with modern web technologies and best practices
           </p>
 
@@ -90,16 +90,16 @@ const TechStackSection = () => {
                 className="flex flex-col items-center justify-center"
               >
                 <div className="group cursor-pointer">
-                  <div className="w-16 h-16 bg-white rounded-xl shadow-surface border border-surface-200 flex items-center justify-center mb-3 group-hover:shadow-surface-md transition-all duration-200 group-hover:scale-105">
+                  <div className="w-16 h-16 bg-white dark:bg-surface-800 rounded-xl shadow-surface border border-surface-200 dark:border-surface-700 flex items-center justify-center mb-3 group-hover:shadow-surface-md transition-all duration-200 group-hover:scale-105">
                     <tech.icon
                       size={28}
                       className={`${tech.color} group-hover:scale-110 transition-transform`}
                     />
                   </div>
-                  <div className="text-surface-800 text-sm font-semibold text-center mb-1">
+                  <div className="text-surface-800 dark:text-surface-200 text-sm font-semibold text-center mb-1">
                     {tech.name}
                   </div>
-                  <div className="text-surface-600 text-xs text-center">
+                  <div className="text-surface-600 dark:text-surface-400 text-xs text-center">
                     {tech.description}
                   </div>
                 </div>
@@ -114,7 +114,7 @@ const TechStackSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center border-t border-surface-200 pt-12"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center border-t border-surface-200 dark:border-surface-700 pt-12"
         >
           {projectStats.map((stat, index) => (
             <motion.div
@@ -124,13 +124,13 @@ const TechStackSection = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
             >
-              <div className="text-3xl lg:text-4xl font-bold text-surface-900 mb-2">
+              <div className="text-3xl lg:text-4xl font-bold text-surface-900 dark:text-surface-100 mb-2">
                 {stat.value}
               </div>
-              <div className="text-surface-800 font-medium mb-1">
+              <div className="text-surface-800 dark:text-surface-200 font-medium mb-1">
                 {stat.label}
               </div>
-              <div className="text-surface-600 text-sm">{stat.description}</div>
+              <div className="text-surface-600 dark:text-surface-400 text-sm">{stat.description}</div>
             </motion.div>
           ))}
         </motion.div>

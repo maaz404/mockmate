@@ -245,15 +245,15 @@ const Sidebar = () => {
         flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200
         ${
           isActive(item.path)
-            ? "bg-primary-500/20 text-primary-300 border-r-2 border-primary-500"
-            : "text-surface-300 hover:text-white hover:bg-surface-700/50"
+            ? "bg-primary-500/20 text-primary-600 dark:text-primary-300 border-r-2 border-primary-500"
+            : "text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-200 dark:hover:bg-surface-700/50"
         }
         ${isCollapsed ? "justify-center" : "justify-start"}
       `}
     >
       <span
         className={`flex-shrink-0 ${
-          isActive(item.path) ? "text-primary-400" : "text-surface-400"
+          isActive(item.path) ? "text-primary-500 dark:text-primary-400" : "text-surface-500 dark:text-surface-400"
         }`}
       >
         {item.icon}
@@ -276,12 +276,12 @@ const Sidebar = () => {
       <div className="hidden lg:flex fixed top-1/2 left-0 z-60 -translate-y-1/2">
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="group flex items-center justify-center w-6 h-20 bg-surface-800 border border-surface-700 rounded-r-2xl shadow-md hover:bg-surface-700 transition-colors"
+          className="group flex items-center justify-center w-6 h-20 bg-surface-100 dark:bg-surface-800 border border-surface-300 dark:border-surface-700 rounded-r-2xl shadow-md hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
           style={{ outline: "none" }}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <svg
-            className={`w-5 h-5 text-surface-400 group-hover:text-primary-400 transition-transform ${
+            className={`w-5 h-5 text-surface-600 dark:text-surface-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-transform ${
               isCollapsed ? "rotate-180" : ""
             }`}
             fill="none"
@@ -302,7 +302,7 @@ const Sidebar = () => {
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-2 rounded-lg bg-surface-800 shadow-md border border-surface-700 text-surface-300 hover:text-white backdrop-blur-sm"
+          className="p-2 rounded-lg bg-surface-100 dark:bg-surface-800 shadow-md border border-surface-300 dark:border-surface-700 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white backdrop-blur-sm"
         >
           <svg
             className="w-6 h-6"
@@ -332,7 +332,7 @@ const Sidebar = () => {
       {/* Sidebar */}
       <div
         className={`
-          fixed top-0 left-0 z-50 h-full bg-surface-800 border-r border-surface-700 transition-all duration-300 overflow-y-auto
+          fixed top-0 left-0 z-50 h-full bg-surface-50 dark:bg-surface-800 border-r border-surface-200 dark:border-surface-700 transition-all duration-300 overflow-y-auto
           ${isCollapsed ? "w-16" : "w-64"}
           ${
             isMobileOpen
@@ -342,9 +342,9 @@ const Sidebar = () => {
         `}
       >
         {/* Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-surface-700">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-surface-200 dark:border-surface-700">
           {!isCollapsed && (
-            <Link to="/" className="text-xl font-bold gradient-text">
+            <Link to="/" className="text-xl font-bold text-surface-900 dark:text-white">
               MockMate
             </Link>
           )}
@@ -356,7 +356,7 @@ const Sidebar = () => {
           {navigationItems.map((section) => (
             <div key={section.section}>
               {!isCollapsed && (
-                <h3 className="px-3 text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">
+                <h3 className="px-3 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-3">
                   {section.section}
                 </h3>
               )}
@@ -368,7 +368,13 @@ const Sidebar = () => {
         </nav>
 
         {/* User section */}
-        <div className="border-t border-surface-700 p-4">
+        <div className="border-t border-surface-200 dark:border-surface-700 p-4 space-y-4">
+          {/* Dark Mode Toggle - Always visible */}
+          <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between px-3"}`}>
+            {!isCollapsed && <span className="text-sm text-surface-500 dark:text-surface-400">Theme</span>}
+            <DarkModeToggle />
+          </div>
+
           <SignedIn>
             <div
               className={`flex items-center ${
@@ -388,10 +394,10 @@ const Sidebar = () => {
               />
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
+                  <p className="text-sm font-medium text-surface-900 dark:text-white truncate">
                     {user?.firstName || "User"} {user?.lastName || ""}
                   </p>
-                  <p className="text-xs text-surface-400 truncate">
+                  <p className="text-xs text-surface-500 dark:text-surface-400 truncate">
                     {user?.primaryEmailAddress?.emailAddress || ""}
                   </p>
                 </div>
@@ -399,13 +405,7 @@ const Sidebar = () => {
             </div>
 
             {!isCollapsed && (
-              <div className="mt-4 space-y-3">
-                {/* Dark Mode Toggle */}
-                <div className="flex items-center justify-between px-3">
-                  <span className="text-sm text-surface-400">Theme</span>
-                  <DarkModeToggle />
-                </div>
-                
+              <div className="space-y-3">
                 <button className="w-full text-left px-3 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium">
                   Upgrade to Pro
                 </button>
@@ -418,7 +418,7 @@ const Sidebar = () => {
               <div className="space-y-2">
                 <Link
                   to="/login"
-                  className="block w-full text-center px-3 py-2 text-sm text-surface-300 hover:text-white border border-surface-600 rounded-lg hover:bg-surface-700 transition-colors"
+                  className="block w-full text-center px-3 py-2 text-sm text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white border border-surface-300 dark:border-surface-600 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
                 >
                   Sign In
                 </Link>
