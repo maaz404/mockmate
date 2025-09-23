@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { apiService } from "../services/api";
+import { interviewService } from "../services/mockmate";
+import FollowUpQuestions from "../components/FollowUpQuestions";
+=======
 import CodeEditor from "../components/ui/CodeEditor";
 import CodeExecutionResults from "../components/ui/CodeExecutionResults";
 
@@ -19,6 +22,10 @@ const InterviewExperiencePage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
+  // Follow-up questions state
+  const [followUpQuestions, setFollowUpQuestions] = useState({});
+  const [loadingFollowUps, setLoadingFollowUps] = useState({});
+  const [showFollowUps, setShowFollowUps] = useState({});
   // Coding challenge state
   const [codingLanguage, setCodingLanguage] = useState("javascript");
   const [codeExecutionResult, setCodeExecutionResult] = useState(null);
@@ -60,6 +67,33 @@ const InterviewExperiencePage = () => {
       }));
     }
   }, [interview, currentQuestionIndex, currentAnswer]);
+
+  // Submit answer and fetch follow-up questions
+  const handleSubmitAnswerWithFollowUp = useCallback(async () => {
+    if (!interview || !currentAnswer.trim()) return;
+
+    try {
+      setLoadingFollowUps(prev => ({ ...prev, [currentQuestionIndex]: true }));
+      
+      // Submit answer to backend
+      const response = await interviewService.submitAnswer(interviewId, currentQuestionIndex, {
+        answer: currentAnswer,
+        timeSpent: 0 // You can implement timing if needed
+      });
+
+      if (response.success && response.data.followUpQuestions && response.data.followUpQuestions.length > 0) {
+        setFollowUpQuestions(prev => ({
+          ...prev,
+          [currentQuestionIndex]: response.data.followUpQuestions
+        }));
+        setShowFollowUps(prev => ({ ...prev, [currentQuestionIndex]: true }));
+      }
+    } catch (error) {
+      console.error('Failed to submit answer or fetch follow-ups:', error);
+    } finally {
+      setLoadingFollowUps(prev => ({ ...prev, [currentQuestionIndex]: false }));
+    }
+  }, [interview, currentAnswer, interviewId, currentQuestionIndex]);
 
   const handleInterviewComplete = useCallback(async () => {
     if (submitting) return;
@@ -377,6 +411,70 @@ const InterviewExperiencePage = () => {
             </div>
           </div>
 
+          {/* Follow-up Questions Section */}
+          {currentAnswer.trim() && (
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Follow-up Questions</h3>
+                {!showFollowUps[currentQuestionIndex] && (
+                  <button
+                    onClick={handleSubmitAnswerWithFollowUp}
+                    disabled={loadingFollowUps[currentQuestionIndex]}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingFollowUps[currentQuestionIndex] ? (
+                      <>
+                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Generating...
+                      </>
+                    ) : (
+                      'Generate Follow-ups'
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {showFollowUps[currentQuestionIndex] && followUpQuestions[currentQuestionIndex] && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="space-y-4">
+                    {followUpQuestions[currentQuestionIndex].map((followUp, index) => (
+                      <div key={index} className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-600 text-white text-xs font-medium">
+                            {index + 1}
+                          </span>
+                        </div>
+                        <div className="flex-grow">
+                          <p className="text-gray-900 font-medium">{followUp.text}</p>
+                          {followUp.type && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                              {followUp.type}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      💡 These follow-up questions are designed to help you think deeper about your answer. 
+                      Consider how you might respond to these in a real interview.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {!showFollowUps[currentQuestionIndex] && !loadingFollowUps[currentQuestionIndex] && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-600">
+                    💡 Complete your answer above and click "Generate Follow-ups" to see additional questions 
+                    that might be asked based on your response.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex justify-between items-center">
             <button
@@ -394,6 +492,23 @@ const InterviewExperiencePage = () => {
               >
                 💾 Save Answer
               </button>
+
+              {currentAnswer.trim() && !showFollowUps[currentQuestionIndex] && (
+                <button
+                  onClick={handleSubmitAnswerWithFollowUp}
+                  disabled={loadingFollowUps[currentQuestionIndex]}
+                  className="px-6 py-3 text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingFollowUps[currentQuestionIndex] ? (
+                    <>
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Submitting...
+                    </>
+                  ) : (
+                    '🤔 Submit & Get Follow-ups'
+                  )}
+                </button>
+              )}
 
               {currentQuestionIndex === interview.questions.length - 1 ? (
                 <button

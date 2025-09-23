@@ -96,6 +96,48 @@ export const useInterview = () => {
     }
   }, []);
 
+  // Submit answer and get follow-ups
+  const submitAnswer = useCallback(async (interviewId, questionIndex, answerData) => {
+    try {
+      setError(null);
+
+      const response = await interviewService.submitAnswer(
+        interviewId,
+        questionIndex,
+        answerData
+      );
+
+      if (response.success) {
+        toast.success("Answer submitted successfully!");
+        return response.data;
+      }
+    } catch (err) {
+      setError(err.message);
+      toast.error(err.message);
+      throw err;
+    }
+  }, []);
+
+  // Get follow-up questions
+  const getFollowUpQuestions = useCallback(async (interviewId, questionIndex) => {
+    try {
+      setError(null);
+
+      const response = await interviewService.getFollowUpQuestions(
+        interviewId,
+        questionIndex
+      );
+
+      if (response.success) {
+        return response.data;
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Failed to get follow-up questions:", err);
+      throw err;
+    }
+  }, []);
+
   // Reset interview state
   const resetInterview = useCallback(() => {
     setCurrentInterview(null);
@@ -114,6 +156,8 @@ export const useInterview = () => {
     fetchInterviews,
     fetchInterview,
     submitResponse,
+    submitAnswer,
+    getFollowUpQuestions,
     resetInterview,
 
     // Utilities

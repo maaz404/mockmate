@@ -278,20 +278,33 @@ Requirements:
     }
 
     try {
-      const prompt = `Based on this interview question and the candidate's answer, generate an appropriate follow-up question.
+      const prompt = `Based on this interview question and the candidate's answer, generate 1-2 short follow-up questions.
 
-Original Question: "${originalQuestion.text}"
+Original Question: "${originalQuestion}"
 Candidate's Answer: "${userAnswer}"
 Job Role: ${params.jobRole}
 Experience Level: ${params.experienceLevel}
 
-Generate a follow-up question that:
-1. Probes deeper into their understanding
-2. Tests practical application
-3. Explores edge cases or challenges
-4. Is appropriate for their experience level
+Generate follow-up questions that:
+1. Probe deeper into their understanding (why/how questions)
+2. Ask for practical examples or applications
+3. Explore edge cases or challenges
+4. Are appropriate for their experience level
+5. Are concise and focused
 
-Return only the follow-up question text, no additional formatting.`;
+Return in JSON format:
+{
+  "followUps": [
+    {
+      "text": "Follow-up question 1",
+      "type": "clarification|example|technical|challenge"
+    },
+    {
+      "text": "Follow-up question 2 (optional)",
+      "type": "clarification|example|technical|challenge"
+    }
+  ]
+}`;
 
       const response = await this.getOpenAIClient().chat.completions.create({
         model: "gpt-3.5-turbo",
@@ -299,15 +312,32 @@ Return only the follow-up question text, no additional formatting.`;
           {
             role: "system",
             content:
-              "You are an expert interviewer generating insightful follow-up questions.",
+              "You are an expert interviewer generating insightful follow-up questions. Always return valid JSON.",
           },
           { role: "user", content: prompt },
         ],
         temperature: 0.6,
-        max_tokens: 200,
+        max_tokens: 300,
       });
 
-      return response.choices[0]?.message?.content?.trim();
+      const content = response.choices[0]?.message?.content?.trim();
+      
+      // Try to parse JSON response
+      try {
+        const parsed = JSON.parse(content);
+        return parsed.followUps || null;
+      } catch (parseError) {
+        // Fallback: try to extract questions from text
+        const questions = content.split('\n')
+          .filter(line => line.trim() && (line.includes('?') || line.match(/^\d+\./)))
+          .slice(0, 2)
+          .map(line => ({
+            text: line.replace(/^\d+\.\s*/, '').trim(),
+            type: 'clarification'
+          }));
+        
+        return questions.length > 0 ? questions : null;
+      }
     } catch (error) {
       Logger.error("Follow-up generation error:", error);
       return null;

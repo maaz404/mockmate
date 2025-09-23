@@ -262,10 +262,31 @@ const submitAnswer = async (req, res) => {
 
     await interview.save();
 
+    // Generate follow-up questions automatically after scoring
+    let followUpQuestions = null;
+    try {
+      console.log("Generating follow-up questions for question:", qIndex);
+      followUpQuestions = await aiQuestionService.generateFollowUp(
+        interview.questions[qIndex].questionText,
+        answer,
+        interview.config
+      );
+      
+      if (followUpQuestions && followUpQuestions.length > 0) {
+        interview.questions[qIndex].followUpQuestions = followUpQuestions;
+        await interview.save();
+        console.log("Follow-up questions generated and saved:", followUpQuestions.length);
+      }
+    } catch (error) {
+      console.error("Follow-up generation failed:", error);
+      // Continue without follow-ups - non-critical feature
+    }
+
     // Prepare response data
     const responseData = {
       questionIndex: qIndex,
       score: score.overall,
+      followUpQuestions: followUpQuestions,
     };
 
     // Add adaptive difficulty info if enabled
@@ -327,19 +348,38 @@ const generateFollowUp = async (req, res) => {
       });
     }
 
+    // Check if follow-up questions already exist
+    if (question.followUpQuestions && question.followUpQuestions.length > 0) {
+      return res.json({
+        success: true,
+        message: "Follow-up questions retrieved",
+        data: {
+          followUpQuestions: question.followUpQuestions,
+          originalQuestion: question.questionText,
+          originalAnswer: question.response.text,
+        },
+      });
+    }
+
     try {
-      console.log("Generating AI follow-up question for question:", qIndex);
-      const followUp = await aiQuestionService.generateFollowUp(
+      console.log("Generating AI follow-up questions for question:", qIndex);
+      const followUpQuestions = await aiQuestionService.generateFollowUp(
         question.questionText,
         question.response.text,
         interview.config
       );
 
+      // Save the generated follow-ups to the interview
+      if (followUpQuestions && followUpQuestions.length > 0) {
+        interview.questions[qIndex].followUpQuestions = followUpQuestions;
+        await interview.save();
+      }
+
       res.json({
         success: true,
-        message: "Follow-up question generated",
+        message: "Follow-up questions generated",
         data: {
-          followUpQuestion: followUp,
+          followUpQuestions: followUpQuestions || [],
           originalQuestion: question.questionText,
           originalAnswer: question.response.text,
         },
@@ -348,9 +388,13 @@ const generateFollowUp = async (req, res) => {
       console.error("AI follow-up generation failed:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to generate follow-up question",
-        fallback:
-          "Can you elaborate more on your approach and explain any alternative solutions?",
+        message: "Failed to generate follow-up questions",
+        fallback: [
+          {
+            text: "Can you elaborate more on your approach and explain any alternative solutions?",
+            type: "clarification"
+          }
+        ],
       });
     }
   } catch (error) {

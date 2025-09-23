@@ -232,6 +232,20 @@ const interviewSchema = new mongoose.Schema(
           // AI-generated model answer as per requirements
           modelAnswer: String,
         },
+        followUpQuestions: [
+          {
+            text: String,
+            type: {
+              type: String,
+              enum: ["clarification", "example", "technical", "challenge"],
+              default: "clarification"
+            },
+            generatedAt: {
+              type: Date,
+              default: Date.now
+            }
+          }
+        ],
       },
     ],
 
