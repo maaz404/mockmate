@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { apiService } from "../services/api";
+import TranscriptDisplay from "../components/TranscriptDisplay";
 
 const InterviewResultsPage = () => {
   const { interviewId } = useParams();
@@ -277,6 +278,15 @@ const InterviewResultsPage = () => {
                           ))}
                         </ul>
                       </div>
+                    </div>
+
+                    {/* Video Transcript Section */}
+                    <div className="mt-4">
+                      <TranscriptDisplay 
+                        interviewId={interviewId}
+                        questionIndex={index}
+                        className="w-full"
+                      />
                     </div>
                   </div>
                 ))}

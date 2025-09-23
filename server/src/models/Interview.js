@@ -105,6 +105,15 @@ const interviewSchema = new mongoose.Schema(
           duration: Number, // in seconds
           uploadedAt: Date,
           size: Number, // file size in bytes
+          transcript: {
+            text: String,
+            generatedAt: Date,
+            status: {
+              type: String,
+              enum: ['pending', 'completed', 'failed'],
+              default: 'pending'
+            }
+          }
         },
         score: {
           overall: {

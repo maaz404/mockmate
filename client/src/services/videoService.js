@@ -72,6 +72,16 @@ const videoService = {
   getStreamUrl(filename) {
     const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
     return `${baseUrl}/video/stream/${filename}`;
+  },
+
+  /**
+   * Get transcription for a specific video
+   * @param {string} interviewId 
+   * @param {number} questionIndex 
+   * @returns {Promise<Object>}
+   */
+  async getTranscription(interviewId, questionIndex) {
+    return await apiService.get(`/video/transcript/${interviewId}/${questionIndex}`);
   }
 };
 

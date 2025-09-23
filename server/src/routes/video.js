@@ -5,6 +5,7 @@ const fs = require("fs").promises;
 const requireAuth = require("../middleware/auth");
 const Interview = require("../models/Interview");
 const UserProfile = require("../models/UserProfile");
+const transcriptionService = require("../services/transcriptionService");
 
 const router = express.Router();
 
@@ -163,9 +164,24 @@ router.post(
         path: req.file.path,
         duration: req.body.duration || null,
         uploadedAt: new Date(),
+        transcript: {
+          text: null,
+          generatedAt: null,
+          status: 'pending'
+        }
       };
 
       await interview.save();
+
+      // Start transcription process asynchronously (don't await to not block response)
+      transcriptionService.processVideoTranscription(
+        interview, 
+        qIndex, 
+        req.file.path, 
+        req.file.filename
+      ).catch(error => {
+        console.error("Background transcription error:", error);
+      });
 
       res.json({
         success: true,
@@ -175,6 +191,7 @@ router.post(
           videoId: req.file.filename,
           size: req.file.size,
           duration: req.body.duration,
+          transcriptionStatus: 'pending'
         },
       });
     } catch (error) {
@@ -505,6 +522,7 @@ router.get("/summary/:interviewId", requireAuth, async (req, res) => {
     // Get details for each question with video
     interview.questions.forEach((question, index) => {
       if (question.video && question.video.filename) {
+        const transcriptionStatus = transcriptionService.getTranscriptionStatus(question.video);
         videoSummary.recordings.push({
           questionIndex: index,
           questionText: question.questionText.substring(0, 100) + "...",
@@ -512,6 +530,7 @@ router.get("/summary/:interviewId", requireAuth, async (req, res) => {
           duration: question.video.duration,
           uploadedAt: question.video.uploadedAt,
           playbackUrl: `/api/video/stream/${question.video.filename}`,
+          transcription: transcriptionStatus
         });
       }
     });
@@ -526,6 +545,66 @@ router.get("/summary/:interviewId", requireAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to get video summary",
+    });
+  }
+});
+
+// @desc    Get transcription for a specific video
+// @route   GET /api/video/transcript/:interviewId/:questionIndex
+// @access  Private
+router.get("/transcript/:interviewId/:questionIndex", requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { interviewId, questionIndex } = req.params;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      userId,
+    });
+
+    if (!interview) {
+      return res.status(404).json({
+        success: false,
+        message: "Interview not found",
+      });
+    }
+
+    const qIndex = parseInt(questionIndex);
+    if (qIndex >= interview.questions.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid question index",
+      });
+    }
+
+    const question = interview.questions[qIndex];
+    if (!question.video || !question.video.filename) {
+      return res.status(404).json({
+        success: false,
+        message: "No video found for this question",
+      });
+    }
+
+    const transcriptionStatus = transcriptionService.getTranscriptionStatus(question.video);
+
+    res.json({
+      success: true,
+      message: "Transcription status retrieved",
+      data: {
+        questionIndex: qIndex,
+        transcription: transcriptionStatus,
+        video: {
+          filename: question.video.filename,
+          duration: question.video.duration,
+          uploadedAt: question.video.uploadedAt,
+        }
+      },
+    });
+  } catch (error) {
+    console.error("Get transcription error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to get transcription",
     });
   }
 });
