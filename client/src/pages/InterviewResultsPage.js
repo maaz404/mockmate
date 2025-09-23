@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { apiService } from "../services/api";
@@ -11,13 +11,7 @@ const InterviewResultsPage = () => {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (isLoaded && user && interviewId) {
-      fetchResults();
-    }
-  }, [isLoaded, user, interviewId]);
-
-  const fetchResults = async () => {
+  const fetchResults = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.get(
@@ -29,13 +23,19 @@ const InterviewResultsPage = () => {
         throw new Error("Failed to fetch results");
       }
     } catch (error) {
-      console.error("Error fetching results:", error);
+      // Error fetching results
       alert("Failed to load results. Redirecting to dashboard.");
       navigate("/dashboard");
     } finally {
       setLoading(false);
     }
-  };
+  }, [interviewId, navigate]);
+
+  useEffect(() => {
+    if (isLoaded && user && interviewId) {
+      fetchResults();
+    }
+  }, [isLoaded, user, interviewId, fetchResults]);
 
   const getScoreColor = (score) => {
     if (score >= 80) return "text-green-600";

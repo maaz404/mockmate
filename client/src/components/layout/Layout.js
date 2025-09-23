@@ -19,8 +19,8 @@ const Layout = ({ children }) => {
     }
   }, [isSignedIn, userProfile]);
 
-  // Show loading spinner while auth is loading
-  if (loading) {
+  // Show loading spinner while auth is loading (but not for home page)
+  if (loading && location.pathname !== "/") {
     return <AuthLoadingSpinner message="Loading your dashboard..." />;
   }
 
