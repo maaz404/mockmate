@@ -17,27 +17,8 @@ const InterviewExperiencePage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Timer functionality
-  useEffect(() => {
-    if (timeRemaining > 0) {
-      const timer = setTimeout(() => {
-        setTimeRemaining(timeRemaining - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (timeRemaining === 0) {
-      // Auto-submit when time runs out
-      handleInterviewComplete();
-    }
-  }, [timeRemaining]);
-
-  // Fetch interview data
-  useEffect(() => {
-    if (isLoaded && user && interviewId) {
-      fetchInterview();
-    }
-  }, [isLoaded, user, interviewId]);
-
-  const fetchInterview = async () => {
+  // Function to fetch interview data
+  const fetchInterview = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.get(`/interviews/${interviewId}`);
@@ -55,26 +36,73 @@ const InterviewExperiencePage = () => {
         throw new Error("Failed to fetch interview");
       }
     } catch (error) {
-      console.error("Error fetching interview:", error);
+      // Error fetching interview data
       alert("Failed to load interview. Redirecting to dashboard.");
       navigate("/dashboard");
     } finally {
       setLoading(false);
     }
-  };
+  }, [interviewId, navigate]);
+
+  const handleSaveAnswer = useCallback(() => {
+    if (interview && interview.questions[currentQuestionIndex]) {
+      const questionId = interview.questions[currentQuestionIndex]._id;
+      setAnswers((prev) => ({
+        ...prev,
+        [questionId]: currentAnswer,
+      }));
+    }
+  }, [interview, currentQuestionIndex, currentAnswer]);
+
+  const handleInterviewComplete = useCallback(async () => {
+    if (submitting) return;
+
+    try {
+      setSubmitting(true);
+      
+      // Save current answer before submitting
+      handleSaveAnswer();
+
+      const response = await apiService.post(`/interviews/${interviewId}/submit`, {
+        answers,
+        timeTaken: interview?.duration * 60 - timeRemaining,
+      });
+
+      if (response.success) {
+        navigate(`/interview/${interviewId}/results`);
+      } else {
+        throw new Error("Failed to submit interview");
+      }
+    } catch (error) {
+      // Error submitting interview
+      alert("Failed to submit interview. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [interviewId, answers, interview, timeRemaining, navigate, submitting, handleSaveAnswer]);
+
+  // Timer functionality
+  useEffect(() => {
+    if (timeRemaining > 0) {
+      const timer = setTimeout(() => {
+        setTimeRemaining(timeRemaining - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (timeRemaining === 0) {
+      // Auto-submit when time runs out
+      handleInterviewComplete();
+    }
+  }, [timeRemaining, handleInterviewComplete]);
+
+  // Fetch interview data
+  useEffect(() => {
+    if (isLoaded && user && interviewId) {
+      fetchInterview();
+    }
+  }, [isLoaded, user, interviewId, fetchInterview]);
 
   const handleAnswerChange = (e) => {
     setCurrentAnswer(e.target.value);
-  };
-
-  const handleSaveAnswer = () => {
-    if (!interview?.questions[currentQuestionIndex]) return;
-
-    const questionId = interview.questions[currentQuestionIndex]._id;
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: currentAnswer,
-    }));
   };
 
   const handleNextQuestion = () => {
@@ -94,41 +122,6 @@ const InterviewExperiencePage = () => {
       setCurrentAnswer(answers[prevQuestionId] || "");
     }
   };
-
-  const handleInterviewComplete = useCallback(async () => {
-    if (submitting) return;
-
-    setSubmitting(true);
-    handleSaveAnswer(); // Save current answer before submitting
-
-    try {
-      const submissionData = {
-        answers: Object.entries(answers).map(([questionId, answer]) => ({
-          questionId,
-          answer,
-          timeSpent: 180, // Default 3 minutes per question - would be tracked in real implementation
-        })),
-        totalTimeSpent: interview.duration * 60 - timeRemaining,
-        completedAt: new Date().toISOString(),
-      };
-
-      const response = await apiService.post(
-        `/interviews/${interviewId}/complete`,
-        submissionData
-      );
-
-      if (response.success) {
-        navigate(`/interview/${interviewId}/results`);
-      } else {
-        throw new Error("Failed to submit interview");
-      }
-    } catch (error) {
-      console.error("Error submitting interview:", error);
-      alert("Failed to submit interview. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }, [interviewId, answers, interview, timeRemaining, navigate, submitting]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
