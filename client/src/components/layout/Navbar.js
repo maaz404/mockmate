@@ -3,6 +3,7 @@ import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import DarkModeToggle from "../ui/DarkModeToggle";
 
 const Navbar = () => {
   const { user } = useUser();
@@ -69,6 +70,9 @@ const Navbar = () => {
 
           {/* CTA & User Actions */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Dark Mode Toggle */}
+            <DarkModeToggle />
+            
             <SignedOut>
               <Link
                 to="/login"
@@ -100,8 +104,12 @@ const Navbar = () => {
             </SignedIn>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden">
+          {/* Mobile controls */}
+          <div className="md:hidden flex items-center space-x-2">
+            {/* Mobile Dark Mode Toggle */}
+            <DarkModeToggle />
+            
+            {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="text-surface-300 hover:text-white transition-colors p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"

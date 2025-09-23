@@ -19,8 +19,8 @@ const Layout = ({ children }) => {
     }
   }, [isSignedIn, userProfile]);
 
-  // Show loading spinner while auth is loading (but not for home page)
-  if (loading && location.pathname !== "/") {
+  // Show loading spinner while auth is loading (but not for home page or sidebar test)
+  if (loading && location.pathname !== "/" && location.pathname !== "/sidebar-test") {
     return <AuthLoadingSpinner message="Loading your dashboard..." />;
   }
 
@@ -37,12 +37,13 @@ const Layout = ({ children }) => {
     "/reports",
     "/settings",
     "/support",
+    "/sidebar-test",
   ];
 
   // Check if current route should show sidebar
   const showSidebar = sidebarRoutes.some((route) =>
     location.pathname.startsWith(route)
-  );
+  ) || location.pathname === "/sidebar-test"; // Allow sidebar test without auth
 
   // Routes that should show the old navbar (public pages)
   const publicRoutes = [
