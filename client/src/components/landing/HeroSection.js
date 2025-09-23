@@ -6,13 +6,13 @@ import { ArrowRight, Play, Sparkles } from "lucide-react";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-screen bg-gradient-to-br from-surface-900 via-surface-800 to-surface-900 flex items-center overflow-hidden">
+    <section className="relative min-h-screen bg-surface-50 dark:bg-gradient-to-br dark:from-surface-900 dark:via-surface-800 dark:to-surface-900 flex items-center overflow-hidden transition-colors duration-200">
       {/* Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/5 dark:bg-primary-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/5 dark:bg-accent-500/10 rounded-full blur-3xl" />
         <div className="absolute inset-0 opacity-30">
-          <div className="h-full w-full bg-gradient-to-br from-transparent via-surface-800/5 to-transparent" />
+          <div className="h-full w-full bg-gradient-to-br from-transparent via-surface-100/5 dark:via-surface-800/5 to-transparent" />
         </div>
       </div>
 
@@ -30,10 +30,10 @@ const HeroSection = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="inline-flex items-center space-x-2 bg-surface-800/50 backdrop-blur-sm border border-surface-700 rounded-full px-4 py-2 mb-6"
+              className="inline-flex items-center space-x-2 bg-surface-200/50 dark:bg-surface-800/50 backdrop-blur-sm border border-surface-300 dark:border-surface-700 rounded-full px-4 py-2 mb-6"
             >
-              <Sparkles size={16} className="text-primary-400" />
-              <span className="text-surface-300 text-sm font-medium">
+              <Sparkles size={16} className="text-primary-500 dark:text-primary-400" />
+              <span className="text-surface-700 dark:text-surface-300 text-sm font-medium">
                 AI-Powered Interview Preparation
               </span>
             </motion.div>
@@ -43,7 +43,7 @@ const HeroSection = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="hero-title text-white mb-6"
+              className="hero-title text-surface-900 dark:text-white mb-6"
             >
               MockMate: <span className="gradient-text">AI-Powered</span>{" "}
               Interview Practice Platform
@@ -54,7 +54,7 @@ const HeroSection = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="hero-subtitle text-surface-400 mb-8 max-w-2xl mx-auto lg:mx-0"
+              className="hero-subtitle text-surface-600 dark:text-surface-400 mb-8 max-w-2xl mx-auto lg:mx-0"
             >
               A comprehensive full-stack application built with React, Node.js,
               and MongoDB. Features intelligent question generation, real-time
@@ -117,14 +117,14 @@ const HeroSection = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-3 sm:space-y-0 sm:space-x-6 text-surface-400 text-sm"
+              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-3 sm:space-y-0 sm:space-x-6 text-surface-600 dark:text-surface-400 text-sm"
             >
               <div className="flex items-center space-x-2">
                 <div className="flex -space-x-2" role="img" aria-label="Technology stack represented by letters A through E">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div
                       key={i}
-                      className="w-8 h-8 bg-gradient-to-r from-primary-400 to-accent-400 rounded-full border-2 border-surface-800 flex items-center justify-center text-xs font-bold text-white"
+                      className="w-8 h-8 bg-gradient-to-r from-primary-400 to-accent-400 rounded-full border-2 border-surface-200 dark:border-surface-800 flex items-center justify-center text-xs font-bold text-white"
                       aria-hidden="true"
                     >
                       {String.fromCharCode(64 + i)}
@@ -160,8 +160,8 @@ const HeroSection = () => {
           >
             <div className="relative">
               {/* Main Dashboard Mockup */}
-              <div className="bg-surface-800 rounded-2xl shadow-2xl border border-surface-700 p-6 backdrop-blur-sm">
-                <div className="bg-surface-900 rounded-xl p-6">
+              <div className="bg-surface-100 dark:bg-surface-800 rounded-2xl shadow-2xl border border-surface-300 dark:border-surface-700 p-6 backdrop-blur-sm">
+                <div className="bg-surface-200 dark:bg-surface-900 rounded-xl p-6">
                   {/* Header */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center space-x-3">
@@ -169,10 +169,10 @@ const HeroSection = () => {
                         <span className="text-white font-bold">M</span>
                       </div>
                       <div>
-                        <div className="text-white font-semibold">
+                        <div className="text-surface-900 dark:text-white font-semibold">
                           Mock Interview
                         </div>
-                        <div className="text-surface-400 text-sm">
+                        <div className="text-surface-600 dark:text-surface-400 text-sm">
                           Software Engineer
                         </div>
                       </div>
@@ -185,11 +185,11 @@ const HeroSection = () => {
                   </div>
 
                   {/* Question */}
-                  <div className="bg-surface-800 rounded-lg p-4 mb-4">
-                    <div className="text-primary-400 text-sm font-medium mb-2">
+                  <div className="bg-surface-300 dark:bg-surface-800 rounded-lg p-4 mb-4">
+                    <div className="text-primary-600 dark:text-primary-400 text-sm font-medium mb-2">
                       Question 1 of 5
                     </div>
-                    <div className="text-white text-lg leading-relaxed">
+                    <div className="text-surface-900 dark:text-white text-lg leading-relaxed">
                       "Tell me about a challenging project you worked on and how
                       you overcame the obstacles."
                     </div>
@@ -198,12 +198,12 @@ const HeroSection = () => {
                   {/* AI Feedback */}
                   <div className="bg-primary-500/10 border border-primary-500/20 rounded-lg p-4">
                     <div className="flex items-center space-x-2 mb-2">
-                      <Sparkles size={16} className="text-primary-400" />
-                      <span className="text-primary-400 font-medium text-sm">
+                      <Sparkles size={16} className="text-primary-500 dark:text-primary-400" />
+                      <span className="text-primary-600 dark:text-primary-400 font-medium text-sm">
                         AI Feedback
                       </span>
                     </div>
-                    <div className="text-surface-300 text-sm">
+                    <div className="text-surface-700 dark:text-surface-300 text-sm">
                       Great structure! Consider adding more specific metrics
                       about the project impact...
                     </div>
@@ -217,7 +217,7 @@ const HeroSection = () => {
                 transition={{ duration: 3, repeat: Infinity }}
                 className="absolute -top-4 -right-4 bg-accent-500/20 backdrop-blur-sm border border-accent-500/30 rounded-lg p-3"
               >
-                <div className="text-accent-400 text-sm font-medium">
+                <div className="text-accent-500 dark:text-accent-400 text-sm font-medium">
                   +89% Success Rate
                 </div>
               </motion.div>
@@ -227,7 +227,7 @@ const HeroSection = () => {
                 transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
                 className="absolute -bottom-4 -left-4 bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-lg p-3"
               >
-                <div className="text-green-400 text-sm font-medium">
+                <div className="text-green-500 dark:text-green-400 text-sm font-medium">
                   Real-time Analysis
                 </div>
               </motion.div>
