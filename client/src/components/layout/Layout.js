@@ -57,7 +57,7 @@ const Layout = ({ children }) => {
 
   if (showSidebar) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-surface-900">
         <Sidebar />
         {/* Main content area with sidebar */}
         <div className="flex-1 flex flex-col ml-0 lg:ml-64">
@@ -91,7 +91,7 @@ const Layout = ({ children }) => {
 
   // Default layout for other pages
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface-900">
       <main className="flex-1">{children}</main>
     </div>
   );

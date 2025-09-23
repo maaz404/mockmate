@@ -244,15 +244,15 @@ const Sidebar = () => {
         flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200
         ${
           isActive(item.path)
-            ? "bg-orange-50 text-orange-600 border-r-2 border-orange-600"
-            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+            ? "bg-primary-500/20 text-primary-300 border-r-2 border-primary-500"
+            : "text-surface-300 hover:text-white hover:bg-surface-700/50"
         }
         ${isCollapsed ? "justify-center" : "justify-start"}
       `}
     >
       <span
         className={`flex-shrink-0 ${
-          isActive(item.path) ? "text-orange-600" : "text-gray-400"
+          isActive(item.path) ? "text-primary-400" : "text-surface-400"
         }`}
       >
         {item.icon}
@@ -266,7 +266,7 @@ const Sidebar = () => {
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+          className="fixed inset-0 z-40 bg-surface-900 bg-opacity-75 lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
@@ -275,12 +275,12 @@ const Sidebar = () => {
       <div className="hidden lg:flex fixed top-1/2 left-0 z-60 -translate-y-1/2">
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="group flex items-center justify-center w-6 h-20 bg-white border border-gray-200 rounded-r-2xl shadow-md hover:bg-gray-50 transition-colors"
+          className="group flex items-center justify-center w-6 h-20 bg-surface-800 border border-surface-700 rounded-r-2xl shadow-md hover:bg-surface-700 transition-colors"
           style={{ outline: "none" }}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <svg
-            className={`w-5 h-5 text-gray-500 group-hover:text-orange-600 transition-transform ${
+            className={`w-5 h-5 text-surface-400 group-hover:text-primary-400 transition-transform ${
               isCollapsed ? "rotate-180" : ""
             }`}
             fill="none"
@@ -301,7 +301,7 @@ const Sidebar = () => {
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-2 rounded-lg bg-white shadow-md border border-gray-200 text-gray-600 hover:text-gray-900"
+          className="p-2 rounded-lg bg-surface-800 shadow-md border border-surface-700 text-surface-300 hover:text-white backdrop-blur-sm"
         >
           <svg
             className="w-6 h-6"
@@ -331,7 +331,7 @@ const Sidebar = () => {
       {/* Sidebar */}
       <div
         className={`
-          fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 transition-all duration-300 overflow-y-auto
+          fixed top-0 left-0 z-50 h-full bg-surface-800 border-r border-surface-700 transition-all duration-300 overflow-y-auto
           ${isCollapsed ? "w-16" : "w-64"}
           ${
             isMobileOpen
@@ -341,9 +341,9 @@ const Sidebar = () => {
         `}
       >
         {/* Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-surface-700">
           {!isCollapsed && (
-            <Link to="/" className="text-xl font-bold text-gradient">
+            <Link to="/" className="text-xl font-bold gradient-text">
               MockMate
             </Link>
           )}
@@ -355,7 +355,7 @@ const Sidebar = () => {
           {navigationItems.map((section) => (
             <div key={section.section}>
               {!isCollapsed && (
-                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <h3 className="px-3 text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">
                   {section.section}
                 </h3>
               )}
@@ -367,7 +367,7 @@ const Sidebar = () => {
         </nav>
 
         {/* User section */}
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-surface-700 p-4">
           <SignedIn>
             <div
               className={`flex items-center ${
@@ -387,10 +387,10 @@ const Sidebar = () => {
               />
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-white truncate">
                     {user?.firstName || "User"} {user?.lastName || ""}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-surface-400 truncate">
                     {user?.primaryEmailAddress?.emailAddress || ""}
                   </p>
                 </div>
@@ -399,7 +399,7 @@ const Sidebar = () => {
 
             {!isCollapsed && (
               <div className="mt-4">
-                <button className="w-full text-left px-3 py-2 text-sm text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors font-medium">
+                <button className="w-full text-left px-3 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium">
                   Upgrade to Pro
                 </button>
               </div>
@@ -411,13 +411,13 @@ const Sidebar = () => {
               <div className="space-y-2">
                 <Link
                   to="/login"
-                  className="block w-full text-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="block w-full text-center px-3 py-2 text-sm text-surface-300 hover:text-white border border-surface-600 rounded-lg hover:bg-surface-700 transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="block w-full text-center px-3 py-2 text-sm text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors font-medium"
+                  className="block w-full text-center px-3 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium"
                 >
                   Get Started
                 </Link>

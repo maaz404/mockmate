@@ -35,16 +35,16 @@ const QuickActions = ({ onStartInterview, userProfile }) => {
   const isProfileComplete = userProfile?.profileCompleteness >= 70;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="p-6 border-b border-gray-200">
-        <h3 className="text-lg font-medium text-gray-900">Quick Start</h3>
-        <p className="text-sm text-gray-600 mt-1">
+    <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700">
+      <div className="p-6 border-b border-surface-700">
+        <h3 className="text-lg font-medium text-white">Quick Start</h3>
+        <p className="text-sm text-surface-400 mt-1">
           Jump into a practice session
         </p>
       </div>
 
       {!isProfileComplete && (
-        <div className="p-6 bg-yellow-50 border-b border-gray-200">
+        <div className="p-6 bg-yellow-500/10 border-b border-surface-700 backdrop-blur-sm">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg
@@ -60,7 +60,7 @@ const QuickActions = ({ onStartInterview, userProfile }) => {
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">
+              <h3 className="text-sm font-medium text-yellow-300">
                 Complete your profile for better recommendations
               </h3>
               <p className="text-sm text-yellow-700 mt-1">
@@ -78,32 +78,32 @@ const QuickActions = ({ onStartInterview, userProfile }) => {
             <button
               key={interview.type}
               onClick={() => onStartInterview(interview.type)}
-              className="group relative bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-200 text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="group relative bg-surface-700/50 backdrop-blur-sm border border-surface-600 rounded-xl p-6 hover:shadow-glow hover:bg-surface-700/70 hover:border-primary-500/50 transition-all duration-300 text-left focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-800"
               disabled={!userProfile?.onboardingCompleted}
             >
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <span className="text-2xl">{interview.icon}</span>
+                  <span className="text-2xl filter group-hover:brightness-110 transition-all duration-300">{interview.icon}</span>
                 </div>
                 <div className="ml-4 flex-1">
-                  <h4 className="text-base font-medium text-gray-900 group-hover:text-blue-600">
+                  <h4 className="text-base font-medium text-white group-hover:text-primary-300 transition-colors">
                     {interview.title}
                   </h4>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-surface-400 mt-1 group-hover:text-surface-300 transition-colors">
                     {interview.description}
                   </p>
                 </div>
               </div>
 
               {!userProfile?.onboardingCompleted && (
-                <div className="absolute inset-0 bg-gray-100 bg-opacity-75 rounded-lg flex items-center justify-center">
-                  <span className="text-sm text-gray-600 font-medium">
+                <div className="absolute inset-0 bg-surface-800/90 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <span className="text-sm text-surface-300 font-medium">
                     Complete onboarding first
                   </span>
                 </div>
               )}
 
-              <div className="mt-4 flex items-center text-sm text-blue-600 group-hover:text-blue-700">
+              <div className="mt-4 flex items-center text-sm text-primary-400 group-hover:text-primary-300 transition-colors">
                 <span>Start practice</span>
                 <svg
                   className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform"
