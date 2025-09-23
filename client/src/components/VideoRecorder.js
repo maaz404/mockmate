@@ -1,6 +1,60 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Webcam from 'react-webcam';
 import { useVideoRecording } from '../hooks/useVideoRecording';
+import { useFacialExpressionAnalysis } from '../hooks/useFacialExpressionAnalysis';
+import { 
+  CalibrationModal, 
+  ConfidenceMeter, 
+  FeedbackTips, 
+  PrivacyConsentModal 
+} from './facial-analysis';
+
+const VideoRecorder = ({ 
+  interviewId, 
+  currentQuestionIndex, 
+  onVideoUploaded, 
+  className = '',
+  facialAnalysisEnabled = false,
+  userPreferences = {}
+}) => {
+  const webcamRef = useRef(null);
+  const [hasCamera, setHasCamera] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [showCalibrationModal, setShowCalibrationModal] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(userPreferences?.facialAnalysis?.consentGiven || false);
+  const [ferEnabled, setFerEnabled] = useState(facialAnalysisEnabled && consentGiven);
+
+  const {
+    isRecording,
+    hasRecorded,
+    isUploading,
+    recordingDuration,
+    error,
+    sessionStarted,
+    startSession,
+    startRecording,
+    stopRecording,
+    uploadVideo,
+    clearRecording
+  } = useVideoRecording(interviewId);
+
+  const {
+    isInitialized: ferInitialized,
+    isCalibrating,
+    isAnalyzing,
+    calibrationProgress,
+    metrics,
+    recommendations,
+    baseline,
+    error: ferError,
+    initialize: initializeFER,
+    startCalibration,
+    startAnalysis,
+    stopAnalysis,
+    getSessionSummary,
+    reset: resetFER
+  } = useFacialExpressionAnalysis(ferEnabled);
 
 const VideoRecorder = ({ 
   interviewId, 
@@ -45,6 +99,13 @@ const VideoRecorder = ({
     checkCamera();
   }, []);
 
+  // Handle facial analysis consent
+  useEffect(() => {
+    if (facialAnalysisEnabled && !consentGiven && hasCamera) {
+      setShowConsentModal(true);
+    }
+  }, [facialAnalysisEnabled, consentGiven, hasCamera]);
+
   // Start recording session when component mounts
   useEffect(() => {
     if (hasCamera && !sessionStarted) {
@@ -52,7 +113,43 @@ const VideoRecorder = ({
     }
   }, [hasCamera, sessionStarted, startSession]);
 
-  // Handle start recording
+  // Initialize FER when consent is given
+  useEffect(() => {
+    if (ferEnabled && !ferInitialized && hasCamera) {
+      initializeFER();
+    }
+  }, [ferEnabled, ferInitialized, hasCamera, initializeFER]);
+
+  // Handle consent modal actions
+  const handleConsentAccept = () => {
+    setConsentGiven(true);
+    setFerEnabled(true);
+    setShowConsentModal(false);
+    // Show calibration modal after consent
+    if (userPreferences?.facialAnalysis?.autoCalibration !== false) {
+      setShowCalibrationModal(true);
+    }
+  };
+
+  const handleConsentDecline = () => {
+    setConsentGiven(false);
+    setFerEnabled(false);
+    setShowConsentModal(false);
+  };
+
+  // Handle calibration
+  const handleStartCalibration = async () => {
+    if (webcamRef.current?.video) {
+      const success = await startCalibration(webcamRef.current.video);
+      if (success) {
+        setTimeout(() => {
+          setShowCalibrationModal(false);
+        }, 1000);
+      }
+    }
+  };
+
+  // Handle start recording with FER
   const handleStartRecording = async () => {
     if (!webcamRef.current || !webcamRef.current.stream) {
       setCameraError('Camera stream not available');
@@ -60,18 +157,40 @@ const VideoRecorder = ({
     }
 
     await startRecording(webcamRef.current.stream);
+    
+    // Start facial analysis if enabled and initialized
+    if (ferEnabled && ferInitialized && webcamRef.current?.video) {
+      startAnalysis(webcamRef.current.video);
+    }
   };
 
-  // Handle stop recording
+  // Handle stop recording with FER
   const handleStopRecording = () => {
     stopRecording();
+    
+    // Stop facial analysis
+    if (ferEnabled && isAnalyzing) {
+      stopAnalysis();
+    }
   };
 
-  // Handle upload video
+  // Handle upload video with FER data
   const handleUploadVideo = async () => {
-    const success = await uploadVideo(currentQuestionIndex);
+    let facialAnalysisData = null;
+    
+    // Get facial analysis summary if enabled
+    if (ferEnabled && isAnalyzing) {
+      facialAnalysisData = getSessionSummary();
+    }
+    
+    const success = await uploadVideo(currentQuestionIndex, facialAnalysisData);
     if (success && onVideoUploaded) {
       onVideoUploaded(currentQuestionIndex);
+    }
+    
+    // Reset FER for next recording
+    if (ferEnabled) {
+      resetFER();
     }
   };
 
@@ -142,21 +261,53 @@ const VideoRecorder = ({
             <span className="text-white text-sm font-medium">Recorded: {formatDuration(recordingDuration)}</span>
           </div>
         )}
+
+        {/* FER Analysis Indicator */}
+        {ferEnabled && isAnalyzing && (
+          <div className="absolute top-4 right-4 bg-blue-600 px-3 py-1 rounded-full">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              <span className="text-white text-sm font-medium">Analyzing</span>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Confidence Meter - Show during recording if FER is enabled */}
+      {ferEnabled && isAnalyzing && userPreferences?.facialAnalysis?.showConfidenceMeter !== false && (
+        <ConfidenceMeter 
+          metrics={metrics}
+          isAnalyzing={isAnalyzing}
+          className="mt-4"
+        />
+      )}
 
       {/* Recording Controls */}
       <div className="flex justify-center space-x-4">
         {!isRecording && !hasRecorded && (
-          <button
-            onClick={handleStartRecording}
-            disabled={!hasCamera || !sessionStarted}
-            className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed p-4 rounded-full transition-colors"
-            title="Start recording"
-          >
-            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="8" />
-            </svg>
-          </button>
+          <>
+            <button
+              onClick={handleStartRecording}
+              disabled={!hasCamera || !sessionStarted}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed p-4 rounded-full transition-colors"
+              title="Start recording"
+            >
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="8" />
+              </svg>
+            </button>
+            
+            {/* Calibration button if FER enabled but not calibrated */}
+            {ferEnabled && ferInitialized && !baseline && (
+              <button
+                onClick={() => setShowCalibrationModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white text-sm transition-colors"
+                title="Calibrate facial analysis"
+              >
+                Calibrate
+              </button>
+            )}
+          </>
         )}
 
         {isRecording && (
@@ -205,9 +356,9 @@ const VideoRecorder = ({
       </div>
 
       {/* Error Display */}
-      {error && (
+      {(error || ferError) && (
         <div className="bg-red-900/50 border border-red-700 rounded-lg p-3 text-red-400 text-sm text-center">
-          {error}
+          {error || ferError}
         </div>
       )}
 
@@ -217,7 +368,31 @@ const VideoRecorder = ({
         {hasRecorded && !isUploading && 'Recording complete. Click upload to save.'}
         {isUploading && 'Uploading your video response...'}
         {!sessionStarted && hasCamera && 'Initializing recording session...'}
+        {ferEnabled && !ferInitialized && 'Initializing facial analysis...'}
+        {ferEnabled && isCalibrating && 'Calibrating facial analysis...'}
       </div>
+
+      {/* Modals */}
+      <PrivacyConsentModal
+        isOpen={showConsentModal}
+        onConsent={handleConsentAccept}
+        onDecline={handleConsentDecline}
+        onClose={handleConsentDecline}
+      />
+
+      <CalibrationModal
+        isOpen={showCalibrationModal}
+        onClose={() => setShowCalibrationModal(false)}
+        onStart={handleStartCalibration}
+        progress={calibrationProgress}
+        isCalibrating={isCalibrating}
+      />
+
+      {/* Feedback Tips */}
+      <FeedbackTips
+        recommendations={recommendations}
+        isVisible={ferEnabled && isAnalyzing && userPreferences?.facialAnalysis?.showRealtimeFeedback !== false}
+      />
     </div>
   );
 };

@@ -146,6 +146,16 @@ router.post(
         mimeType: req.file.mimetype,
       };
 
+      // Parse facial analysis data if provided
+      let facialAnalysisData = null;
+      if (req.body.facialAnalysis) {
+        try {
+          facialAnalysisData = JSON.parse(req.body.facialAnalysis);
+        } catch (error) {
+          console.warn('Invalid facial analysis data:', error);
+        }
+      }
+
       // Initialize video session if not exists
       if (!interview.videoSession) {
         interview.videoSession = {
@@ -159,7 +169,7 @@ router.post(
       interview.videoSession.recordings.push(videoData);
 
       // Add video reference to the specific question
-      interview.questions[qIndex].video = {
+      const videoQuestion = {
         filename: req.file.filename,
         path: req.file.path,
         duration: req.body.duration || null,
@@ -170,6 +180,19 @@ router.post(
           status: 'pending'
         }
       };
+
+      // Add facial analysis data if provided
+      if (facialAnalysisData) {
+        videoQuestion.facialAnalysis = {
+          enabled: true,
+          metrics: facialAnalysisData.metrics || {},
+          baseline: facialAnalysisData.baseline || { completed: false },
+          sessionSummary: facialAnalysisData.sessionSummary || {},
+          analysisTimestamp: new Date(),
+        };
+      }
+
+      interview.questions[qIndex].video = videoQuestion;
 
       await interview.save();
 
