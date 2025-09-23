@@ -5,34 +5,34 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case "completed":
-        return "bg-green-100 text-green-800";
+        return "bg-green-500/20 text-green-400 border-green-500/30";
       case "in-progress":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
       case "abandoned":
-        return "bg-red-100 text-red-800";
+        return "bg-red-500/20 text-red-400 border-red-500/30";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-surface-500/20 text-surface-400 border-surface-500/30";
     }
   };
 
   const getPerformanceColor = (score) => {
-    if (score >= 85) return "text-green-600";
-    if (score >= 70) return "text-blue-600";
-    if (score >= 50) return "text-yellow-600";
-    return "text-red-600";
+    if (score >= 85) return "text-green-400";
+    if (score >= 70) return "text-blue-400";
+    if (score >= 50) return "text-yellow-400";
+    return "text-red-400";
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="p-6 border-b border-gray-200">
+    <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700">
+      <div className="p-6 border-b border-surface-700">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">
+          <h3 className="text-lg font-medium text-white">
             Recent Interviews
           </h3>
           {interviews.length > 0 && (
             <button
               onClick={onViewAll}
-              className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+              className="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors"
             >
               View all
             </button>
@@ -40,12 +40,12 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
         </div>
       </div>
 
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-surface-700">
         {interviews.length === 0 ? (
           <div className="p-6 text-center">
-            <div className="text-gray-400 text-4xl mb-4">📋</div>
-            <p className="text-gray-500 mb-2">No interviews yet</p>
-            <p className="text-sm text-gray-400">
+            <div className="text-surface-400 text-4xl mb-4">📋</div>
+            <p className="text-surface-300 mb-2">No interviews yet</p>
+            <p className="text-sm text-surface-400">
               Start your first practice session!
             </p>
           </div>
@@ -53,16 +53,16 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
           interviews.map((interview) => (
             <div
               key={interview._id}
-              className="p-6 hover:bg-gray-50 transition-colors"
+              className="p-6 hover:bg-surface-700/30 transition-colors group"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-base font-medium text-gray-900">
+                    <h4 className="text-base font-medium text-white group-hover:text-primary-300 transition-colors">
                       {interview.config.jobRole}
                     </h4>
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
                         interview.status
                       )}`}
                     >
@@ -70,7 +70,7 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
                     </span>
                   </div>
 
-                  <div className="mt-1 flex items-center text-sm text-gray-500">
+                  <div className="mt-1 flex items-center text-sm text-surface-400">
                     <span className="capitalize">
                       {interview.config.interviewType}
                     </span>
@@ -85,7 +85,7 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
                   {interview.status === "completed" &&
                     interview.results?.overallScore && (
                       <div className="mt-2 flex items-center">
-                        <span className="text-sm text-gray-600 mr-2">
+                        <span className="text-sm text-surface-400 mr-2">
                           Score:
                         </span>
                         <span
