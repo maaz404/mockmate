@@ -1,0 +1,517 @@
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
+import { 
+  Clock, 
+  Target, 
+  TrendingUp, 
+  Download, 
+  ArrowLeft, 
+  Star,
+  CheckCircle,
+  AlertCircle,
+  BarChart3,
+  FileText
+} from "lucide-react";
+import toast from "react-hot-toast";
+import { apiService } from "../services/api";
+
+const SessionSummaryPage = () => {
+  const { interviewId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useUser();
+  
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [hasProAccess, setHasProAccess] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  useEffect(() => {
+    if (interviewId) {
+      fetchSessionSummary();
+    }
+  }, [interviewId]);
+
+  const fetchSessionSummary = async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.get(`/reports/${interviewId}/session-summary`);
+      
+      if (response.data.success) {
+        setSummary(response.data.data.summary);
+        setHasProAccess(response.data.data.hasProAccess);
+      } else {
+        toast.error("Failed to load session summary");
+      }
+    } catch (error) {
+      console.error("Error fetching session summary:", error);
+      toast.error("Failed to load session summary");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePDFExport = async () => {
+    if (!hasProAccess) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    try {
+      setExportingPDF(true);
+      
+      const response = await fetch(`/api/reports/${interviewId}/export-pdf`, {
+        headers: {
+          'Authorization': `Bearer ${await user.getToken()}`,
+        },
+      });
+
+      if (response.ok) {
+        // Create download link
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `interview-summary-${interviewId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast.success("PDF downloaded successfully!");
+      } else if (response.status === 403) {
+        const errorData = await response.json();
+        if (errorData.error === "UPGRADE_REQUIRED") {
+          setShowUpgradeModal(true);
+        } else {
+          toast.error("PDF export requires Pro plan");
+        }
+      } else {
+        toast.error("Failed to export PDF");
+      }
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast.error("Failed to export PDF");
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
+  const getPerformanceColor = (level) => {
+    switch (level) {
+      case 'excellent': return 'text-green-600 bg-green-100';
+      case 'good': return 'text-blue-600 bg-blue-100';
+      case 'average': return 'text-yellow-600 bg-yellow-100';
+      case 'needs-improvement': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 85) return 'text-green-600';
+    if (score >= 75) return 'text-blue-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const renderStars = (rating) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    const emptyStars = 5 - Math.ceil(rating);
+
+    return (
+      <div className="flex items-center">
+        {[...Array(fullStars)].map((_, i) => (
+          <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+        ))}
+        {hasHalfStar && (
+          <Star className="h-5 w-5 text-yellow-400 fill-current opacity-50" />
+        )}
+        {[...Array(emptyStars)].map((_, i) => (
+          <Star key={i} className="h-5 w-5 text-gray-300" />
+        ))}
+        <span className="ml-2 text-sm text-gray-600">({rating}/5)</span>
+      </div>
+    );
+  };
+
+  const UpgradeModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
+            <FileText className="h-6 w-6 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Upgrade to Pro for PDF Export
+          </h3>
+          <p className="text-sm text-gray-500 mb-6">
+            Get detailed PDF reports and advanced analytics with our Pro plan.
+          </p>
+          
+          <div className="space-y-2 text-left mb-6">
+            <div className="flex items-center text-sm text-gray-700">
+              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+              PDF report exports
+            </div>
+            <div className="flex items-center text-sm text-gray-700">
+              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+              Advanced analytics
+            </div>
+            <div className="flex items-center text-sm text-gray-700">
+              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+              Detailed performance insights
+            </div>
+            <div className="flex items-center text-sm text-gray-700">
+              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+              Progress tracking
+            </div>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowUpgradeModal(false)}
+              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Maybe Later
+            </button>
+            <button
+              onClick={() => {
+                // In a real app, this would redirect to payment/upgrade page
+                toast.info("Upgrade functionality coming soon!");
+                setShowUpgradeModal(false);
+              }}
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+            >
+              Upgrade Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading session summary...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Session Not Found</h2>
+          <p className="text-gray-600 mb-4">The requested interview session could not be found.</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center">
+              <button
+                onClick={() => navigate(-1)}
+                className="mr-4 p-2 text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Session Summary</h1>
+                <p className="text-gray-600">
+                  {summary.sessionInfo.jobRole} - {summary.sessionInfo.interviewType}
+                </p>
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={handlePDFExport}
+                disabled={exportingPDF}
+                className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                  hasProAccess
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                } ${exportingPDF ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {exportingPDF ? 'Exporting...' : 'Export PDF'}
+                {!hasProAccess && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Pro</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {/* Overall Score */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Target className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Overall Score</p>
+                <p className={`text-2xl font-bold ${getScoreColor(summary.overallAssessment.overallScore)}`}>
+                  {summary.overallAssessment.overallScore}/100
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Completion Rate */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Completion</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {summary.aggregateMetrics.completionRate}%
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Time */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Duration</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {summary.sessionInfo.totalDuration}m
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Session Rating */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Star className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Rating</p>
+                <div className="flex items-center mt-1">
+                  {renderStars(summary.overallAssessment.sessionRating)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Performance Metrics */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <BarChart3 className="h-5 w-5 mr-2" />
+              Performance Breakdown
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Questions Answered</span>
+                  <span>{summary.aggregateMetrics.answeredQuestions}/{summary.aggregateMetrics.totalQuestions}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full" 
+                    style={{ width: `${summary.aggregateMetrics.completionRate}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <h4 className="font-medium text-gray-900 mb-3">Score Distribution</h4>
+                <div className="space-y-2">
+                  {Object.entries(summary.aggregateMetrics.scoreDistribution).map(([level, count]) => {
+                    const percentage = summary.aggregateMetrics.answeredQuestions > 0 
+                      ? (count / summary.aggregateMetrics.answeredQuestions) * 100 
+                      : 0;
+                    
+                    return (
+                      <div key={level} className="flex items-center justify-between text-sm">
+                        <span className="capitalize">{level.replace('-', ' ')}</span>
+                        <div className="flex items-center">
+                          <div className="w-20 bg-gray-200 rounded-full h-2 mr-3">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                level === 'excellent' ? 'bg-green-500' :
+                                level === 'good' ? 'bg-blue-500' :
+                                level === 'average' ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-gray-600 w-8">{count}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Category Scores */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Category Performance</h3>
+            <div className="space-y-3">
+              {summary.categoryScores.slice(0, 6).map((category, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900 capitalize">{category.category}</p>
+                    <p className="text-sm text-gray-600">{category.questionsCount} questions</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-bold ${getScoreColor(category.averageScore)}`}>
+                      {category.averageScore}/100
+                    </p>
+                    <span className={`text-xs px-2 py-1 rounded-full ${getPerformanceColor(category.performance)}`}>
+                      {category.performance.replace('-', ' ')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Best Answers */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <TrendingUp className="h-5 w-5 text-green-600 mr-2" />
+              Best Performing Answers
+            </h3>
+            <div className="space-y-4">
+              {summary.performanceHighlights.bestAnswers.slice(0, 3).map((answer, index) => (
+                <div key={index} className="border-l-4 border-green-500 pl-4">
+                  <p className="text-sm text-gray-900 mb-1">{answer.question}</p>
+                  <div className="flex items-center justify-between text-xs text-gray-600">
+                    <span>Score: {answer.score}/100</span>
+                    <span>Time: {answer.timeSpent}s</span>
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded">{answer.category}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Areas for Improvement */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+              Areas for Improvement
+            </h3>
+            <div className="space-y-4">
+              {summary.performanceHighlights.worstAnswers.slice(0, 3).map((answer, index) => (
+                <div key={index} className="border-l-4 border-red-500 pl-4">
+                  <p className="text-sm text-gray-900 mb-1">{answer.question}</p>
+                  <div className="flex items-center justify-between text-xs text-gray-600">
+                    <span>Score: {answer.score}/100</span>
+                    <span>Time: {answer.timeSpent}s</span>
+                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded">{answer.category}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {summary.performanceHighlights.improvementOpportunities.length > 0 && (
+              <div className="mt-6 pt-4 border-t">
+                <h4 className="font-medium text-gray-900 mb-2">Focus Areas</h4>
+                <div className="space-y-2">
+                  {summary.performanceHighlights.improvementOpportunities.map((opp, index) => (
+                    <div key={index} className="flex items-start">
+                      <span className={`inline-block w-2 h-2 rounded-full mr-3 mt-2 ${
+                        opp.priority === 'high' ? 'bg-red-500' : 'bg-yellow-500'
+                      }`}></span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{opp.area}</p>
+                        <p className="text-xs text-gray-600">{opp.suggestion}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Overall Assessment */}
+        <div className="mt-8 bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Overall Assessment</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Readiness Level</h4>
+              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getPerformanceColor(summary.overallAssessment.readinessLevel)}`}>
+                {summary.overallAssessment.readinessLevel.replace('-', ' ')}
+              </span>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Recommendation</h4>
+              <p className="text-gray-700">{summary.overallAssessment.recommendation}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Time Analysis */}
+        <div className="mt-8 bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Clock className="h-5 w-5 mr-2" />
+            Time Analysis
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Average Response Time</h4>
+              <p className="text-2xl font-bold text-blue-600">{summary.timeAnalysis.averageTime}s</p>
+              <p className="text-sm text-gray-600">Time efficiency: {summary.timeAnalysis.timeEfficiency}</p>
+            </div>
+            {summary.timeAnalysis.fastestAnswer && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Fastest Response</h4>
+                <p className="text-lg font-bold text-green-600">{summary.timeAnalysis.fastestAnswer.time}s</p>
+                <p className="text-sm text-gray-600">Score: {summary.timeAnalysis.fastestAnswer.score}/100</p>
+              </div>
+            )}
+            {summary.timeAnalysis.slowestAnswer && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Slowest Response</h4>
+                <p className="text-lg font-bold text-red-600">{summary.timeAnalysis.slowestAnswer.time}s</p>
+                <p className="text-sm text-gray-600">Score: {summary.timeAnalysis.slowestAnswer.score}/100</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showUpgradeModal && <UpgradeModal />}
+    </div>
+  );
+};
+
+export default SessionSummaryPage;
