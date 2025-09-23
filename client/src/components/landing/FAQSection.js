@@ -92,7 +92,7 @@ const FAQSection = () => {
         </motion.div>
 
         {/* FAQ Accordion */}
-        <div className="space-y-4">
+        <div className="space-y-4" role="region" aria-label="Frequently asked questions">
           {faqs.map((faq, index) => (
             <motion.div
               key={index}
@@ -104,12 +104,15 @@ const FAQSection = () => {
             >
               <button
                 onClick={() => toggleFAQ(index)}
-                className="w-full px-6 py-6 text-left flex items-center justify-between hover:bg-surface-50 transition-colors duration-200"
+                className="w-full px-6 py-6 text-left flex items-center justify-between hover:bg-surface-50 focus:bg-surface-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
+                aria-expanded={openFAQ === index}
+                aria-controls={`faq-answer-${index}`}
+                id={`faq-question-${index}`}
               >
                 <h3 className="text-lg font-semibold text-surface-900 pr-4">
                   {faq.question}
                 </h3>
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0" aria-hidden="true">
                   {openFAQ === index ? (
                     <Minus size={20} className="text-primary-600" />
                   ) : (
@@ -126,6 +129,9 @@ const FAQSection = () => {
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3 }}
                     className="overflow-hidden"
+                    id={`faq-answer-${index}`}
+                    role="region"
+                    aria-labelledby={`faq-question-${index}`}
                   >
                     <div className="px-6 pb-6">
                       <div className="border-t border-surface-200 pt-4">
@@ -158,10 +164,18 @@ const FAQSection = () => {
               to you within 24 hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="mailto:support@mockmate.com" className="btn-primary">
+              <a 
+                href="mailto:support@mockmate.com" 
+                className="btn-primary"
+                aria-label="Contact MockMate support team via email"
+              >
                 Contact Support
               </a>
-              <a href="/help" className="btn-secondary">
+              <a 
+                href="/help" 
+                className="btn-secondary"
+                aria-label="Visit MockMate help center"
+              >
                 Help Center
               </a>
             </div>
