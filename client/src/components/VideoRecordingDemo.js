@@ -58,7 +58,7 @@ const VideoRecordingDemo = () => {
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2">
             <div
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              className="bg-primary-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             ></div>
           </div>
@@ -67,7 +67,7 @@ const VideoRecordingDemo = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Video Section */}
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-blue-400 mb-4">Video Recording</h2>
+            <h2 className="text-xl font-semibold text-primary-400 mb-4">Video Recording</h2>
             
             {/* Demo Notice */}
             <div className="bg-yellow-900/50 border border-yellow-700 rounded-lg p-4 mb-4">
@@ -100,7 +100,7 @@ const VideoRecordingDemo = () => {
 
             {/* Recording Instructions */}
             <div className="bg-gray-800 rounded-lg p-4">
-              <h3 className="font-medium text-blue-400 mb-2">How to Use:</h3>
+              <h3 className="font-medium text-primary-400 mb-2">How to Use:</h3>
               <ol className="text-sm text-gray-300 space-y-1">
                 <li>1. Allow camera access when prompted</li>
                 <li>2. Click the red record button to start recording</li>
@@ -116,12 +116,12 @@ const VideoRecordingDemo = () => {
           <div className="space-y-6">
             <div className="bg-gray-800 rounded-lg p-6">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-lg font-semibold text-blue-400">
+                <h2 className="text-lg font-semibold text-primary-400">
                   Current Question
                 </h2>
                 <div className="text-right text-sm">
                   <span className="text-gray-400">Category: </span>
-                  <span className="text-blue-400">{currentQuestion.category}</span>
+                  <span className="text-primary-400">{currentQuestion.category}</span>
                   <br />
                   <span className="text-gray-400">Difficulty: </span>
                   <span className="text-yellow-400">{currentQuestion.difficulty}</span>
@@ -134,11 +134,11 @@ const VideoRecordingDemo = () => {
 
             {/* Notes Area */}
             <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4 text-blue-400">
+              <h3 className="text-lg font-semibold mb-4 text-primary-400">
                 Your Response Notes
               </h3>
               <textarea
-                className="w-full h-32 bg-gray-700 border border-gray-600 rounded-lg p-4 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full h-32 bg-gray-700 border border-gray-600 rounded-lg p-4 text-white placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                 placeholder="Take notes or outline your response here..."
               />
               <p className="text-sm text-gray-400 mt-2">
@@ -158,7 +158,7 @@ const VideoRecordingDemo = () => {
               <button 
                 onClick={handleNext}
                 disabled={currentQuestionIndex === questions.length - 1}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed py-3 px-6 rounded-lg font-medium transition-colors"
+                className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-600 disabled:cursor-not-allowed py-3 px-6 rounded-lg font-medium transition-colors"
               >
                 {currentQuestionIndex === questions.length - 1 ? 'Demo Complete' : 'Next Question'}
               </button>
@@ -166,7 +166,7 @@ const VideoRecordingDemo = () => {
 
             {/* Feature Highlights */}
             <div className="bg-gray-800 rounded-lg p-4">
-              <h4 className="font-medium mb-3 text-blue-400">Video Recording Features</h4>
+              <h4 className="font-medium mb-3 text-primary-400">Video Recording Features</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center space-x-2">
                   <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,9 +205,9 @@ const VideoRecordingDemo = () => {
 
         {/* Demo Footer */}
         <div className="mt-8 text-center">
-          <div className="bg-blue-900/50 border border-blue-700 rounded-lg p-4">
-            <p className="text-blue-400 font-medium">Video Interview Recording System</p>
-            <p className="text-blue-200 text-sm mt-1">
+          <div className="bg-primary-900/50 border border-primary-700 rounded-lg p-4">
+            <p className="text-primary-400 font-medium">Video Interview Recording System</p>
+            <p className="text-primary-200 text-sm mt-1">
               Complete per-question video recording and upload functionality for interview platforms
             </p>
           </div>

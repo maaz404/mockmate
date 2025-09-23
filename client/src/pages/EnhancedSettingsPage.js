@@ -42,7 +42,7 @@ const SettingsPage = () => {
     } catch (error) {
       console.error("Error updating preferences:", error); // eslint-disable-line no-console
       // Revert the local state on error
-      setPreferences(userProfile.preferences);
+      setPreferences(userProfile?.preferences || null);
       toast.error("Failed to save preferences. Please try again.");
     }
   };

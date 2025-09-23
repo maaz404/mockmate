@@ -283,7 +283,7 @@ const InterviewCreationPage = () => {
                   name="duration"
                   value={formData.duration}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value={15}>15 minutes (Quick practice)</option>
                   <option value={30}>30 minutes (Standard)</option>
@@ -304,7 +304,7 @@ const InterviewCreationPage = () => {
                   name="difficulty"
                   value={formData.difficulty}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
@@ -325,8 +325,8 @@ const InterviewCreationPage = () => {
                     key={skill}
                     className={`px-3 py-2 rounded-lg border cursor-pointer text-center text-sm transition-all ${
                       formData.skills.includes(skill)
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
+                        ? "bg-primary-600 text-white border-primary-600"
+                        : "bg-white text-gray-700 border-gray-300 hover:border-primary-400"
                     }`}
                     onClick={() => handleSkillToggle(skill)}
                   >

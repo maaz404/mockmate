@@ -25,7 +25,7 @@ const FollowUpQuestions = ({
         <button
           onClick={onGenerate}
           disabled={loading}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <>
@@ -41,7 +41,7 @@ const FollowUpQuestions = ({
   }
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div className="bg-primary-50 border border-primary-200 rounded-lg p-6">
       <h3 className="text-lg font-medium text-gray-900 mb-4">Follow-up Questions</h3>
       
       {followUpQuestions && followUpQuestions.length > 0 ? (
@@ -50,14 +50,14 @@ const FollowUpQuestions = ({
             {followUpQuestions.map((followUp, index) => (
               <div key={index} className="flex items-start space-x-3">
                 <div className="flex-shrink-0">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-600 text-white text-xs font-medium">
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary-600 text-white text-xs font-medium">
                     {index + 1}
                   </span>
                 </div>
                 <div className="flex-grow">
                   <p className="text-gray-900 font-medium">{followUp.text}</p>
                   {followUp.type && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 mt-1">
                       {followUp.type}
                     </span>
                   )}
@@ -65,8 +65,8 @@ const FollowUpQuestions = ({
               </div>
             ))}
           </div>
-          <div className="mt-4 p-3 bg-blue-100 rounded-lg">
-            <p className="text-sm text-blue-800">
+          <div className="mt-4 p-3 bg-primary-100 rounded-lg">
+            <p className="text-sm text-primary-800">
               💡 These follow-up questions are designed to help you think deeper about your answer. 
               Consider how you might respond to these in a real interview.
             </p>

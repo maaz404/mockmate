@@ -76,8 +76,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
 
     try {
       // Log the data being sent for debugging
-      // eslint-disable-next-line no-console
-      console.log("Submitting onboarding data:", formData);
+      // console.log("Submitting onboarding data:", formData); // eslint-disable-line no-console
 
       // apiService.post returns already-unwrapped data
       const result = await apiService.post(
@@ -85,8 +84,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
         formData
       );
 
-      // eslint-disable-next-line no-console
-      console.log("Onboarding response:", result);
+      // console.log("Onboarding response:", result); // eslint-disable-line no-console
 
       toast.success("Profile setup completed successfully!", {
         id: loadingToast,
@@ -95,8 +93,7 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
       // Call onComplete with the server result (fallback to local form data)
       onComplete?.(result?.data || formData);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Onboarding submission failed:", error);
+      // console.error("Onboarding submission failed:", error); // eslint-disable-line no-console
 
       // Show detailed error message from server if available
       let errorMessage = "Failed to save preferences. Please try again.";

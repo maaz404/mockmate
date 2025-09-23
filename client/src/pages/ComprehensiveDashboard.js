@@ -200,7 +200,7 @@ const ComprehensiveDashboard = () => {
                   Your Skills
                 </h3>
                 <div className="space-y-3">
-                  {userProfile.skills.map((skill, index) => (
+                  {userProfile?.skills?.map((skill, index) => (
                     <div
                       key={index}
                       className="flex justify-between items-center"
@@ -245,9 +245,9 @@ const ComprehensiveDashboard = () => {
                   Recent Activity
                 </h3>
                 <div className="space-y-3">
-                  {userProfile.recentActivity
-                    .slice(0, 5)
-                    .map((activity, index) => (
+                  {userProfile?.recentActivity
+                    ?.slice(0, 5)
+                    ?.map((activity, index) => (
                       <div
                         key={index}
                         className="flex items-center space-x-3 text-sm"
