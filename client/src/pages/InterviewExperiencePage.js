@@ -3,8 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { apiService } from "../services/api";
 import { interviewService } from "../services/mockmate";
-import FollowUpQuestions from "../components/FollowUpQuestions";
-=======
 import CodeEditor from "../components/ui/CodeEditor";
 import CodeExecutionResults from "../components/ui/CodeExecutionResults";
 
@@ -89,7 +87,7 @@ const InterviewExperiencePage = () => {
         setShowFollowUps(prev => ({ ...prev, [currentQuestionIndex]: true }));
       }
     } catch (error) {
-      console.error('Failed to submit answer or fetch follow-ups:', error);
+      // console.error('Failed to submit answer or fetch follow-ups:', error); // eslint-disable-line no-console
     } finally {
       setLoadingFollowUps(prev => ({ ...prev, [currentQuestionIndex]: false }));
     }

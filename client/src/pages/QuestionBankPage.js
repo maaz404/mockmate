@@ -3,7 +3,13 @@ import HybridQuestionGenerator from "../components/ui/HybridQuestionGenerator";
 
 const QuestionBankPage = () => {
   const [showGenerator, setShowGenerator] = useState(false);
+  
+  const handleQuestionsGenerated = (_questions) => {
+    // Handle the generated questions
+    // console.log('Generated questions:', questions); // eslint-disable-line no-console
+    setShowGenerator(false);
   };
+  
   const questionCategories = [
     {
       name: "Behavioral Questions",
