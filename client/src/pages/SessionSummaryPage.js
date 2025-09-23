@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { 
@@ -27,13 +27,7 @@ const SessionSummaryPage = () => {
   const [exportingPDF, setExportingPDF] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  useEffect(() => {
-    if (interviewId) {
-      fetchSessionSummary();
-    }
-  }, [interviewId]);
-
-  const fetchSessionSummary = async () => {
+  const fetchSessionSummary = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.get(`/reports/${interviewId}/session-summary`);
@@ -45,12 +39,18 @@ const SessionSummaryPage = () => {
         toast.error("Failed to load session summary");
       }
     } catch (error) {
-      console.error("Error fetching session summary:", error);
+      // Remove console.error for production
       toast.error("Failed to load session summary");
     } finally {
       setLoading(false);
     }
-  };
+  }, [interviewId]);
+
+  useEffect(() => {
+    if (interviewId) {
+      fetchSessionSummary();
+    }
+  }, [interviewId, fetchSessionSummary]);
 
   const handlePDFExport = async () => {
     if (!hasProAccess) {
@@ -92,7 +92,7 @@ const SessionSummaryPage = () => {
         toast.error("Failed to export PDF");
       }
     } catch (error) {
-      console.error("Error exporting PDF:", error);
+      // Remove console.error for production
       toast.error("Failed to export PDF");
     } finally {
       setExportingPDF(false);
