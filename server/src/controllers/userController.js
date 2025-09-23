@@ -11,17 +11,51 @@ const getProfile = async (req, res) => {
 
     // If profile doesn't exist, create one from Clerk data
     if (!userProfile) {
-      const clerkUser = await clerkClient.users.getUser(userId);
+      let clerkUser = null;
+      
+      // Try to get user from Clerk, but don't fail if Clerk is not configured
+      try {
+        if (process.env.CLERK_SECRET_KEY) {
+          clerkUser = await clerkClient.users.getUser(userId);
+        }
+      } catch (clerkError) {
+        console.error("Clerk API error in getProfile:", clerkError);
+        
+        // In production with Clerk configured, this should fail
+        if (process.env.NODE_ENV === 'production' && process.env.CLERK_SECRET_KEY) {
+          throw clerkError;
+        }
+        
+        // In development, use fallback
+        console.warn("Using fallback user data in development mode");
+      }
 
-      userProfile = new UserProfile({
-        clerkUserId: userId,
-        email: clerkUser.emailAddresses[0]?.emailAddress,
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-        profileImage: clerkUser.profileImageUrl,
-      });
+      // Fallback user data for development
+      if (!clerkUser && process.env.NODE_ENV !== 'production') {
+        clerkUser = {
+          emailAddresses: [{ emailAddress: `user-${userId}@example.com` }],
+          firstName: "Test",
+          lastName: "User",
+          profileImageUrl: null,
+        };
+      }
 
-      await userProfile.save();
+      if (clerkUser) {
+        userProfile = new UserProfile({
+          clerkUserId: userId,
+          email: clerkUser.emailAddresses[0]?.emailAddress,
+          firstName: clerkUser.firstName,
+          lastName: clerkUser.lastName,
+          profileImage: clerkUser.profileImageUrl,
+        });
+
+        await userProfile.save();
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: "User not found and could not create profile",
+        });
+      }
     }
 
     res.json({
@@ -124,15 +158,36 @@ const completeOnboarding = async (req, res) => {
     }
 
     // Ensure a profile exists; if not, create it from Clerk data on the fly
-    let clerkUser;
+    let clerkUser = null;
+    
+    // Try to get user from Clerk, but don't fail if Clerk is not configured (development mode)
     try {
-      clerkUser = await clerkClient.users.getUser(userId);
+      if (process.env.CLERK_SECRET_KEY) {
+        clerkUser = await clerkClient.users.getUser(userId);
+      }
     } catch (clerkError) {
       console.error("Clerk API error:", clerkError);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to fetch user data from authentication service",
-      });
+      
+      // In production with Clerk configured, this should fail
+      if (process.env.NODE_ENV === 'production' && process.env.CLERK_SECRET_KEY) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to fetch user data from authentication service",
+        });
+      }
+      
+      // In development, continue without Clerk data
+      console.warn("Continuing without Clerk authentication in development mode");
+    }
+
+    // Fallback user data for development
+    if (!clerkUser && process.env.NODE_ENV !== 'production') {
+      clerkUser = {
+        emailAddresses: [{ emailAddress: `user-${userId}@example.com` }],
+        firstName: "Test",
+        lastName: "User",
+        profileImageUrl: null,
+      };
     }
 
     if (!clerkUser) {

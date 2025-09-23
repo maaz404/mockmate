@@ -3,8 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { apiService } from "../services/api";
 import { interviewService } from "../services/mockmate";
-import FollowUpQuestions from "../components/FollowUpQuestions";
-=======
 import CodeEditor from "../components/ui/CodeEditor";
 import CodeExecutionResults from "../components/ui/CodeExecutionResults";
 
@@ -89,7 +87,7 @@ const InterviewExperiencePage = () => {
         setShowFollowUps(prev => ({ ...prev, [currentQuestionIndex]: true }));
       }
     } catch (error) {
-      console.error('Failed to submit answer or fetch follow-ups:', error);
+      // console.error('Failed to submit answer or fetch follow-ups:', error); // eslint-disable-line no-console
     } finally {
       setLoadingFollowUps(prev => ({ ...prev, [currentQuestionIndex]: false }));
     }
@@ -220,7 +218,7 @@ const InterviewExperiencePage = () => {
   if (!isLoaded || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -234,7 +232,7 @@ const InterviewExperiencePage = () => {
           </h2>
           <button
             onClick={() => navigate("/dashboard")}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           >
             Return to Dashboard
           </button>
@@ -267,7 +265,7 @@ const InterviewExperiencePage = () => {
                 <span className="text-sm text-gray-600">Progress:</span>
                 <div className="w-32 bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${getProgressPercentage()}%` }}
                   ></div>
                 </div>
@@ -281,7 +279,7 @@ const InterviewExperiencePage = () => {
                 className={`text-lg font-mono font-bold px-3 py-1 rounded ${
                   timeRemaining < 300
                     ? "text-red-600 bg-red-100"
-                    : "text-blue-600 bg-blue-100"
+                    : "text-primary-600 bg-primary-100"
                 }`}
               >
                 {formatTime(timeRemaining)}
@@ -301,7 +299,7 @@ const InterviewExperiencePage = () => {
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${
                     currentQuestion.type === "technical"
-                      ? "bg-blue-100 text-blue-800"
+                      ? "bg-primary-100 text-primary-800"
                       : currentQuestion.type === "behavioral"
                       ? "bg-green-100 text-green-800"
                       : "bg-purple-100 text-purple-800"
@@ -377,7 +375,7 @@ const InterviewExperiencePage = () => {
                   value={currentAnswer}
                   onChange={handleAnswerChange}
                   placeholder="Provide your detailed answer here..."
-                  className="w-full h-48 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full h-48 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                 />
                 <p className="text-sm text-gray-600">
                   💡 Tip: Use the STAR method (Situation, Task, Action, Result)
@@ -402,7 +400,7 @@ const InterviewExperiencePage = () => {
                   className={`px-4 py-2 rounded-lg font-medium ${
                     isRecording
                       ? "bg-red-600 text-white hover:bg-red-700"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-primary-600 text-white hover:bg-primary-700"
                   }`}
                 >
                   {isRecording ? "🎙️ Stop Recording" : "🎤 Start Recording"}
@@ -420,7 +418,7 @@ const InterviewExperiencePage = () => {
                   <button
                     onClick={handleSubmitAnswerWithFollowUp}
                     disabled={loadingFollowUps[currentQuestionIndex]}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loadingFollowUps[currentQuestionIndex] ? (
                       <>
@@ -435,19 +433,19 @@ const InterviewExperiencePage = () => {
               </div>
 
               {showFollowUps[currentQuestionIndex] && followUpQuestions[currentQuestionIndex] && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="bg-primary-50 border border-primary-200 rounded-lg p-6">
                   <div className="space-y-4">
                     {followUpQuestions[currentQuestionIndex].map((followUp, index) => (
                       <div key={index} className="flex items-start space-x-3">
                         <div className="flex-shrink-0">
-                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-600 text-white text-xs font-medium">
+                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary-600 text-white text-xs font-medium">
                             {index + 1}
                           </span>
                         </div>
                         <div className="flex-grow">
                           <p className="text-gray-900 font-medium">{followUp.text}</p>
                           {followUp.type && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 mt-1">
                               {followUp.type}
                             </span>
                           )}
@@ -455,8 +453,8 @@ const InterviewExperiencePage = () => {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 p-3 bg-blue-100 rounded-lg">
-                    <p className="text-sm text-blue-800">
+                  <div className="mt-4 p-3 bg-primary-100 rounded-lg">
+                    <p className="text-sm text-primary-800">
                       💡 These follow-up questions are designed to help you think deeper about your answer. 
                       Consider how you might respond to these in a real interview.
                     </p>
@@ -488,7 +486,7 @@ const InterviewExperiencePage = () => {
             <div className="flex space-x-4">
               <button
                 onClick={handleSaveAnswer}
-                className="px-6 py-3 text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200"
+                className="px-6 py-3 text-primary-700 bg-primary-100 rounded-lg hover:bg-primary-200"
               >
                 💾 Save Answer
               </button>
@@ -521,7 +519,7 @@ const InterviewExperiencePage = () => {
               ) : (
                 <button
                   onClick={handleNextQuestion}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
                 >
                   Next →
                 </button>
@@ -542,7 +540,7 @@ const InterviewExperiencePage = () => {
                 }}
                 className={`w-3 h-3 rounded-full transition-colors ${
                   index === currentQuestionIndex
-                    ? "bg-blue-600"
+                    ? "bg-primary-600"
                     : answers[interview.questions[index]._id]
                     ? "bg-green-400"
                     : "bg-gray-300"

@@ -128,7 +128,7 @@ const ComprehensiveDashboard = () => {
               </span>
               <div className="w-20 bg-gray-200 rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                   style={{
                     width: `${
                       userProfile?.profileCompletenessPercentage || 0
@@ -200,7 +200,7 @@ const ComprehensiveDashboard = () => {
                   Your Skills
                 </h3>
                 <div className="space-y-3">
-                  {userProfile.skills.map((skill, index) => (
+                  {userProfile?.skills?.map((skill, index) => (
                     <div
                       key={index}
                       className="flex justify-between items-center"
@@ -245,14 +245,14 @@ const ComprehensiveDashboard = () => {
                   Recent Activity
                 </h3>
                 <div className="space-y-3">
-                  {userProfile.recentActivity
-                    .slice(0, 5)
-                    .map((activity, index) => (
+                  {userProfile?.recentActivity
+                    ?.slice(0, 5)
+                    ?.map((activity, index) => (
                       <div
                         key={index}
                         className="flex items-center space-x-3 text-sm"
                       >
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
                         <span className="text-gray-700">
                           {activity.description}
                         </span>

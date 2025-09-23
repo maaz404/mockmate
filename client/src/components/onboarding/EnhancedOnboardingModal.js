@@ -115,13 +115,32 @@ const OnboardingModal = ({ isOpen, onClose }) => {
   };
 
   const handleComplete = async () => {
+    // Validate required fields before submission
+    const { currentRole, industry } = formData.professionalInfo;
+    const { interviewTypes } = formData.preferences;
+
+    if (!currentRole.trim()) {
+      toast.error("Please provide your current role");
+      return;
+    }
+
+    if (!industry.trim()) {
+      toast.error("Please select your industry");
+      return;
+    }
+
+    if (!interviewTypes || interviewTypes.length === 0) {
+      toast.error("Please select at least one interview type");
+      return;
+    }
+
     setLoading(true);
     try {
-      console.log("Submitting onboarding data:", formData); // eslint-disable-line no-console
+      // console.log("Submitting onboarding data:", formData); // eslint-disable-line no-console
       
       const response = await api.post("/users/onboarding/complete", formData);
       
-      console.log("Onboarding response:", response); // eslint-disable-line no-console
+      // console.log("Onboarding response:", response); // eslint-disable-line no-console
       
       if (response.data && response.data.success) {
         await refreshProfile();
@@ -180,7 +199,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("professionalInfo", "currentRole", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="e.g., Software Engineer, Product Manager"
           />
         </div>
@@ -195,7 +214,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("professionalInfo", "company", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="e.g., Google, Microsoft, Startup"
           />
         </div>
@@ -213,7 +232,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                 e.target.value
               )
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="">Select experience level</option>
             <option value="0-1">0-1 years</option>
@@ -233,7 +252,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("professionalInfo", "industry", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="">Select industry</option>
             {industries.map((industry) => (
@@ -270,7 +289,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                 e.target.value.split(", ").filter(Boolean)
               )
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="e.g., React, Python, Leadership, Communication"
           />
         </div>
@@ -289,7 +308,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
               )
             }
             rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Describe your career aspirations and what you want to achieve..."
           />
         </div>
@@ -341,7 +360,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("preferences", "difficulty", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
@@ -405,7 +424,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             <div
               className={`w-11 h-6 bg-gray-200 rounded-full peer ${
                 formData.preferences.notifications.email
-                  ? "peer-checked:bg-blue-600"
+                  ? "peer-checked:bg-primary-600"
                   : ""
               }`}
             >
@@ -437,7 +456,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             <div
               className={`w-11 h-6 bg-gray-200 rounded-full peer ${
                 formData.preferences.notifications.push
-                  ? "peer-checked:bg-blue-600"
+                  ? "peer-checked:bg-primary-600"
                   : ""
               }`}
             >
@@ -471,7 +490,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             <div
               className={`w-11 h-6 bg-gray-200 rounded-full peer ${
                 formData.preferences.notifications.interviews
-                  ? "peer-checked:bg-blue-600"
+                  ? "peer-checked:bg-primary-600"
                   : ""
               }`}
             >
@@ -503,7 +522,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             <div
               className={`w-11 h-6 bg-gray-200 rounded-full peer ${
                 formData.preferences.notifications.progress
-                  ? "peer-checked:bg-blue-600"
+                  ? "peer-checked:bg-primary-600"
                   : ""
               }`}
             >
@@ -549,7 +568,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                   key={s}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     s <= step
-                      ? "bg-blue-600 text-white"
+                      ? "bg-primary-600 text-white"
                       : "bg-gray-200 text-gray-600"
                   }`}
                 >
@@ -559,7 +578,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             </div>
             <div className="h-2 bg-gray-200 rounded-full">
               <div
-                className="h-2 bg-blue-600 rounded-full transition-all duration-300"
+                className="h-2 bg-primary-600 rounded-full transition-all duration-300"
                 style={{ width: `${(step / 4) * 100}%` }}
               />
             </div>
@@ -588,7 +607,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             {step < 4 ? (
               <button
                 onClick={handleNext}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className="px-6 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
               >
                 Next
               </button>

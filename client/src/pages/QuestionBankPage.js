@@ -3,13 +3,19 @@ import HybridQuestionGenerator from "../components/ui/HybridQuestionGenerator";
 
 const QuestionBankPage = () => {
   const [showGenerator, setShowGenerator] = useState(false);
+  
+  const handleQuestionsGenerated = (_questions) => {
+    // Handle the generated questions
+    // console.log('Generated questions:', questions); // eslint-disable-line no-console
+    setShowGenerator(false);
   };
+  
   const questionCategories = [
     {
       name: "Behavioral Questions",
       count: 45,
       description: "Common behavioral interview questions",
-      color: "bg-blue-100 text-blue-600",
+      color: "bg-primary-100 text-primary-600",
       icon: (
         <svg
           className="w-6 h-6"
