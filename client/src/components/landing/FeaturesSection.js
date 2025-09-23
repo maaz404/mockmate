@@ -39,21 +39,21 @@ const FeaturesSection = () => {
       title: "Dynamic Question Management",
       description:
         "Created scalable question database with MongoDB aggregation pipelines for categorized, difficulty-based question retrieval.",
-      color: "blue",
+      color: "primary",
     },
     {
       icon: Clock,
       title: "Asynchronous Processing",
       description:
         "Implemented non-blocking backend architecture with Node.js event loop for real-time feedback and concurrent user sessions.",
-      color: "orange",
+      color: "accent",
     },
     {
       icon: Target,
       title: "Adaptive Algorithm Design",
       description:
         "Developed machine learning logic for personalized content delivery based on user performance patterns and learning objectives.",
-      color: "purple",
+      color: "success",
     },
   ];
 
@@ -61,10 +61,8 @@ const FeaturesSection = () => {
     const colors = {
       primary: "bg-primary-500/10 text-primary-600 border-primary-500/20",
       accent: "bg-accent-500/10 text-accent-600 border-accent-500/20",
+      success: "bg-success-500/10 text-success-600 border-success-500/20",
       green: "bg-green-500/10 text-green-600 border-green-500/20",
-      blue: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-      orange: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-      purple: "bg-purple-500/10 text-purple-600 border-purple-500/20",
     };
     return colors[color] || colors.primary;
   };
@@ -207,8 +205,8 @@ const FeaturesSection = () => {
                       ⚠ Technical depth improvement
                     </div>
                   </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="text-blue-700 font-medium text-sm">
+                  <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
+                    <div className="text-primary-700 font-medium text-sm">
                       💡 Algorithm optimization potential
                     </div>
                   </div>

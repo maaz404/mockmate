@@ -7,7 +7,7 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
       case "completed":
         return "bg-green-500/20 text-green-400 border-green-500/30";
       case "in-progress":
-        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+        return "bg-primary-500/20 text-primary-400 border-primary-500/30";
       case "abandoned":
         return "bg-red-500/20 text-red-400 border-red-500/30";
       default:
@@ -17,7 +17,7 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
 
   const getPerformanceColor = (score) => {
     if (score >= 85) return "text-green-400";
-    if (score >= 70) return "text-blue-400";
+    if (score >= 70) return "text-primary-400";
     if (score >= 50) return "text-yellow-400";
     return "text-red-400";
   };
@@ -115,7 +115,7 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
                       </svg>
                     </div>
                   ) : interview.status === "in-progress" ? (
-                    <div className="text-blue-400">
+                    <div className="text-primary-400">
                       <svg
                         className="w-5 h-5 animate-spin"
                         fill="none"

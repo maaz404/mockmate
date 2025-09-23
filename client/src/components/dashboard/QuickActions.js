@@ -7,7 +7,7 @@ const QuickActions = ({ onStartInterview, userProfile }) => {
       title: "Technical Interview",
       description: "Practice coding and technical questions",
       icon: "💻",
-      color: "bg-blue-500 hover:bg-blue-600",
+      color: "bg-primary-500 hover:bg-primary-600",
     },
     {
       type: "behavioral",
@@ -28,7 +28,7 @@ const QuickActions = ({ onStartInterview, userProfile }) => {
       title: "Mixed Interview",
       description: "Combination of technical and behavioral",
       icon: "🎯",
-      color: "bg-orange-500 hover:bg-orange-600",
+      color: "bg-accent-500 hover:bg-accent-600",
     },
   ];
 

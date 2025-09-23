@@ -129,8 +129,6 @@
 
   .form-checkbox-card.selected {
     @apply bg-green-500/20 text-green-300 border-green-500/50;
-=======
-    @apply block w-full px-4 py-3 border border-surface-300 rounded-xl shadow-sm placeholder-surface-400 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 disabled:bg-surface-100 disabled:cursor-not-allowed;
   }
 
   .form-input-dark {
@@ -244,7 +242,7 @@
 
 /* Gradient text improvements */
 .text-gradient {
-  @apply bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent;
 }
 
 /* Enhanced card styles */

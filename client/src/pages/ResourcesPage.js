@@ -27,7 +27,7 @@ const ResourcesPage = () => {
               <p className="text-surface-500 mb-6">
                 Essential tips for acing your interviews
               </p>
-              <button className="text-orange-600 hover:text-orange-700 font-medium self-start">
+              <button className="text-primary-600 hover:text-primary-700 font-medium self-start">
                 Learn More →
               </button>
             </div>
@@ -39,7 +39,7 @@ const ResourcesPage = () => {
               <p className="text-surface-500 mb-6">
                 Most frequently asked interview questions
               </p>
-              <button className="text-orange-600 hover:text-orange-700 font-medium self-start">
+              <button className="text-primary-600 hover:text-primary-700 font-medium self-start">
                 View Questions →
               </button>
             </div>
@@ -51,7 +51,7 @@ const ResourcesPage = () => {
               <p className="text-surface-500 mb-6">
                 Role-specific interview preparation guides
               </p>
-              <button className="text-orange-600 hover:text-orange-700 font-medium self-start">
+              <button className="text-primary-600 hover:text-primary-700 font-medium self-start">
                 Browse Guides →
               </button>
             </div>

@@ -160,7 +160,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
   const renderStep1 = () => (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <User className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+        <User className="mx-auto h-12 w-12 text-primary-600 mb-4" />
         <h3 className="text-xl font-semibold text-gray-900">
           Professional Information
         </h3>
@@ -250,7 +250,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
   const renderStep2 = () => (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <Briefcase className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+        <Briefcase className="mx-auto h-12 w-12 text-primary-600 mb-4" />
         <h3 className="text-xl font-semibold text-gray-900">Skills & Goals</h3>
         <p className="text-gray-600">What skills do you want to improve?</p>
       </div>
@@ -300,7 +300,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
   const renderStep3 = () => (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <Target className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+        <Target className="mx-auto h-12 w-12 text-primary-600 mb-4" />
         <h3 className="text-xl font-semibold text-gray-900">
           Interview Preferences
         </h3>
@@ -324,7 +324,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                   onChange={() =>
                     handleArrayToggle("preferences", "interviewTypes", type)
                   }
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="text-sm text-gray-700">{type}</span>
               </label>
@@ -366,7 +366,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                   onChange={() =>
                     handleArrayToggle("preferences", "focusAreas", area)
                   }
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="text-sm text-gray-700">{area}</span>
               </label>
@@ -380,7 +380,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
   const renderStep4 = () => (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <Settings className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+        <Settings className="mx-auto h-12 w-12 text-primary-600 mb-4" />
         <h3 className="text-xl font-semibold text-gray-900">
           Notification Preferences
         </h3>
