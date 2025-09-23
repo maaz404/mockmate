@@ -129,7 +129,7 @@ const UserProfileCard = () => {
               alt="Profile"
               className="w-16 h-16 rounded-full border-2 border-gray-200"
             />
-            <button className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-1 rounded-full hover:bg-blue-700 transition-colors">
+            <button className="absolute -bottom-1 -right-1 bg-primary-600 text-white p-1 rounded-full hover:bg-primary-700 transition-colors">
               <Camera className="h-3 w-3" />
             </button>
           </div>
@@ -187,7 +187,7 @@ const UserProfileCard = () => {
           ) : (
             <button
               onClick={() => setIsEditing(true)}
-              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <Edit3 className="h-4 w-4" />
             </button>
@@ -198,7 +198,7 @@ const UserProfileCard = () => {
       {/* Professional Info */}
       <div className="space-y-4">
         <div className="flex items-center space-x-2 mb-3">
-          <Briefcase className="h-5 w-5 text-blue-600" />
+          <Briefcase className="h-5 w-5 text-primary-600" />
           <h3 className="font-medium text-gray-900">
             Professional Information
           </h3>
@@ -319,7 +319,7 @@ const UserProfileCard = () => {
                 userProfile.professionalInfo.skills.map((skill, index) => (
                   <span
                     key={index}
-                    className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                    className="px-2 py-1 bg-primary-100 text-primary-800 text-sm rounded-full"
                   >
                     {skill}
                   </span>
@@ -360,13 +360,13 @@ const UserProfileCard = () => {
       {stats && (
         <div className="mt-6 pt-6 border-t border-gray-200">
           <div className="flex items-center space-x-2 mb-3">
-            <Award className="h-5 w-5 text-blue-600" />
+            <Award className="h-5 w-5 text-primary-600" />
             <h3 className="font-medium text-gray-900">Statistics</h3>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">
+              <p className="text-2xl font-bold text-primary-600">
                 {stats.analytics?.totalInterviews || 0}
               </p>
               <p className="text-sm text-gray-600">Total Interviews</p>
@@ -384,7 +384,7 @@ const UserProfileCard = () => {
               <p className="text-sm text-gray-600">Current Streak</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-orange-600">
+              <p className="text-2xl font-bold text-accent-600">
                 {stats.analytics?.streak?.longest || 0}
               </p>
               <p className="text-sm text-gray-600">Best Streak</p>
@@ -405,7 +405,7 @@ const UserProfileCard = () => {
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            className="bg-primary-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${userProfile.profileCompleteness || 0}%` }}
           />
         </div>

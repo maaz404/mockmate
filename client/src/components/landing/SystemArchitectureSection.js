@@ -17,7 +17,7 @@ const SystemArchitectureSection = () => {
       name: "Frontend Layer",
       description: "React-based user interface with modern design patterns",
       icon: Globe,
-      color: "blue",
+      color: "primary",
       technologies: [
         "React 18.2.0 with Hooks",
         "Tailwind CSS for styling",
@@ -73,7 +73,7 @@ const SystemArchitectureSection = () => {
       name: "AI Integration",
       description: "Machine learning APIs for intelligent feedback",
       icon: Code,
-      color: "orange",
+      color: "accent",
       technologies: [
         "Natural Language Processing",
         "AI API integration",
@@ -126,10 +126,8 @@ const SystemArchitectureSection = () => {
     const colors = {
       primary: "bg-primary-500/10 text-primary-600 border-primary-500/20",
       accent: "bg-accent-500/10 text-accent-600 border-accent-500/20",
-      blue: "bg-blue-500/10 text-blue-600 border-blue-500/20",
       green: "bg-green-500/10 text-green-600 border-green-500/20",
       purple: "bg-purple-500/10 text-purple-600 border-purple-500/20",
-      orange: "bg-orange-500/10 text-orange-600 border-orange-500/20",
     };
     return colors[color] || colors.primary;
   };

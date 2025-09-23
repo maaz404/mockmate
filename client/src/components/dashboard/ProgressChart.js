@@ -85,7 +85,7 @@ const ProgressChart = ({ analytics }) => {
         <div className="space-y-2">
           {improvementAreas.map((area, index) => (
             <div key={index} className="flex items-center">
-              <div className="w-2 h-2 bg-orange-400 rounded-full mr-3"></div>
+              <div className="w-2 h-2 bg-accent-400 rounded-full mr-3"></div>
               <span className="text-sm text-surface-300">{area}</span>
             </div>
           ))}

@@ -42,7 +42,7 @@ const ProjectInfoSection = () => {
       content:
         "Overcame challenges in real-time video processing, AI response analysis, user data synchronization, and creating responsive, accessible user interfaces.",
       category: "Problem Solving",
-      color: "blue",
+      color: "primary",
     },
     {
       icon: Cpu,
@@ -50,7 +50,7 @@ const ProjectInfoSection = () => {
       content:
         "Implemented microservices architecture with RESTful APIs, JWT authentication, MongoDB aggregation pipelines, and asynchronous processing for optimal performance.",
       category: "Technical Design",
-      color: "orange",
+      color: "accent",
     },
     {
       icon: Database,
@@ -90,8 +90,6 @@ const ProjectInfoSection = () => {
       primary: "bg-primary-500/10 text-primary-600 border-primary-500/20",
       accent: "bg-accent-500/10 text-accent-600 border-accent-500/20",
       green: "bg-green-500/10 text-green-600 border-green-500/20",
-      blue: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-      orange: "bg-orange-500/10 text-orange-600 border-orange-500/20",
       purple: "bg-purple-500/10 text-purple-600 border-purple-500/20",
     };
     return colors[color] || colors.primary;

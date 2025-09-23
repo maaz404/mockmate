@@ -8,7 +8,7 @@ const TechStackSection = () => {
       name: "React",
       icon: Code2,
       description: "Frontend Framework",
-      color: "text-blue-500",
+      color: "text-primary-500",
     },
     {
       name: "Node.js",
@@ -38,7 +38,7 @@ const TechStackSection = () => {
       name: "AI Integration",
       icon: Brain,
       description: "Machine Learning",
-      color: "text-orange-500",
+      color: "text-accent-500",
     },
   ];
 

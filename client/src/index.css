@@ -242,7 +242,7 @@
 
 /* Gradient text improvements */
 .text-gradient {
-  @apply bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent;
 }
 
 /* Enhanced card styles */
