@@ -3,6 +3,8 @@ const fs = require("fs").promises;
 const path = require("path");
 
 const Logger = require("../utils/logger");
+const judge0Service = require("./judge0Service");
+const codeReviewService = require("./codeReviewService");
 
 class CodingChallengeService {
   constructor() {
@@ -411,34 +413,78 @@ You must write an algorithm with O(log n) runtime complexity.`,
       // Add submission to session
       session.submissions.push(submission);
 
-      // Run tests
-      const testResults = await this.runTests(challenge, code, language);
+      try {
+        // Run tests
+        const testResults = await this.runTests(challenge, code, language);
 
-      // Calculate score
-      const score = this.calculateScore(testResults, challenge);
+        // Calculate score
+        const score = this.calculateScore(testResults, challenge);
 
-      // Update submission with results
-      submission.status = "completed";
-      submission.testResults = testResults;
-      submission.score = score;
-      submission.completedAt = new Date();
-      submission.executionTime =
-        submission.completedAt - submission.submittedAt;
+        // Generate AI code review
+        const executionResult = {
+          success: true,
+          testResults,
+          score
+        };
+        
+        const codeReview = await codeReviewService.reviewCode(
+          code, 
+          language, 
+          challenge, 
+          executionResult
+        );
 
-      // Update session results
-      session.results.totalScore += score;
-      session.results.challengesCompleted++;
-      session.results.totalTime += submission.executionTime;
+        // Update submission with results
+        submission.status = "completed";
+        submission.testResults = testResults;
+        submission.score = score;
+        submission.codeReview = codeReview;
+        submission.completedAt = new Date();
+        submission.executionTime =
+          submission.completedAt - submission.submittedAt;
 
-      return {
-        success: true,
-        submissionId,
-        testResults,
-        score,
-        passedTests: testResults.filter((t) => t.passed).length,
-        totalTests: testResults.length,
-        feedback: this.generateCodeFeedback(testResults, code, challenge),
-      };
+        // Update session results
+        session.results.totalScore += score;
+        session.results.challengesCompleted++;
+        session.results.totalTime += submission.executionTime;
+
+        return {
+          success: true,
+          submissionId,
+          testResults,
+          score,
+          passedTests: testResults.filter((t) => t.passed).length,
+          totalTests: testResults.length,
+          feedback: this.generateCodeFeedback(testResults, code, challenge),
+          codeReview
+        };
+        
+      } catch (executionError) {
+        // Handle execution failure
+        const executionResult = {
+          success: false,
+          error: executionError.message
+        };
+        
+        const codeReview = await codeReviewService.reviewCode(
+          code, 
+          language, 
+          challenge, 
+          executionResult
+        );
+
+        submission.status = "failed";
+        submission.error = executionError.message;
+        submission.codeReview = codeReview;
+        submission.completedAt = new Date();
+
+        return {
+          success: false,
+          error: executionError.message,
+          submissionId,
+          codeReview
+        };
+      }
     } catch (error) {
       console.error("Code submission failed:", error);
       return {
@@ -490,34 +536,211 @@ You must write an algorithm with O(log n) runtime complexity.`,
   }
 
   /**
-   * Execute a single test case (simplified version)
+   * Execute a single test case using Judge0 or fallback
    */
   async executeTest(code, testCase, language, challenge) {
     const startTime = Date.now();
 
     try {
-      // This is a simplified implementation
-      // In production, you'd use a secure sandboxed environment
-      let result;
-
-      if (language === "javascript") {
-        result = this.executeJavaScriptTest(code, testCase, challenge);
-      } else if (language === "python") {
-        result = this.executePythonTest(code, testCase, challenge);
+      // Use Judge0 if available, otherwise fallback to local execution
+      if (judge0Service.isAvailable()) {
+        return await this.executeWithJudge0(code, testCase, language, challenge);
       } else {
-        throw new Error(`Language ${language} not supported for execution`);
+        // Fallback to local execution (for development/testing)
+        return await this.executeLocally(code, testCase, language, challenge);
       }
-
-      const executionTime = Date.now() - startTime;
-
-      return {
-        output: result,
-        executionTime,
-        memoryUsed: 0, // Placeholder
-      };
     } catch (error) {
       throw new Error(`Execution error: ${error.message}`);
     }
+  }
+
+  /**
+   * Execute code using Judge0 API
+   */
+  async executeWithJudge0(code, testCase, language, challenge) {
+    try {
+      // Prepare test code for Judge0
+      const testCode = this.prepareTestCode(code, testCase, language, challenge);
+      
+      // Execute using Judge0
+      const result = await judge0Service.executeCode(testCode, language);
+      
+      // Parse Judge0 result
+      if (result.status.id === 3) { // Accepted
+        const output = this.parseJudge0Output(result.stdout, language);
+        return {
+          output,
+          executionTime: result.time * 1000, // Convert to milliseconds
+          memoryUsed: result.memory || 0,
+          judge0Result: result
+        };
+      } else {
+        throw new Error(`Execution failed: ${result.stderr || result.compile_output || 'Unknown error'}`);
+      }
+    } catch (error) {
+      throw new Error(`Judge0 execution failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Prepare test code for Judge0 execution
+   */
+  prepareTestCode(code, testCase, language, challenge) {
+    switch (language) {
+      case 'javascript':
+        return this.prepareJavaScriptTestCode(code, testCase, challenge);
+      case 'python':
+        return this.preparePythonTestCode(code, testCase, challenge);
+      case 'java':
+        return this.prepareJavaTestCode(code, testCase, challenge);
+      default:
+        throw new Error(`Language ${language} not supported`);
+    }
+  }
+
+  /**
+   * Prepare JavaScript test code for Judge0
+   */
+  prepareJavaScriptTestCode(code, testCase, challenge) {
+    const input = JSON.stringify(testCase.input);
+    return `
+${code}
+
+// Test execution
+try {
+  const input = ${input};
+  let result;
+  
+  switch('${challenge.id}') {
+    case 'two-sum':
+      result = twoSum(input[0], input[1]);
+      break;
+    case 'reverse-string':
+      const arr = [...input[0]];
+      reverseString(arr);
+      result = arr;
+      break;
+    case 'fibonacci':
+      result = fib(input[0]);
+      break;
+    case 'valid-parentheses':
+      result = isValid(input[0]);
+      break;
+    case 'binary-search':
+      result = search(input[0], input[1]);
+      break;
+    default:
+      throw new Error('Unknown challenge');
+  }
+  
+  console.log(JSON.stringify(result));
+} catch (error) {
+  console.error('Test execution failed:', error.message);
+  process.exit(1);
+}`;
+  }
+
+  /**
+   * Prepare Python test code for Judge0
+   */
+  preparePythonTestCode(code, testCase, challenge) {
+    return `
+import json
+import sys
+
+${code}
+
+# Test execution
+try:
+    input_data = ${JSON.stringify(testCase.input)}
+    
+    # Execute based on challenge
+    if '${challenge.id}' == 'two-sum':
+        result = twoSum(input_data[0], input_data[1])
+    elif '${challenge.id}' == 'fibonacci':
+        result = fib(input_data[0])
+    else:
+        raise Exception('Unknown challenge')
+    
+    print(json.dumps(result))
+except Exception as e:
+    print(f"Test execution failed: {e}", file=sys.stderr)
+    sys.exit(1)`;
+  }
+
+  /**
+   * Prepare Java test code for Judge0
+   */
+  prepareJavaTestCode(code, testCase, challenge) {
+    return `
+import java.util.*;
+import com.google.gson.Gson;
+
+${code}
+
+public class Main {
+    public static void main(String[] args) {
+        try {
+            Solution solution = new Solution();
+            Gson gson = new Gson();
+            
+            // Test execution based on challenge
+            Object result = null;
+            
+            switch("${challenge.id}") {
+                case "two-sum":
+                    int[] nums = ${JSON.stringify(testCase.input[0])};
+                    int target = ${testCase.input[1]};
+                    result = solution.twoSum(nums, target);
+                    break;
+                default:
+                    throw new Exception("Unknown challenge");
+            }
+            
+            System.out.println(gson.toJson(result));
+        } catch (Exception e) {
+            System.err.println("Test execution failed: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+}`;
+  }
+
+  /**
+   * Parse Judge0 output based on language
+   */
+  parseJudge0Output(stdout, language) {
+    try {
+      const trimmed = stdout.trim();
+      return JSON.parse(trimmed);
+    } catch (error) {
+      // If JSON parsing fails, return the raw output
+      return stdout.trim();
+    }
+  }
+
+  /**
+   * Fallback local execution (for development)
+   */
+  async executeLocally(code, testCase, language, challenge) {
+    const startTime = Date.now();
+    let result;
+
+    if (language === "javascript") {
+      result = this.executeJavaScriptTest(code, testCase, challenge);
+    } else if (language === "python") {
+      result = this.executePythonTest(code, testCase, challenge);
+    } else {
+      throw new Error(`Language ${language} not supported for local execution`);
+    }
+
+    const executionTime = Date.now() - startTime;
+
+    return {
+      output: result,
+      executionTime,
+      memoryUsed: 0, // Placeholder
+    };
   }
 
   /**
