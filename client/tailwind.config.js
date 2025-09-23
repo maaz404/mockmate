@@ -5,8 +5,21 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // FinalRound-inspired dark theme colors
+        // Final Round AI orange branding as primary
         primary: {
+          50: "#fff7ed",
+          100: "#ffedd5",
+          200: "#fed7aa",
+          300: "#fdba74",
+          400: "#fb923c",
+          500: "#f97316", // Final Round AI main orange
+          600: "#ea580c", // Final Round AI darker orange
+          700: "#c2410c",
+          800: "#9a3412",
+          900: "#7c2d12",
+        },
+        // Keep blue as secondary for variety
+        blue: {
           50: "#f0f7ff",
           100: "#dbeafe",
           200: "#bfdbfe",
@@ -116,12 +129,14 @@ module.exports = {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-        "gradient-primary": "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+        "gradient-primary": "linear-gradient(135deg, #f97316 0%, #ea580c 100%)", // Final Round AI orange gradient
+        "gradient-secondary": "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)", // Blue gradient for variety
         "gradient-accent": "linear-gradient(135deg, #d946ef 0%, #a21caf 100%)",
         "gradient-dark": "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
       },
       boxShadow: {
-        glow: "0 0 20px rgba(59, 130, 246, 0.15)",
+        glow: "0 0 20px rgba(249, 115, 22, 0.15)", // Orange glow for Final Round AI
+        "glow-blue": "0 0 20px rgba(59, 130, 246, 0.15)", // Blue glow
         "glow-accent": "0 0 20px rgba(217, 70, 239, 0.15)",
         surface:
           "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",

@@ -28,6 +28,7 @@ import HybridQuestionDemo from "./pages/HybridQuestionDemo";
 import CodingChallengeDemo from "./pages/CodingChallengeDemo";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 import VideoRecordingDemo from "./components/VideoRecordingDemo";
 
@@ -65,7 +66,7 @@ function App() {
       appearance={{
         baseTheme: undefined,
         variables: {
-          colorPrimary: "#3b82f6",
+          colorPrimary: "#f97316", // Final Round AI orange
           colorBackground: "#0f172a",
           colorInputBackground: "#334155",
           colorInputText: "#ffffff",
@@ -74,14 +75,15 @@ function App() {
         },
       }}
     >
-      <AuthProvider>
-        <Router>
-          <Routes>
-            {/* Standalone Video Demo Route (no layout wrapper) */}
-            <Route path="/video-demo" element={<VideoRecordingDemo />} />
-          </Routes>
-          <Layout>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
             <Routes>
+              {/* Standalone Video Demo Route (no layout wrapper) */}
+              <Route path="/video-demo" element={<VideoRecordingDemo />} />
+            </Routes>
+            <Layout>
+              <Routes>
               {/* Public Routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
@@ -215,6 +217,7 @@ function App() {
         </Router>
         <Toaster position="top-right" />
       </AuthProvider>
+      </ThemeProvider>
     </ClerkProvider>
   );
 }

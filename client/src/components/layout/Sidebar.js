@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
+import DarkModeToggle from "../ui/DarkModeToggle";
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -398,7 +399,13 @@ const Sidebar = () => {
             </div>
 
             {!isCollapsed && (
-              <div className="mt-4">
+              <div className="mt-4 space-y-3">
+                {/* Dark Mode Toggle */}
+                <div className="flex items-center justify-between px-3">
+                  <span className="text-sm text-surface-400">Theme</span>
+                  <DarkModeToggle />
+                </div>
+                
                 <button className="w-full text-left px-3 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium">
                   Upgrade to Pro
                 </button>
