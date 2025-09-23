@@ -25,12 +25,17 @@ const videoService = {
    * @param {number} questionIndex 
    * @param {Blob} videoBlob 
    * @param {number} duration Duration in seconds
+   * @param {Object} facialAnalysis Optional facial analysis data
    * @returns {Promise<Object>}
    */
-  async uploadVideo(interviewId, questionIndex, videoBlob, duration) {
+  async uploadVideo(interviewId, questionIndex, videoBlob, duration, facialAnalysis = null) {
     const formData = new FormData();
     formData.append('video', videoBlob, `question_${questionIndex}.webm`);
     formData.append('duration', duration.toString());
+    
+    if (facialAnalysis) {
+      formData.append('facialAnalysis', JSON.stringify(facialAnalysis));
+    }
 
     return await apiService.upload(`/video/upload/${interviewId}/${questionIndex}`, formData);
   },

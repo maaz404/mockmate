@@ -113,6 +113,80 @@ const interviewSchema = new mongoose.Schema(
               enum: ['pending', 'completed', 'failed'],
               default: 'pending'
             }
+          },
+          // Facial Expression Analysis Results
+          facialAnalysis: {
+            enabled: {
+              type: Boolean,
+              default: false,
+            },
+            metrics: {
+              eyeContact: {
+                type: Number,
+                min: 0,
+                max: 100,
+                default: 0,
+              },
+              blinkRate: {
+                type: Number,
+                min: 0,
+                default: 0,
+              },
+              headSteadiness: {
+                type: Number,
+                min: 0,
+                max: 100,
+                default: 0,
+              },
+              smilePercentage: {
+                type: Number,
+                min: 0,
+                max: 100,
+                default: 0,
+              },
+              offScreenPercentage: {
+                type: Number,
+                min: 0,
+                max: 100,
+                default: 0,
+              },
+              confidenceScore: {
+                type: Number,
+                min: 0,
+                max: 100,
+                default: 0,
+              },
+              environmentQuality: {
+                type: Number,
+                min: 0,
+                max: 100,
+                default: 0,
+              },
+            },
+            baseline: {
+              completed: {
+                type: Boolean,
+                default: false,
+              },
+              timestamp: Date,
+              duration: Number, // calibration duration in seconds
+            },
+            sessionSummary: {
+              duration: Number, // analysis duration in seconds
+              totalFrames: Number,
+              faceDetectedFrames: Number,
+              detectionRate: Number,
+              recommendations: [{
+                type: String,
+                message: String,
+                priority: {
+                  type: String,
+                  enum: ['low', 'medium', 'high'],
+                  default: 'medium',
+                },
+              }],
+            },
+            analysisTimestamp: Date,
           }
         },
         score: {

@@ -61,6 +61,35 @@ const userProfileSchema = new mongoose.Schema(
         min: 15,
         max: 120,
       },
+      // Facial Expression Analysis Settings
+      facialAnalysis: {
+        enabled: {
+          type: Boolean,
+          default: false,
+        },
+        consentGiven: {
+          type: Boolean,
+          default: false,
+        },
+        consentDate: Date,
+        autoCalibration: {
+          type: Boolean,
+          default: true,
+        },
+        showConfidenceMeter: {
+          type: Boolean,
+          default: true,
+        },
+        showRealtimeFeedback: {
+          type: Boolean,
+          default: true,
+        },
+        feedbackFrequency: {
+          type: String,
+          enum: ["low", "medium", "high"],
+          default: "medium",
+        },
+      },
     },
 
     // Analytics & Progress
