@@ -106,6 +106,35 @@ export const interviewService = {
       );
     }
   },
+
+  // Submit answer to specific question
+  submitAnswer: async (interviewId, questionIndex, answerData) => {
+    try {
+      const response = await api.post(
+        `/interviews/${interviewId}/answer/${questionIndex}`,
+        answerData
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.error || "Failed to submit answer"
+      );
+    }
+  },
+
+  // Get follow-up questions for a specific question
+  getFollowUpQuestions: async (interviewId, questionIndex) => {
+    try {
+      const response = await api.post(
+        `/interviews/${interviewId}/followup/${questionIndex}`
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.error || "Failed to get follow-up questions"
+      );
+    }
+  },
 };
 
 /**
