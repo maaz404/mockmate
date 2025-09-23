@@ -98,10 +98,22 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
       // eslint-disable-next-line no-console
       console.error("Onboarding submission failed:", error);
 
-      // Show user-friendly error message
-      const errorMessage =
-        error.response?.data?.message ||
-        "Failed to save preferences. Please try again.";
+      // Show detailed error message from server if available
+      let errorMessage = "Failed to save preferences. Please try again.";
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.details) {
+        // Handle validation errors with details
+        const details = error.response.data.details;
+        const detailMessages = Object.values(details).filter(Boolean);
+        if (detailMessages.length > 0) {
+          errorMessage = detailMessages.join(", ");
+        }
+      } else if (error.message && !error.message.includes('Request failed')) {
+        errorMessage = error.message;
+      }
+      
       toast.error(errorMessage, { id: loadingToast });
 
       // Don't close the modal on error
