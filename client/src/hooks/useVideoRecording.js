@@ -79,7 +79,7 @@ export const useVideoRecording = (interviewId) => {
   }, [isRecording]);
 
   // Upload recorded video for a specific question
-  const uploadVideo = useCallback(async (questionIndex) => {
+  const uploadVideo = useCallback(async (questionIndex, facialAnalysisData = null) => {
     if (!hasRecorded || recordedChunksRef.current.length === 0) {
       setError('No recording to upload');
       return false;
@@ -90,7 +90,7 @@ export const useVideoRecording = (interviewId) => {
       setError(null);
 
       const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-      await videoService.uploadVideo(interviewId, questionIndex, blob, recordingDuration);
+      await videoService.uploadVideo(interviewId, questionIndex, blob, recordingDuration, facialAnalysisData);
       
       // Clear recorded data after successful upload
       recordedChunksRef.current = [];
