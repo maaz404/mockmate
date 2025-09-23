@@ -91,8 +91,56 @@ const completeOnboarding = async (req, res) => {
     const { userId } = req.auth;
     const { professionalInfo, preferences } = req.body;
 
+    // Validate required data
+    if (!professionalInfo || !preferences) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required onboarding data",
+        details: {
+          professionalInfo: !professionalInfo ? "Professional information is required" : null,
+          preferences: !preferences ? "Preferences are required" : null,
+        },
+      });
+    }
+
+    // Validate professionalInfo fields
+    if (!professionalInfo.currentRole || !professionalInfo.industry) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required professional information",
+        details: {
+          currentRole: !professionalInfo.currentRole ? "Current role is required" : null,
+          industry: !professionalInfo.industry ? "Industry is required" : null,
+        },
+      });
+    }
+
+    // Validate preferences fields
+    if (!preferences.interviewTypes || preferences.interviewTypes.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one interview type must be selected",
+      });
+    }
+
     // Ensure a profile exists; if not, create it from Clerk data on the fly
-    const clerkUser = await clerkClient.users.getUser(userId);
+    let clerkUser;
+    try {
+      clerkUser = await clerkClient.users.getUser(userId);
+    } catch (clerkError) {
+      console.error("Clerk API error:", clerkError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch user data from authentication service",
+      });
+    }
+
+    if (!clerkUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found in authentication service",
+      });
+    }
 
     const userProfile = await UserProfile.findOneAndUpdate(
       { clerkUserId: userId },
@@ -128,9 +176,34 @@ const completeOnboarding = async (req, res) => {
     });
   } catch (error) {
     console.error("Complete onboarding error:", error);
+    
+    // Handle MongoDB validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        details: validationErrors,
+      });
+    }
+
+    // Handle MongoDB duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "User profile already exists",
+      });
+    }
+
+    // Generic error response
     res.status(500).json({
       success: false,
       message: "Failed to complete onboarding",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };

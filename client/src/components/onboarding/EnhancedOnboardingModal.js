@@ -117,7 +117,12 @@ const OnboardingModal = ({ isOpen, onClose }) => {
   const handleComplete = async () => {
     setLoading(true);
     try {
+      console.log("Submitting onboarding data:", formData); // eslint-disable-line no-console
+      
       const response = await api.post("/users/onboarding/complete", formData);
+      
+      console.log("Onboarding response:", response); // eslint-disable-line no-console
+      
       if (response.data && response.data.success) {
         await refreshProfile();
         onClose();
@@ -127,7 +132,24 @@ const OnboardingModal = ({ isOpen, onClose }) => {
       }
     } catch (error) {
       console.error("Onboarding completion failed:", error); // eslint-disable-line no-console
-      toast.error(error.response?.data?.message || "Failed to complete setup. Please try again.");
+      
+      // Show detailed error message from server if available
+      let errorMessage = "Failed to complete setup. Please try again.";
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.details) {
+        // Handle validation errors with details
+        const details = error.response.data.details;
+        const detailMessages = Object.values(details).filter(Boolean);
+        if (detailMessages.length > 0) {
+          errorMessage = detailMessages.join(", ");
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
