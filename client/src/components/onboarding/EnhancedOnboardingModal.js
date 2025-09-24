@@ -137,11 +137,11 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     setLoading(true);
     try {
       // console.log("Submitting onboarding data:", formData); // eslint-disable-line no-console
-      
+
       const response = await api.post("/users/onboarding/complete", formData);
-      
+
       // console.log("Onboarding response:", response); // eslint-disable-line no-console
-      
+
       if (response.data && response.data.success) {
         await refreshProfile();
         onClose();
@@ -151,10 +151,10 @@ const OnboardingModal = ({ isOpen, onClose }) => {
       }
     } catch (error) {
       console.error("Onboarding completion failed:", error); // eslint-disable-line no-console
-      
+
       // Show detailed error message from server if available
       let errorMessage = "Failed to complete setup. Please try again.";
-      
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.details) {
@@ -167,7 +167,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -180,32 +180,36 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <User className="mx-auto h-12 w-12 text-primary-600 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
           Professional Information
         </h3>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-surface-300">
           Tell us about your professional background
         </p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
             Job Title
           </label>
           <input
             type="text"
             value={formData.professionalInfo.currentRole}
             onChange={(e) =>
-              handleInputChange("professionalInfo", "currentRole", e.target.value)
+              handleInputChange(
+                "professionalInfo",
+                "currentRole",
+                e.target.value
+              )
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface-700 text-gray-900 dark:text-white"
             placeholder="e.g., Software Engineer, Product Manager"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
             Company
           </label>
           <input
@@ -214,13 +218,13 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("professionalInfo", "company", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface-700 text-gray-900 dark:text-white"
             placeholder="e.g., Google, Microsoft, Startup"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
             Years of Experience
           </label>
           <select
@@ -232,7 +236,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                 e.target.value
               )
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface-700 text-gray-900 dark:text-white"
           >
             <option value="">Select experience level</option>
             <option value="0-1">0-1 years</option>
@@ -244,7 +248,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
             Industry
           </label>
           <select
@@ -252,7 +256,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("professionalInfo", "industry", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface-700 text-gray-900 dark:text-white"
           >
             <option value="">Select industry</option>
             {industries.map((industry) => (
@@ -270,13 +274,17 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <Briefcase className="mx-auto h-12 w-12 text-primary-600 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900">Skills & Goals</h3>
-        <p className="text-gray-600">What skills do you want to improve?</p>
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          Skills & Goals
+        </h3>
+        <p className="text-gray-600 dark:text-surface-300">
+          What skills do you want to improve?
+        </p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
             Key Skills (comma separated)
           </label>
           <input
@@ -289,13 +297,13 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                 e.target.value.split(", ").filter(Boolean)
               )
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface-700 text-gray-900 dark:text-white"
             placeholder="e.g., React, Python, Leadership, Communication"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
             Career Goals
           </label>
           <textarea
@@ -308,7 +316,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
               )
             }
             rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface-700 text-gray-900 dark:text-white"
             placeholder="Describe your career aspirations and what you want to achieve..."
           />
         </div>
@@ -320,15 +328,17 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <Target className="mx-auto h-12 w-12 text-primary-600 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
           Interview Preferences
         </h3>
-        <p className="text-gray-600">Customize your interview practice</p>
+        <p className="text-gray-600 dark:text-surface-300">
+          Customize your interview practice
+        </p>
       </div>
 
       <div className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-3">
             Interview Types (select multiple)
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -345,14 +355,16 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                   }
                   className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-700">{type}</span>
+                <span className="text-sm text-gray-700 dark:text-surface-300">
+                  {type}
+                </span>
               </label>
             ))}
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
             Difficulty Level
           </label>
           <select
@@ -360,7 +372,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("preferences", "difficulty", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface-700 text-gray-900 dark:text-white"
           >
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
@@ -370,7 +382,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-3">
             Focus Areas (select multiple)
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -387,7 +399,9 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                   }
                   className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-700">{area}</span>
+                <span className="text-sm text-gray-700 dark:text-surface-300">
+                  {area}
+                </span>
               </label>
             ))}
           </div>
@@ -400,17 +414,23 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <Settings className="mx-auto h-12 w-12 text-primary-600 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
           Notification Preferences
         </h3>
-        <p className="text-gray-600">Choose how you want to stay updated</p>
+        <p className="text-gray-600 dark:text-surface-300">
+          Choose how you want to stay updated
+        </p>
       </div>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-gray-900">Email Notifications</p>
-            <p className="text-sm text-gray-600">Receive updates via email</p>
+            <p className="font-medium text-gray-900 dark:text-white">
+              Email Notifications
+            </p>
+            <p className="text-sm text-gray-600 dark:text-surface-300">
+              Receive updates via email
+            </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input
@@ -441,8 +461,12 @@ const OnboardingModal = ({ isOpen, onClose }) => {
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-gray-900">Push Notifications</p>
-            <p className="text-sm text-gray-600">Browser notifications</p>
+            <p className="font-medium text-gray-900 dark:text-white">
+              Push Notifications
+            </p>
+            <p className="text-sm text-gray-600 dark:text-surface-300">
+              Browser notifications
+            </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input
@@ -473,8 +497,10 @@ const OnboardingModal = ({ isOpen, onClose }) => {
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-gray-900">Interview Reminders</p>
-            <p className="text-sm text-gray-600">
+            <p className="font-medium text-gray-900 dark:text-white">
+              Interview Reminders
+            </p>
+            <p className="text-sm text-gray-600 dark:text-surface-300">
               Get reminded about scheduled interviews
             </p>
           </div>
@@ -507,8 +533,12 @@ const OnboardingModal = ({ isOpen, onClose }) => {
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-gray-900">Progress Updates</p>
-            <p className="text-sm text-gray-600">Weekly progress summaries</p>
+            <p className="font-medium text-gray-900 dark:text-white">
+              Progress Updates
+            </p>
+            <p className="text-sm text-gray-600 dark:text-surface-300">
+              Weekly progress summaries
+            </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input
@@ -541,20 +571,22 @@ const OnboardingModal = ({ isOpen, onClose }) => {
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-surface-800 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Welcome to MockMate!
               </h2>
-              <p className="text-gray-600">Step {step} of 4</p>
+              <p className="text-gray-600 dark:text-surface-400">
+                Step {step} of 4
+              </p>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 dark:text-surface-500 hover:text-gray-600 dark:hover:text-surface-300 transition-colors"
             >
               <X className="h-6 w-6" />
             </button>
@@ -569,14 +601,14 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     s <= step
                       ? "bg-primary-600 text-white"
-                      : "bg-gray-200 text-gray-600"
+                      : "bg-gray-200 dark:bg-surface-600 text-gray-600 dark:text-surface-400"
                   }`}
                 >
                   {s}
                 </div>
               ))}
             </div>
-            <div className="h-2 bg-gray-200 rounded-full">
+            <div className="h-2 bg-gray-200 dark:bg-surface-600 rounded-full">
               <div
                 className="h-2 bg-primary-600 rounded-full transition-all duration-300"
                 style={{ width: `${(step / 4) * 100}%` }}
@@ -591,14 +623,14 @@ const OnboardingModal = ({ isOpen, onClose }) => {
           {step === 4 && renderStep4()}
 
           {/* Navigation */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
+          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-surface-600">
             <button
               onClick={handlePrevious}
               disabled={step === 1}
               className={`px-6 py-2 rounded-lg font-medium transition-colors ${
                 step === 1
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-gray-100 dark:bg-surface-700 text-gray-400 dark:text-surface-500 cursor-not-allowed"
+                  : "bg-gray-100 dark:bg-surface-700 text-gray-700 dark:text-surface-300 hover:bg-gray-200 dark:hover:bg-surface-600"
               }`}
             >
               Previous

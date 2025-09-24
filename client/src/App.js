@@ -36,9 +36,8 @@ import VideoRecordingDemo from "./components/VideoRecordingDemo";
 const clerkPubKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 
 function App() {
-  // Use the environment key
-  const clerkKey =
-    clerkPubKey || "pk_test_bGF6eS1waWxsLTYxLmNsZXJrLmFjY291bnRzLmRldiQ";
+  // Use the environment key - no fallback to ensure proper configuration
+  const clerkKey = clerkPubKey;
 
   if (!clerkKey) {
     return (
@@ -59,14 +58,10 @@ function App() {
   return (
     <ClerkProvider
       publishableKey={clerkKey}
-      afterSignInUrl="/dashboard"
-      afterSignUpUrl="/dashboard"
-      signInUrl="/login"
-      signUpUrl="/register"
       appearance={{
         baseTheme: undefined,
         variables: {
-          colorPrimary: "#f97316", // Final Round AI orange
+          colorPrimary: "#2563eb", // Primary blue
           colorBackground: "#0f172a",
           colorInputBackground: "#334155",
           colorInputText: "#ffffff",
@@ -84,139 +79,139 @@ function App() {
             </Routes>
             <Layout>
               <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/demo" element={<HybridQuestionDemo />} />
-              <Route path="/coding-demo" element={<CodingChallengeDemo />} />
+                {/* Public Routes */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/demo" element={<HybridQuestionDemo />} />
+                <Route path="/coding-demo" element={<CodingChallengeDemo />} />
 
-              {/* Protected Routes */}
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/comprehensive-dashboard"
-                element={
-                  <ProtectedRoute>
-                    <ComprehensiveDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/interview/new"
-                element={
-                  <ProtectedRoute>
-                    <InterviewCreationPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/interview/experience"
-                element={
-                  <ProtectedRoute>
-                    <InterviewExperiencePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/interview/results"
-                element={
-                  <ProtectedRoute>
-                    <InterviewResultsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/interview/:id"
-                element={
-                  <ProtectedRoute>
-                    <InterviewPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/interviews"
-                element={
-                  <ProtectedRoute>
-                    <InterviewHistoryPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/questions"
-                element={
-                  <ProtectedRoute>
-                    <QuestionBankPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <EnhancedSettingsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/mock-interview"
-                element={
-                  <ProtectedRoute>
-                    <MockInterviewPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/practice"
-                element={
-                  <ProtectedRoute>
-                    <PracticePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/resources"
-                element={
-                  <ProtectedRoute>
-                    <ResourcesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute>
-                    <ReportsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/session-summary/:interviewId"
-                element={
-                  <ProtectedRoute>
-                    <SessionSummaryPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/support"
-                element={
-                  <ProtectedRoute>
-                    <SupportPage />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </Layout>
-        </Router>
-        <Toaster position="top-right" />
-      </AuthProvider>
+                {/* Protected Routes */}
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/comprehensive-dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <ComprehensiveDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/interview/new"
+                  element={
+                    <ProtectedRoute>
+                      <InterviewCreationPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/interview/experience"
+                  element={
+                    <ProtectedRoute>
+                      <InterviewExperiencePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/interview/results"
+                  element={
+                    <ProtectedRoute>
+                      <InterviewResultsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/interview/:id"
+                  element={
+                    <ProtectedRoute>
+                      <InterviewPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/interviews"
+                  element={
+                    <ProtectedRoute>
+                      <InterviewHistoryPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/questions"
+                  element={
+                    <ProtectedRoute>
+                      <QuestionBankPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <EnhancedSettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/mock-interview"
+                  element={
+                    <ProtectedRoute>
+                      <MockInterviewPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/practice"
+                  element={
+                    <ProtectedRoute>
+                      <PracticePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/resources"
+                  element={
+                    <ProtectedRoute>
+                      <ResourcesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <ProtectedRoute>
+                      <ReportsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/session-summary/:interviewId"
+                  element={
+                    <ProtectedRoute>
+                      <SessionSummaryPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/support"
+                  element={
+                    <ProtectedRoute>
+                      <SupportPage />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </Layout>
+          </Router>
+          <Toaster position="top-right" />
+        </AuthProvider>
       </ThemeProvider>
     </ClerkProvider>
   );

@@ -3,8 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
 import DarkModeToggle from "../ui/DarkModeToggle";
 
-const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
   const { user } = useUser();
@@ -242,7 +241,7 @@ const Sidebar = () => {
       to={item.path}
       onClick={() => setIsMobileOpen(false)} // Close mobile menu when clicking nav item
       className={`
-        flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-all duration-200
+        flex items-center px-1.5 py-1.5 text-sm font-medium rounded-lg transition-all duration-200
         ${
           isActive(item.path)
             ? "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-500"
@@ -273,35 +272,6 @@ const Sidebar = () => {
           onClick={() => setIsMobileOpen(false)}
         />
       )}
-
-      {/* Sidebar Slider (always visible on desktop) */}
-      <div
-        className="hidden lg:flex fixed top-1/2 left-0 z-60 -translate-y-1/2"
-        style={{ left: isCollapsed ? "16px" : "224px" }}
-      >
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="group flex items-center justify-center w-5 h-16 bg-white dark:bg-surface-800 border border-surface-300 dark:border-surface-700 rounded-r-xl shadow-lg hover:bg-surface-50 dark:hover:bg-surface-700 transition-all duration-300"
-          style={{ outline: "none" }}
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <svg
-            className={`w-4 h-4 text-surface-600 dark:text-surface-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-all duration-300 ${
-              isCollapsed ? "rotate-180" : ""
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-      </div>
 
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
@@ -338,7 +308,7 @@ const Sidebar = () => {
       <div
         className={`
           fixed top-0 left-0 z-50 h-full bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 transition-all duration-300 overflow-y-auto shadow-lg
-          ${isCollapsed ? "w-16" : "w-56"}
+          ${isCollapsed ? "w-12" : "w-52"}
           ${
             isMobileOpen
               ? "translate-x-0"
@@ -347,23 +317,65 @@ const Sidebar = () => {
         `}
       >
         {/* Header */}
-        <div className="flex items-center justify-between h-16 px-3 border-b border-surface-200 dark:border-surface-800">
+        <div className="flex items-center h-12 px-2 border-b border-surface-200 dark:border-surface-800">
           {!isCollapsed && (
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-7 h-7 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">M</span>
-              </div>
-              <span className="text-lg font-bold text-surface-900 dark:text-white">
-                MockMate
-              </span>
-            </Link>
+            <>
+              <Link to="/" className="flex items-center space-x-2 flex-1">
+                <div className="w-6 h-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">M</span>
+                </div>
+                <span className="text-base font-bold text-surface-900 dark:text-white">
+                  MockMate
+                </span>
+              </Link>
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-all duration-200"
+                aria-label="Collapse sidebar"
+              >
+                <svg
+                  className="w-4 h-4 transition-transform duration-200"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+            </>
           )}
           {isCollapsed && (
-            <Link to="/" className="flex items-center justify-center mx-auto">
-              <div className="w-7 h-7 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">M</span>
-              </div>
-            </Link>
+            <div className="flex items-center justify-between w-full">
+              <Link to="/" className="flex items-center justify-center flex-1">
+                <div className="w-6 h-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">M</span>
+                </div>
+              </Link>
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-all duration-200"
+                aria-label="Expand sidebar"
+              >
+                <svg
+                  className="w-4 h-4 transition-transform duration-200 rotate-180"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
 
@@ -384,7 +396,7 @@ const Sidebar = () => {
         </nav>
 
         {/* User section */}
-        <div className="border-t border-surface-200 dark:border-surface-800 p-3 space-y-3">
+        <div className="border-t border-surface-200 dark:border-surface-800 p-2 space-y-2">
           {/* Dark Mode Toggle - Always visible */}
           <div
             className={`flex items-center ${
@@ -409,7 +421,7 @@ const Sidebar = () => {
                 afterSignOutUrl="/"
                 appearance={{
                   elements: {
-                    avatarBox: "w-8 h-8",
+                    avatarBox: "w-7 h-7",
                     userButtonPopoverCard: "shadow-lg",
                     userButtonPopoverActionButton:
                       "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",

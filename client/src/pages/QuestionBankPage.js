@@ -3,13 +3,13 @@ import HybridQuestionGenerator from "../components/ui/HybridQuestionGenerator";
 
 const QuestionBankPage = () => {
   const [showGenerator, setShowGenerator] = useState(false);
-  
+
   const handleQuestionsGenerated = (_questions) => {
     // Handle the generated questions
     // console.log('Generated questions:', questions); // eslint-disable-line no-console
     setShowGenerator(false);
   };
-  
+
   const questionCategories = [
     {
       name: "Behavioral Questions",
@@ -106,7 +106,7 @@ const QuestionBankPage = () => {
                 <span className="text-sm text-gray-500">
                   {category.count} questions
                 </span>
-                <button className="text-sm text-orange-600 hover:text-orange-700 font-medium">
+                <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
                   Browse →
                 </button>
               </div>
@@ -115,17 +115,18 @@ const QuestionBankPage = () => {
         </div>
 
         <div className="mt-12">
-          <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-8">
+          <div className="bg-gradient-to-r from-primary-50 to-secondary-50 rounded-xl p-8">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   Hybrid Question Generation
                 </h3>
                 <p className="text-gray-600">
-                  Generate a mix of template-based and AI-created questions tailored to your interview needs.
+                  Generate a mix of template-based and AI-created questions
+                  tailored to your interview needs.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowGenerator(!showGenerator)}
                 className="btn-primary"
               >
@@ -138,7 +139,9 @@ const QuestionBankPage = () => {
         {/* Hybrid Question Generator */}
         {showGenerator && (
           <div className="mt-8">
-            <HybridQuestionGenerator onQuestionsGenerated={handleQuestionsGenerated} />
+            <HybridQuestionGenerator
+              onQuestionsGenerated={handleQuestionsGenerated}
+            />
           </div>
         )}
       </div>

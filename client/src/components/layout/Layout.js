@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuthContext } from "../../context/AuthContext";
 import Sidebar from "./Sidebar";
@@ -9,15 +9,16 @@ import AuthLoadingSpinner from "../ui/AuthLoadingSpinner";
 
 const Layout = ({ children }) => {
   const location = useLocation();
-  const { isSignedIn, userProfile, loading, refreshProfile } = useAuthContext();
+  const { loading, refreshProfile } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   // Check if user needs onboarding
-  useEffect(() => {
-    if (isSignedIn && userProfile && !userProfile.onboardingCompleted) {
-      setShowOnboarding(true);
-    }
-  }, [isSignedIn, userProfile]);
+  // useEffect(() => {
+  //   if (isSignedIn && userProfile && !userProfile.onboardingCompleted) {
+  //     setShowOnboarding(true);
+  //   }
+  // }, [isSignedIn, userProfile]);
 
   // Show loading spinner while auth is loading (but not for home page)
   if (loading && location.pathname !== "/") {
@@ -33,9 +34,16 @@ const Layout = ({ children }) => {
   if (useSidebarLayout) {
     return (
       <div className="flex min-h-screen bg-white dark:bg-surface-900 transition-colors duration-200">
-        <Sidebar />
+        <Sidebar
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
         {/* Main content area with sidebar */}
-        <div className="flex-1 flex flex-col ml-0 lg:ml-56">
+        <div
+          className={`flex-1 flex flex-col ml-0 ${
+            isSidebarCollapsed ? "lg:ml-12" : "lg:ml-52"
+          } transition-all duration-300`}
+        >
           {/* Show navbar on public pages within sidebar layout */}
           {(location.pathname === "/" ||
             location.pathname === "/login" ||

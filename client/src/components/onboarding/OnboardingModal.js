@@ -1,50 +1,66 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
+import { useAuthContext } from "../../context/AuthContext";
+import api from "../../services/api";
+import { X, User, Briefcase, Target, Settings } from "lucide-react";
 import toast from "react-hot-toast";
-import { apiService } from "../../services/api";
 
-const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+const OnboardingModal = ({ isOpen, onClose }) => {
+  const { refreshProfile } = useAuthContext();
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [languageInput, setLanguageInput] = useState("");
-  const modalRef = useRef(null);
   const [formData, setFormData] = useState({
     professionalInfo: {
       currentRole: "",
-      experience: "entry",
-      industry: "",
       company: "",
-      targetRoles: [],
+      experience: "",
       skills: [],
+      industry: "",
+      careerGoals: "",
     },
     preferences: {
-      preferredLanguages: ["English"],
-      interviewTypes: ["technical", "behavioral"],
-      difficulty: "beginner",
-      sessionDuration: 30,
+      interviewTypes: [],
+      difficulty: "intermediate",
+      focusAreas: [],
+      notifications: {
+        email: true,
+        push: true,
+        interviews: true,
+        progress: true,
+      },
     },
   });
 
-  const totalSteps = 3;
+  const industries = [
+    "Technology",
+    "Finance",
+    "Healthcare",
+    "Education",
+    "Manufacturing",
+    "Consulting",
+    "Retail",
+    "Media",
+    "Government",
+    "Nonprofit",
+    "Other",
+  ];
 
-  // Prevent closing with Escape key unintentionally
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        // Block default ESC close behavior while modal is open
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown, true);
-      // Prevent background scroll
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown, true);
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
+  const interviewTypes = [
+    "Technical",
+    "Behavioral",
+    "System Design",
+    "Case Study",
+    "Leadership",
+    "Sales",
+  ];
+
+  const focusAreas = [
+    "Problem Solving",
+    "Communication",
+    "Leadership",
+    "Technical Skills",
+    "Industry Knowledge",
+    "Presentation Skills",
+  ];
 
   const handleInputChange = (section, field, value) => {
     setFormData((prev) => ({
@@ -56,48 +72,89 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
     }));
   };
 
-  const handleArrayInputChange = (section, field, value) => {
+  const handleArrayToggle = (section, field, value) => {
+    setFormData((prev) => {
+      const currentArray = prev[section][field];
+      const newArray = currentArray.includes(value)
+        ? currentArray.filter((item) => item !== value)
+        : [...currentArray, value];
+
+      return {
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: newArray,
+        },
+      };
+    });
+  };
+
+  const handleNotificationChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
+      preferences: {
+        ...prev.preferences,
+        notifications: {
+          ...prev.preferences.notifications,
+          [field]: value,
+        },
       },
     }));
   };
 
-  const handleSubmit = async () => {
+  const handleNext = () => {
+    if (step < 4) {
+      setStep(step + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const handleComplete = async () => {
+    // Validate required fields before submission
+    const { currentRole, industry } = formData.professionalInfo;
+    const { interviewTypes } = formData.preferences;
+
+    if (!currentRole.trim()) {
+      toast.error("Please provide your current role");
+      return;
+    }
+
+    if (!industry.trim()) {
+      toast.error("Please select your industry");
+      return;
+    }
+
+    if (!interviewTypes || interviewTypes.length === 0) {
+      toast.error("Please select at least one interview type");
+      return;
+    }
+
     setLoading(true);
-
-    const loadingToast = toast.loading("Saving your preferences...");
-
     try {
-      // Log the data being sent for debugging
       // console.log("Submitting onboarding data:", formData); // eslint-disable-line no-console
 
-      // apiService.post returns already-unwrapped data
-      const result = await apiService.post(
-        "/users/onboarding/complete",
-        formData
-      );
+      const response = await api.post("/users/onboarding/complete", formData);
 
-      // console.log("Onboarding response:", result); // eslint-disable-line no-console
+      // console.log("Onboarding response:", response); // eslint-disable-line no-console
 
-      toast.success("Profile setup completed successfully!", {
-        id: loadingToast,
-      });
-
-      // Call onComplete with the server result (fallback to local form data)
-      onComplete?.(result?.data || formData);
+      if (response.data && response.data.success) {
+        await refreshProfile();
+        onClose();
+        toast.success("Profile setup completed successfully!");
+      } else {
+        throw new Error(response.data?.message || "Failed to complete setup");
+      }
     } catch (error) {
-      // console.error("Onboarding submission failed:", error); // eslint-disable-line no-console
+      console.error("Onboarding completion failed:", error); // eslint-disable-line no-console
 
       // Show detailed error message from server if available
-      let errorMessage = "Failed to save preferences. Please try again.";
-      
+      let errorMessage = "Failed to complete setup. Please try again.";
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.details) {
@@ -107,480 +164,494 @@ const OnboardingModal = ({ isOpen, onComplete, onClose }) => {
         if (detailMessages.length > 0) {
           errorMessage = detailMessages.join(", ");
         }
-      } else if (error.message && !error.message.includes('Request failed')) {
+      } else if (error.message) {
         errorMessage = error.message;
       }
-      
-      toast.error(errorMessage, { id: loadingToast });
 
-      // Don't close the modal on error
-      return;
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const validateForm = () => {
-    if (currentStep === 1) {
-      const { currentRole, industry } = formData.professionalInfo;
-      if (!currentRole.trim() || !industry.trim()) {
-        toast.error("Please provide your current role and industry");
-        return false;
-      }
-    }
-
-    if (currentStep === 2) {
-      const { skills, targetRoles } = formData.professionalInfo;
-      if (skills.length === 0 || targetRoles.length === 0) {
-        toast.error("Please add at least one skill and target role");
-        return false;
-      }
-    }
-
-    if (currentStep === 3) {
-      const { interviewTypes } = formData.preferences;
-      if (interviewTypes.length === 0) {
-        toast.error("Please select at least one interview type");
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  const nextStep = () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      handleSubmit();
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
   if (!isOpen) return null;
 
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <User className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          Professional Information
+        </h3>
+        <p className="text-gray-600 dark:text-surface-400">
+          Tell us about your professional background
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+            Job Title
+          </label>
+          <input
+            type="text"
+            value={formData.professionalInfo.currentRole}
+            onChange={(e) =>
+              handleInputChange(
+                "professionalInfo",
+                "currentRole",
+                e.target.value
+              )
+            }
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            placeholder="e.g., Software Engineer, Product Manager"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+            Company
+          </label>
+          <input
+            type="text"
+            value={formData.professionalInfo.company}
+            onChange={(e) =>
+              handleInputChange("professionalInfo", "company", e.target.value)
+            }
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            placeholder="e.g., Google, Microsoft, Startup"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+            Years of Experience
+          </label>
+          <select
+            value={formData.professionalInfo.experience}
+            onChange={(e) =>
+              handleInputChange(
+                "professionalInfo",
+                "experience",
+                e.target.value
+              )
+            }
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+          >
+            <option value="">Select experience level</option>
+            <option value="0-1">0-1 years</option>
+            <option value="2-3">2-3 years</option>
+            <option value="4-6">4-6 years</option>
+            <option value="7-10">7-10 years</option>
+            <option value="10+">10+ years</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+            Industry
+          </label>
+          <select
+            value={formData.professionalInfo.industry}
+            onChange={(e) =>
+              handleInputChange("professionalInfo", "industry", e.target.value)
+            }
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+          >
+            <option value="">Select industry</option>
+            {industries.map((industry) => (
+              <option key={industry} value={industry}>
+                {industry}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <Briefcase className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          Skills & Goals
+        </h3>
+        <p className="text-gray-600 dark:text-surface-400">
+          What skills do you want to improve?
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+            Key Skills (comma separated)
+          </label>
+          <input
+            type="text"
+            value={formData.professionalInfo.skills.join(", ")}
+            onChange={(e) =>
+              handleInputChange(
+                "professionalInfo",
+                "skills",
+                e.target.value.split(", ").filter(Boolean)
+              )
+            }
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            placeholder="e.g., React, Python, Leadership, Communication"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+            Career Goals
+          </label>
+          <textarea
+            value={formData.professionalInfo.careerGoals}
+            onChange={(e) =>
+              handleInputChange(
+                "professionalInfo",
+                "careerGoals",
+                e.target.value
+              )
+            }
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            placeholder="Describe your career aspirations and what you want to achieve..."
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <Target className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          Interview Preferences
+        </h3>
+        <p className="text-gray-600 dark:text-surface-400">
+          Customize your interview practice
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-3">
+            Interview Types (select multiple)
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {interviewTypes.map((type) => (
+              <label
+                key={type}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.preferences.interviewTypes.includes(type)}
+                  onChange={() =>
+                    handleArrayToggle("preferences", "interviewTypes", type)
+                  }
+                  className="rounded border-gray-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-surface-300">
+                  {type}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+            Difficulty Level
+          </label>
+          <select
+            value={formData.preferences.difficulty}
+            onChange={(e) =>
+              handleInputChange("preferences", "difficulty", e.target.value)
+            }
+            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+          >
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+            <option value="expert">Expert</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-3">
+            Focus Areas (select multiple)
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {focusAreas.map((area) => (
+              <label
+                key={area}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.preferences.focusAreas.includes(area)}
+                  onChange={() =>
+                    handleArrayToggle("preferences", "focusAreas", area)
+                  }
+                  className="rounded border-gray-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-surface-300">
+                  {area}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep4 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <Settings className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          Notification Preferences
+        </h3>
+        <p className="text-gray-600 dark:text-surface-400">
+          Choose how you want to stay updated
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">
+              Email Notifications
+            </p>
+            <p className="text-sm text-gray-600 dark:text-surface-400">
+              Receive updates via email
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.preferences.notifications.email}
+              onChange={(e) =>
+                handleNotificationChange("email", e.target.checked)
+              }
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 bg-gray-200 dark:bg-surface-600 rounded-full peer ${
+                formData.preferences.notifications.email
+                  ? "peer-checked:bg-primary-600"
+                  : ""
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  formData.preferences.notifications.email
+                    ? "translate-x-5"
+                    : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">
+              Push Notifications
+            </p>
+            <p className="text-sm text-gray-600 dark:text-surface-400">
+              Browser notifications
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.preferences.notifications.push}
+              onChange={(e) =>
+                handleNotificationChange("push", e.target.checked)
+              }
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 bg-gray-200 dark:bg-surface-600 rounded-full peer ${
+                formData.preferences.notifications.push
+                  ? "peer-checked:bg-primary-600"
+                  : ""
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  formData.preferences.notifications.push
+                    ? "translate-x-5"
+                    : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">
+              Interview Reminders
+            </p>
+            <p className="text-sm text-gray-600 dark:text-surface-400">
+              Get reminded about scheduled interviews
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.preferences.notifications.interviews}
+              onChange={(e) =>
+                handleNotificationChange("interviews", e.target.checked)
+              }
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 bg-gray-200 dark:bg-surface-600 rounded-full peer ${
+                formData.preferences.notifications.interviews
+                  ? "peer-checked:bg-primary-600"
+                  : ""
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  formData.preferences.notifications.interviews
+                    ? "translate-x-5"
+                    : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">
+              Progress Updates
+            </p>
+            <p className="text-sm text-gray-600 dark:text-surface-400">
+              Weekly progress summaries
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.preferences.notifications.progress}
+              onChange={(e) =>
+                handleNotificationChange("progress", e.target.checked)
+              }
+              className="sr-only"
+            />
+            <div
+              className={`w-11 h-6 bg-gray-200 dark:bg-surface-600 rounded-full peer ${
+                formData.preferences.notifications.progress
+                  ? "peer-checked:bg-primary-600"
+                  : ""
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  formData.preferences.notifications.progress
+                    ? "translate-x-5"
+                    : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 bg-surface-900/70 backdrop-blur-sm flex items-center justify-center z-50">
-      <div
-        ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl border border-surface-200 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-      >
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-surface-200 bg-surface-50 rounded-t-2xl">
-          <div className="flex items-center justify-between">
+    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-surface-800 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-semibold text-surface-900">
-                Welcome to MockMate! 🎯
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Welcome to MockMate!
               </h2>
-              <p className="text-sm text-surface-600 mt-1">
-                Let's personalize your interview experience
+              <p className="text-gray-600 dark:text-surface-400">
+                Step {step} of 4
               </p>
             </div>
-            <div className="text-sm text-surface-500">
-              Step {currentStep} of {totalSteps}
-            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 dark:text-surface-500 hover:text-gray-600 dark:hover:text-surface-300 transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-4">
-            <div className="bg-surface-200 rounded-full h-2">
+          <div className="mb-8">
+            <div className="flex justify-between mb-2">
+              {[1, 2, 3, 4].map((s) => (
+                <div
+                  key={s}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    s <= step
+                      ? "bg-primary-600 text-white"
+                      : "bg-gray-200 dark:bg-surface-600 text-gray-600 dark:text-surface-400"
+                  }`}
+                >
+                  {s}
+                </div>
+              ))}
+            </div>
+            <div className="h-2 bg-gray-200 dark:bg-surface-600 rounded-full">
               <div
-                className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-              ></div>
+                className="h-2 bg-primary-600 rounded-full transition-all duration-300"
+                style={{ width: `${(step / 4) * 100}%` }}
+              />
             </div>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="px-6 py-6">
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-surface-900 mb-4">
-                  Tell us about your professional background
-                </h3>
+          {/* Step Content */}
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+          {step === 4 && renderStep4()}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700">
-                      Current Role
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.professionalInfo.currentRole}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "professionalInfo",
-                          "currentRole",
-                          e.target.value
-                        )
-                      }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="e.g., Software Developer"
-                    />
-                  </div>
+          {/* Navigation */}
+          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-surface-600">
+            <button
+              onClick={handlePrevious}
+              disabled={step === 1}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                step === 1
+                  ? "bg-gray-100 dark:bg-surface-700 text-gray-400 dark:text-surface-500 cursor-not-allowed"
+                  : "bg-gray-100 dark:bg-surface-700 text-gray-700 dark:text-surface-300 hover:bg-gray-200 dark:hover:bg-surface-600"
+              }`}
+            >
+              Previous
+            </button>
 
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700">
-                      Experience Level
-                    </label>
-                    <select
-                      value={formData.professionalInfo.experience}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "professionalInfo",
-                          "experience",
-                          e.target.value
-                        )
-                      }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      <option value="entry">Entry Level (0-2 years)</option>
-                      <option value="junior">Junior (2-4 years)</option>
-                      <option value="mid">Mid Level (4-7 years)</option>
-                      <option value="senior">Senior (7+ years)</option>
-                      <option value="lead">Lead/Principal (10+ years)</option>
-                      <option value="executive">Executive</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700">
-                      Industry
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.professionalInfo.industry}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "professionalInfo",
-                          "industry",
-                          e.target.value
-                        )
-                      }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="e.g., Technology, Finance, Healthcare"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700">
-                      Current Company
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.professionalInfo.company}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "professionalInfo",
-                          "company",
-                          e.target.value
-                        )
-                      }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Optional"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-surface-900 mb-4">
-                  What are your skills and target roles?
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700">
-                      Skills (comma separated)
-                    </label>
-                    <textarea
-                      value={formData.professionalInfo.skills.join(", ")}
-                      onChange={(e) =>
-                        handleArrayInputChange(
-                          "professionalInfo",
-                          "skills",
-                          e.target.value
-                        )
-                      }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      rows={3}
-                      placeholder="e.g., JavaScript, React, Node.js, Python, AWS, Leadership"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700">
-                      Target Roles (comma separated)
-                    </label>
-                    <textarea
-                      value={formData.professionalInfo.targetRoles.join(", ")}
-                      onChange={(e) =>
-                        handleArrayInputChange(
-                          "professionalInfo",
-                          "targetRoles",
-                          e.target.value
-                        )
-                      }
-                      className="mt-1 block w-full border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      rows={2}
-                      placeholder="e.g., Senior Developer, Tech Lead, Product Manager"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-surface-900 mb-4">
-                  Interview preferences
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Interview Types */}
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700 mb-3">
-                      Interview Types (select all that apply)
-                    </label>
-                    <div className="space-y-2">
-                      {[
-                        "technical",
-                        "behavioral",
-                        "system-design",
-                        "case-study",
-                      ].map((type) => (
-                        <label key={type} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={formData.preferences.interviewTypes.includes(
-                              type
-                            )}
-                            onChange={(e) => {
-                              const types = formData.preferences.interviewTypes;
-                              if (e.target.checked) {
-                                handleInputChange(
-                                  "preferences",
-                                  "interviewTypes",
-                                  Array.from(new Set([...types, type]))
-                                );
-                              } else {
-                                handleInputChange(
-                                  "preferences",
-                                  "interviewTypes",
-                                  types.filter((t) => t !== type)
-                                );
-                              }
-                            }}
-                            className="rounded border-surface-300 text-primary-600 focus:ring-primary-500"
-                          />
-                          <span className="ml-2 text-sm text-surface-700 capitalize">
-                            {type.replace("-", " ")}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Difficulty Segmented Control */}
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700 mb-2">
-                      Preferred Difficulty
-                    </label>
-                    <div className="flex rounded-lg overflow-hidden border border-surface-300">
-                      {["beginner", "intermediate", "advanced"].map((level) => (
-                        <button
-                          type="button"
-                          key={level}
-                          onClick={() =>
-                            handleInputChange(
-                              "preferences",
-                              "difficulty",
-                              level
-                            )
-                          }
-                          className={`flex-1 px-3 py-2 text-sm ${
-                            formData.preferences.difficulty === level
-                              ? "bg-primary-600 text-white"
-                              : "bg-white text-surface-700 hover:bg-surface-50"
-                          } transition-colors`}
-                        >
-                          {level.charAt(0).toUpperCase() + level.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Languages chips */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-surface-700 mb-2">
-                      Preferred Languages
-                    </label>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {formData.preferences.preferredLanguages.map(
-                        (lang, idx) => (
-                          <span
-                            key={`${lang}-${idx}`}
-                            className="inline-flex items-center gap-2 px-2 py-1 bg-surface-100 text-surface-800 rounded-full text-sm border border-surface-300"
-                          >
-                            {lang}
-                            <button
-                              type="button"
-                              className="text-surface-500 hover:text-red-600"
-                              onClick={() =>
-                                handleInputChange(
-                                  "preferences",
-                                  "preferredLanguages",
-                                  formData.preferences.preferredLanguages.filter(
-                                    (l) => l !== lang
-                                  )
-                                )
-                              }
-                            >
-                              ×
-                            </button>
-                          </span>
-                        )
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={languageInput}
-                        onChange={(e) => setLanguageInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (
-                            (e.key === "Enter" || e.key === ",") &&
-                            languageInput.trim()
-                          ) {
-                            e.preventDefault();
-                            const next = Array.from(
-                              new Set([
-                                ...formData.preferences.preferredLanguages,
-                                languageInput.trim(),
-                              ])
-                            );
-                            handleInputChange(
-                              "preferences",
-                              "preferredLanguages",
-                              next
-                            );
-                            setLanguageInput("");
-                          }
-                        }}
-                        className="flex-1 border border-surface-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Add a language and press Enter"
-                      />
-                      <button
-                        type="button"
-                        className="btn-primary px-4"
-                        onClick={() => {
-                          if (!languageInput.trim()) return;
-                          const next = Array.from(
-                            new Set([
-                              ...formData.preferences.preferredLanguages,
-                              languageInput.trim(),
-                            ])
-                          );
-                          handleInputChange(
-                            "preferences",
-                            "preferredLanguages",
-                            next
-                          );
-                          setLanguageInput("");
-                        }}
-                      >
-                        Add
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Duration slider */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-surface-700 mb-2">
-                      Preferred Session Duration:{" "}
-                      <span className="font-semibold">
-                        {formData.preferences.sessionDuration} min
-                      </span>
-                    </label>
-                    <input
-                      type="range"
-                      min={15}
-                      max={120}
-                      step={15}
-                      value={formData.preferences.sessionDuration}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "preferences",
-                          "sessionDuration",
-                          parseInt(e.target.value)
-                        )
-                      }
-                      className="w-full accent-blue-600"
-                    />
-                    <div className="flex justify-between text-xs text-surface-500 mt-1">
-                      <span>15</span>
-                      <span>30</span>
-                      <span>45</span>
-                      <span>60</span>
-                      <span>75</span>
-                      <span>90</span>
-                      <span>105</span>
-                      <span>120</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-surface-200 bg-surface-50 rounded-b-2xl flex items-center justify-between">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="text-surface-500 hover:text-surface-700 disabled:opacity-50"
-          >
-            Skip for now
-          </button>
-
-          <div className="flex space-x-3">
-            {currentStep > 1 && (
+            {step < 4 ? (
               <button
-                onClick={prevStep}
-                className="px-4 py-2 border border-surface-300 rounded-md text-surface-700 hover:bg-surface-50"
+                onClick={handleNext}
+                className="px-6 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
               >
-                Previous
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={handleComplete}
+                disabled={loading}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {loading ? "Completing..." : "Complete Setup"}
               </button>
             )}
-            <button
-              onClick={nextStep}
-              disabled={loading}
-              className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
-            >
-              {loading
-                ? "Saving..."
-                : currentStep === totalSteps
-                ? "Complete Setup"
-                : "Next"}
-            </button>
           </div>
         </div>
       </div>

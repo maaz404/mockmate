@@ -41,8 +41,9 @@ const RegisterPage = () => {
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white/90 dark:bg-surface-800/50 backdrop-blur-sm border border-gray-200 dark:border-surface-700 py-8 px-4 shadow-xl sm:rounded-xl sm:px-10">
           <SignUp
-            afterSignUpUrl="/dashboard"
-            signInUrl="/login"
+            routing="path"
+            path="/register"
+            redirectUrl="/dashboard"
             appearance={{
               elements: {
                 formButtonPrimary:

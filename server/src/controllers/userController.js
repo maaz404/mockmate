@@ -12,7 +12,7 @@ const getProfile = async (req, res) => {
     // If profile doesn't exist, create one from Clerk data
     if (!userProfile) {
       let clerkUser = null;
-      
+
       // Try to get user from Clerk, but don't fail if Clerk is not configured
       try {
         if (process.env.CLERK_SECRET_KEY) {
@@ -20,18 +20,21 @@ const getProfile = async (req, res) => {
         }
       } catch (clerkError) {
         console.error("Clerk API error in getProfile:", clerkError);
-        
+
         // In production with Clerk configured, this should fail
-        if (process.env.NODE_ENV === 'production' && process.env.CLERK_SECRET_KEY) {
+        if (
+          process.env.NODE_ENV === "production" &&
+          process.env.CLERK_SECRET_KEY
+        ) {
           throw clerkError;
         }
-        
+
         // In development, use fallback
         console.warn("Using fallback user data in development mode");
       }
 
       // Fallback user data for development
-      if (!clerkUser && process.env.NODE_ENV !== 'production') {
+      if (!clerkUser && process.env.NODE_ENV !== "production") {
         clerkUser = {
           emailAddresses: [{ emailAddress: `user-${userId}@example.com` }],
           firstName: "Test",
@@ -87,11 +90,9 @@ const updateProfile = async (req, res) => {
       { clerkUserId: userId },
       {
         ...updates,
-        lastModified: new Date(),
       },
       {
         new: true,
-        runValidators: true,
       }
     );
 
@@ -131,7 +132,9 @@ const completeOnboarding = async (req, res) => {
         success: false,
         message: "Missing required onboarding data",
         details: {
-          professionalInfo: !professionalInfo ? "Professional information is required" : null,
+          professionalInfo: !professionalInfo
+            ? "Professional information is required"
+            : null,
           preferences: !preferences ? "Preferences are required" : null,
         },
       });
@@ -143,14 +146,19 @@ const completeOnboarding = async (req, res) => {
         success: false,
         message: "Missing required professional information",
         details: {
-          currentRole: !professionalInfo.currentRole ? "Current role is required" : null,
+          currentRole: !professionalInfo.currentRole
+            ? "Current role is required"
+            : null,
           industry: !professionalInfo.industry ? "Industry is required" : null,
         },
       });
     }
 
     // Validate preferences fields
-    if (!preferences.interviewTypes || preferences.interviewTypes.length === 0) {
+    if (
+      !preferences.interviewTypes ||
+      preferences.interviewTypes.length === 0
+    ) {
       return res.status(400).json({
         success: false,
         message: "At least one interview type must be selected",
@@ -159,7 +167,7 @@ const completeOnboarding = async (req, res) => {
 
     // Ensure a profile exists; if not, create it from Clerk data on the fly
     let clerkUser = null;
-    
+
     // Try to get user from Clerk, but don't fail if Clerk is not configured (development mode)
     try {
       if (process.env.CLERK_SECRET_KEY) {
@@ -167,21 +175,26 @@ const completeOnboarding = async (req, res) => {
       }
     } catch (clerkError) {
       console.error("Clerk API error:", clerkError);
-      
+
       // In production with Clerk configured, this should fail
-      if (process.env.NODE_ENV === 'production' && process.env.CLERK_SECRET_KEY) {
+      if (
+        process.env.NODE_ENV === "production" &&
+        process.env.CLERK_SECRET_KEY
+      ) {
         return res.status(500).json({
           success: false,
           message: "Failed to fetch user data from authentication service",
         });
       }
-      
+
       // In development, continue without Clerk data
-      console.warn("Continuing without Clerk authentication in development mode");
+      console.warn(
+        "Continuing without Clerk authentication in development mode"
+      );
     }
 
     // Fallback user data for development
-    if (!clerkUser && process.env.NODE_ENV !== 'production') {
+    if (!clerkUser && process.env.NODE_ENV !== "production") {
       clerkUser = {
         emailAddresses: [{ emailAddress: `user-${userId}@example.com` }],
         firstName: "Test",
@@ -204,7 +217,6 @@ const completeOnboarding = async (req, res) => {
           professionalInfo,
           preferences,
           onboardingCompleted: true,
-          lastModified: new Date(),
         },
         $setOnInsert: {
           email: clerkUser.emailAddresses[0]?.emailAddress,
@@ -215,7 +227,6 @@ const completeOnboarding = async (req, res) => {
       },
       {
         new: true,
-        runValidators: true,
         upsert: true,
       }
     );
@@ -231,14 +242,14 @@ const completeOnboarding = async (req, res) => {
     });
   } catch (error) {
     console.error("Complete onboarding error:", error);
-    
+
     // Handle MongoDB validation errors
-    if (error.name === 'ValidationError') {
+    if (error.name === "ValidationError") {
       const validationErrors = {};
-      Object.keys(error.errors).forEach(key => {
+      Object.keys(error.errors).forEach((key) => {
         validationErrors[key] = error.errors[key].message;
       });
-      
+
       return res.status(400).json({
         success: false,
         message: "Validation failed",
@@ -258,7 +269,7 @@ const completeOnboarding = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to complete onboarding",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
