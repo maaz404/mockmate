@@ -120,18 +120,41 @@ app.use("/api/coding", codingRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+let PORT = parseInt(process.env.PORT, 10) || 5000;
+let server;
 
-const server = app.listen(PORT, () => {
-  console.log(
-    `🚀 MockMate server is running on port ${PORT} in ${process.env.NODE_ENV} mode`
-  );
-  console.log(
-    `🔐 Clerk authentication is ${
-      process.env.CLERK_SECRET_KEY ? "configured" : "NOT configured"
-    }`
-  );
-});
+function startServer(port) {
+  try {
+    server = app
+      .listen(port, () => {
+        console.log(
+          `🚀 MockMate server is running on port ${port} in ${process.env.NODE_ENV} mode`
+        );
+        console.log(
+          `🔐 Clerk authentication is ${
+            process.env.CLERK_SECRET_KEY ? "configured" : "NOT configured"
+          }`
+        );
+      })
+      .on("error", (err) => {
+        if (err.code === "EADDRINUSE") {
+          const nextPort = port + 1;
+          console.warn(
+            `Port ${port} is in use. Attempting to use port ${nextPort}...`
+          );
+          startServer(nextPort);
+        } else {
+          console.error("Server failed to start:", err);
+          process.exit(1);
+        }
+      });
+  } catch (err) {
+    console.error("Unexpected error while starting server:", err);
+    process.exit(1);
+  }
+}
+
+startServer(PORT);
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {

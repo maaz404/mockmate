@@ -117,7 +117,7 @@ const InterviewExperiencePage = () => {
       handleSaveAnswer();
 
       const response = await apiService.post(
-        `/interviews/${interviewId}/submit`,
+        `/interviews/${interviewId}/complete`,
         {
           answers,
           timeTaken: interview?.duration * 60 - timeRemaining,

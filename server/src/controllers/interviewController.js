@@ -99,7 +99,7 @@ const createInterview = async (req, res) => {
 const startInterview = async (req, res) => {
   try {
     const { userId } = req.auth;
-    const { interviewId } = req.params;
+  const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -154,7 +154,8 @@ const startInterview = async (req, res) => {
 const submitAnswer = async (req, res) => {
   try {
     const { userId } = req.auth;
-    const { interviewId, questionIndex } = req.params;
+  const interviewId = req.params.interviewId || req.params.id;
+  const { questionIndex } = req.params;
     const { answer, timeSpent } = req.body;
 
     const interview = await Interview.findOne({
@@ -342,7 +343,8 @@ const submitAnswer = async (req, res) => {
 const generateFollowUp = async (req, res) => {
   try {
     const { userId } = req.auth;
-    const { interviewId, questionIndex } = req.params;
+  const interviewId = req.params.interviewId || req.params.id;
+  const { questionIndex } = req.params;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -434,7 +436,7 @@ const generateFollowUp = async (req, res) => {
 const completeInterview = async (req, res) => {
   try {
     const { userId } = req.auth;
-    const { interviewId } = req.params;
+  const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -540,7 +542,7 @@ const getUserInterviews = async (req, res) => {
 const getInterviewDetails = async (req, res) => {
   try {
     const { userId } = req.auth;
-    const { interviewId } = req.params;
+  const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -802,7 +804,7 @@ const getNextDifficultyLevel = (currentScore, currentDifficulty) => {
 const getAdaptiveQuestion = async (req, res) => {
   try {
     const { userId } = req.auth;
-    const { interviewId } = req.params;
+  const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
