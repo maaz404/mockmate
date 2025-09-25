@@ -19,7 +19,7 @@ const InterviewExperiencePage = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Follow-up questions state
   const [followUpQuestions, setFollowUpQuestions] = useState({});
   const [loadingFollowUps, setLoadingFollowUps] = useState({});
@@ -71,25 +71,39 @@ const InterviewExperiencePage = () => {
     if (!interview || !currentAnswer.trim()) return;
 
     try {
-      setLoadingFollowUps(prev => ({ ...prev, [currentQuestionIndex]: true }));
-      
-      // Submit answer to backend
-      const response = await interviewService.submitAnswer(interviewId, currentQuestionIndex, {
-        answer: currentAnswer,
-        timeSpent: 0 // You can implement timing if needed
-      });
+      setLoadingFollowUps((prev) => ({
+        ...prev,
+        [currentQuestionIndex]: true,
+      }));
 
-      if (response.success && response.data.followUpQuestions && response.data.followUpQuestions.length > 0) {
-        setFollowUpQuestions(prev => ({
+      // Submit answer to backend
+      const response = await interviewService.submitAnswer(
+        interviewId,
+        currentQuestionIndex,
+        {
+          answer: currentAnswer,
+          timeSpent: 0, // You can implement timing if needed
+        }
+      );
+
+      if (
+        response.success &&
+        response.data.followUpQuestions &&
+        response.data.followUpQuestions.length > 0
+      ) {
+        setFollowUpQuestions((prev) => ({
           ...prev,
-          [currentQuestionIndex]: response.data.followUpQuestions
+          [currentQuestionIndex]: response.data.followUpQuestions,
         }));
-        setShowFollowUps(prev => ({ ...prev, [currentQuestionIndex]: true }));
+        setShowFollowUps((prev) => ({ ...prev, [currentQuestionIndex]: true }));
       }
     } catch (error) {
       // console.error('Failed to submit answer or fetch follow-ups:', error); // eslint-disable-line no-console
     } finally {
-      setLoadingFollowUps(prev => ({ ...prev, [currentQuestionIndex]: false }));
+      setLoadingFollowUps((prev) => ({
+        ...prev,
+        [currentQuestionIndex]: false,
+      }));
     }
   }, [interview, currentAnswer, interviewId, currentQuestionIndex]);
 
@@ -98,14 +112,17 @@ const InterviewExperiencePage = () => {
 
     try {
       setSubmitting(true);
-      
+
       // Save current answer before submitting
       handleSaveAnswer();
 
-      const response = await apiService.post(`/interviews/${interviewId}/submit`, {
-        answers,
-        timeTaken: interview?.duration * 60 - timeRemaining,
-      });
+      const response = await apiService.post(
+        `/interviews/${interviewId}/submit`,
+        {
+          answers,
+          timeTaken: interview?.duration * 60 - timeRemaining,
+        }
+      );
 
       if (response.success) {
         navigate(`/interview/${interviewId}/results`);
@@ -118,7 +135,15 @@ const InterviewExperiencePage = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [interviewId, answers, interview, timeRemaining, navigate, submitting, handleSaveAnswer]);
+  }, [
+    interviewId,
+    answers,
+    interview,
+    timeRemaining,
+    navigate,
+    submitting,
+    handleSaveAnswer,
+  ]);
 
   // Timer functionality
   useEffect(() => {
@@ -142,14 +167,14 @@ const InterviewExperiencePage = () => {
 
   const handleAnswerChange = (value) => {
     // Handle both event objects (from textarea) and direct values (from Monaco Editor)
-    const newValue = typeof value === 'string' ? value : value.target.value;
+    const newValue = typeof value === "string" ? value : value.target.value;
     setCurrentAnswer(newValue);
   };
 
   // Handle code execution for coding questions
   const handleCodeExecution = async () => {
     if (!currentAnswer.trim()) {
-      alert('Please write some code before running it.');
+      alert("Please write some code before running it.");
       return;
     }
 
@@ -158,12 +183,12 @@ const InterviewExperiencePage = () => {
 
     try {
       const currentQuestion = interview.questions[currentQuestionIndex];
-      
+
       // Create a temporary coding session for testing
-      const response = await apiService.post('/coding/test', {
+      const response = await apiService.post("/coding/test", {
         code: currentAnswer,
         language: codingLanguage,
-        challengeId: currentQuestion.challengeId || 'default-challenge'
+        challengeId: currentQuestion.challengeId || "default-challenge",
       });
 
       if (response.success) {
@@ -171,13 +196,13 @@ const InterviewExperiencePage = () => {
       } else {
         setCodeExecutionResult({
           success: false,
-          error: response.message || 'Code execution failed'
+          error: response.message || "Code execution failed",
         });
       }
     } catch (error) {
       setCodeExecutionResult({
         success: false,
-        error: 'Failed to execute code. Please try again.'
+        error: "Failed to execute code. Please try again.",
       });
     } finally {
       setIsExecutingCode(false);
@@ -225,9 +250,9 @@ const InterviewExperiencePage = () => {
 
   if (!interview) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-900">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-50 mb-4">
             Interview not found
           </h2>
           <button
@@ -244,16 +269,16 @@ const InterviewExperiencePage = () => {
   const currentQuestion = interview.questions[currentQuestionIndex];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
       {/* Header with Progress and Timer */}
-      <div className="bg-white shadow-md">
+      <div className="bg-white dark:bg-surface-800 shadow-md border-b border-surface-200 dark:border-surface-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-surface-900 dark:text-surface-50">
                 {interview.jobRole} Interview
               </h1>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-surface-600 dark:text-surface-400">
                 Question {currentQuestionIndex + 1} of{" "}
                 {interview.questions.length}
               </span>
@@ -262,14 +287,16 @@ const InterviewExperiencePage = () => {
             <div className="flex items-center space-x-6">
               {/* Progress Bar */}
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Progress:</span>
-                <div className="w-32 bg-gray-200 rounded-full h-2">
+                <span className="text-sm text-surface-600 dark:text-surface-400">
+                  Progress:
+                </span>
+                <div className="w-32 bg-surface-200 dark:bg-surface-700 rounded-full h-2">
                   <div
                     className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${getProgressPercentage()}%` }}
                   ></div>
                 </div>
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-surface-900 dark:text-surface-50">
                   {getProgressPercentage()}%
                 </span>
               </div>
@@ -291,7 +318,7 @@ const InterviewExperiencePage = () => {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="card p-8">
           {/* Question */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -323,14 +350,18 @@ const InterviewExperiencePage = () => {
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-50 mb-6">
               {currentQuestion.text}
             </h2>
 
             {currentQuestion.context && (
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-gray-900 mb-2">Context:</h4>
-                <p className="text-gray-700">{currentQuestion.context}</p>
+              <div className="bg-surface-50 dark:bg-surface-800 rounded-lg p-4 mb-6 border border-surface-200 dark:border-surface-700">
+                <h4 className="font-semibold text-surface-900 dark:text-surface-50 mb-2">
+                  Context:
+                </h4>
+                <p className="text-surface-700 dark:text-surface-300">
+                  {currentQuestion.context}
+                </p>
               </div>
             )}
           </div>
@@ -339,7 +370,7 @@ const InterviewExperiencePage = () => {
           <div className="mb-8">
             <label
               htmlFor="answer"
-              className="block text-lg font-medium text-gray-900 mb-4"
+              className="block text-lg font-medium text-surface-900 dark:text-surface-50 mb-4"
             >
               Your Answer:
             </label>
@@ -357,15 +388,16 @@ const InterviewExperiencePage = () => {
                   loading={isExecutingCode}
                   height="400px"
                 />
-                
+
                 {/* Code Execution Results */}
-                <CodeExecutionResults 
+                <CodeExecutionResults
                   result={codeExecutionResult}
                   loading={isExecutingCode}
                 />
-                
-                <p className="text-sm text-gray-600">
-                  💡 Tip: Write clean, readable code and consider edge cases. Press Ctrl+Enter to run your code.
+
+                <p className="text-sm text-surface-600 dark:text-surface-400">
+                  💡 Tip: Write clean, readable code and consider edge cases.
+                  Press Ctrl+Enter to run your code.
                 </p>
               </div>
             ) : (
@@ -375,9 +407,9 @@ const InterviewExperiencePage = () => {
                   value={currentAnswer}
                   onChange={handleAnswerChange}
                   placeholder="Provide your detailed answer here..."
-                  className="w-full h-48 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                  className="form-input h-48 resize-none"
                 />
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-surface-600 dark:text-surface-400">
                   💡 Tip: Use the STAR method (Situation, Task, Action, Result)
                   for behavioral questions
                 </p>
@@ -385,22 +417,22 @@ const InterviewExperiencePage = () => {
             )}
 
             {/* Voice Recording Option */}
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-4 p-4 bg-surface-50 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-gray-900">
+                  <h4 className="font-medium text-surface-900 dark:text-surface-50">
                     Voice Response (Optional)
                   </h4>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-surface-600 dark:text-surface-400">
                     Practice speaking your answer out loud
                   </p>
                 </div>
                 <button
                   onClick={() => setIsRecording(!isRecording)}
-                  className={`px-4 py-2 rounded-lg font-medium ${
+                  className={`${
                     isRecording
-                      ? "bg-red-600 text-white hover:bg-red-700"
-                      : "bg-primary-600 text-white hover:bg-primary-700"
+                      ? "btn-outline text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20"
+                      : "btn-primary"
                   }`}
                 >
                   {isRecording ? "🎙️ Stop Recording" : "🎤 Start Recording"}
@@ -413,12 +445,14 @@ const InterviewExperiencePage = () => {
           {currentAnswer.trim() && (
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Follow-up Questions</h3>
+                <h3 className="text-lg font-medium text-surface-900 dark:text-surface-50">
+                  Follow-up Questions
+                </h3>
                 {!showFollowUps[currentQuestionIndex] && (
                   <button
                     onClick={handleSubmitAnswerWithFollowUp}
                     disabled={loadingFollowUps[currentQuestionIndex]}
-                    className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loadingFollowUps[currentQuestionIndex] ? (
                       <>
@@ -426,50 +460,61 @@ const InterviewExperiencePage = () => {
                         Generating...
                       </>
                     ) : (
-                      'Generate Follow-ups'
+                      "Generate Follow-ups"
                     )}
                   </button>
                 )}
               </div>
 
-              {showFollowUps[currentQuestionIndex] && followUpQuestions[currentQuestionIndex] && (
-                <div className="bg-primary-50 border border-primary-200 rounded-lg p-6">
-                  <div className="space-y-4">
-                    {followUpQuestions[currentQuestionIndex].map((followUp, index) => (
-                      <div key={index} className="flex items-start space-x-3">
-                        <div className="flex-shrink-0">
-                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary-600 text-white text-xs font-medium">
-                            {index + 1}
-                          </span>
-                        </div>
-                        <div className="flex-grow">
-                          <p className="text-gray-900 font-medium">{followUp.text}</p>
-                          {followUp.type && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 mt-1">
-                              {followUp.type}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+              {showFollowUps[currentQuestionIndex] &&
+                followUpQuestions[currentQuestionIndex] && (
+                  <div className="bg-primary-50 border border-primary-200 rounded-lg p-6">
+                    <div className="space-y-4">
+                      {followUpQuestions[currentQuestionIndex].map(
+                        (followUp, index) => (
+                          <div
+                            key={index}
+                            className="flex items-start space-x-3"
+                          >
+                            <div className="flex-shrink-0">
+                              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary-600 text-white text-xs font-medium">
+                                {index + 1}
+                              </span>
+                            </div>
+                            <div className="flex-grow">
+                              <p className="text-surface-900 dark:text-surface-50 font-medium">
+                                {followUp.text}
+                              </p>
+                              {followUp.type && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 mt-1">
+                                  {followUp.type}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                    <div className="mt-4 p-3 bg-primary-100 rounded-lg">
+                      <p className="text-sm text-primary-800">
+                        💡 These follow-up questions are designed to help you
+                        think deeper about your answer. Consider how you might
+                        respond to these in a real interview.
+                      </p>
+                    </div>
                   </div>
-                  <div className="mt-4 p-3 bg-primary-100 rounded-lg">
-                    <p className="text-sm text-primary-800">
-                      💡 These follow-up questions are designed to help you think deeper about your answer. 
-                      Consider how you might respond to these in a real interview.
+                )}
+
+              {!showFollowUps[currentQuestionIndex] &&
+                !loadingFollowUps[currentQuestionIndex] && (
+                  <div className="bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+                    <p className="text-sm text-surface-600 dark:text-surface-400">
+                      💡 Complete your answer above and click "Generate
+                      Follow-ups" to see additional questions that might be
+                      asked based on your response.
                     </p>
                   </div>
-                </div>
-              )}
-
-              {!showFollowUps[currentQuestionIndex] && !loadingFollowUps[currentQuestionIndex] && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">
-                    💡 Complete your answer above and click "Generate Follow-ups" to see additional questions 
-                    that might be asked based on your response.
-                  </p>
-                </div>
-              )}
+                )}
             </div>
           )}
 
@@ -478,16 +523,13 @@ const InterviewExperiencePage = () => {
             <button
               onClick={handlePreviousQuestion}
               disabled={currentQuestionIndex === 0}
-              className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ← Previous
             </button>
 
             <div className="flex space-x-4">
-              <button
-                onClick={handleSaveAnswer}
-                className="px-6 py-3 text-primary-700 bg-primary-100 rounded-lg hover:bg-primary-200"
-              >
+              <button onClick={handleSaveAnswer} className="btn-outline">
                 💾 Save Answer
               </button>
 
@@ -495,7 +537,7 @@ const InterviewExperiencePage = () => {
                 <button
                   onClick={handleSubmitAnswerWithFollowUp}
                   disabled={loadingFollowUps[currentQuestionIndex]}
-                  className="px-6 py-3 text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loadingFollowUps[currentQuestionIndex] ? (
                     <>
@@ -503,7 +545,7 @@ const InterviewExperiencePage = () => {
                       Submitting...
                     </>
                   ) : (
-                    '🤔 Submit & Get Follow-ups'
+                    "🤔 Submit & Get Follow-ups"
                   )}
                 </button>
               )}
@@ -512,15 +554,12 @@ const InterviewExperiencePage = () => {
                 <button
                   onClick={handleInterviewComplete}
                   disabled={submitting}
-                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed px-8"
                 >
                   {submitting ? "Submitting..." : "🎯 Complete Interview"}
                 </button>
               ) : (
-                <button
-                  onClick={handleNextQuestion}
-                  className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                >
+                <button onClick={handleNextQuestion} className="btn-primary">
                   Next →
                 </button>
               )}
@@ -543,7 +582,7 @@ const InterviewExperiencePage = () => {
                     ? "bg-primary-600"
                     : answers[interview.questions[index]._id]
                     ? "bg-green-400"
-                    : "bg-gray-300"
+                    : "bg-surface-300 dark:bg-surface-600"
                 }`}
                 title={`Question ${index + 1}`}
               />

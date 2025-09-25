@@ -26,7 +26,7 @@ const TechStackSection = () => {
       name: "Express.js",
       icon: Globe,
       description: "Web Framework",
-      color: "text-gray-700",
+      color: "text-surface-700 dark:text-surface-300",
     },
     {
       name: "Clerk Auth",
@@ -130,7 +130,9 @@ const TechStackSection = () => {
               <div className="text-surface-800 dark:text-surface-200 font-medium mb-1">
                 {stat.label}
               </div>
-              <div className="text-surface-600 dark:text-surface-400 text-sm">{stat.description}</div>
+              <div className="text-surface-600 dark:text-surface-400 text-sm">
+                {stat.description}
+              </div>
             </motion.div>
           ))}
         </motion.div>

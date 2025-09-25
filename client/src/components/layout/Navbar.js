@@ -26,13 +26,18 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               className="flex items-center space-x-2 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
               aria-label="MockMate home"
             >
               <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg" aria-hidden="true">M</span>
+                <span
+                  className="text-white font-bold text-lg"
+                  aria-hidden="true"
+                >
+                  M
+                </span>
               </div>
               <span className="text-xl font-bold text-white">MockMate</span>
             </Link>
@@ -42,27 +47,17 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-8">
             <SignedOut>
               {navigation.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="text-surface-300 hover:text-white focus:text-white transition-colors duration-200 font-medium rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
-                >
+                <a key={item.name} href={item.href} className="nav-link-dark">
                   {item.name}
                 </a>
               ))}
             </SignedOut>
 
             <SignedIn>
-              <Link
-                to="/dashboard"
-                className="text-surface-300 hover:text-white focus:text-white transition-colors duration-200 font-medium rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
-              >
+              <Link to="/dashboard" className="nav-link-dark">
                 Dashboard
               </Link>
-              <Link
-                to="/mock-interview"
-                className="text-surface-300 hover:text-white focus:text-white transition-colors duration-200 font-medium rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
-              >
+              <Link to="/mock-interview" className="nav-link-dark">
                 Practice
               </Link>
             </SignedIn>
@@ -72,16 +67,13 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {/* Dark Mode Toggle */}
             <DarkModeToggle />
-            
+
             <SignedOut>
-              <Link
-                to="/login"
-                className="text-surface-300 hover:text-white focus:text-white transition-colors duration-200 font-medium rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
-              >
+              <Link to="/login" className="nav-link-dark">
                 Sign In
               </Link>
-              <Link 
-                to="/register" 
+              <Link
+                to="/register"
                 className="btn-primary focus:ring-offset-surface-900"
               >
                 Sign Up Free
@@ -96,7 +88,8 @@ const Navbar = () => {
                 <UserButton
                   appearance={{
                     elements: {
-                      avatarBox: "w-8 h-8 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900",
+                      avatarBox:
+                        "w-8 h-8 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900",
                     },
                   }}
                 />
@@ -108,7 +101,7 @@ const Navbar = () => {
           <div className="md:hidden flex items-center space-x-2">
             {/* Mobile Dark Mode Toggle */}
             <DarkModeToggle />
-            
+
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -140,7 +133,7 @@ const Navbar = () => {
                     <a
                       key={item.name}
                       href={item.href}
-                      className="block text-surface-300 hover:text-white focus:text-white transition-colors duration-200 font-medium py-2 px-2 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
+                      className="block nav-link-dark"
                       onClick={() => setIsMobileMenuOpen(false)}
                       role="menuitem"
                     >
@@ -152,7 +145,7 @@ const Navbar = () => {
                   <SignedOut>
                     <Link
                       to="/login"
-                      className="block text-surface-300 hover:text-white focus:text-white transition-colors duration-200 font-medium py-2 px-2 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
+                      className="block nav-link-dark"
                       onClick={() => setIsMobileMenuOpen(false)}
                       role="menuitem"
                     >
@@ -172,7 +165,7 @@ const Navbar = () => {
                 <SignedIn>
                   <Link
                     to="/dashboard"
-                    className="block text-surface-300 hover:text-white focus:text-white transition-colors duration-200 font-medium py-2 px-2 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
+                    className="block nav-link-dark"
                     onClick={() => setIsMobileMenuOpen(false)}
                     role="menuitem"
                   >
@@ -180,7 +173,7 @@ const Navbar = () => {
                   </Link>
                   <Link
                     to="/mock-interview"
-                    className="block text-surface-300 hover:text-white focus:text-white transition-colors duration-200 font-medium py-2 px-2 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
+                    className="block nav-link-dark"
                     onClick={() => setIsMobileMenuOpen(false)}
                     role="menuitem"
                   >
@@ -190,7 +183,8 @@ const Navbar = () => {
                     <UserButton
                       appearance={{
                         elements: {
-                          avatarBox: "w-8 h-8 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900",
+                          avatarBox:
+                            "w-8 h-8 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900",
                         },
                       }}
                     />

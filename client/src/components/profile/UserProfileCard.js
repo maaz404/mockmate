@@ -110,15 +110,15 @@ const UserProfileCard = () => {
     return (
       <div className="bg-white rounded-lg shadow-md p-6 animate-pulse">
         <div className="flex items-center space-x-4 mb-6">
-          <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+          <div className="w-16 h-16 bg-surface-200 rounded-full"></div>
           <div className="space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-32"></div>
-            <div className="h-3 bg-gray-200 rounded w-24"></div>
+            <div className="h-4 bg-surface-200 rounded w-32"></div>
+            <div className="h-3 bg-surface-200 rounded w-24"></div>
           </div>
         </div>
         <div className="space-y-3">
-          <div className="h-3 bg-gray-200 rounded"></div>
-          <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-3 bg-surface-200 rounded"></div>
+          <div className="h-3 bg-surface-200 rounded w-3/4"></div>
         </div>
       </div>
     );
@@ -133,7 +133,7 @@ const UserProfileCard = () => {
             <img
               src={user?.profileImageUrl || "/api/placeholder/64/64"}
               alt="Profile"
-              className="w-16 h-16 rounded-full border-2 border-gray-200"
+              className="w-16 h-16 rounded-full border-2 border-surface-200"
             />
             <button className="absolute -bottom-1 -right-1 bg-primary-600 text-white p-1 rounded-full hover:bg-primary-700 transition-colors">
               <Camera className="h-3 w-3" />
@@ -163,10 +163,10 @@ const UserProfileCard = () => {
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold text-surface-900">
                   {userProfile.firstName} {userProfile.lastName}
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-surface-600">
                   {user?.emailAddresses?.[0]?.emailAddress}
                 </p>
               </>
@@ -185,7 +185,7 @@ const UserProfileCard = () => {
               </button>
               <button
                 onClick={handleCancel}
-                className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="p-2 bg-surface-700 text-white rounded-lg hover:bg-surface-800 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -205,14 +205,14 @@ const UserProfileCard = () => {
       <div className="space-y-4">
         <div className="flex items-center space-x-2 mb-3">
           <Briefcase className="h-5 w-5 text-primary-600" />
-          <h3 className="font-medium text-gray-900">
+          <h3 className="font-medium text-surface-900">
             Professional Information
           </h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-surface-700 mb-1">
               Current Role
             </label>
             {isEditing ? (
@@ -225,18 +225,18 @@ const UserProfileCard = () => {
                     e.target.value
                   )
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-surface-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="e.g., Software Engineer"
               />
             ) : (
-              <p className="text-gray-900">
+              <p className="text-surface-900">
                 {userProfile.professionalInfo?.currentRole || "Not specified"}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-surface-700 mb-1">
               Company
             </label>
             {isEditing ? (
@@ -246,18 +246,18 @@ const UserProfileCard = () => {
                 onChange={(e) =>
                   handleInputChange("professionalInfo.company", e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-surface-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="e.g., Google"
               />
             ) : (
-              <p className="text-gray-900">
+              <p className="text-surface-900">
                 {userProfile.professionalInfo?.company || "Not specified"}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-surface-700 mb-1">
               Experience
             </label>
             {isEditing ? (
@@ -269,7 +269,7 @@ const UserProfileCard = () => {
                     e.target.value
                   )
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-surface-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="entry">Entry (0-2y)</option>
                 <option value="junior">Junior (2-4y)</option>
@@ -279,14 +279,14 @@ const UserProfileCard = () => {
                 <option value="executive">Executive</option>
               </select>
             ) : (
-              <p className="text-gray-900">
+              <p className="text-surface-900">
                 {userProfile.professionalInfo?.experience || "Not specified"}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-surface-700 mb-1">
               Industry
             </label>
             {isEditing ? (
@@ -296,11 +296,11 @@ const UserProfileCard = () => {
                 onChange={(e) =>
                   handleInputChange("professionalInfo.industry", e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-surface-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="e.g., Technology"
               />
             ) : (
-              <p className="text-gray-900">
+              <p className="text-surface-900">
                 {userProfile.professionalInfo?.industry || "Not specified"}
               </p>
             )}
@@ -308,7 +308,7 @@ const UserProfileCard = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Skills
           </label>
           {isEditing ? (
@@ -316,7 +316,7 @@ const UserProfileCard = () => {
               type="text"
               value={editForm.professionalInfo.skills.join(", ")}
               onChange={(e) => handleSkillsChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-surface-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="e.g., React, Python, Leadership (comma separated)"
             />
           ) : (
@@ -331,14 +331,14 @@ const UserProfileCard = () => {
                   </span>
                 ))
               ) : (
-                <p className="text-gray-500">No skills added</p>
+                <p className="text-surface-500">No skills added</p>
               )}
             </div>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-surface-700 mb-1">
             Career Goals
           </label>
           {isEditing ? (
@@ -351,11 +351,11 @@ const UserProfileCard = () => {
                 )
               }
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-surface-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="Describe your career aspirations..."
             />
           ) : (
-            <p className="text-gray-900">
+            <p className="text-surface-900">
               {userProfile.professionalInfo?.careerGoals || "Not specified"}
             </p>
           )}
@@ -364,10 +364,10 @@ const UserProfileCard = () => {
 
       {/* Stats Section */}
       {stats && (
-        <div className="mt-6 pt-6 border-t border-gray-200">
+        <div className="mt-6 pt-6 border-t border-surface-200">
           <div className="flex items-center space-x-2 mb-3">
             <Award className="h-5 w-5 text-primary-600" />
-            <h3 className="font-medium text-gray-900">Statistics</h3>
+            <h3 className="font-medium text-surface-900">Statistics</h3>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -375,41 +375,41 @@ const UserProfileCard = () => {
               <p className="text-2xl font-bold text-primary-600">
                 {stats.analytics?.totalInterviews || 0}
               </p>
-              <p className="text-sm text-gray-600">Total Interviews</p>
+              <p className="text-sm text-surface-600">Total Interviews</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-green-600">
                 {stats.analytics?.averageScore || 0}%
               </p>
-              <p className="text-sm text-gray-600">Avg Score</p>
+              <p className="text-sm text-surface-600">Avg Score</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-purple-600">
                 {stats.analytics?.streak?.current || 0}
               </p>
-              <p className="text-sm text-gray-600">Current Streak</p>
+              <p className="text-sm text-surface-600">Current Streak</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-accent-600">
                 {stats.analytics?.streak?.longest || 0}
               </p>
-              <p className="text-sm text-gray-600">Best Streak</p>
+              <p className="text-sm text-surface-600">Best Streak</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Profile Completeness */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
+      <div className="mt-6 pt-6 border-t border-surface-200">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-surface-700">
             Profile Completeness
           </span>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-surface-600">
             {userProfile.profileCompleteness || 0}%
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-surface-200 rounded-full h-2">
           <div
             className="bg-primary-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${userProfile.profileCompleteness || 0}%` }}

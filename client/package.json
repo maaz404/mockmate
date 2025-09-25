@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@clerk/clerk-react": "^5.46.0",
+    "@fontsource/inter": "^5.2.8",
     "@mediapipe/face_mesh": "^0.4.1633559619",
     "@monaco-editor/react": "^4.6.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",

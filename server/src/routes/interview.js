@@ -10,6 +10,7 @@ const {
   generateFollowUp,
   completeInterview,
   getAdaptiveQuestion,
+  getInterviewResults,
 } = require("../controllers/interviewController");
 
 // @desc    Create interview session
@@ -57,9 +58,12 @@ router.post("/:id/adaptive-question", requireAuth, getAdaptiveQuestion);
 // @access  Private
 router.post("/:id/complete", requireAuth, completeInterview);
 
-// @desc    Get interview results
+// @desc    Get interview results (formatted)
 // @route   GET /api/interviews/:id/results
 // @access  Private
-router.get("/:id/results", requireAuth, getInterviewDetails); // Will return results if completed
+router.get("/:id/results", requireAuth, (req, res) => {
+  req.params.interviewId = req.params.id;
+  return getInterviewResults(req, res);
+});
 
 module.exports = router;

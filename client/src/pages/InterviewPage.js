@@ -24,8 +24,8 @@ const InterviewPage = () => {
   const handleEndInterview = useCallback(() => {
     // In a real app, save responses and navigate to results
     toast.success("Interview completed!");
-    navigate("/interview-results");
-  }, [navigate]);
+    navigate(`/interview/${interviewId}/results`);
+  }, [navigate, interviewId]);
 
   // Fetch interview data on component mount
   useEffect(() => {
@@ -123,10 +123,10 @@ const InterviewPage = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-surface-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-white">Loading interview...</p>
+          <p className="text-surface-50">Loading interview...</p>
         </div>
       </div>
     );
@@ -135,12 +135,12 @@ const InterviewPage = () => {
   // Error state
   if (error || !interview) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-surface-900">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">
+          <h2 className="text-2xl font-bold text-surface-50 mb-4">
             Interview Not Found
           </h2>
-          <p className="text-gray-400 mb-6">
+          <p className="text-surface-400 mb-6">
             {error || "Unable to load interview"}
           </p>
           <button
@@ -160,7 +160,7 @@ const InterviewPage = () => {
     ((currentQuestionIndex + 1) / interview.questions.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-surface-900 text-surface-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Interview Header */}
         <div className="mb-8">
@@ -169,16 +169,16 @@ const InterviewPage = () => {
               {interview.config.jobRole} Interview
             </h1>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-surface-400">
                 Question {currentQuestionIndex + 1} of{" "}
                 {interview.questions.length}
               </span>
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-surface-400">
                 {formatTime(timeRemaining)}
               </span>
             </div>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-2">
+          <div className="w-full bg-surface-700 rounded-full h-2">
             <div
               className="bg-primary-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
@@ -197,10 +197,10 @@ const InterviewPage = () => {
                 onVideoUploaded={handleVideoUploaded}
               />
             ) : (
-              <div className="bg-gray-800 rounded-lg aspect-video flex items-center justify-center">
+              <div className="bg-surface-800 rounded-lg aspect-video flex items-center justify-center border border-surface-700">
                 <div className="text-center">
                   <svg
-                    className="w-16 h-16 text-gray-500 mx-auto mb-4"
+                    className="w-16 h-16 text-surface-400 mx-auto mb-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -212,7 +212,9 @@ const InterviewPage = () => {
                       d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                     />
                   </svg>
-                  <p className="text-gray-500">Video recording is disabled</p>
+                  <p className="text-surface-400">
+                    Video recording is disabled
+                  </p>
                 </div>
               </div>
             )}
@@ -242,18 +244,18 @@ const InterviewPage = () => {
 
           {/* Question Section */}
           <div className="space-y-6">
-            <div className="bg-gray-800 rounded-lg p-6">
+            <div className="bg-surface-800 rounded-lg p-6 border border-surface-700">
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-lg font-semibold text-primary-400">
                   Current Question
                 </h2>
                 <div className="text-right text-sm">
-                  <span className="text-gray-400">Category: </span>
+                  <span className="text-surface-400">Category: </span>
                   <span className="text-primary-400">
                     {currentQuestion.category}
                   </span>
                   <br />
-                  <span className="text-gray-400">Difficulty: </span>
+                  <span className="text-surface-400">Difficulty: </span>
                   <span className="text-yellow-400">
                     {currentQuestion.difficulty}
                   </span>
@@ -265,17 +267,17 @@ const InterviewPage = () => {
             </div>
 
             {/* Response Area */}
-            <div className="bg-gray-800 rounded-lg p-6">
+            <div className="bg-surface-800 rounded-lg p-6 border border-surface-700">
               <h3 className="text-lg font-semibold mb-4 text-blue-400">
                 Your Response Notes
               </h3>
               <textarea
                 value={responses[currentQuestionIndex] || ""}
                 onChange={(e) => handleResponseChange(e.target.value)}
-                className="w-full h-32 bg-gray-700 border border-gray-600 rounded-lg p-4 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full h-32 bg-surface-700 border border-surface-600 rounded-lg p-4 text-surface-50 placeholder-surface-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 placeholder="Take notes or outline your response here..."
               />
-              <p className="text-sm text-gray-400 mt-2">
+              <p className="text-sm text-surface-400 mt-2">
                 These notes are for your reference. Your video response is the
                 main submission.
               </p>
@@ -286,7 +288,7 @@ const InterviewPage = () => {
               <button
                 onClick={handlePrevious}
                 disabled={currentQuestionIndex === 0}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed py-3 px-6 rounded-lg font-medium transition-colors"
+                className="flex-1 bg-surface-600 hover:bg-surface-700 disabled:bg-surface-800 disabled:cursor-not-allowed py-3 px-6 rounded-lg font-medium transition-colors"
               >
                 Previous
               </button>
@@ -301,7 +303,7 @@ const InterviewPage = () => {
             </div>
 
             {/* Interview Settings */}
-            <div className="bg-gray-800 rounded-lg p-4">
+            <div className="bg-surface-800 rounded-lg p-4 border border-surface-700">
               <h4 className="font-medium mb-3">Interview Settings</h4>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -309,7 +311,9 @@ const InterviewPage = () => {
                   <button
                     onClick={() => toggleSetting("videoRecording")}
                     className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      settings.videoRecording ? "bg-primary-600" : "bg-gray-600"
+                      settings.videoRecording
+                        ? "bg-primary-600"
+                        : "bg-surface-600"
                     }`}
                   >
                     <div
@@ -324,7 +328,9 @@ const InterviewPage = () => {
                   <button
                     onClick={() => toggleSetting("audioRecording")}
                     className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      settings.audioRecording ? "bg-primary-600" : "bg-gray-600"
+                      settings.audioRecording
+                        ? "bg-primary-600"
+                        : "bg-surface-600"
                     }`}
                   >
                     <div
@@ -339,7 +345,9 @@ const InterviewPage = () => {
                   <button
                     onClick={() => toggleSetting("questionAudio")}
                     className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      settings.questionAudio ? "bg-primary-600" : "bg-gray-600"
+                      settings.questionAudio
+                        ? "bg-primary-600"
+                        : "bg-surface-600"
                     }`}
                   >
                     <div

@@ -297,14 +297,14 @@ const submitAnswer = async (req, res) => {
     // Prepare response data
     const responseData = {
       questionIndex: qIndex,
-      score: score.overall,
+      score: interview.questions[qIndex].score?.overall || evaluation.score,
       followUpQuestions: followUpQuestions,
     };
 
     // Add adaptive difficulty info if enabled
     if (interview.config.adaptiveDifficulty?.enabled) {
       const nextDifficulty = getNextDifficultyLevel(
-        score.overall,
+        responseData.score,
         interview.questions[qIndex].difficulty || interview.config.difficulty
       );
       responseData.adaptiveInfo = {
@@ -316,9 +316,9 @@ const submitAnswer = async (req, res) => {
           (interview.questions[qIndex].difficulty ||
             interview.config.difficulty),
         scoreBasedRecommendation:
-          score.overall < 60
+          responseData.score < 60
             ? "easier"
-            : score.overall >= 80
+            : responseData.score >= 80
             ? "harder"
             : "same",
       };
@@ -961,3 +961,79 @@ module.exports = {
   getInterviewDetails,
   getAdaptiveQuestion,
 };
+
+// Compose interview results payload for frontend consumption
+const composeResultsPayload = (interviewDoc) => {
+  const interview = {
+    jobRole: interviewDoc?.config?.jobRole || "",
+    interviewType: interviewDoc?.config?.interviewType || "",
+    duration: (interviewDoc?.timing?.totalDuration || 0) * 60, // seconds
+    questions: interviewDoc?.questions || [],
+    completedAt: interviewDoc?.timing?.completedAt || interviewDoc?.updatedAt,
+  };
+
+  const breakdown = interviewDoc?.results?.breakdown || {};
+  const analysis = {
+    overallScore: interviewDoc?.results?.overallScore || 0,
+    technicalScore: breakdown.technical ?? 0,
+    communicationScore: breakdown.communication ?? 0,
+    problemSolvingScore: breakdown.problemSolving ?? 0,
+    questionAnalysis: (interviewDoc?.questions || []).map((q) => ({
+      question: q.questionText || "",
+      type: q.category?.includes("behavior") ? "behavioral" : "technical",
+      difficulty: q.difficulty || interviewDoc?.config?.difficulty || "",
+      userAnswer: q.response?.text || "",
+      timeSpent: q.timeSpent || 0,
+      score: q.score
+        ? { overall: q.score.overall ?? 0, rubricScores: q.score.rubricScores || {} }
+        : 0,
+      feedback: {
+        strengths: q.feedback?.strengths || [],
+        improvements: q.feedback?.improvements || [],
+        modelAnswer: q.feedback?.modelAnswer || "",
+      },
+    })),
+    recommendations:
+      interviewDoc?.results?.feedback?.recommendations &&
+      interviewDoc.results.feedback.recommendations.length > 0
+        ? interviewDoc.results.feedback.recommendations
+        : [
+            "Practice articulating your thought process more clearly",
+            "Incorporate concrete examples from past projects",
+            "Balance depth with breadth when answering technical questions",
+          ],
+    focusAreas: [
+      { skill: "communication", priority: "high", currentLevel: "developing" },
+      { skill: "problem-solving", priority: "medium", currentLevel: "intermediate" },
+    ],
+  };
+
+  return { interview, analysis };
+};
+
+// Get interview results formatted for the results page
+const getInterviewResults = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { interviewId } = req.params;
+
+    const interview = await Interview.findOne({ _id: interviewId, userId });
+    if (!interview) {
+      return res.status(404).json({ success: false, message: "Interview not found" });
+    }
+
+    // Ensure results are computed if missing
+    if (!interview.results?.overallScore) {
+      interview.calculateOverallScore();
+      await interview.save();
+    }
+
+    const payload = composeResultsPayload(interview);
+    return res.json({ success: true, data: payload });
+  } catch (error) {
+    console.error("Get interview results error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch interview results" });
+  }
+};
+
+module.exports.getInterviewResults = getInterviewResults;

@@ -99,47 +99,55 @@ const HybridQuestionDemo = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-8 transition-colors duration-200">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50 mb-2">
             Hybrid Question Generation Demo
           </h1>
-          <p className="text-gray-600">
+          <p className="text-surface-600 dark:text-surface-400">
             Showcasing template-based + AI-generated interview questions with
             comprehensive tagging
           </p>
         </div>
 
         {/* Configuration Display */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="card p-6 mb-6">
+          <h2 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
             Interview Configuration
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="font-medium text-gray-700">Role:</span>
+              <span className="font-medium text-surface-700 dark:text-surface-300">
+                Role:
+              </span>
               <div className="text-blue-600">Software Engineer</div>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Level:</span>
+              <span className="font-medium text-surface-700 dark:text-surface-300">
+                Level:
+              </span>
               <div className="text-green-600">Intermediate</div>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Type:</span>
+              <span className="font-medium text-surface-700 dark:text-surface-300">
+                Type:
+              </span>
               <div className="text-purple-600">Mixed</div>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Questions:</span>
+              <span className="font-medium text-surface-700 dark:text-surface-300">
+                Questions:
+              </span>
               <div className="text-primary-600">10 total</div>
             </div>
           </div>
         </div>
 
         {/* Generation Summary */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-surface-800 dark:to-surface-700 rounded-lg p-6 mb-6">
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
             Generation Summary
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -147,10 +155,12 @@ const HybridQuestionDemo = () => {
               <div className="text-2xl font-bold text-blue-600">
                 {mockMetadata.totalQuestions}
               </div>
-              <div className="text-sm text-gray-600">Total Questions</div>
+              <div className="text-sm text-surface-600 dark:text-surface-400">
+                Total Questions
+              </div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-700 mb-2">
+              <div className="text-sm text-surface-700 dark:text-surface-300 mb-2">
                 Source Distribution:
               </div>
               <div className="space-y-1">
@@ -169,7 +179,9 @@ const HybridQuestionDemo = () => {
               </div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-700 mb-2">Tag Coverage:</div>
+              <div className="text-sm text-surface-700 dark:text-surface-300 mb-2">
+                Tag Coverage:
+              </div>
               <div className="flex flex-wrap gap-1 justify-center">
                 {mockMetadata.tagCoverage.map((tag, index) => (
                   <span
@@ -201,7 +213,7 @@ const HybridQuestionDemo = () => {
           <button
             onClick={prevQuestion}
             disabled={currentQuestionIndex === 0}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 text-gray-800 rounded-md font-medium transition-colors duration-200"
+            className="btn-ghost flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg
               className="w-4 h-4"
@@ -219,14 +231,14 @@ const HybridQuestionDemo = () => {
             Previous
           </button>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-surface-500 dark:text-surface-400">
             Question {currentQuestionIndex + 1} of {mockQuestions.length}
           </div>
 
           <button
             onClick={nextQuestion}
             disabled={currentQuestionIndex === mockQuestions.length - 1}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-100 disabled:text-gray-400 text-white rounded-md font-medium transition-colors duration-200"
+            className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next
             <svg
@@ -246,8 +258,8 @@ const HybridQuestionDemo = () => {
         </div>
 
         {/* Features Showcase */}
-        <div className="mt-12 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="mt-12 card p-6">
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
             Key Features Implemented
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -255,10 +267,10 @@ const HybridQuestionDemo = () => {
               <div className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                 <div>
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-surface-900 dark:text-surface-50">
                     Hybrid Generation
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-surface-600 dark:text-surface-400">
                     70% template-based, 30% AI-generated questions
                   </div>
                 </div>
@@ -266,10 +278,10 @@ const HybridQuestionDemo = () => {
               <div className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                 <div>
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-surface-900 dark:text-surface-50">
                     Comprehensive Tagging
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-surface-600 dark:text-surface-400">
                     DSA, System Design, DB, Behavioral categorization
                   </div>
                 </div>
@@ -277,8 +289,10 @@ const HybridQuestionDemo = () => {
               <div className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                 <div>
-                  <div className="font-medium text-gray-900">Smart Caching</div>
-                  <div className="text-sm text-gray-600">
+                  <div className="font-medium text-surface-900 dark:text-surface-50">
+                    Smart Caching
+                  </div>
+                  <div className="text-sm text-surface-600 dark:text-surface-400">
                     Redis-based caching to minimize API calls
                   </div>
                 </div>
@@ -288,10 +302,10 @@ const HybridQuestionDemo = () => {
               <div className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                 <div>
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-surface-900 dark:text-surface-50">
                     Balanced Coverage
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-surface-600 dark:text-surface-400">
                     Ensures proper distribution across question types
                   </div>
                 </div>
@@ -299,10 +313,10 @@ const HybridQuestionDemo = () => {
               <div className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                 <div>
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-surface-900 dark:text-surface-50">
                     AI Paraphrasing
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-surface-600 dark:text-surface-400">
                     Templates enhanced with AI for variety
                   </div>
                 </div>
@@ -310,10 +324,10 @@ const HybridQuestionDemo = () => {
               <div className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                 <div>
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-surface-900 dark:text-surface-50">
                     Role-Based Templates
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-surface-600 dark:text-surface-400">
                     Organized by job role and difficulty level
                   </div>
                 </div>

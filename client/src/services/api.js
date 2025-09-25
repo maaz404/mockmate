@@ -2,7 +2,11 @@ import axios from "axios";
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api",
+  // Prefer explicit REACT_APP_API_BASE, fall back to legacy var, then proxy-friendly '/api'
+  baseURL:
+    process.env.REACT_APP_API_BASE ||
+    process.env.REACT_APP_API_BASE_URL ||
+    "/api",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -30,6 +34,7 @@ api.interceptors.request.use(
       }
     } catch (error) {
       // Authentication token retrieval failed
+      // eslint-disable-next-line no-console
       console.warn("Failed to get authentication token:", error);
     }
 

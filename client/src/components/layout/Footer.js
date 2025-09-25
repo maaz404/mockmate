@@ -86,10 +86,7 @@ const Footer = () => {
             <ul className="space-y-1.5">
               {footerLinks.project.map((link) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
-                    className="text-surface-400 hover:text-white transition-colors duration-200 text-xs"
-                  >
+                  <a href={link.href} className="nav-link-dark-sm">
                     {link.name}
                   </a>
                 </li>
@@ -157,22 +154,13 @@ const Footer = () => {
               computer science project by Maaz Sheikh.
             </div>
             <div className="flex items-center space-x-3 text-[11px]">
-              <a
-                href="#faq"
-                className="text-surface-400 hover:text-white transition-colors duration-200"
-              >
+              <a href="#faq" className="nav-link-dark-sm">
                 Technical Docs
               </a>
-              <a
-                href="#about"
-                className="text-surface-400 hover:text-white transition-colors duration-200"
-              >
+              <a href="#about" className="nav-link-dark-sm">
                 Project Info
               </a>
-              <a
-                href="/cookies"
-                className="text-surface-400 hover:text-white transition-colors duration-200"
-              >
+              <a href="/cookies" className="nav-link-dark-sm">
                 Cookies
               </a>
             </div>

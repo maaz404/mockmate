@@ -41,19 +41,29 @@ function App() {
 
   if (!clerkKey) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-50 dark:bg-surface-900 flex items-center justify-center transition-colors">
         <div className="text-center">
           <h1 className="text-xl font-bold text-red-400 mb-4">
             Configuration Error
           </h1>
-          <p className="text-white mb-4">
+          <p className="text-surface-700 dark:text-surface-300 mb-4">
             Clerk publishable key is required. Please add
             REACT_APP_CLERK_PUBLISHABLE_KEY to your .env file.
           </p>
-          <div className="text-left bg-slate-800 p-4 rounded-lg max-w-md">
+          <div className="text-left bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-4 rounded-lg max-w-md">
             <h3 className="text-yellow-400 font-semibold mb-2">Quick Fix:</h3>
-            <ol className="text-sm text-gray-300 space-y-1">
-              <li>1. Go to <a href="https://clerk.com" className="text-blue-400 underline" target="_blank" rel="noopener noreferrer">clerk.com</a></li>
+            <ol className="text-sm text-surface-700 dark:text-surface-300 space-y-1">
+              <li>
+                1. Go to{" "}
+                <a
+                  href="https://clerk.com"
+                  className="text-blue-400 underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  clerk.com
+                </a>
+              </li>
               <li>2. Create/sign in to your account</li>
               <li>3. Create a new application</li>
               <li>4. Copy your Publishable Key</li>
@@ -137,7 +147,7 @@ function App() {
                   }
                 />
                 <Route
-                  path="/interview/results"
+                  path="/interview/:interviewId/results"
                   element={
                     <ProtectedRoute>
                       <InterviewResultsPage />
@@ -145,7 +155,7 @@ function App() {
                   }
                 />
                 <Route
-                  path="/interview/:id"
+                  path="/interview/:interviewId"
                   element={
                     <ProtectedRoute>
                       <InterviewPage />

@@ -17,17 +17,17 @@ const QuestionCard = ({
       Behavioral: "bg-yellow-100 text-yellow-800",
       "Programming Fundamentals": "bg-indigo-100 text-indigo-800",
       Frontend: "bg-pink-100 text-pink-800",
-      Backend: "bg-gray-100 text-gray-800",
+      Backend: "bg-surface-100 text-surface-800",
       React: "bg-cyan-100 text-cyan-800",
       API: "bg-primary-100 text-primary-800",
       Performance: "bg-red-100 text-red-800",
-      Security: "bg-slate-100 text-slate-800",
+      Security: "bg-surface-100 text-surface-800",
       Leadership: "bg-emerald-100 text-emerald-800",
       Teamwork: "bg-teal-100 text-teal-800",
       Learning: "bg-violet-100 text-violet-800",
       "Problem Solving": "bg-rose-100 text-rose-800",
     };
-    return tagColors[tag] || "bg-gray-100 text-gray-600";
+    return tagColors[tag] || "bg-surface-100 text-surface-600";
   };
 
   const getSourceIcon = (source) => {
@@ -105,15 +105,15 @@ const QuestionCard = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="card p-6">
       {/* Question Header */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium text-gray-500">
+          <span className="text-sm font-medium text-surface-500">
             Question {index + 1} of {total}
           </span>
           {question.source && (
-            <div className="flex items-center space-x-1 text-xs text-gray-500">
+            <div className="flex items-center space-x-1 text-xs text-surface-500">
               {getSourceIcon(question.source)}
               <span>{getSourceLabel(question.source)}</span>
             </div>
@@ -135,7 +135,7 @@ const QuestionCard = ({
             </span>
           )}
           {timeRemaining !== null && (
-            <div className="text-sm font-mono text-gray-600">
+            <div className="text-sm font-mono text-surface-600">
               {formatTime(timeRemaining)}
             </div>
           )}
@@ -160,11 +160,11 @@ const QuestionCard = ({
 
       {/* Question Text */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 leading-relaxed">
+        <h3 className="text-lg font-semibold text-surface-900 leading-relaxed">
           {question.text}
         </h3>
         {question.category && (
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-surface-500 mt-2">
             Category:{" "}
             {question.category.charAt(0).toUpperCase() +
               question.category.slice(1)}
@@ -175,19 +175,19 @@ const QuestionCard = ({
       {/* Answer Section */}
       {onAnswer && (
         <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-surface-700">
             Your Answer
           </label>
           <textarea
             value={currentAnswer}
             onChange={(e) => onAnswer(e.target.value)}
-            className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="form-input h-32 resize-none"
             placeholder="Type your answer here..."
           />
 
           {/* Estimated Time */}
           {question.estimatedTime && (
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center justify-between text-xs text-surface-500">
               <span>
                 Estimated time: {Math.ceil(question.estimatedTime / 60)} minutes
               </span>
@@ -199,8 +199,8 @@ const QuestionCard = ({
 
       {/* Question Metadata (for review mode) */}
       {!onAnswer && question.estimatedTime && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <div className="flex justify-between text-xs text-gray-500">
+        <div className="mt-4 pt-4 border-t border-surface-100">
+          <div className="flex justify-between text-xs text-surface-500">
             <span>
               Estimated time: {Math.ceil(question.estimatedTime / 60)} minutes
             </span>

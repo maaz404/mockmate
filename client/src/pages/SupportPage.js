@@ -11,12 +11,12 @@ const SupportPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-gray-200 dark:border-surface-700 p-6 flex flex-col">
+        <div className="card flex flex-col">
           <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
             Frequently Asked Questions
           </h3>
           <div className="space-y-3 flex-1">
-            <div className="border-b border-gray-200 dark:border-surface-700 pb-3">
+            <div className="border-b border-surface-200 dark:border-surface-700 pb-3">
               <h4 className="font-medium text-surface-900 dark:text-surface-50">
                 How do I start an interview?
               </h4>
@@ -24,7 +24,7 @@ const SupportPage = () => {
                 Click "Create Interview" and follow the setup process...
               </p>
             </div>
-            <div className="border-b border-gray-200 dark:border-surface-700 pb-3">
+            <div className="border-b border-surface-200 dark:border-surface-700 pb-3">
               <h4 className="font-medium text-surface-900 dark:text-surface-50">
                 Can I practice specific question types?
               </h4>
@@ -38,7 +38,7 @@ const SupportPage = () => {
           </button>
         </div>
 
-        <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-gray-200 dark:border-surface-700 p-6 flex flex-col">
+        <div className="card flex flex-col">
           <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
             Contact Support
           </h3>
@@ -46,10 +46,10 @@ const SupportPage = () => {
             Need personalized help? Our support team is here to assist you.
           </p>
           <div className="space-y-3 flex-1">
-            <button className="w-full text-left p-3 border border-gray-200 dark:border-surface-600 rounded-lg hover:bg-gray-50 dark:hover:bg-surface-700 text-surface-900 dark:text-surface-50">
+            <button className="w-full text-left p-3 border border-surface-200 dark:border-surface-600 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-900 dark:text-surface-50">
               📧 Email Support
             </button>
-            <button className="w-full text-left p-3 border border-gray-200 dark:border-surface-600 rounded-lg hover:bg-gray-50 dark:hover:bg-surface-700 text-surface-900 dark:text-surface-50">
+            <button className="w-full text-left p-3 border border-surface-200 dark:border-surface-600 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-900 dark:text-surface-50">
               💬 Live Chat
             </button>
           </div>

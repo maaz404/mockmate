@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 const AuthLoadingSpinner = ({ message = "Loading..." }) => {
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 text-surface-900 dark:text-white transition-colors flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl" />
@@ -30,7 +30,7 @@ const AuthLoadingSpinner = ({ message = "Loading..." }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-2xl font-bold text-white mb-2"
+            className="text-2xl font-bold text-surface-900 dark:text-white mb-2"
           >
             MockMate
           </motion.h2>

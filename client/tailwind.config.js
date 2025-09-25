@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./src/**/*.{js,jsx,ts,tsx}", "./public/index.html"],
+  content: ["./src/**/*.{js,jsx,ts,tsx,html}", "./public/index.html"],
   darkMode: "class",
   theme: {
     extend: {
@@ -97,8 +97,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["Inter", "system-ui", "serif"],
+        sans: ["Inter", "Helvetica Neue", "Arial", "sans-serif"],
+        display: ["Inter", "Helvetica Neue", "Arial", "sans-serif"],
       },
       fontSize: {
         xs: ["0.75rem", { lineHeight: "1rem" }],

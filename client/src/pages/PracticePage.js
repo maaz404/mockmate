@@ -14,7 +14,7 @@ const PracticePage = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-surface-200 dark:border-surface-700 p-6 flex flex-col transition-colors duration-200">
+          <div className="card flex flex-col">
             <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
               Quick Practice
             </h3>
@@ -24,7 +24,7 @@ const PracticePage = () => {
             <button className="btn-primary w-full">Start Session</button>
           </div>
 
-          <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-surface-200 dark:border-surface-700 p-6 flex flex-col transition-colors duration-200">
+          <div className="card flex flex-col">
             <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
               Focused Practice
             </h3>
@@ -34,7 +34,7 @@ const PracticePage = () => {
             <button className="btn-primary w-full">Choose Focus</button>
           </div>
 
-          <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-surface-200 dark:border-surface-700 p-6 flex flex-col transition-colors duration-200">
+          <div className="card flex flex-col">
             <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
               Timed Practice
             </h3>

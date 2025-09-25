@@ -1,18 +1,18 @@
-import React from 'react';
+import React from "react";
 
-const FollowUpQuestions = ({ 
-  followUpQuestions, 
-  loading, 
-  onGenerate, 
+const FollowUpQuestions = ({
+  followUpQuestions,
+  loading,
+  onGenerate,
   hasAnswer,
-  isVisible 
+  isVisible,
 }) => {
   if (!hasAnswer) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <p className="text-sm text-gray-600">
-          💡 Complete your answer above to generate follow-up questions that might be asked 
-          based on your response.
+      <div className="bg-surface-50 border border-surface-200 rounded-lg p-4">
+        <p className="text-sm text-surface-600">
+          💡 Complete your answer above to generate follow-up questions that
+          might be asked based on your response.
         </p>
       </div>
     );
@@ -21,7 +21,9 @@ const FollowUpQuestions = ({
   if (!isVisible) {
     return (
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium text-gray-900">Follow-up Questions</h3>
+        <h3 className="text-lg font-medium text-surface-900">
+          Follow-up Questions
+        </h3>
         <button
           onClick={onGenerate}
           disabled={loading}
@@ -33,7 +35,7 @@ const FollowUpQuestions = ({
               Generating...
             </>
           ) : (
-            'Generate Follow-ups'
+            "Generate Follow-ups"
           )}
         </button>
       </div>
@@ -42,8 +44,10 @@ const FollowUpQuestions = ({
 
   return (
     <div className="bg-primary-50 border border-primary-200 rounded-lg p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Follow-up Questions</h3>
-      
+      <h3 className="text-lg font-medium text-surface-900 mb-4">
+        Follow-up Questions
+      </h3>
+
       {followUpQuestions && followUpQuestions.length > 0 ? (
         <>
           <div className="space-y-4">
@@ -55,7 +59,9 @@ const FollowUpQuestions = ({
                   </span>
                 </div>
                 <div className="flex-grow">
-                  <p className="text-gray-900 font-medium">{followUp.text}</p>
+                  <p className="text-surface-900 font-medium">
+                    {followUp.text}
+                  </p>
                   {followUp.type && (
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 mt-1">
                       {followUp.type}
@@ -67,14 +73,17 @@ const FollowUpQuestions = ({
           </div>
           <div className="mt-4 p-3 bg-primary-100 rounded-lg">
             <p className="text-sm text-primary-800">
-              💡 These follow-up questions are designed to help you think deeper about your answer. 
-              Consider how you might respond to these in a real interview.
+              💡 These follow-up questions are designed to help you think deeper
+              about your answer. Consider how you might respond to these in a
+              real interview.
             </p>
           </div>
         </>
       ) : (
         <div className="text-center py-4">
-          <p className="text-gray-600">No follow-up questions were generated for this answer.</p>
+          <p className="text-surface-600">
+            No follow-up questions were generated for this answer.
+          </p>
         </div>
       )}
     </div>

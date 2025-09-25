@@ -2,22 +2,22 @@ import React from "react";
 
 const InterviewHistoryPage = () => {
   return (
-    <div className="p-6">
+    <div className="p-6 bg-surface-50 dark:bg-surface-900 min-h-screen transition-colors duration-200">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
             Interview History
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-surface-600 dark:text-surface-400">
             View and manage your past mock interviews and their results.
           </p>
         </div>
 
         {/* Placeholder content */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+        <div className="card text-center p-8 transition-colors duration-200">
+          <div className="w-16 h-16 mx-auto mb-4 bg-surface-100 dark:bg-surface-700 rounded-full flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-gray-400"
+              className="w-8 h-8 text-surface-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -30,10 +30,10 @@ const InterviewHistoryPage = () => {
               />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
             No Interviews Yet
           </h3>
-          <p className="text-gray-600 mb-6">
+          <p className="text-surface-600 dark:text-surface-400 mb-6">
             You haven't completed any mock interviews yet. Start your first
             interview to see your history here.
           </p>

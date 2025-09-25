@@ -11,7 +11,7 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const { loading, refreshProfile } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Check if user needs onboarding
   // useEffect(() => {
@@ -53,7 +53,12 @@ const Layout = ({ children }) => {
             </div>
           )}
           <main className="flex-1 bg-white dark:bg-surface-900 transition-colors duration-200">
-            <div className="pt-16 lg:pt-0">{children}</div>
+            <div
+              key={location.pathname}
+              className="pt-16 lg:pt-0 animate-fade-up"
+            >
+              {children}
+            </div>
           </main>
           {/* Show footer on public pages within sidebar layout */}
           {(location.pathname === "/" ||

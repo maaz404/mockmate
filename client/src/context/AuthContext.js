@@ -48,15 +48,18 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         try {
           // Sync with backend (background operation)
-          console.log('Syncing user data with backend...');
+          // eslint-disable-next-line no-console
+          // console.log('Syncing user data with backend...');
           await api.post("/auth/sync");
 
           // Get user profile
           const response = await api.get("/users/profile");
           setUserProfile(response.data.data);
-          console.log('User profile synced successfully');
+          // eslint-disable-next-line no-console
+          // console.log('User profile synced successfully');
         } catch (error) {
-          console.error('Auth sync failed:', error);
+          // eslint-disable-next-line no-console
+          console.error("Auth sync failed:", error);
           // Error handled silently - set basic profile from Clerk user
           setUserProfile({
             firstName: user?.firstName || "",

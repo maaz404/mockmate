@@ -86,11 +86,11 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-8 transition-colors duration-200">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="card overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+          <div className="bg-gradient-to-r from-primary-600 to-purple-600 text-white p-6">
             <h1 className="text-3xl font-bold mb-2">Coding Challenge Demo</h1>
             <p className="text-blue-100">
               Experience the Monaco Editor integration with Judge0 API and AI
@@ -99,24 +99,34 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
           </div>
 
           {/* Challenge Description */}
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+          <div className="p-6 border-b border-surface-200 dark:border-surface-700">
+            <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-50 mb-3">
               Problem: Two Sum
             </h2>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <p className="text-gray-700 mb-3">
+            <div className="bg-surface-50 dark:bg-surface-900/40 rounded-lg p-4 mb-4 border border-surface-200 dark:border-surface-700">
+              <p className="text-surface-700 dark:text-surface-300 mb-3">
                 Given an array of integers{" "}
-                <code className="bg-gray-200 px-1 rounded">nums</code> and an
-                integer <code className="bg-gray-200 px-1 rounded">target</code>
+                <code className="bg-surface-200 dark:bg-surface-700 px-1 rounded">
+                  nums
+                </code>{" "}
+                and an integer{" "}
+                <code className="bg-surface-200 dark:bg-surface-700 px-1 rounded">
+                  target
+                </code>
                 , return indices of the two numbers such that they add up to{" "}
-                <code className="bg-gray-200 px-1 rounded">target</code>.
+                <code className="bg-surface-200 dark:bg-surface-700 px-1 rounded">
+                  target
+                </code>
+                .
               </p>
-              <p className="text-gray-700 mb-3">
+              <p className="text-surface-700 dark:text-surface-300 mb-3">
                 You may assume that each input would have exactly one solution,
                 and you may not use the same element twice.
               </p>
-              <div className="bg-white rounded border p-3">
-                <p className="font-medium text-gray-900 mb-2">Example:</p>
+              <div className="card p-3">
+                <p className="font-medium text-surface-900 dark:text-surface-50 mb-2">
+                  Example:
+                </p>
                 <code className="text-sm">
                   Input: nums = [2,7,11,15], target = 9<br />
                   Output: [0,1]
@@ -129,7 +139,7 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
 
           {/* Monaco Editor */}
           <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
               Your Solution:
             </h3>
 
@@ -145,7 +155,7 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
 
             {/* Execution Results */}
             <div className="mt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
                 Execution Results:
               </h3>
               <CodeExecutionResults
@@ -156,12 +166,12 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
           </div>
 
           {/* Features Showcase */}
-          <div className="bg-gray-50 p-6 border-t border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-surface-50 dark:bg-surface-900/40 p-6 border-t border-surface-200 dark:border-surface-700 transition-colors duration-200">
+            <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
               🚀 Key Features Demonstrated:
             </h3>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg p-4 border">
+              <div className="card p-4">
                 <div className="text-blue-600 mb-2">
                   <svg
                     className="w-6 h-6"
@@ -171,13 +181,15 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
                     <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
                   </svg>
                 </div>
-                <h4 className="font-medium text-gray-900">Monaco Editor</h4>
-                <p className="text-sm text-gray-600">
+                <h4 className="font-medium text-surface-900 dark:text-surface-50">
+                  Monaco Editor
+                </h4>
+                <p className="text-sm text-surface-600 dark:text-surface-400">
                   VS Code-like editor with syntax highlighting
                 </p>
               </div>
 
-              <div className="bg-white rounded-lg p-4 border">
+              <div className="card p-4">
                 <div className="text-green-600 mb-2">
                   <svg
                     className="w-6 h-6"
@@ -190,15 +202,15 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
                     />
                   </svg>
                 </div>
-                <h4 className="font-medium text-gray-900">
+                <h4 className="font-medium text-surface-900 dark:text-surface-50">
                   Judge0 Integration
                 </h4>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-surface-600 dark:text-surface-400">
                   Secure code execution in multiple languages
                 </p>
               </div>
 
-              <div className="bg-white rounded-lg p-4 border">
+              <div className="card p-4">
                 <div className="text-purple-600 mb-2">
                   <svg
                     className="w-6 h-6"
@@ -208,13 +220,15 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h4 className="font-medium text-gray-900">AI Code Review</h4>
-                <p className="text-sm text-gray-600">
+                <h4 className="font-medium text-surface-900 dark:text-surface-50">
+                  AI Code Review
+                </h4>
+                <p className="text-sm text-surface-600 dark:text-surface-400">
                   OpenAI-powered code analysis and feedback
                 </p>
               </div>
 
-              <div className="bg-white rounded-lg p-4 border">
+              <div className="card p-4">
                 <div className="text-primary-600 mb-2">
                   <svg
                     className="w-6 h-6"
@@ -224,10 +238,10 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h4 className="font-medium text-gray-900">
+                <h4 className="font-medium text-surface-900 dark:text-surface-50">
                   Multi-language Support
                 </h4>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-surface-600 dark:text-surface-400">
                   JavaScript, Python, Java, C++, and more
                 </p>
               </div>

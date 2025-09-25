@@ -126,10 +126,10 @@ const QuickActions = ({ onStartInterview, userProfile }) => {
         </div>
 
         {/* Custom Interview Button */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
+        <div className="mt-6 pt-6 border-t border-surface-200">
           <button
             disabled
-            className="w-full bg-gray-300 text-gray-500 py-3 px-4 rounded-lg cursor-not-allowed font-medium"
+            className="w-full bg-surface-300 text-surface-500 py-3 px-4 rounded-lg cursor-not-allowed font-medium"
           >
             Create Custom Interview (Coming Soon)
           </button>

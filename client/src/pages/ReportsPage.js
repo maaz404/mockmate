@@ -11,7 +11,7 @@ const ReportsPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-gray-200 dark:border-surface-700 p-6 flex flex-col items-center">
+        <div className="card flex flex-col items-center">
           <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
             Overall Score
           </h3>
@@ -21,7 +21,7 @@ const ReportsPage = () => {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-gray-200 dark:border-surface-700 p-6 flex flex-col items-center">
+        <div className="card flex flex-col items-center">
           <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
             Interviews Completed
           </h3>
@@ -29,7 +29,7 @@ const ReportsPage = () => {
           <p className="text-surface-500 dark:text-surface-400">This month</p>
         </div>
 
-        <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-gray-200 dark:border-surface-700 p-6 flex flex-col items-center">
+        <div className="card flex flex-col items-center">
           <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
             Improvement
           </h3>
@@ -40,7 +40,7 @@ const ReportsPage = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-gray-200 dark:border-surface-700 p-8 text-center">
+      <div className="card text-center p-8">
         <h3 className="text-xl font-semibold text-surface-900 dark:text-surface-50 mb-4">
           Detailed Analytics Coming Soon
         </h3>

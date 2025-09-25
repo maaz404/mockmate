@@ -84,8 +84,8 @@ const SettingsPage = () => {
 
   if (!userProfile) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-surface-50 dark:bg-surface-900 flex items-center justify-center transition-colors duration-200">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -106,7 +106,7 @@ const SettingsPage = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
           <div className="lg:w-64">
-            <div className="bg-white dark:bg-surface-800 rounded-lg shadow-sm border border-surface-200 dark:border-surface-700 p-4">
+            <div className="card p-4">
               <nav className="space-y-2">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -135,7 +135,7 @@ const SettingsPage = () => {
               <div className="space-y-6">
                 <UserProfileCard />
 
-                <div className="bg-white dark:bg-surface-800 rounded-lg shadow-sm border border-surface-200 dark:border-surface-700 p-6">
+                <div className="card p-6">
                   <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
                     Onboarding
                   </h3>
@@ -145,7 +145,7 @@ const SettingsPage = () => {
                   </p>
                   <button
                     onClick={() => setShowOnboarding(true)}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    className="btn-primary"
                   >
                     Restart Onboarding
                   </button>
@@ -154,18 +154,18 @@ const SettingsPage = () => {
             )}
 
             {activeTab === "notifications" && preferences && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              <div className="card p-6 transition-colors duration-200">
+                <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-6">
                   Notification Preferences
                 </h3>
 
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium text-gray-900">
+                      <h4 className="font-medium text-surface-900 dark:text-surface-50">
                         Email Notifications
                       </h4>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-surface-600 dark:text-surface-400">
                         Receive updates and reminders via email
                       </p>
                     </div>
@@ -182,11 +182,11 @@ const SettingsPage = () => {
                         className={`w-11 h-6 rounded-full transition-colors ${
                           preferences.notifications?.email
                             ? "bg-primary-600"
-                            : "bg-gray-200"
+                            : "bg-surface-200 dark:bg-surface-700"
                         }`}
                       >
                         <div
-                          className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                          className={`w-5 h-5 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
                             preferences.notifications?.email
                               ? "translate-x-5"
                               : "translate-x-0"
@@ -198,10 +198,10 @@ const SettingsPage = () => {
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium text-gray-900">
+                      <h4 className="font-medium text-surface-900 dark:text-surface-50">
                         Push Notifications
                       </h4>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-surface-600 dark:text-surface-400">
                         Browser push notifications
                       </p>
                     </div>
@@ -218,11 +218,11 @@ const SettingsPage = () => {
                         className={`w-11 h-6 rounded-full transition-colors ${
                           preferences.notifications?.push
                             ? "bg-primary-600"
-                            : "bg-gray-200"
+                            : "bg-surface-200 dark:bg-surface-700"
                         }`}
                       >
                         <div
-                          className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                          className={`w-5 h-5 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
                             preferences.notifications?.push
                               ? "translate-x-5"
                               : "translate-x-0"
@@ -234,10 +234,10 @@ const SettingsPage = () => {
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium text-gray-900">
+                      <h4 className="font-medium text-surface-900 dark:text-surface-50">
                         Interview Reminders
                       </h4>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-surface-600 dark:text-surface-400">
                         Get reminded about scheduled interviews
                       </p>
                     </div>
@@ -257,11 +257,11 @@ const SettingsPage = () => {
                         className={`w-11 h-6 rounded-full transition-colors ${
                           preferences.notifications?.interviews
                             ? "bg-primary-600"
-                            : "bg-gray-200"
+                            : "bg-surface-200 dark:bg-surface-700"
                         }`}
                       >
                         <div
-                          className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                          className={`w-5 h-5 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
                             preferences.notifications?.interviews
                               ? "translate-x-5"
                               : "translate-x-0"
@@ -273,10 +273,10 @@ const SettingsPage = () => {
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium text-gray-900">
+                      <h4 className="font-medium text-surface-900 dark:text-surface-50">
                         Progress Updates
                       </h4>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-surface-600 dark:text-surface-400">
                         Weekly progress summaries and insights
                       </p>
                     </div>
@@ -293,11 +293,11 @@ const SettingsPage = () => {
                         className={`w-11 h-6 rounded-full transition-colors ${
                           preferences.notifications?.progress
                             ? "bg-primary-600"
-                            : "bg-gray-200"
+                            : "bg-surface-200 dark:bg-surface-700"
                         }`}
                       >
                         <div
-                          className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                          className={`w-5 h-5 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
                             preferences.notifications?.progress
                               ? "translate-x-5"
                               : "translate-x-0"
@@ -312,17 +312,17 @@ const SettingsPage = () => {
 
             {activeTab === "privacy" && (
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-6">
+                <div className="card p-6 transition-colors duration-200">
+                  <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-6">
                     Privacy & Security
                   </h3>
 
                   <div className="space-y-6">
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">
+                      <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
                         Account Security
                       </h4>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
                         Your account is secured through Clerk authentication
                         with industry-standard security measures.
                       </p>
@@ -343,23 +343,23 @@ const SettingsPage = () => {
                     </div>
 
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">
+                      <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
                         Data Privacy
                       </h4>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
                         Your interview data and personal information are kept
                         private and secure.
                       </p>
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2">
-                          <Eye className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">
+                          <Eye className="h-4 w-4 text-surface-400" />
+                          <span className="text-sm text-surface-600 dark:text-surface-400">
                             Interview recordings are stored securely
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Shield className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">
+                          <Shield className="h-4 w-4 text-surface-400" />
+                          <span className="text-sm text-surface-600 dark:text-surface-400">
                             Personal data is never shared without consent
                           </span>
                         </div>
@@ -367,10 +367,10 @@ const SettingsPage = () => {
                     </div>
 
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">
+                      <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
                         Facial Expression Analysis
                       </h4>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
                         AI-powered analysis of your facial expressions and
                         delivery during interviews. All processing happens
                         locally in your browser.
@@ -380,10 +380,10 @@ const SettingsPage = () => {
                         {/* Main Enable/Disable Toggle */}
                         <div className="flex items-center justify-between">
                           <div>
-                            <h5 className="font-medium text-gray-800">
+                            <h5 className="font-medium text-surface-800 dark:text-surface-200">
                               Enable Facial Analysis
                             </h5>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-surface-600 dark:text-surface-400">
                               Analyze eye contact, expressions, and delivery for
                               confidence feedback
                             </p>
@@ -407,11 +407,11 @@ const SettingsPage = () => {
                               className={`w-11 h-6 rounded-full transition-colors ${
                                 preferences.facialAnalysis?.enabled
                                   ? "bg-primary-600"
-                                  : "bg-gray-200"
+                                  : "bg-surface-200 dark:bg-surface-700"
                               }`}
                             >
                               <div
-                                className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                                className={`w-5 h-5 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
                                   preferences.facialAnalysis?.enabled
                                     ? "translate-x-5"
                                     : "translate-x-0"
@@ -422,14 +422,14 @@ const SettingsPage = () => {
                         </div>
 
                         {preferences.facialAnalysis?.enabled && (
-                          <div className="ml-4 space-y-3 border-l-2 border-blue-100 pl-4">
+                          <div className="ml-4 space-y-3 border-l-2 border-primary-100 dark:border-primary-900/30 pl-4">
                             {/* Auto Calibration */}
                             <div className="flex items-center justify-between">
                               <div>
-                                <h6 className="text-sm font-medium text-gray-700">
+                                <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300">
                                   Auto Calibration
                                 </h6>
-                                <p className="text-xs text-gray-600">
+                                <p className="text-xs text-surface-600 dark:text-surface-400">
                                   Automatically run baseline calibration before
                                   interviews
                                 </p>
@@ -455,11 +455,11 @@ const SettingsPage = () => {
                                     preferences.facialAnalysis
                                       ?.autoCalibration !== false
                                       ? "bg-primary-500"
-                                      : "bg-gray-200"
+                                      : "bg-surface-200 dark:bg-surface-700"
                                   }`}
                                 >
                                   <div
-                                    className={`w-4 h-4 bg-white rounded-full shadow transform transition-transform ${
+                                    className={`w-4 h-4 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
                                       preferences.facialAnalysis
                                         ?.autoCalibration !== false
                                         ? "translate-x-4"
@@ -473,10 +473,10 @@ const SettingsPage = () => {
                             {/* Show Confidence Meter */}
                             <div className="flex items-center justify-between">
                               <div>
-                                <h6 className="text-sm font-medium text-gray-700">
+                                <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300">
                                   Confidence Meter
                                 </h6>
-                                <p className="text-xs text-gray-600">
+                                <p className="text-xs text-surface-600 dark:text-surface-400">
                                   Display real-time confidence score during
                                   recording
                                 </p>
@@ -502,11 +502,11 @@ const SettingsPage = () => {
                                     preferences.facialAnalysis
                                       ?.showConfidenceMeter !== false
                                       ? "bg-primary-500"
-                                      : "bg-gray-200"
+                                      : "bg-surface-200 dark:bg-surface-700"
                                   }`}
                                 >
                                   <div
-                                    className={`w-4 h-4 bg-white rounded-full shadow transform transition-transform ${
+                                    className={`w-4 h-4 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
                                       preferences.facialAnalysis
                                         ?.showConfidenceMeter !== false
                                         ? "translate-x-4"
@@ -520,10 +520,10 @@ const SettingsPage = () => {
                             {/* Real-time Feedback */}
                             <div className="flex items-center justify-between">
                               <div>
-                                <h6 className="text-sm font-medium text-gray-700">
+                                <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300">
                                   Real-time Tips
                                 </h6>
-                                <p className="text-xs text-gray-600">
+                                <p className="text-xs text-surface-600 dark:text-surface-400">
                                   Show delivery improvement tips during
                                   interviews
                                 </p>
@@ -549,11 +549,11 @@ const SettingsPage = () => {
                                     preferences.facialAnalysis
                                       ?.showRealtimeFeedback !== false
                                       ? "bg-primary-500"
-                                      : "bg-gray-200"
+                                      : "bg-surface-200 dark:bg-surface-700"
                                   }`}
                                 >
                                   <div
-                                    className={`w-4 h-4 bg-white rounded-full shadow transform transition-transform ${
+                                    className={`w-4 h-4 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
                                       preferences.facialAnalysis
                                         ?.showRealtimeFeedback !== false
                                         ? "translate-x-4"
@@ -566,7 +566,7 @@ const SettingsPage = () => {
 
                             {/* Feedback Frequency */}
                             <div>
-                              <h6 className="text-sm font-medium text-gray-700 mb-2">
+                              <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                                 Feedback Frequency
                               </h6>
                               <select
@@ -581,7 +581,7 @@ const SettingsPage = () => {
                                     e.target.value
                                   )
                                 }
-                                className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                className="form-select"
                               >
                                 <option value="low">
                                   Low (Every 30 seconds)
@@ -630,14 +630,14 @@ const SettingsPage = () => {
                     </div>
 
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">
+                      <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
                         Session Management
                       </h4>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
                         Manage your active sessions and sign out from other
                         devices.
                       </p>
-                      <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                      <button className="btn-outline text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20">
                         Sign Out All Devices
                       </button>
                     </div>
@@ -648,62 +648,62 @@ const SettingsPage = () => {
 
             {activeTab === "data" && (
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-6">
+                <div className="card p-6 transition-colors duration-200">
+                  <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-6">
                     Data Management
                   </h3>
 
                   <div className="space-y-6">
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">
+                      <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
                         Export Your Data
                       </h4>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
                         Download a copy of all your data including profile
                         information, interview history, and analytics.
                       </p>
                       <button
                         onClick={handleExportData}
                         disabled={loading}
-                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                        className="btn-primary disabled:opacity-50 flex items-center space-x-2"
                       >
                         <Download className="h-4 w-4" />
                         <span>{loading ? "Exporting..." : "Export Data"}</span>
                       </button>
                     </div>
 
-                    <div className="border-t border-gray-200 pt-6">
-                      <h4 className="font-medium text-gray-900 mb-2 text-red-600">
+                    <div className="border-t border-surface-200 dark:border-surface-700 pt-6">
+                      <h4 className="font-medium mb-2 text-red-600">
                         Danger Zone
                       </h4>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
                         These actions are irreversible. Please be careful.
                       </p>
 
                       <div className="space-y-4">
-                        <div className="border border-red-200 rounded-lg p-4">
-                          <h5 className="font-medium text-gray-900 mb-2">
+                        <div className="border border-red-200 dark:border-red-800/50 rounded-lg p-4 bg-white dark:bg-surface-900/40">
+                          <h5 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
                             Delete All Interview Data
                           </h5>
-                          <p className="text-sm text-gray-600 mb-3">
+                          <p className="text-sm text-surface-600 dark:text-surface-400 mb-3">
                             This will permanently delete all your interview
                             recordings, results, and analytics.
                           </p>
-                          <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2">
+                          <button className="btn-outline text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20 flex items-center space-x-2">
                             <Trash2 className="h-4 w-4" />
                             <span>Delete Interview Data</span>
                           </button>
                         </div>
 
-                        <div className="border border-red-200 rounded-lg p-4">
-                          <h5 className="font-medium text-gray-900 mb-2">
+                        <div className="border border-red-200 dark:border-red-800/50 rounded-lg p-4 bg-white dark:bg-surface-900/40">
+                          <h5 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
                             Delete Account
                           </h5>
-                          <p className="text-sm text-gray-600 mb-3">
+                          <p className="text-sm text-surface-600 dark:text-surface-400 mb-3">
                             This will permanently delete your account and all
                             associated data. This action cannot be undone.
                           </p>
-                          <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2">
+                          <button className="btn-outline text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20 flex items-center space-x-2">
                             <Trash2 className="h-4 w-4" />
                             <span>Delete Account</span>
                           </button>

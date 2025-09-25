@@ -96,7 +96,7 @@ const ComprehensiveDashboard = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-50 mb-4">
             Please sign in to continue
           </h2>
         </div>
@@ -105,28 +105,28 @@ const ComprehensiveDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
       {/* Header */}
-      <div className="bg-white shadow">
+      <div className="bg-white dark:bg-surface-800 shadow border-b border-surface-200 dark:border-surface-700 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
                 Welcome back,{" "}
                 {user.firstName || user.emailAddresses[0]?.emailAddress}!
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-surface-600 dark:text-surface-400 mt-1">
                 {userProfile?.jobRole
                   ? `${userProfile.jobRole} - ${userProfile.experienceLevel}`
                   : "Ready to practice your interview skills?"}
               </p>
             </div>
             <div className="flex items-center space-x-3">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-surface-600 dark:text-surface-400">
                 Profile Completion:{" "}
                 {userProfile?.profileCompletenessPercentage || 0}%
               </span>
-              <div className="w-20 bg-gray-200 rounded-full h-2">
+              <div className="w-20 bg-surface-200 dark:bg-surface-700 rounded-full h-2">
                 <div
                   className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                   style={{
@@ -195,8 +195,8 @@ const ComprehensiveDashboard = () => {
 
             {/* Skills Overview */}
             {userProfile?.skills && userProfile.skills.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="card p-6">
+                <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
                   Your Skills
                 </h3>
                 <div className="space-y-3">
@@ -205,11 +205,11 @@ const ComprehensiveDashboard = () => {
                       key={index}
                       className="flex justify-between items-center"
                     >
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm font-medium text-surface-700 dark:text-surface-300">
                         {skill.name}
                       </span>
                       <div className="flex items-center space-x-2">
-                        <div className="w-20 bg-gray-200 rounded-full h-2">
+                        <div className="w-20 bg-surface-200 dark:bg-surface-700 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
                               skill.confidence <= 2
@@ -223,7 +223,7 @@ const ComprehensiveDashboard = () => {
                             }}
                           ></div>
                         </div>
-                        <span className="text-xs text-gray-500 capitalize w-16">
+                        <span className="text-xs text-surface-500 dark:text-surface-400 capitalize w-16">
                           {skill.confidence}
                         </span>
                       </div>
@@ -235,8 +235,8 @@ const ComprehensiveDashboard = () => {
 
             {/* Recent Activity */}
             {userProfile?.recentActivity && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="card p-6">
+                <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
                   Recent Activity
                 </h3>
                 <div className="space-y-3">
@@ -248,10 +248,10 @@ const ComprehensiveDashboard = () => {
                         className="flex items-center space-x-3 text-sm"
                       >
                         <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-                        <span className="text-gray-700">
+                        <span className="text-surface-700 dark:text-surface-300">
                           {activity.description}
                         </span>
-                        <span className="text-gray-400 ml-auto">
+                        <span className="text-surface-400 dark:text-surface-500 ml-auto">
                           {new Date(activity.timestamp).toLocaleDateString()}
                         </span>
                       </div>

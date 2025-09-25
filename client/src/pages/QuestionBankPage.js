@@ -77,11 +77,13 @@ const QuestionBankPage = () => {
   ];
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-surface-50 dark:bg-surface-900 min-h-screen transition-colors duration-200">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Question Bank</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
+            Question Bank
+          </h1>
+          <p className="mt-2 text-surface-600 dark:text-surface-400">
             Browse and practice with our comprehensive collection of interview
             questions.
           </p>
@@ -91,19 +93,21 @@ const QuestionBankPage = () => {
           {questionCategories.map((category) => (
             <div
               key={category.name}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+              className="bg-white dark:bg-surface-800 rounded-xl shadow-sm border border-surface-200 dark:border-surface-700 p-6 hover:shadow-md transition-shadow cursor-pointer"
             >
               <div
                 className={`w-12 h-12 rounded-lg ${category.color} flex items-center justify-center mb-4`}
               >
                 {category.icon}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
                 {category.name}
               </h3>
-              <p className="text-gray-600 mb-4">{category.description}</p>
+              <p className="text-surface-600 dark:text-surface-400 mb-4">
+                {category.description}
+              </p>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-surface-500 dark:text-surface-400">
                   {category.count} questions
                 </span>
                 <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
@@ -115,13 +119,13 @@ const QuestionBankPage = () => {
         </div>
 
         <div className="mt-12">
-          <div className="bg-gradient-to-r from-primary-50 to-secondary-50 rounded-xl p-8">
+          <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-950 dark:to-secondary-950 rounded-xl p-8 border border-primary-100/60 dark:border-primary-900/30 transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-semibold text-surface-900 dark:text-surface-50 mb-2">
                   Hybrid Question Generation
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-surface-700 dark:text-surface-300">
                   Generate a mix of template-based and AI-created questions
                   tailored to your interview needs.
                 </p>

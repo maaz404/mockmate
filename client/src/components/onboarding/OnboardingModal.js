@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const OnboardingModal = ({ isOpen, onClose }) => {
+const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
   const { refreshProfile, userProfile } = useAuthContext();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -196,6 +196,35 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     { value: "exploring", label: "Just exploring options", urgency: "none" },
   ];
 
+  // Step metadata for UI (title, subtitle, icon)
+  const stepMeta = [
+    {
+      title: "Professional Information",
+      subtitle: "Tell us about your professional background",
+      icon: User,
+    },
+    {
+      title: "Skills & Experience",
+      subtitle: "Show your strengths and growth areas",
+      icon: Code,
+    },
+    {
+      title: "Interview Preferences",
+      subtitle: "Customize practice to your style",
+      icon: Target,
+    },
+    {
+      title: "AI Coaching & Practice Settings",
+      subtitle: "Tune session length, language, and optional facial analysis",
+      icon: Settings,
+    },
+    {
+      title: "Interview Goals",
+      subtitle: "Set your target timeline and companies",
+      icon: CheckCircle,
+    },
+  ];
+
   // Calculate profile strength
   useEffect(() => {
     const calculateStrength = () => {
@@ -224,6 +253,18 @@ const OnboardingModal = ({ isOpen, onClose }) => {
 
     calculateStrength();
   }, [formData]);
+
+  // Close on Escape for accessibility
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        onClose && onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
 
   // Load existing user profile data when modal opens
   useEffect(() => {
@@ -298,18 +339,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     });
   };
 
-  const handleNotificationChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        notifications: {
-          ...prev.preferences.notifications,
-          [field]: value,
-        },
-      },
-    }));
-  };
+  // notifications toggles removed in favor of AI coaching settings step
 
   const handleSkillAdd = (skillName, category) => {
     if (!formData.professionalInfo.skills.find((s) => s.name === skillName)) {
@@ -405,11 +435,6 @@ const OnboardingModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (!professionalInfo.industry) {
-      toast.error("Please select your industry");
-      return;
-    }
-
     if (!interviewGoals.primaryGoal) {
       toast.error("Please select your primary interview goal");
       return;
@@ -431,9 +456,17 @@ const OnboardingModal = ({ isOpen, onClose }) => {
 
       if (response.data && response.data.success) {
         await refreshProfile();
+        // Allow parent to perform additional actions (e.g., refresh, navigate)
+        if (typeof onComplete === "function") {
+          try {
+            await onComplete();
+          } catch (_) {
+            // swallow to avoid blocking UI
+          }
+        }
         setStep(6); // Show success step
         setTimeout(() => {
-          onClose();
+          onClose && onClose();
         }, 3000);
       } else {
         throw new Error(response.data?.message || "Failed to complete setup");
@@ -472,17 +505,17 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <User className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+        <h3 className="text-xl font-semibold text-surface-900 dark:text-white">
           Professional Information
         </h3>
-        <p className="text-gray-600 dark:text-surface-400">
+        <p className="text-surface-600 dark:text-surface-400">
           Tell us about your professional background
         </p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
             Job Title
           </label>
           <input
@@ -495,13 +528,13 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                 e.target.value
               )
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             placeholder="e.g., Software Engineer, Product Manager"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
             Company
           </label>
           <input
@@ -510,13 +543,13 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("professionalInfo", "company", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             placeholder="e.g., Google, Microsoft, Startup"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
             Years of Experience
           </label>
           <select
@@ -528,7 +561,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                 e.target.value
               )
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
           >
             <option value="">Select experience level</option>
             <option value="entry">Entry Level (0-1 years)</option>
@@ -541,7 +574,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
             Industry
           </label>
           <select
@@ -549,7 +582,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("professionalInfo", "industry", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
           >
             <option value="">Select industry</option>
             {industries.map((industry) => (
@@ -589,10 +622,10 @@ const OnboardingModal = ({ isOpen, onClose }) => {
       <div className="space-y-6">
         <div className="text-center mb-6">
           <Code className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-xl font-semibold text-surface-900 dark:text-white">
             Skills Assessment
           </h3>
-          <p className="text-gray-600 dark:text-surface-400">
+          <p className="text-surface-600 dark:text-surface-400">
             Select your skills and rate your confidence level
           </p>
         </div>
@@ -600,18 +633,18 @@ const OnboardingModal = ({ isOpen, onClose }) => {
         <div className="space-y-4">
           {/* Skill Search and Add */}
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
               Add Skills
             </label>
             <input
               type="text"
               value={skillInput}
               onChange={(e) => handleSkillInputChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
               placeholder="Search for skills (e.g., React, Python, SQL)"
             />
             {filteredSkills.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-surface-700 border border-gray-300 dark:border-surface-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
                 {filteredSkills.map((skill) => (
                   <button
                     key={`${skill.category}-${skill.name}`}
@@ -620,10 +653,10 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                       setSkillInput("");
                       setFilteredSkills([]);
                     }}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-surface-600 text-gray-900 dark:text-white text-sm"
+                    className="w-full px-3 py-2 text-left hover:bg-surface-100 dark:hover:bg-surface-600 text-surface-900 dark:text-white text-sm"
                   >
                     <span className="font-medium">{skill.name}</span>
-                    <span className="text-gray-500 dark:text-surface-400 ml-2">
+                    <span className="text-surface-500 dark:text-surface-400 ml-2">
                       ({skill.category})
                     </span>
                   </button>
@@ -635,14 +668,14 @@ const OnboardingModal = ({ isOpen, onClose }) => {
           {/* Selected Skills with Confidence */}
           {formData.professionalInfo.skills.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                 Your Skills & Confidence Levels
               </label>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {formData.professionalInfo.skills.map((skill) => (
                   <div
                     key={skill.name}
-                    className="flex items-center justify-between p-2 bg-gray-50 dark:bg-surface-700 rounded-lg"
+                    className="flex items-center justify-between p-2 bg-surface-100 dark:bg-surface-700 rounded-lg"
                   >
                     <div className="flex items-center space-x-2">
                       <button
@@ -651,10 +684,10 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                       >
                         <X className="h-4 w-4" />
                       </button>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      <span className="text-sm font-medium text-surface-900 dark:text-white">
                         {skill.name}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-surface-400 bg-gray-200 dark:bg-surface-600 px-2 py-1 rounded">
+                      <span className="text-xs text-surface-500 dark:text-surface-400 bg-surface-200 dark:bg-surface-600 px-2 py-1 rounded">
                         {skill.category}
                       </span>
                     </div>
@@ -663,7 +696,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                       onChange={(e) =>
                         handleSkillConfidenceChange(skill.name, e.target.value)
                       }
-                      className="text-sm border border-gray-300 dark:border-surface-600 rounded px-2 py-1 bg-white dark:bg-surface-700 text-gray-900 dark:text-white"
+                      className="text-sm border border-surface-300 dark:border-surface-600 rounded px-2 py-1 bg-white dark:bg-surface-700 text-surface-900 dark:text-white"
                     >
                       <option value={1}>Beginner</option>
                       <option value={2}>Basic</option>
@@ -679,7 +712,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
 
           {/* Skills to Improve */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
               Skills to Improve (optional)
             </label>
             <input
@@ -699,7 +732,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                   skillsToImprove
                 );
               }}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
               placeholder="e.g., System Design, Algorithms, Leadership"
             />
           </div>
@@ -712,17 +745,17 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <Target className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+        <h3 className="text-xl font-semibold text-surface-900 dark:text-white">
           Interview Preferences
         </h3>
-        <p className="text-gray-600 dark:text-surface-400">
+        <p className="text-surface-600 dark:text-surface-400">
           Customize your interview practice
         </p>
       </div>
 
       <div className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-3">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
             Interview Types (select multiple)
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -743,9 +776,9 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                       type.value
                     )
                   }
-                  className="rounded border-gray-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
+                  className="rounded border-surface-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-700 dark:text-surface-300">
+                <span className="text-sm text-surface-700 dark:text-surface-300">
                   {type.label}
                 </span>
               </label>
@@ -754,7 +787,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
             Difficulty Level
           </label>
           <select
@@ -762,7 +795,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("preferences", "difficulty", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
           >
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
@@ -772,7 +805,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-3">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
             Focus Areas (select multiple)
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -787,9 +820,9 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                   onChange={() =>
                     handleArrayToggle("preferences", "focusAreas", area.value)
                   }
-                  className="rounded border-gray-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
+                  className="rounded border-surface-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-700 dark:text-surface-300">
+                <span className="text-sm text-surface-700 dark:text-surface-300">
                   {area.label}
                 </span>
               </label>
@@ -804,157 +837,178 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <Settings className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-          Notification Preferences
+        <h3 className="text-xl font-semibold text-surface-900 dark:text-white">
+          AI Coaching & Practice Settings
         </h3>
-        <p className="text-gray-600 dark:text-surface-400">
-          Choose how you want to stay updated
+        <p className="text-surface-600 dark:text-surface-400">
+          Personalize your sessions and optional facial analysis
         </p>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-gray-900 dark:text-white">
-              Email Notifications
-            </p>
-            <p className="text-sm text-gray-600 dark:text-surface-400">
-              Receive updates via email
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.preferences.notifications.email}
-              onChange={(e) =>
-                handleNotificationChange("email", e.target.checked)
-              }
-              className="sr-only"
-            />
-            <div
-              className={`w-11 h-6 bg-gray-200 dark:bg-surface-600 rounded-full peer ${
-                formData.preferences.notifications.email
-                  ? "peer-checked:bg-primary-600"
-                  : ""
-              }`}
-            >
-              <div
-                className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  formData.preferences.notifications.email
-                    ? "translate-x-5"
-                    : "translate-x-0"
-                }`}
-              ></div>
-            </div>
+      <div className="space-y-6">
+        {/* Session duration */}
+        <div>
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+            Session Duration (minutes)
           </label>
+          <input
+            type="range"
+            min={15}
+            max={120}
+            step={15}
+            value={formData.preferences.sessionDuration}
+            onChange={(e) =>
+              handleInputChange(
+                "preferences",
+                "sessionDuration",
+                parseInt(e.target.value)
+              )
+            }
+            className="w-full"
+          />
+          <div className="mt-1 text-sm text-surface-600 dark:text-surface-400">
+            {formData.preferences.sessionDuration} minutes
+          </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-gray-900 dark:text-white">
-              Push Notifications
-            </p>
-            <p className="text-sm text-gray-600 dark:text-surface-400">
-              Browser notifications
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.preferences.notifications.push}
-              onChange={(e) =>
-                handleNotificationChange("push", e.target.checked)
-              }
-              className="sr-only"
-            />
-            <div
-              className={`w-11 h-6 bg-gray-200 dark:bg-surface-600 rounded-full peer ${
-                formData.preferences.notifications.push
-                  ? "peer-checked:bg-primary-600"
-                  : ""
-              }`}
-            >
-              <div
-                className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  formData.preferences.notifications.push
-                    ? "translate-x-5"
-                    : "translate-x-0"
-                }`}
-              ></div>
-            </div>
+        {/* Preferred language */}
+        <div>
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+            Preferred Language
           </label>
+          <select
+            value={formData.preferences.preferredLanguages?.[0] || "English"}
+            onChange={(e) =>
+              handleInputChange("preferences", "preferredLanguages", [
+                e.target.value,
+              ])
+            }
+            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+          >
+            {["English", "Spanish", "French", "German", "Hindi", "Urdu"].map(
+              (lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              )
+            )}
+          </select>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-gray-900 dark:text-white">
-              Interview Reminders
-            </p>
-            <p className="text-sm text-gray-600 dark:text-surface-400">
-              Get reminded about scheduled interviews
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
+        {/* Facial analysis */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-surface-900 dark:text-white">
+                Enable Facial Expression Analysis
+              </p>
+              <p className="text-sm text-surface-600 dark:text-surface-400">
+                Analyze eye contact, emotions, and expressions
+              </p>
+            </div>
             <input
               type="checkbox"
-              checked={formData.preferences.notifications.interviews}
+              checked={formData.preferences.facialAnalysis.enabled}
               onChange={(e) =>
-                handleNotificationChange("interviews", e.target.checked)
+                handleInputChange("preferences", "facialAnalysis", {
+                  ...formData.preferences.facialAnalysis,
+                  enabled: e.target.checked,
+                })
               }
-              className="sr-only"
             />
-            <div
-              className={`w-11 h-6 bg-gray-200 dark:bg-surface-600 rounded-full peer ${
-                formData.preferences.notifications.interviews
-                  ? "peer-checked:bg-primary-600"
-                  : ""
-              }`}
-            >
-              <div
-                className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  formData.preferences.notifications.interviews
-                    ? "translate-x-5"
-                    : "translate-x-0"
-                }`}
-              ></div>
-            </div>
-          </label>
-        </div>
+          </div>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-gray-900 dark:text-white">
-              Progress Updates
-            </p>
-            <p className="text-sm text-gray-600 dark:text-surface-400">
-              Weekly progress summaries
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.preferences.notifications.progress}
-              onChange={(e) =>
-                handleNotificationChange("progress", e.target.checked)
-              }
-              className="sr-only"
-            />
-            <div
-              className={`w-11 h-6 bg-gray-200 dark:bg-surface-600 rounded-full peer ${
-                formData.preferences.notifications.progress
-                  ? "peer-checked:bg-primary-600"
-                  : ""
-              }`}
-            >
-              <div
-                className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  formData.preferences.notifications.progress
-                    ? "translate-x-5"
-                    : "translate-x-0"
-                }`}
-              ></div>
+          {formData.preferences.facialAnalysis.enabled && (
+            <div className="space-y-3 pl-1">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.preferences.facialAnalysis.consentGiven}
+                  onChange={(e) =>
+                    handleInputChange("preferences", "facialAnalysis", {
+                      ...formData.preferences.facialAnalysis,
+                      consentGiven: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm text-surface-700 dark:text-surface-300">
+                  I consent to optional facial analysis during practice
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.preferences.facialAnalysis.autoCalibration}
+                  onChange={(e) =>
+                    handleInputChange("preferences", "facialAnalysis", {
+                      ...formData.preferences.facialAnalysis,
+                      autoCalibration: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm text-surface-700 dark:text-surface-300">
+                  Auto calibration
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={
+                    formData.preferences.facialAnalysis.showConfidenceMeter
+                  }
+                  onChange={(e) =>
+                    handleInputChange("preferences", "facialAnalysis", {
+                      ...formData.preferences.facialAnalysis,
+                      showConfidenceMeter: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm text-surface-700 dark:text-surface-300">
+                  Show confidence meter
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={
+                    formData.preferences.facialAnalysis.showRealtimeFeedback
+                  }
+                  onChange={(e) =>
+                    handleInputChange("preferences", "facialAnalysis", {
+                      ...formData.preferences.facialAnalysis,
+                      showRealtimeFeedback: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm text-surface-700 dark:text-surface-300">
+                  Show real‑time feedback
+                </span>
+              </label>
+
+              <div>
+                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                  Feedback frequency
+                </label>
+                <select
+                  value={formData.preferences.facialAnalysis.feedbackFrequency}
+                  onChange={(e) =>
+                    handleInputChange("preferences", "facialAnalysis", {
+                      ...formData.preferences.facialAnalysis,
+                      feedbackFrequency: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
             </div>
-          </label>
+          )}
         </div>
       </div>
     </div>
@@ -964,17 +1018,17 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <Target className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+        <h3 className="text-xl font-semibold text-surface-900 dark:text-white">
           Interview Goals & Timeline
         </h3>
-        <p className="text-gray-600 dark:text-surface-400">
+        <p className="text-surface-600 dark:text-surface-400">
           Set your interview preparation goals
         </p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
             Primary Interview Goal
           </label>
           <select
@@ -982,7 +1036,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("interviewGoals", "primaryGoal", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
           >
             <option value="">Select your primary goal</option>
             {primaryGoals.map((goal) => (
@@ -994,7 +1048,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
             Target Companies (optional)
           </label>
           <input
@@ -1007,13 +1061,13 @@ const OnboardingModal = ({ isOpen, onClose }) => {
                 e.target.value.split(", ").filter(Boolean)
               )
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             placeholder="e.g., Google, Meta, Amazon, Netflix"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
             Interview Timeline
           </label>
           <select
@@ -1021,7 +1075,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             onChange={(e) =>
               handleInputChange("interviewGoals", "timeline", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
           >
             <option value="">Select timeline</option>
             {timelines.map((timeline) => (
@@ -1039,10 +1093,10 @@ const OnboardingModal = ({ isOpen, onClose }) => {
     <div className="space-y-6 text-center">
       <div className="mb-6">
         <CheckCircle className="mx-auto h-16 w-16 text-green-600 dark:text-green-400 mb-4" />
-        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-2xl font-semibold text-surface-900 dark:text-white mb-2">
           Welcome to MockMate! 🎉
         </h3>
-        <p className="text-gray-600 dark:text-surface-400">
+        <p className="text-surface-600 dark:text-surface-400">
           Your profile has been set up successfully. Here are your personalized
           recommendations:
         </p>
@@ -1060,89 +1114,110 @@ const OnboardingModal = ({ isOpen, onClose }) => {
         </ul>
       </div>
 
-      <div className="text-sm text-gray-500 dark:text-surface-500">
+      <div className="text-sm text-surface-500 dark:text-surface-500">
         This modal will close automatically in a few seconds...
       </div>
     </div>
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-surface-800 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Welcome to MockMate!
-              </h2>
-              <p className="text-gray-600 dark:text-surface-400">
-                Step {step} of 5
-              </p>
+    <div
+      className="modal-backdrop z-[60] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
+    >
+      <div className="modal-panel w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Sticky header */}
+        <div className="sticky top-0 z-10 bg-white/90 dark:bg-surface-800/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b border-surface-200 dark:border-surface-700 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {(() => {
+                const MetaIcon = stepMeta[Math.min(step - 1, 4)]?.icon || User;
+                return (
+                  <div className="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
+                    <MetaIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                  </div>
+                );
+              })()}
+              <div>
+                <h2
+                  id="onboarding-title"
+                  className="text-lg sm:text-xl font-semibold text-surface-900 dark:text-white"
+                >
+                  {stepMeta[Math.min(step - 1, 4)]?.title || "Welcome"}
+                </h2>
+                <p className="text-xs text-surface-500 dark:text-surface-400">
+                  Step {Math.min(step, 5)} of 5
+                </p>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={handleSaveProgress}
                 disabled={loading}
-                className={`flex items-center space-x-1 px-3 py-1 text-sm rounded-lg transition-colors ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   savedProgress
-                    ? "bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300"
-                    : "bg-gray-100 dark:bg-surface-700 text-gray-700 dark:text-surface-300 hover:bg-gray-200 dark:hover:bg-surface-600"
+                    ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300"
+                    : "bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-600"
                 }`}
               >
                 <Save className="h-4 w-4" />
-                <span>{savedProgress ? "Saved!" : "Save Progress"}</span>
+                <span>{savedProgress ? "Saved" : "Save"}</span>
               </button>
               <button
                 onClick={onClose}
-                className="text-gray-400 dark:text-surface-500 hover:text-gray-600 dark:hover:text-surface-300 transition-colors"
+                className="p-2 rounded-lg text-surface-500 dark:text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
+                aria-label="Close"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="mb-8">
-            <div className="flex justify-between mb-2">
+          {/* Progress */}
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-2">
               {[1, 2, 3, 4, 5].map((s) => (
                 <div
                   key={s}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    s <= step
-                      ? "bg-primary-600 text-white"
-                      : "bg-gray-200 dark:bg-surface-600 text-gray-600 dark:text-surface-400"
-                  }`}
+                  className="flex-1 flex items-center last:flex-none"
                 >
-                  {s}
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold shadow-sm ${
+                      s < step
+                        ? "bg-primary-600 text-white"
+                        : s === step
+                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-200"
+                        : "bg-surface-200 dark:bg-surface-700 text-surface-500"
+                    }`}
+                  >
+                    {s < step ? "✓" : s}
+                  </div>
+                  {s < 5 && (
+                    <div className="flex-1 h-1 mx-2 rounded-full bg-surface-200 dark:bg-surface-700 overflow-hidden">
+                      <div
+                        className={`h-1 rounded-full transition-all duration-300 ${
+                          s < step
+                            ? "bg-primary-500 w-full"
+                            : s === step
+                            ? "bg-primary-300 w-1/2"
+                            : "w-0"
+                        }`}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-            <div className="h-2 bg-gray-200 dark:bg-surface-600 rounded-full">
-              <div
-                className="h-2 bg-primary-600 rounded-full transition-all duration-300"
-                style={{ width: `${(step / 5) * 100}%` }}
-              />
-            </div>
           </div>
+        </div>
 
-          {/* Profile Strength Meter */}
-          <div className="flex items-center justify-between text-sm mb-6">
-            <span className="text-gray-600 dark:text-surface-400">
-              Profile Strength
-            </span>
-            <div className="flex items-center space-x-2">
-              <div className="w-24 h-2 bg-gray-200 dark:bg-surface-600 rounded-full">
-                <div
-                  className="h-2 bg-gradient-to-r from-yellow-400 to-green-500 rounded-full transition-all duration-300"
-                  style={{ width: `${profileStrength}%` }}
-                />
-              </div>
-              <span className="text-gray-700 dark:text-surface-300 font-medium">
-                {profileStrength}%
-              </span>
-            </div>
-          </div>
+        {/* Scrollable content */}
+        <div className="px-6 py-5 overflow-y-auto">
+          <p className="mb-4 text-sm text-surface-600 dark:text-surface-400 hidden sm:block">
+            {stepMeta[Math.min(step - 1, 4)]?.subtitle}
+          </p>
 
           {/* Step Content */}
           {step === 1 && renderStep1()}
@@ -1152,15 +1227,35 @@ const OnboardingModal = ({ isOpen, onClose }) => {
           {step === 5 && renderStep5()}
           {step === 6 && renderSuccessStep()}
 
-          {/* Navigation */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-surface-600">
+          {/* Profile strength */}
+          <div className="mt-6 flex items-center justify-between text-xs">
+            <span className="text-surface-600 dark:text-surface-400">
+              Profile Strength
+            </span>
+            <div className="flex items-center gap-2">
+              <div className="w-28 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+                <div
+                  className="h-2 bg-gradient-to-r from-yellow-400 to-green-500 rounded-full"
+                  style={{ width: `${profileStrength}%` }}
+                />
+              </div>
+              <span className="text-surface-700 dark:text-surface-300 font-medium">
+                {profileStrength}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Sticky footer */}
+        <div className="sticky bottom-0 z-10 border-t border-surface-200 dark:border-surface-700 bg-white/90 dark:bg-surface-800/90 backdrop-blur px-6 py-4">
+          <div className="flex justify-between">
             <button
               onClick={handlePrevious}
               disabled={step === 1}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-5 py-2 rounded-lg font-medium transition-all shadow-sm ${
                 step === 1
-                  ? "bg-gray-100 dark:bg-surface-700 text-gray-400 dark:text-surface-500 cursor-not-allowed"
-                  : "bg-gray-100 dark:bg-surface-700 text-gray-700 dark:text-surface-300 hover:bg-gray-200 dark:hover:bg-surface-600"
+                  ? "bg-surface-100 dark:bg-surface-700 text-surface-400 cursor-not-allowed"
+                  : "bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-600"
               }`}
             >
               Previous
@@ -1169,7 +1264,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
             {step < 5 ? (
               <button
                 onClick={handleNext}
-                className="px-6 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
+                className="px-6 py-2 rounded-lg font-semibold text-white shadow-sm bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
               >
                 Next
               </button>
@@ -1177,7 +1272,7 @@ const OnboardingModal = ({ isOpen, onClose }) => {
               <button
                 onClick={handleComplete}
                 disabled={loading}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                className="px-6 py-2 rounded-lg font-semibold text-white shadow-sm bg-green-600 hover:bg-green-700 disabled:opacity-60"
               >
                 {loading ? "Completing..." : "Complete Setup"}
               </button>

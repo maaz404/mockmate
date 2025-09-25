@@ -62,7 +62,7 @@ const InterviewResultsPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-50 mb-4">
             Results not available
           </h2>
           <button
@@ -79,18 +79,18 @@ const InterviewResultsPage = () => {
   const { interview, analysis } = results;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-8 transition-colors duration-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+        <div className="card p-8 mb-8">
           <div className="text-center">
             <div className="flex justify-center items-center space-x-4 mb-4">
               <div className="text-6xl">🎉</div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
                   Interview Complete!
                 </h1>
-                <p className="text-gray-600 mt-2">
+                <p className="text-surface-600 dark:text-surface-400 mt-2">
                   {interview.jobRole} • {interview.interviewType} interview
                 </p>
               </div>
@@ -111,8 +111,8 @@ const InterviewResultsPage = () => {
           {/* Left Column - Detailed Analysis */}
           <div className="lg:col-span-2 space-y-8">
             {/* Performance Breakdown */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            <div className="card p-6">
+              <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-50 mb-6">
                 Performance Breakdown
               </h2>
 
@@ -125,10 +125,10 @@ const InterviewResultsPage = () => {
                   >
                     {analysis.technicalScore}%
                   </div>
-                  <div className="text-gray-600 font-medium">
+                  <div className="text-surface-600 dark:text-surface-400 font-medium">
                     Technical Skills
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="w-full bg-surface-200 dark:bg-surface-700 rounded-full h-2 mt-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-500 ${
                         analysis.technicalScore >= 80
@@ -150,8 +150,10 @@ const InterviewResultsPage = () => {
                   >
                     {analysis.communicationScore}%
                   </div>
-                  <div className="text-gray-600 font-medium">Communication</div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="text-surface-600 dark:text-surface-400 font-medium">
+                    Communication
+                  </div>
+                  <div className="w-full bg-surface-200 dark:bg-surface-700 rounded-full h-2 mt-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-500 ${
                         analysis.communicationScore >= 80
@@ -173,10 +175,10 @@ const InterviewResultsPage = () => {
                   >
                     {analysis.problemSolvingScore}%
                   </div>
-                  <div className="text-gray-600 font-medium">
+                  <div className="text-surface-600 dark:text-surface-400 font-medium">
                     Problem Solving
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="w-full bg-surface-200 dark:bg-surface-700 rounded-full h-2 mt-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-500 ${
                         analysis.problemSolvingScore >= 80
@@ -193,8 +195,8 @@ const InterviewResultsPage = () => {
             </div>
 
             {/* Question by Question Analysis */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-6">
+            <div className="card p-6">
+              <h3 className="text-xl font-bold text-surface-900 dark:text-surface-50 mb-6">
                 Question Analysis
               </h3>
 
@@ -202,14 +204,14 @@ const InterviewResultsPage = () => {
                 {analysis.questionAnalysis.map((qa, index) => (
                   <div
                     key={index}
-                    className="border-b border-gray-200 pb-6 last:border-b-0 last:pb-0"
+                    className="border-b border-surface-200 dark:border-surface-700 pb-6 last:border-b-0 last:pb-0"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-1">
+                        <h4 className="font-semibold text-surface-900 dark:text-surface-50 mb-1">
                           Question {index + 1}
                         </h4>
-                        <p className="text-gray-700 text-sm mb-2">
+                        <p className="text-surface-700 dark:text-surface-300 text-sm mb-2">
                           {qa.question}
                         </p>
                         <div className="flex space-x-2">
@@ -238,59 +240,72 @@ const InterviewResultsPage = () => {
                       <div className="text-right ml-4">
                         <div
                           className={`text-2xl font-bold ${getScoreColor(
-                            typeof qa.score === 'object' ? qa.score.overall : qa.score
+                            typeof qa.score === "object"
+                              ? qa.score.overall
+                              : qa.score
                           )}`}
                         >
-                          {typeof qa.score === 'object' ? qa.score.overall : qa.score}%
+                          {typeof qa.score === "object"
+                            ? qa.score.overall
+                            : qa.score}
+                          %
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-surface-500 dark:text-surface-400">
                           {qa.timeSpent}s
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 rounded-lg p-4 mb-3">
-                      <h5 className="font-medium text-gray-900 mb-2">
+                    <div className="bg-surface-50 dark:bg-surface-800 rounded-lg p-4 mb-3 border border-surface-200 dark:border-surface-700">
+                      <h5 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
                         Your Answer:
                       </h5>
-                      <p className="text-gray-700 text-sm">{qa.userAnswer}</p>
+                      <p className="text-surface-700 dark:text-surface-300 text-sm">
+                        {qa.userAnswer}
+                      </p>
                     </div>
 
                     <div className="space-y-4">
                       {/* Rubric Scores Section */}
-                      {qa.score && typeof qa.score === 'object' && qa.score.rubricScores && (
-                        <div className="bg-blue-50 rounded-lg p-4">
-                          <h5 className="font-medium text-blue-900 mb-3 flex items-center">
-                            📊 Rubric Scores (1-5 Scale):
-                          </h5>
-                          <div className="grid grid-cols-2 gap-3">
-                            {Object.entries(qa.score.rubricScores).map(([criterion, score]) => (
-                              <div key={criterion} className="space-y-1">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm font-medium capitalize text-gray-700">
-                                    {criterion}
-                                  </span>
-                                  <span className="text-sm font-bold text-blue-700">
-                                    {score}/5
-                                  </span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className={`h-2 rounded-full transition-all duration-500 ${
-                                      score >= 4
-                                        ? "bg-green-500"
-                                        : score >= 3
-                                        ? "bg-yellow-500"
-                                        : "bg-red-500"
-                                    }`}
-                                    style={{ width: `${(score / 5) * 100}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                            ))}
+                      {qa.score &&
+                        typeof qa.score === "object" &&
+                        qa.score.rubricScores && (
+                          <div className="bg-blue-50 dark:bg-surface-800/50 rounded-lg p-4 border border-blue-100/60 dark:border-surface-700">
+                            <h5 className="font-medium text-blue-900 mb-3 flex items-center">
+                              📊 Rubric Scores (1-5 Scale):
+                            </h5>
+                            <div className="grid grid-cols-2 gap-3">
+                              {Object.entries(qa.score.rubricScores).map(
+                                ([criterion, score]) => (
+                                  <div key={criterion} className="space-y-1">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm font-medium capitalize text-surface-700 dark:text-surface-300">
+                                        {criterion}
+                                      </span>
+                                      <span className="text-sm font-bold text-blue-700">
+                                        {score}/5
+                                      </span>
+                                    </div>
+                                    <div className="w-full bg-surface-200 dark:bg-surface-700 rounded-full h-2">
+                                      <div
+                                        className={`h-2 rounded-full transition-all duration-500 ${
+                                          score >= 4
+                                            ? "bg-green-500"
+                                            : score >= 3
+                                            ? "bg-yellow-500"
+                                            : "bg-red-500"
+                                        }`}
+                                        style={{
+                                          width: `${(score / 5) * 100}%`,
+                                        }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                )
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
                       {/* Feedback Section */}
                       <div className="space-y-2">
@@ -298,7 +313,7 @@ const InterviewResultsPage = () => {
                           <h5 className="font-medium text-green-800 mb-1">
                             ✅ Strengths:
                           </h5>
-                          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                          <ul className="list-disc list-inside text-sm text-surface-700 dark:text-surface-300 space-y-1">
                             {qa.feedback.strengths.map((strength, i) => (
                               <li key={i}>{strength}</li>
                             ))}
@@ -309,7 +324,7 @@ const InterviewResultsPage = () => {
                           <h5 className="font-medium text-red-800 mb-1">
                             ❌ Areas for Improvement:
                           </h5>
-                          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                          <ul className="list-disc list-inside text-sm text-surface-700 dark:text-surface-300 space-y-1">
                             {qa.feedback.improvements.map((improvement, i) => (
                               <li key={i}>{improvement}</li>
                             ))}
@@ -319,11 +334,11 @@ const InterviewResultsPage = () => {
 
                       {/* Model Answer Section */}
                       {qa.feedback && qa.feedback.modelAnswer && (
-                        <div className="bg-green-50 rounded-lg p-4">
+                        <div className="bg-green-50 dark:bg-surface-800/50 rounded-lg p-4 border border-green-100/60 dark:border-surface-700">
                           <h5 className="font-medium text-green-900 mb-2 flex items-center">
                             💡 Model Answer:
                           </h5>
-                          <p className="text-sm text-gray-700 leading-relaxed">
+                          <p className="text-sm text-surface-700 dark:text-surface-300 leading-relaxed">
                             {qa.feedback.modelAnswer}
                           </p>
                         </div>
@@ -332,7 +347,7 @@ const InterviewResultsPage = () => {
 
                     {/* Video Transcript Section */}
                     <div className="mt-4">
-                      <TranscriptDisplay 
+                      <TranscriptDisplay
                         interviewId={interviewId}
                         questionIndex={index}
                         className="w-full"
@@ -347,33 +362,41 @@ const InterviewResultsPage = () => {
           {/* Right Column - Summary & Actions */}
           <div className="space-y-6">
             {/* Quick Stats */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
+            <div className="card p-6">
+              <h3 className="text-lg font-bold text-surface-900 dark:text-surface-50 mb-4">
                 Interview Stats
               </h3>
 
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Duration:</span>
+                  <span className="text-surface-600 dark:text-surface-400">
+                    Duration:
+                  </span>
                   <span className="font-medium">
                     {Math.floor(interview.duration / 60)}m{" "}
                     {interview.duration % 60}s
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Questions:</span>
+                  <span className="text-surface-600 dark:text-surface-400">
+                    Questions:
+                  </span>
                   <span className="font-medium">
                     {interview.questions.length}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Completed:</span>
+                  <span className="text-surface-600 dark:text-surface-400">
+                    Completed:
+                  </span>
                   <span className="font-medium">
                     {new Date(interview.completedAt).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Type:</span>
+                  <span className="text-surface-600 dark:text-surface-400">
+                    Type:
+                  </span>
                   <span className="font-medium capitalize">
                     {interview.interviewType}
                   </span>
@@ -382,8 +405,8 @@ const InterviewResultsPage = () => {
             </div>
 
             {/* Key Recommendations */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
+            <div className="card p-6">
+              <h3 className="text-lg font-bold text-surface-900 dark:text-surface-50 mb-4">
                 Key Recommendations
               </h3>
 
@@ -393,15 +416,17 @@ const InterviewResultsPage = () => {
                     <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
                       {index + 1}
                     </div>
-                    <p className="text-sm text-gray-700">{rec}</p>
+                    <p className="text-sm text-surface-700 dark:text-surface-300">
+                      {rec}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Skill Development */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
+            <div className="bg-white dark:bg-surface-800 rounded-lg shadow-md p-6 border border-surface-200 dark:border-surface-700">
+              <h3 className="text-lg font-bold text-surface-900 dark:text-surface-50 mb-4">
                 Focus Areas
               </h3>
 
@@ -409,13 +434,13 @@ const InterviewResultsPage = () => {
                 {analysis.focusAreas.map((area, index) => (
                   <div
                     key={index}
-                    className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                    className="flex justify-between items-center p-3 bg-surface-50 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700"
                   >
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-surface-900 dark:text-surface-50">
                         {area.skill}
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-surface-600 dark:text-surface-400">
                         {area.priority} priority
                       </div>
                     </div>
@@ -436,36 +461,36 @@ const InterviewResultsPage = () => {
             </div>
 
             {/* Actions */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
+            <div className="bg-white dark:bg-surface-800 rounded-lg shadow-md p-6 border border-surface-200 dark:border-surface-700">
+              <h3 className="text-lg font-bold text-surface-900 dark:text-surface-50 mb-4">
                 Next Steps
               </h3>
 
               <div className="space-y-3">
                 <button
                   onClick={() => navigate(`/session-summary/${interviewId}`)}
-                  className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="btn-primary w-full"
                 >
                   📋 View Session Summary
                 </button>
 
                 <button
                   onClick={() => navigate("/interview/create")}
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="btn-secondary w-full"
                 >
                   🎯 Start New Interview
                 </button>
 
                 <button
                   onClick={() => navigate("/dashboard")}
-                  className="w-full px-4 py-3 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  className="btn-outline w-full"
                 >
                   📊 View Dashboard
                 </button>
 
                 <button
                   onClick={() => window.print()}
-                  className="w-full px-4 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="btn-ghost w-full"
                 >
                   📄 Print Results
                 </button>

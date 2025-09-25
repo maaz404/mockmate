@@ -325,18 +325,19 @@ Return in JSON format:
       // Try to parse JSON response
       try {
         const parsed = JSON.parse(content);
-        return parsed.followUps || null;
+        return parsed.followUps || [];
       } catch (parseError) {
         // Fallback: try to extract questions from text
-        const questions = content.split('\n')
-          .filter(line => line.trim() && (line.includes('?') || line.match(/^\d+\./)))
+        const questions = content
+          .split('\n')
+          .filter((line) => line.trim() && (line.includes('?') || line.match(/^\d+\./)))
           .slice(0, 2)
-          .map(line => ({
+          .map((line) => ({
             text: line.replace(/^\d+\.\s*/, '').trim(),
-            type: 'clarification'
+            type: 'clarification',
           }));
-        
-        return questions.length > 0 ? questions : null;
+
+        return questions; // return array (possibly empty) for graceful handling
       }
     } catch (error) {
       Logger.error("Follow-up generation error:", error);

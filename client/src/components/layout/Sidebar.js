@@ -5,6 +5,32 @@ import DarkModeToggle from "../ui/DarkModeToggle";
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  // Tooltip state rendered as a single fixed element (prevents clipping behind main content)
+  const [tooltip, setTooltip] = useState({
+    visible: false,
+    text: "",
+    top: 0,
+    left: 0,
+  });
+
+  const showTooltip = (e, text) => {
+    // Use the icon's bounding box when collapsed so the tooltip aligns to the icon,
+    // not to the full link width that differs between expanded/collapsed states.
+    const container = e.currentTarget;
+    const icon = container.querySelector("svg");
+    const link = container.querySelector('a, [role="link"]');
+    const anchor = icon || link || container;
+    const rect = anchor.getBoundingClientRect();
+
+    setTooltip({
+      visible: true,
+      text,
+      top: rect.top + rect.height / 2,
+      left: rect.right + 12, // consistent gap next to icon
+    });
+  };
+
+  const hideTooltip = () => setTooltip((prev) => ({ ...prev, visible: false }));
   const location = useLocation();
   const { user } = useUser();
 
@@ -236,19 +262,21 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const isActive = (path) => location.pathname === path;
 
   const renderNavItem = (item) => (
-    <div key={item.path} className="relative group">
+    <div
+      key={item.path}
+      className="relative group"
+      onMouseEnter={(e) => isCollapsed && showTooltip(e, item.name)}
+      onMouseMove={(e) => isCollapsed && showTooltip(e, item.name)}
+      onMouseLeave={hideTooltip}
+      onFocus={(e) => isCollapsed && showTooltip(e, item.name)}
+      onBlur={hideTooltip}
+    >
       <Link
         to={item.path}
         onClick={() => setIsMobileOpen(false)} // Close mobile menu when clicking nav item
-        className={`
-          flex items-center px-1.5 py-1.5 text-sm font-medium rounded-lg transition-all duration-200
-          ${
-            isActive(item.path)
-              ? "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-500"
-              : "text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800/50"
-          }
-          ${isCollapsed ? "justify-center px-3" : "justify-start"}
-        `}
+        className={`sidebar-link ${
+          isActive(item.path) ? "sidebar-link-active" : ""
+        } ${isCollapsed ? "justify-center px-3" : "justify-start"}`}
       >
         <span
           className={`flex-shrink-0 ${
@@ -257,19 +285,12 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               : "text-surface-500 dark:text-surface-400"
           }`}
         >
-          {item.icon}
+          {React.cloneElement(item.icon, { className: "w-[18px] h-[18px]" })}
         </span>
-        {!isCollapsed && <span className="ml-3 truncate">{item.name}</span>}
+        {!isCollapsed && <span className="ml-1.5 truncate">{item.name}</span>}
       </Link>
 
-      {/* Tooltip for collapsed sidebar */}
-      {isCollapsed && (
-        <div className="absolute left-14 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out pointer-events-none z-50 group-hover:translate-x-1">
-          <div className="bg-black text-white px-3 py-2 rounded-lg shadow-xl text-sm font-medium whitespace-nowrap">
-            {item.name}
-          </div>
-        </div>
-      )}
+      {/* Per-item tooltip removed; we render a single viewport-fixed tooltip below */}
     </div>
   );
 
@@ -313,6 +334,19 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           </svg>
         </button>
       </div>
+
+      {/* Viewport-fixed tooltip to avoid clipping behind main content */}
+      {isCollapsed && tooltip.visible && (
+        <div
+          className="fixed pointer-events-none z-[9999] -translate-y-1/2 transition-all duration-150 ease-out animate-tooltip-pop"
+          style={{ top: tooltip.top, left: tooltip.left }}
+        >
+          <div className="relative bg-neutral-900 text-white px-3 py-1.5 rounded-lg shadow-xl text-sm font-medium whitespace-nowrap">
+            <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-neutral-900 rotate-45 rounded-[2px]"></span>
+            {tooltip.text}
+          </div>
+        </div>
+      )}
 
       {/* Sidebar */}
       <div
@@ -434,7 +468,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                     avatarBox: "w-7 h-7",
                     userButtonPopoverCard: "shadow-lg",
                     userButtonPopoverActionButton:
-                      "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
+                      "text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700",
                   },
                 }}
               />

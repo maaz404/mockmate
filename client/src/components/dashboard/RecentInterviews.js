@@ -26,9 +26,7 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
     <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700">
       <div className="p-6 border-b border-surface-700">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-white">
-            Recent Interviews
-          </h3>
+          <h3 className="text-lg font-medium text-white">Recent Interviews</h3>
           {interviews.length > 0 && (
             <button
               onClick={onViewAll}
@@ -137,7 +135,7 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
                       </svg>
                     </div>
                   ) : (
-                    <div className="text-gray-400">
+                    <div className="text-surface-500">
                       <svg
                         className="w-5 h-5"
                         fill="none"

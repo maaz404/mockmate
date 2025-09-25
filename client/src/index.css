@@ -1,8 +1,15 @@
+/* Global styles with Inter via @fontsource for reliability */
+@import "@fontsource/inter/300.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+@import "@fontsource/inter/900.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 /* Custom base styles */
 @layer base {
@@ -10,17 +17,23 @@
     @apply transition-colors duration-200;
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
-
-  body {
-    @apply font-sans antialiased bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-50 transition-colors duration-200;
-  }
+  html { font-family: Inter, "Helvetica Neue", Arial, sans-serif; scroll-behavior: smooth; }
+  body { @apply font-sans antialiased bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-50 transition-colors duration-200; }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-display font-semibold text-surface-900 dark:text-surface-50;
   }
+
+  /* Base heading sizes and rhythms (can be overridden per-component) */
+  h1 { @apply text-4xl md:text-5xl lg:text-6xl leading-tight font-extrabold; }
+  h2 { @apply text-3xl md:text-4xl leading-tight font-bold; }
+  h3 { @apply text-2xl md:text-3xl leading-snug font-semibold; }
+  h4 { @apply text-xl md:text-2xl leading-snug font-semibold; }
+  h5 { @apply text-lg leading-snug font-medium; }
+  h6 { @apply text-base leading-snug font-medium; }
+
+  /* Default body text (limit scope to paragraphs and list items) */
+  p, li { @apply text-base md:text-lg leading-relaxed text-surface-600 dark:text-surface-300; }
 
   /* Focus visible for better accessibility */
   *:focus-visible {
@@ -120,19 +133,19 @@
   }
   
   .form-input {
-    @apply block w-full px-4 py-3 bg-surface-700 border border-surface-600 rounded-xl shadow-sm placeholder-surface-400 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200;
+    @apply block w-full px-4 py-3 bg-surface-50 dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-xl shadow-sm placeholder-surface-400 dark:placeholder-surface-400 text-surface-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
   }
   
   .form-select {
-    @apply block w-full px-4 py-3 bg-surface-700 border border-surface-600 rounded-xl shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200;
+    @apply block w-full px-4 py-3 bg-surface-50 dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-xl shadow-sm text-surface-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
   }
 
   .form-label {
-    @apply block text-sm font-medium text-surface-300 mb-2;
+    @apply block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2;
   }
 
   .form-radio-card {
-    @apply p-4 border rounded-xl cursor-pointer transition-all duration-200 bg-surface-700/30 border-surface-600 hover:border-surface-500;
+    @apply p-4 border rounded-xl cursor-pointer transition-all duration-200 bg-surface-50 dark:bg-surface-700/30 border-surface-300 dark:border-surface-600 hover:border-surface-400 dark:hover:border-surface-500 text-surface-700 dark:text-surface-300;
   }
 
   .form-radio-card.selected {
@@ -140,7 +153,7 @@
   }
 
   .form-checkbox-card {
-    @apply px-4 py-3 rounded-lg border cursor-pointer text-sm transition-all bg-surface-700/30 text-surface-300 border-surface-600 hover:border-surface-500;
+    @apply px-4 py-3 rounded-lg border cursor-pointer text-sm transition-all bg-surface-50 dark:bg-surface-700/30 text-surface-700 dark:text-surface-300 border-surface-300 dark:border-surface-600 hover:border-surface-400 dark:hover:border-surface-500;
   }
 
   .form-checkbox-card.selected {
@@ -152,7 +165,7 @@
   }
   
   .card {
-    @apply bg-white rounded-2xl shadow-surface-md border border-surface-200 p-6 transition-all duration-300 hover:shadow-surface-lg focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2;
+    @apply bg-surface-50 rounded-2xl shadow-surface-md border border-surface-200 p-6 transition-all duration-300 hover:shadow-surface-lg focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2;
   }
 
   .card-dark {
@@ -194,7 +207,53 @@
   }
 
   .hero-subtitle {
-    @apply text-lg sm:text-xl lg:text-2xl text-surface-600;
+    @apply text-lg sm:text-xl lg:text-2xl text-surface-600 dark:text-surface-300;
+  }
+
+  /* Navigation links */
+  .nav-link {
+    @apply inline-flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-700 px-3 py-2 rounded-lg transition-colors;
+  }
+
+  /* Navigation links on dark surfaces (e.g., top navbar) */
+  .nav-link-dark {
+    @apply inline-flex items-center gap-2 text-sm font-medium text-surface-300 hover:text-white hover:bg-surface-800 px-3 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900;
+  }
+
+  /* Compact variant for dark surfaces (e.g., footer lists) */
+  .nav-link-dark-sm {
+    @apply inline-flex items-center gap-2 text-xs font-medium text-surface-400 hover:text-white hover:bg-surface-800/60 px-2 py-1 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900;
+  }
+
+  /* Sidebar links */
+  .sidebar-link {
+    @apply flex items-center gap-3 text-sm font-medium text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-700 px-3 py-2 rounded-lg transition-colors;
+  }
+
+  .sidebar-link-active {
+    @apply bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-500;
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity;
+  }
+  .modal-panel {
+    @apply bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl shadow-surface-xl p-6;
+  }
+
+  /* Tables */
+  .table-base {
+    @apply w-full text-left border-collapse;
+  }
+  .table-head {
+    @apply text-xs uppercase tracking-wide text-surface-500 dark:text-surface-400 bg-surface-100 dark:bg-surface-800/60;
+  }
+  .table-row {
+    @apply border-b border-surface-200 dark:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-800/50;
+  }
+  .table-row:nth-child(odd) {
+    @apply bg-surface-50/60 dark:bg-surface-800/40;
   }
 }
 
@@ -203,6 +262,61 @@
   .animate-fade-in {
     animation: fadeIn 0.6s ease-out forwards;
     opacity: 0;
+  }
+  .animate-fade-up {
+    animation: fadeUp 0.5s ease-out forwards;
+    opacity: 0;
+  }
+  .animate-in-scale {
+    animation: inScale 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    transform-origin: center;
+  }
+  .animate-slide-right {
+    animation: slideRight 0.35s ease-out forwards;
+    opacity: 0;
+  }
+  .animate-tooltip-pop {
+    animation: tooltipPop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    transform-origin: left center;
+  }
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.2s infinite;
+  }
+  /* Micro-interaction helpers */
+  .hover-lift {
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -10px rgba(0,0,0,0.25);
+  }
+  .hover-press {
+    transition: transform 120ms ease;
+  }
+  .hover-press:active {
+    transform: translateY(1px) scale(0.98);
+  }
+  .hover-glow {
+    transition: box-shadow 200ms ease, transform 200ms ease;
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+    transform: translateY(-1px);
+  }
+  .tilt-on-hover {
+    transition: transform 220ms ease;
+  }
+  .tilt-on-hover:hover {
+    transform: perspective(600px) rotateX(2deg) rotateY(-2deg);
   }
   
   .animation-delay-200 {
@@ -230,6 +344,30 @@
   }
 }
 
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes inScale {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes tooltipPop {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
 /* Custom patterns and backgrounds */
 .bg-grid-pattern {
   background-image: 
@@ -243,25 +381,5 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
-/* Improved button styles */
-.btn-primary {
-  @apply bg-gradient-primary hover:shadow-glow text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transform hover:scale-105 inline-flex items-center;
-  min-height: 48px;
-  display: inline-flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
+/* Hero CTA button (orange gradient pill) */
 
-.btn-secondary {
-  @apply bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold py-3 px-6 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transform hover:-translate-y-0.5;
-}
-
-/* Gradient text improvements */
-.text-gradient {
-  @apply bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent;
-}
-
-/* Enhanced card styles */
-.card {
-  @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
-}
