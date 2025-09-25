@@ -50,10 +50,22 @@ const LoginPage = () => {
 
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white/90 dark:bg-surface-800/50 backdrop-blur-sm border border-gray-200 dark:border-surface-700 py-8 px-4 shadow-xl sm:rounded-xl sm:px-10">
+          {/* Debug info for development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-600 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <strong>Development Mode:</strong> Clerk OAuth may require proper dashboard configuration.
+                <br />
+                Check: <a href="https://clerk.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline">Clerk Dashboard</a> → Social Connections → Enable Google
+              </p>
+            </div>
+          )}
+
           <SignIn
             routing="path"
             path="/login"
             redirectUrl="/dashboard"
+            signUpUrl="/register"
             appearance={{
               elements: {
                 formButtonPrimary:

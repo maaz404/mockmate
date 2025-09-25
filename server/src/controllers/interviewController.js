@@ -57,14 +57,16 @@ const createInterview = async (req, res) => {
         ...config,
         questionCount: Math.min(config.questionCount || 10, questions.length),
         // Initialize adaptive difficulty if enabled
-        adaptiveDifficulty: config.adaptiveDifficulty?.enabled ? {
-          enabled: true,
-          initialDifficulty: config.difficulty,
-          currentDifficulty: config.difficulty,
-          difficultyHistory: [],
-        } : {
-          enabled: false,
-        },
+        adaptiveDifficulty: config.adaptiveDifficulty?.enabled
+          ? {
+              enabled: true,
+              initialDifficulty: config.difficulty,
+              currentDifficulty: config.difficulty,
+              difficultyHistory: [],
+            }
+          : {
+              enabled: false,
+            },
       },
       questions: questions.slice(0, config.questionCount || 10).map((q) => ({
         questionId: q._id,
@@ -72,6 +74,7 @@ const createInterview = async (req, res) => {
         category: q.category,
         difficulty: q.difficulty,
         timeAllocated: q.estimatedTime,
+        hasVideo: false, // Default to false, can be enabled based on question type
       })),
       status: "scheduled",
     });
@@ -192,15 +195,15 @@ const submitAnswer = async (req, res) => {
     let evaluation;
     try {
       console.log("Evaluating answer with AI for question:", qIndex);
-      
+
       // Create question object with necessary fields for AI evaluation
       const questionObj = {
         text: interview.questions[qIndex].questionText,
         category: interview.questions[qIndex].category,
-        type: interview.questions[qIndex].type || 'general',
-        difficulty: interview.questions[qIndex].difficulty
+        type: interview.questions[qIndex].type || "general",
+        difficulty: interview.questions[qIndex].difficulty,
       };
-      
+
       evaluation = await aiQuestionService.evaluateAnswer(
         questionObj,
         answer,
@@ -212,8 +215,8 @@ const submitAnswer = async (req, res) => {
       const questionObj = {
         text: interview.questions[qIndex].questionText,
         category: interview.questions[qIndex].category,
-        type: interview.questions[qIndex].type || 'general',
-        difficulty: interview.questions[qIndex].difficulty
+        type: interview.questions[qIndex].type || "general",
+        difficulty: interview.questions[qIndex].difficulty,
       };
       evaluation = aiQuestionService.getBasicEvaluation(questionObj, answer);
     }
@@ -222,41 +225,47 @@ const submitAnswer = async (req, res) => {
     interview.questions[qIndex].score = {
       overall: evaluation.score,
       rubricScores: evaluation.rubricScores || {},
-      breakdown: evaluation.breakdown || {}
+      breakdown: evaluation.breakdown || {},
     };
-    
+
     interview.questions[qIndex].feedback = {
       strengths: evaluation.strengths || [],
       improvements: evaluation.improvements || [],
       suggestions: evaluation.feedback || "",
-      modelAnswer: evaluation.modelAnswer || ""
+      modelAnswer: evaluation.modelAnswer || "",
     };
 
     // Track score for adaptive difficulty if enabled
     if (interview.config.adaptiveDifficulty?.enabled) {
-      const currentDifficulty = interview.questions[qIndex].difficulty || interview.config.difficulty;
-      
+      const currentDifficulty =
+        interview.questions[qIndex].difficulty || interview.config.difficulty;
+
       // Add to difficulty history for tracking
       if (!interview.config.adaptiveDifficulty.difficultyHistory) {
         interview.config.adaptiveDifficulty.difficultyHistory = [];
       }
-      
+
       // Update or add current question's score tracking
-      const existingEntryIndex = interview.config.adaptiveDifficulty.difficultyHistory.findIndex(
-        entry => entry.questionIndex === qIndex
-      );
-      
+      const existingEntryIndex =
+        interview.config.adaptiveDifficulty.difficultyHistory.findIndex(
+          (entry) => entry.questionIndex === qIndex
+        );
+
       const historyEntry = {
         questionIndex: qIndex,
         difficulty: currentDifficulty,
         score: evaluation.score || 0,
         timestamp: new Date(),
       };
-      
+
       if (existingEntryIndex >= 0) {
-        interview.config.adaptiveDifficulty.difficultyHistory[existingEntryIndex] = historyEntry;
+        interview.config.adaptiveDifficulty.difficultyHistory[
+          existingEntryIndex
+        ] = historyEntry;
       } else {
-        interview.config.adaptiveDifficulty.difficultyHistory.push(historyEntry);
+        interview.config.adaptiveDifficulty.difficultyHistory.push(
+          historyEntry
+        );
       }
     }
 
@@ -271,11 +280,14 @@ const submitAnswer = async (req, res) => {
         answer,
         interview.config
       );
-      
+
       if (followUpQuestions && followUpQuestions.length > 0) {
         interview.questions[qIndex].followUpQuestions = followUpQuestions;
         await interview.save();
-        console.log("Follow-up questions generated and saved:", followUpQuestions.length);
+        console.log(
+          "Follow-up questions generated and saved:",
+          followUpQuestions.length
+        );
       }
     } catch (error) {
       console.error("Follow-up generation failed:", error);
@@ -291,12 +303,24 @@ const submitAnswer = async (req, res) => {
 
     // Add adaptive difficulty info if enabled
     if (interview.config.adaptiveDifficulty?.enabled) {
-      const nextDifficulty = getNextDifficultyLevel(score.overall, interview.questions[qIndex].difficulty || interview.config.difficulty);
+      const nextDifficulty = getNextDifficultyLevel(
+        score.overall,
+        interview.questions[qIndex].difficulty || interview.config.difficulty
+      );
       responseData.adaptiveInfo = {
-        currentDifficulty: interview.questions[qIndex].difficulty || interview.config.difficulty,
+        currentDifficulty:
+          interview.questions[qIndex].difficulty || interview.config.difficulty,
         suggestedNextDifficulty: nextDifficulty,
-        difficultyWillChange: nextDifficulty !== (interview.questions[qIndex].difficulty || interview.config.difficulty),
-        scoreBasedRecommendation: score.overall < 60 ? "easier" : score.overall >= 80 ? "harder" : "same",
+        difficultyWillChange:
+          nextDifficulty !==
+          (interview.questions[qIndex].difficulty ||
+            interview.config.difficulty),
+        scoreBasedRecommendation:
+          score.overall < 60
+            ? "easier"
+            : score.overall >= 80
+            ? "harder"
+            : "same",
       };
     }
 
@@ -392,8 +416,8 @@ const generateFollowUp = async (req, res) => {
         fallback: [
           {
             text: "Can you elaborate more on your approach and explain any alternative solutions?",
-            type: "clarification"
-          }
+            type: "clarification",
+          },
         ],
       });
     }
@@ -521,10 +545,7 @@ const getInterviewDetails = async (req, res) => {
     const interview = await Interview.findOne({
       _id: interviewId,
       userId,
-    }).populate(
-      "questions.questionId",
-      "text category difficulty evaluationCriteria"
-    );
+    });
 
     if (!interview) {
       return res.status(404).json({
@@ -552,27 +573,38 @@ const getQuestionsForInterview = async (config, userProfile) => {
     console.log("Generating hybrid questions for config:", config);
 
     // Use hybrid service to generate questions (70% templates, 30% AI)
-    const hybridQuestions = await hybridQuestionService.generateHybridQuestions(config);
+    const hybridQuestions = await hybridQuestionService.generateHybridQuestions(
+      config
+    );
 
     if (hybridQuestions && hybridQuestions.length > 0) {
       console.log(`Generated ${hybridQuestions.length} hybrid questions`);
 
-      // Transform hybrid questions to match our interview schema
-      return hybridQuestions.map((question, index) => ({
-        _id: question.id || `hybrid_${Date.now()}_${index}`,
-        text: question.text,
-        category: question.category,
-        difficulty: question.difficulty,
-        type: question.type,
-        tags: question.tags || [],
-        experienceLevel: [config.experienceLevel],
-        estimatedTime: Math.floor(question.estimatedTime / 60) || 3, // Convert to minutes
-        source: question.source || 'hybrid',
-        generatedAt: question.generatedAt || new Date(),
-        isHybridGenerated: true,
-        stats: { timesUsed: 0, avgScore: 0 },
-        status: "active",
-      }));
+      // Save questions to database and return the saved documents
+      const savedQuestions = [];
+      for (const question of hybridQuestions) {
+        const questionDoc = new Question({
+          text: question.text,
+          category: question.category,
+          difficulty: question.difficulty,
+          type: question.type,
+          tags: question.tags || [],
+          experienceLevel: [config.experienceLevel],
+          estimatedTime: Math.max(
+            question.estimatedTime || question.timeEstimate * 60 || 180,
+            30
+          ), // Convert minutes to seconds, minimum 30 seconds
+          source: question.source || "hybrid",
+          generatedAt: question.generatedAt || new Date(),
+          isHybridGenerated: true,
+          keywords: question.keywords || [],
+          stats: { timesUsed: 0, avgScore: 0 },
+          status: "active",
+        });
+        const savedQuestion = await questionDoc.save();
+        savedQuestions.push(savedQuestion);
+      }
+      return savedQuestions;
     }
   } catch (error) {
     console.error(
@@ -583,27 +615,43 @@ const getQuestionsForInterview = async (config, userProfile) => {
 
   // Fallback to AI service if hybrid fails
   try {
-    const aiQuestions = await aiQuestionService.generateQuestions(config, userProfile);
-    
+    const aiQuestions = await aiQuestionService.generateQuestions({
+      ...config,
+      userProfile,
+      skills:
+        userProfile?.professionalInfo?.skills?.map((s) =>
+          typeof s === "object" ? s.name : s
+        ) || [],
+    });
+
     if (aiQuestions && aiQuestions.length > 0) {
       console.log(`Generated ${aiQuestions.length} AI fallback questions`);
-      
-      return aiQuestions.map((question, index) => ({
-        _id: `ai_${Date.now()}_${index}`,
-        text: question.question || question.text,
-        category: question.category || config.interviewType,
-        difficulty: question.difficulty || config.difficulty,
-        type: config.interviewType,
-        experienceLevel: [config.experienceLevel],
-        estimatedTime: question.timeLimit || 3,
-        isAIGenerated: true,
-        keywords: question.followUpHints || [],
-        stats: { timesUsed: 0, avgScore: 0 },
-        status: "active",
-      }));
+
+      // Save AI questions to database
+      const savedQuestions = [];
+      for (const question of aiQuestions) {
+        const questionDoc = new Question({
+          text: question.question || question.text,
+          category: question.category || config.interviewType,
+          difficulty: question.difficulty || config.difficulty,
+          type: config.interviewType,
+          experienceLevel: [config.experienceLevel],
+          estimatedTime: Math.max(question.timeLimit * 60 || 180, 30), // Convert minutes to seconds, minimum 30 seconds
+          isAIGenerated: true,
+          keywords: question.followUpHints || [],
+          stats: { timesUsed: 0, avgScore: 0 },
+          status: "active",
+        });
+        const savedQuestion = await questionDoc.save();
+        savedQuestions.push(savedQuestion);
+      }
+      return savedQuestions;
     }
   } catch (aiError) {
-    console.error("AI question generation also failed, falling back to database:", aiError);
+    console.error(
+      "AI question generation also failed, falling back to database:",
+      aiError
+    );
   }
 
   // Final fallback to database questions
@@ -730,16 +778,20 @@ const calculateBasicScore = (answer, question) => {
 const getNextDifficultyLevel = (currentScore, currentDifficulty) => {
   // Convert 100-point scale to 5-point scale: < 60 = < 3/5, >= 80 = >= 4/5
   const normalizedScore = currentScore / 20; // Convert to 5-point scale
-  
+
   const difficulties = ["beginner", "intermediate", "advanced"];
   const currentIndex = difficulties.indexOf(currentDifficulty);
-  
+
   if (normalizedScore < 3.0) {
     // Score < 3/5: make it easier (move down one level if possible)
-    return currentIndex > 0 ? difficulties[currentIndex - 1] : currentDifficulty;
+    return currentIndex > 0
+      ? difficulties[currentIndex - 1]
+      : currentDifficulty;
   } else if (normalizedScore >= 4.0) {
     // Score >= 4/5: make it harder (move up one level if possible)
-    return currentIndex < difficulties.length - 1 ? difficulties[currentIndex + 1] : currentDifficulty;
+    return currentIndex < difficulties.length - 1
+      ? difficulties[currentIndex + 1]
+      : currentDifficulty;
   } else {
     // Score 3-4/5: keep same difficulty
     return currentDifficulty;
@@ -780,7 +832,9 @@ const getAdaptiveQuestion = async (req, res) => {
     }
 
     // Check if there are more questions needed
-    const answeredQuestions = interview.questions.filter(q => q.response?.text).length;
+    const answeredQuestions = interview.questions.filter(
+      (q) => q.response?.text
+    ).length;
     if (answeredQuestions >= interview.config.questionCount) {
       return res.status(400).json({
         success: false,
@@ -789,19 +843,25 @@ const getAdaptiveQuestion = async (req, res) => {
     }
 
     // Get current difficulty level
-    let currentDifficulty = interview.config.adaptiveDifficulty.currentDifficulty || interview.config.difficulty;
-    
+    let currentDifficulty =
+      interview.config.adaptiveDifficulty.currentDifficulty ||
+      interview.config.difficulty;
+
     // If we have previous answers, check if we need to adjust difficulty
     if (answeredQuestions > 0) {
       const lastQuestion = interview.questions[answeredQuestions - 1];
       if (lastQuestion.score?.overall !== undefined) {
-        const nextDifficulty = getNextDifficultyLevel(lastQuestion.score.overall, currentDifficulty);
-        
+        const nextDifficulty = getNextDifficultyLevel(
+          lastQuestion.score.overall,
+          currentDifficulty
+        );
+
         // Update current difficulty if it changed
         if (nextDifficulty !== currentDifficulty) {
           currentDifficulty = nextDifficulty;
-          interview.config.adaptiveDifficulty.currentDifficulty = currentDifficulty;
-          
+          interview.config.adaptiveDifficulty.currentDifficulty =
+            currentDifficulty;
+
           // Track difficulty change
           interview.config.adaptiveDifficulty.difficultyHistory.push({
             questionIndex: answeredQuestions,
@@ -821,7 +881,7 @@ const getAdaptiveQuestion = async (req, res) => {
     };
 
     const questions = await getQuestionsForInterview(adaptiveConfig, null);
-    
+
     if (questions.length === 0) {
       return res.status(400).json({
         success: false,
@@ -830,13 +890,15 @@ const getAdaptiveQuestion = async (req, res) => {
     }
 
     // Select the best question (avoid duplicates if possible)
-    const existingQuestionIds = interview.questions.map(q => q.questionId?.toString() || q._id);
-    const availableQuestions = questions.filter(q => 
-      !existingQuestionIds.includes(q._id?.toString() || q.id)
+    const existingQuestionIds = interview.questions.map(
+      (q) => q.questionId?.toString() || q._id
     );
-    
-    const selectedQuestion = availableQuestions.length > 0 ? 
-      availableQuestions[0] : questions[0];
+    const availableQuestions = questions.filter(
+      (q) => !existingQuestionIds.includes(q._id?.toString() || q.id)
+    );
+
+    const selectedQuestion =
+      availableQuestions.length > 0 ? availableQuestions[0] : questions[0];
 
     // Add the new question to the interview
     const newQuestion = {
@@ -864,16 +926,22 @@ const getAdaptiveQuestion = async (req, res) => {
         },
         adaptiveInfo: {
           currentDifficulty,
-          previousDifficulty: answeredQuestions > 0 ? 
-            interview.config.adaptiveDifficulty.difficultyHistory[interview.config.adaptiveDifficulty.difficultyHistory.length - 2]?.difficulty || interview.config.difficulty :
-            interview.config.difficulty,
-          difficultyChanged: answeredQuestions > 0 && 
+          previousDifficulty:
+            answeredQuestions > 0
+              ? interview.config.adaptiveDifficulty.difficultyHistory[
+                  interview.config.adaptiveDifficulty.difficultyHistory.length -
+                    2
+                ]?.difficulty || interview.config.difficulty
+              : interview.config.difficulty,
+          difficultyChanged:
+            answeredQuestions > 0 &&
             interview.config.adaptiveDifficulty.difficultyHistory.length > 0 &&
-            interview.config.adaptiveDifficulty.difficultyHistory[interview.config.adaptiveDifficulty.difficultyHistory.length - 1]?.questionIndex === answeredQuestions,
+            interview.config.adaptiveDifficulty.difficultyHistory[
+              interview.config.adaptiveDifficulty.difficultyHistory.length - 1
+            ]?.questionIndex === answeredQuestions,
         },
       },
     });
-
   } catch (error) {
     console.error("Get adaptive question error:", error);
     res.status(500).json({

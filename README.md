@@ -35,7 +35,7 @@ MockMate is a comprehensive AI-powered interview practice application that helps
 ### Frontend
 
 - **React.js** - Modern JavaScript library for building user interfaces
-- **Tailwind CSS** - Utility-first CSS framework for rapid UI development
+- **Tailwind CSS** - Utility-first CSS framework for rapid UI evelopment
 - **React Router** - Declarative routing for React applications
 - **Axios** - HTTP client for API requests
 - **React Hook Form** - Performant forms with easy validation

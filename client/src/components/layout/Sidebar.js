@@ -236,31 +236,41 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const isActive = (path) => location.pathname === path;
 
   const renderNavItem = (item) => (
-    <Link
-      key={item.path}
-      to={item.path}
-      onClick={() => setIsMobileOpen(false)} // Close mobile menu when clicking nav item
-      className={`
-        flex items-center px-1.5 py-1.5 text-sm font-medium rounded-lg transition-all duration-200
-        ${
-          isActive(item.path)
-            ? "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-500"
-            : "text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800/50"
-        }
-        ${isCollapsed ? "justify-center px-3" : "justify-start"}
-      `}
-    >
-      <span
-        className={`flex-shrink-0 ${
-          isActive(item.path)
-            ? "text-primary-500 dark:text-primary-400"
-            : "text-surface-500 dark:text-surface-400"
-        }`}
+    <div key={item.path} className="relative group">
+      <Link
+        to={item.path}
+        onClick={() => setIsMobileOpen(false)} // Close mobile menu when clicking nav item
+        className={`
+          flex items-center px-1.5 py-1.5 text-sm font-medium rounded-lg transition-all duration-200
+          ${
+            isActive(item.path)
+              ? "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-500"
+              : "text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800/50"
+          }
+          ${isCollapsed ? "justify-center px-3" : "justify-start"}
+        `}
       >
-        {item.icon}
-      </span>
-      {!isCollapsed && <span className="ml-3 truncate">{item.name}</span>}
-    </Link>
+        <span
+          className={`flex-shrink-0 ${
+            isActive(item.path)
+              ? "text-primary-500 dark:text-primary-400"
+              : "text-surface-500 dark:text-surface-400"
+          }`}
+        >
+          {item.icon}
+        </span>
+        {!isCollapsed && <span className="ml-3 truncate">{item.name}</span>}
+      </Link>
+
+      {/* Tooltip for collapsed sidebar */}
+      {isCollapsed && (
+        <div className="absolute left-14 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out pointer-events-none z-50 group-hover:translate-x-1">
+          <div className="bg-black text-white px-3 py-2 rounded-lg shadow-xl text-sm font-medium whitespace-nowrap">
+            {item.name}
+          </div>
+        </div>
+      )}
+    </div>
   );
 
   return (

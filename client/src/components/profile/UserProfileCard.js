@@ -19,7 +19,10 @@ const UserProfileCard = () => {
           company: userProfile.professionalInfo?.company || "",
           experience: userProfile.professionalInfo?.experience || "entry",
           industry: userProfile.professionalInfo?.industry || "",
-          skills: userProfile.professionalInfo?.skills || [],
+          skills:
+            userProfile.professionalInfo?.skills?.map((skill) =>
+              typeof skill === "object" ? skill.name : skill
+            ) || [],
           careerGoals: userProfile.professionalInfo?.careerGoals || "",
         },
       });
@@ -93,7 +96,10 @@ const UserProfileCard = () => {
           company: userProfile.professionalInfo?.company || "",
           experience: userProfile.professionalInfo?.experience || "entry",
           industry: userProfile.professionalInfo?.industry || "",
-          skills: userProfile.professionalInfo?.skills || [],
+          skills:
+            userProfile.professionalInfo?.skills?.map((skill) =>
+              typeof skill === "object" ? skill.name : skill
+            ) || [],
           careerGoals: userProfile.professionalInfo?.careerGoals || "",
         },
       });
@@ -321,7 +327,7 @@ const UserProfileCard = () => {
                     key={index}
                     className="px-2 py-1 bg-primary-100 text-primary-800 text-sm rounded-full"
                   >
-                    {skill}
+                    {typeof skill === "object" ? skill.name : skill}
                   </span>
                 ))
               ) : (

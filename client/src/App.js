@@ -46,10 +46,21 @@ function App() {
           <h1 className="text-xl font-bold text-red-400 mb-4">
             Configuration Error
           </h1>
-          <p className="text-white">
+          <p className="text-white mb-4">
             Clerk publishable key is required. Please add
             REACT_APP_CLERK_PUBLISHABLE_KEY to your .env file.
           </p>
+          <div className="text-left bg-slate-800 p-4 rounded-lg max-w-md">
+            <h3 className="text-yellow-400 font-semibold mb-2">Quick Fix:</h3>
+            <ol className="text-sm text-gray-300 space-y-1">
+              <li>1. Go to <a href="https://clerk.com" className="text-blue-400 underline" target="_blank" rel="noopener noreferrer">clerk.com</a></li>
+              <li>2. Create/sign in to your account</li>
+              <li>3. Create a new application</li>
+              <li>4. Copy your Publishable Key</li>
+              <li>5. Add it to client/.env</li>
+              <li>6. Configure Google OAuth in Clerk dashboard</li>
+            </ol>
+          </div>
         </div>
       </div>
     );
@@ -69,6 +80,12 @@ function App() {
           colorTextSecondary: "#cbd5e1",
         },
       }}
+      // Add proper redirect URLs for OAuth
+      redirectUrl={window.location.origin}
+      signInUrl="/login"
+      signUpUrl="/register"
+      afterSignInUrl="/dashboard"
+      afterSignUpUrl="/dashboard"
     >
       <ThemeProvider>
         <AuthProvider>

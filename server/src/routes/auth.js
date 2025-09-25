@@ -7,10 +7,43 @@ const { body, validationResult } = require("express-validator");
 const router = express.Router();
 
 /**
- * @desc    Sync user profile with Clerk data
- * @route   POST /api/auth/sync
- * @access  Private
+ * @desc    Test Clerk connection and OAuth setup
+ * @route   GET /api/auth/test
+ * @access  Public (for debugging)
  */
+router.get("/test", async (req, res) => {
+  try {
+    // Test Clerk SDK connection
+    const testUser = await clerkClient.users.getUserList({ limit: 1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Clerk authentication is working",
+      clerkConfigured: true,
+      userCount: testUser.length,
+      environment: process.env.NODE_ENV,
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ? "Set" : "Missing",
+      clerkSecretKey: process.env.CLERK_SECRET_KEY ? "Set" : "Missing",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Clerk authentication not configured properly",
+      message: error.message,
+      clerkConfigured: false,
+      environment: process.env.NODE_ENV,
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ? "Set" : "Missing",
+      clerkSecretKey: process.env.CLERK_SECRET_KEY ? "Set" : "Missing",
+      troubleshooting: {
+        step1: "Check if CLERK_SECRET_KEY is set in server/.env",
+        step2: "Verify Clerk application exists at https://clerk.com/dashboard",
+        step3: "Ensure Google OAuth is enabled in Social Connections",
+        step4: "Add http://localhost:3000 to Authorized redirect URIs",
+        step5: "Restart both server and client applications"
+      }
+    });
+  }
+});
 router.post("/sync", requireAuth, async (req, res) => {
   try {
     const { userId } = req.auth;

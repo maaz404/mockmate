@@ -83,7 +83,9 @@ const QuickActions = ({ onStartInterview, userProfile }) => {
             >
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <span className="text-2xl filter group-hover:brightness-110 transition-all duration-300">{interview.icon}</span>
+                  <span className="text-2xl filter group-hover:brightness-110 transition-all duration-300">
+                    {interview.icon}
+                  </span>
                 </div>
                 <div className="ml-4 flex-1">
                   <h4 className="text-base font-medium text-white group-hover:text-primary-300 transition-colors">
@@ -126,10 +128,10 @@ const QuickActions = ({ onStartInterview, userProfile }) => {
         {/* Custom Interview Button */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <button
-            className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors font-medium"
-            disabled={!userProfile?.onboardingCompleted}
+            disabled
+            className="w-full bg-gray-300 text-gray-500 py-3 px-4 rounded-lg cursor-not-allowed font-medium"
           >
-            Create Custom Interview
+            Create Custom Interview (Coming Soon)
           </button>
         </div>
       </div>

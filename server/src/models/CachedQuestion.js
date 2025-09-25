@@ -19,12 +19,12 @@ const cachedQuestionSchema = new mongoose.Schema(
       },
       experienceLevel: {
         type: String,
-        enum: ["beginner", "intermediate", "advanced"],
+        enum: ["entry", "junior", "mid", "senior", "lead", "executive"],
         required: true,
       },
       interviewType: {
         type: String,
-        enum: ["technical", "behavioral", "mixed"],
+        enum: ["technical", "behavioral", "system-design", "mixed"],
         required: true,
       },
       difficulty: {

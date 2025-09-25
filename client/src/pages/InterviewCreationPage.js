@@ -133,23 +133,36 @@ const InterviewCreationPage = () => {
     setLoading(true);
 
     try {
+      // Map client values to server expected values
+      const experienceLevelMapping = {
+        entry: "entry",
+        intermediate: "mid",
+        senior: "senior",
+        expert: "executive",
+      };
+
+      const difficultyMapping = {
+        easy: "beginner",
+        medium: "intermediate",
+        hard: "advanced",
+      };
+
       // Create interview
       const response = await apiService.post("/interviews", {
-        ...formData,
-        userId: user.id,
+        config: {
+          ...formData,
+          experienceLevel:
+            experienceLevelMapping[formData.experienceLevel] ||
+            formData.experienceLevel,
+          difficulty:
+            difficultyMapping[formData.difficulty] || formData.difficulty,
+          questionCount: Math.floor(formData.duration / 3), // Roughly 3 minutes per question
+        },
       });
 
       if (response.success) {
-        // Generate questions for the interview
-        const questionsResponse = await apiService.post(
-          `/interviews/${response.data._id}/questions`,
-          { count: Math.floor(formData.duration / 3) } // Roughly 3 minutes per question
-        );
-
-        if (questionsResponse.success) {
-          // Redirect to the interview
-          navigate(`/interview/${response.data._id}`);
-        }
+        // Redirect to the interview
+        navigate(`/interview/${response.data._id}`);
       }
     } catch (error) {
       alert("Failed to create interview. Please try again.");

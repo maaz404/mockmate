@@ -7,6 +7,7 @@ const {
   updateProfile,
   getAnalytics,
   completeOnboarding,
+  saveOnboardingProgress,
   uploadResume,
 } = require("../controllers/userController");
 
@@ -74,6 +75,11 @@ router.get("/analytics", requireAuth, getAnalytics);
 // @route   POST /api/users/onboarding/complete
 // @access  Private
 router.post("/onboarding/complete", requireAuth, completeOnboarding);
+
+// @desc    Save onboarding progress
+// @route   POST /api/users/onboarding/save-progress
+// @access  Private
+router.post("/onboarding/save-progress", requireAuth, saveOnboardingProgress);
 
 // @desc    Upload resume
 // @route   POST /api/users/resume

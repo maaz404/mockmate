@@ -53,13 +53,25 @@ const DashboardPage = () => {
 
   const startQuickInterview = async (type) => {
     try {
+      // Map experience levels to match server expectations
+      const experienceMapping = {
+        entry: "entry",
+        junior: "junior",
+        mid: "mid",
+        senior: "senior",
+        lead: "lead",
+        executive: "executive",
+      };
+
       const interviewConfig = {
         jobRole:
           userProfile?.professionalInfo?.currentRole || "Software Developer",
         industry: userProfile?.professionalInfo?.industry || "Technology",
-        experienceLevel: userProfile?.professionalInfo?.experience || "junior",
+        experienceLevel:
+          experienceMapping[userProfile?.professionalInfo?.experience] ||
+          "junior",
         interviewType: type,
-        difficulty: userProfile?.preferences?.difficulty || "beginner",
+        difficulty: "intermediate", // Default to intermediate for quick interviews
         duration: 30,
         questionCount: 10,
       };
@@ -68,10 +80,13 @@ const DashboardPage = () => {
         config: interviewConfig,
       });
 
-      navigate(`/interview/${response.data._id}`);
+      if (response.success) {
+        navigate(`/interview/${response.data._id}`);
+      } else {
+        alert("Failed to create interview. Please try again.");
+      }
     } catch (error) {
-      // Handle interview creation error
-      // Could show a toast notification here
+      alert("Failed to create interview. Please try again.");
     }
   };
 

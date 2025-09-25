@@ -212,24 +212,19 @@ const ComprehensiveDashboard = () => {
                         <div className="w-20 bg-gray-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
-                              skill.proficiency === "beginner"
+                              skill.confidence <= 2
                                 ? "bg-red-500"
-                                : skill.proficiency === "intermediate"
+                                : skill.confidence <= 3
                                 ? "bg-yellow-500"
                                 : "bg-green-500"
                             }`}
                             style={{
-                              width:
-                                skill.proficiency === "beginner"
-                                  ? "33%"
-                                  : skill.proficiency === "intermediate"
-                                  ? "66%"
-                                  : "100%",
+                              width: `${(skill.confidence / 5) * 100}%`,
                             }}
                           ></div>
                         </div>
                         <span className="text-xs text-gray-500 capitalize w-16">
-                          {skill.proficiency}
+                          {skill.confidence}
                         </span>
                       </div>
                     </div>
