@@ -99,7 +99,7 @@ const createInterview = async (req, res) => {
 const startInterview = async (req, res) => {
   try {
     const { userId } = req.auth;
-  const interviewId = req.params.interviewId || req.params.id;
+    const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -154,8 +154,8 @@ const startInterview = async (req, res) => {
 const submitAnswer = async (req, res) => {
   try {
     const { userId } = req.auth;
-  const interviewId = req.params.interviewId || req.params.id;
-  const { questionIndex } = req.params;
+    const interviewId = req.params.interviewId || req.params.id;
+    const { questionIndex } = req.params;
     const { answer, timeSpent } = req.body;
 
     const interview = await Interview.findOne({
@@ -343,8 +343,8 @@ const submitAnswer = async (req, res) => {
 const generateFollowUp = async (req, res) => {
   try {
     const { userId } = req.auth;
-  const interviewId = req.params.interviewId || req.params.id;
-  const { questionIndex } = req.params;
+    const interviewId = req.params.interviewId || req.params.id;
+    const { questionIndex } = req.params;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -436,7 +436,7 @@ const generateFollowUp = async (req, res) => {
 const completeInterview = async (req, res) => {
   try {
     const { userId } = req.auth;
-  const interviewId = req.params.interviewId || req.params.id;
+    const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -542,7 +542,7 @@ const getUserInterviews = async (req, res) => {
 const getInterviewDetails = async (req, res) => {
   try {
     const { userId } = req.auth;
-  const interviewId = req.params.interviewId || req.params.id;
+    const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -804,7 +804,7 @@ const getNextDifficultyLevel = (currentScore, currentDifficulty) => {
 const getAdaptiveQuestion = async (req, res) => {
   try {
     const { userId } = req.auth;
-  const interviewId = req.params.interviewId || req.params.id;
+    const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -987,7 +987,10 @@ const composeResultsPayload = (interviewDoc) => {
       userAnswer: q.response?.text || "",
       timeSpent: q.timeSpent || 0,
       score: q.score
-        ? { overall: q.score.overall ?? 0, rubricScores: q.score.rubricScores || {} }
+        ? {
+            overall: q.score.overall ?? 0,
+            rubricScores: q.score.rubricScores || {},
+          }
         : 0,
       feedback: {
         strengths: q.feedback?.strengths || [],
@@ -1006,7 +1009,11 @@ const composeResultsPayload = (interviewDoc) => {
           ],
     focusAreas: [
       { skill: "communication", priority: "high", currentLevel: "developing" },
-      { skill: "problem-solving", priority: "medium", currentLevel: "intermediate" },
+      {
+        skill: "problem-solving",
+        priority: "medium",
+        currentLevel: "intermediate",
+      },
     ],
   };
 
@@ -1021,7 +1028,9 @@ const getInterviewResults = async (req, res) => {
 
     const interview = await Interview.findOne({ _id: interviewId, userId });
     if (!interview) {
-      return res.status(404).json({ success: false, message: "Interview not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Interview not found" });
     }
 
     // Ensure results are computed if missing
@@ -1034,7 +1043,9 @@ const getInterviewResults = async (req, res) => {
     return res.json({ success: true, data: payload });
   } catch (error) {
     console.error("Get interview results error:", error);
-    return res.status(500).json({ success: false, message: "Failed to fetch interview results" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch interview results" });
   }
 };
 

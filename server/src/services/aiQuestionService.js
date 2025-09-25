@@ -321,7 +321,7 @@ Return in JSON format:
       });
 
       const content = response.choices[0]?.message?.content?.trim();
-      
+
       // Try to parse JSON response
       try {
         const parsed = JSON.parse(content);
@@ -329,12 +329,15 @@ Return in JSON format:
       } catch (parseError) {
         // Fallback: try to extract questions from text
         const questions = content
-          .split('\n')
-          .filter((line) => line.trim() && (line.includes('?') || line.match(/^\d+\./)))
+          .split("\n")
+          .filter(
+            (line) =>
+              line.trim() && (line.includes("?") || line.match(/^\d+\./))
+          )
           .slice(0, 2)
           .map((line) => ({
-            text: line.replace(/^\d+\.\s*/, '').trim(),
-            type: 'clarification',
+            text: line.replace(/^\d+\.\s*/, "").trim(),
+            type: "clarification",
           }));
 
         return questions; // return array (possibly empty) for graceful handling
@@ -360,8 +363,8 @@ Question: "${question.text}"
 Answer: "${answer}"
 Job Role: ${params.jobRole}
 Experience Level: ${params.experienceLevel}
-Question Category: ${question.category || 'general'}
-Question Type: ${question.type || 'general'}
+Question Category: ${question.category || "general"}
+Question Type: ${question.type || "general"}
 
 Please provide evaluation in JSON format:
 {
@@ -410,15 +413,18 @@ Provide exactly 2 specific, actionable improvement suggestions.`;
 
       if (jsonMatch) {
         const parsedResult = JSON.parse(jsonMatch[0]);
-        
+
         // Ensure rubric scores are within 1-5 range
         if (parsedResult.rubricScores) {
-          Object.keys(parsedResult.rubricScores).forEach(key => {
+          Object.keys(parsedResult.rubricScores).forEach((key) => {
             const score = parsedResult.rubricScores[key];
-            parsedResult.rubricScores[key] = Math.max(1, Math.min(5, Math.round(score)));
+            parsedResult.rubricScores[key] = Math.max(
+              1,
+              Math.min(5, Math.round(score))
+            );
           });
         }
-        
+
         return parsedResult;
       }
     } catch (error) {
@@ -441,10 +447,20 @@ Provide exactly 2 specific, actionable improvement suggestions.`;
 
     // Generate basic rubric scores based on answer analysis
     const rubricScores = {
-      relevance: hasKeywords ? Math.min(5, Math.floor(baseScore / 20) + 1) : Math.max(1, Math.floor(baseScore / 25)),
-      clarity: wordCount > 20 ? Math.min(5, Math.floor(baseScore / 20)) : Math.max(1, Math.floor(baseScore / 30)),
-      depth: wordCount > 50 ? Math.min(5, Math.floor(baseScore / 18)) : Math.max(1, Math.floor(baseScore / 30)),
-      structure: /[.!?]/.test(answer) ? Math.min(5, Math.floor(baseScore / 20)) : Math.max(1, Math.floor(baseScore / 35))
+      relevance: hasKeywords
+        ? Math.min(5, Math.floor(baseScore / 20) + 1)
+        : Math.max(1, Math.floor(baseScore / 25)),
+      clarity:
+        wordCount > 20
+          ? Math.min(5, Math.floor(baseScore / 20))
+          : Math.max(1, Math.floor(baseScore / 30)),
+      depth:
+        wordCount > 50
+          ? Math.min(5, Math.floor(baseScore / 18))
+          : Math.max(1, Math.floor(baseScore / 30)),
+      structure: /[.!?]/.test(answer)
+        ? Math.min(5, Math.floor(baseScore / 20))
+        : Math.max(1, Math.floor(baseScore / 35)),
     };
 
     // Generate basic model answer based on question type
@@ -464,14 +480,20 @@ Provide exactly 2 specific, actionable improvement suggestions.`;
           : ["Direct answer"],
       improvements:
         wordCount < 30
-          ? ["Provide more specific details and examples", "Structure your response with clear points"]
-          : ["Consider addressing potential edge cases", "Add concrete examples to strengthen your answer"],
+          ? [
+              "Provide more specific details and examples",
+              "Structure your response with clear points",
+            ]
+          : [
+              "Consider addressing potential edge cases",
+              "Add concrete examples to strengthen your answer",
+            ],
       feedback: `Your answer ${
         wordCount > 50
           ? "shows good detail and understanding"
           : "could benefit from more elaboration and examples"
       }.`,
-      modelAnswer
+      modelAnswer,
     };
   }
 
@@ -479,15 +501,15 @@ Provide exactly 2 specific, actionable improvement suggestions.`;
    * Generate a basic model answer for fallback scenarios
    */
   generateBasicModelAnswer(question) {
-    const questionType = question.type || 'general';
-    const category = question.category || 'general';
-    
+    const questionType = question.type || "general";
+    const category = question.category || "general";
+
     switch (questionType) {
-      case 'technical':
+      case "technical":
         return `A strong technical answer would include: 1) Clear explanation of the concept, 2) Practical implementation details, 3) Relevant examples or use cases, 4) Consideration of alternatives or trade-offs.`;
-      case 'behavioral':
+      case "behavioral":
         return `A strong behavioral answer would follow the STAR method: 1) Situation - context and background, 2) Task - what needed to be accomplished, 3) Action - specific steps taken, 4) Result - outcomes and lessons learned.`;
-      case 'system-design':
+      case "system-design":
         return `A strong system design answer would cover: 1) Requirements clarification, 2) High-level architecture, 3) Component design and data flow, 4) Scalability and performance considerations.`;
       default:
         return `A strong answer would be well-structured, directly address the question, provide specific examples, and demonstrate clear understanding of ${category} concepts.`;
