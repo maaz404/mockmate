@@ -351,7 +351,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       {/* Sidebar */}
       <div
         className={`
-          fixed top-0 left-0 z-50 h-full bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 transition-all duration-300 overflow-y-auto shadow-lg
+          fixed top-0 left-0 z-50 h-full bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 transition-all duration-300 shadow-lg flex flex-col overflow-hidden
           ${isCollapsed ? "w-12" : "w-52"}
           ${
             isMobileOpen
@@ -424,7 +424,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-4">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
           {navigationItems.map((section) => (
             <div key={section.section}>
               {!isCollapsed && (
@@ -440,7 +440,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         </nav>
 
         {/* User section */}
-        <div className="border-t border-surface-200 dark:border-surface-800 p-2 space-y-2">
+        <div className="mt-auto border-t border-surface-200 dark:border-surface-800 p-2 space-y-2">
           {/* Dark Mode Toggle - Always visible */}
           <div
             className={`flex items-center ${
