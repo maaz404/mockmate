@@ -14,19 +14,17 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   });
 
   const showTooltip = (e, text) => {
-    // Use the icon's bounding box when collapsed so the tooltip aligns to the icon,
-    // not to the full link width that differs between expanded/collapsed states.
+    // Anchor to the nav link container center for precise vertical alignment
+    // with the icon, and round to whole pixels to avoid subpixel drift.
     const container = e.currentTarget;
-    const icon = container.querySelector("svg");
-    const link = container.querySelector('a, [role="link"]');
-    const anchor = icon || link || container;
-    const rect = anchor.getBoundingClientRect();
+    const link = container.querySelector('a, [role="link"]') || container;
+    const rect = link.getBoundingClientRect();
 
     setTooltip({
       visible: true,
       text,
-      top: rect.top + rect.height / 2,
-      left: rect.right + 12, // consistent gap next to icon
+      top: Math.round(rect.top + rect.height / 2),
+      left: Math.round(rect.right + 12), // consistent gap next to icon
     });
   };
 
@@ -274,7 +272,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       <Link
         to={item.path}
         onClick={() => setIsMobileOpen(false)} // Close mobile menu when clicking nav item
-        className={`sidebar-link ${
+        className={`sidebar-link items-center ${
           isActive(item.path) ? "sidebar-link-active" : ""
         } ${isCollapsed ? "justify-center px-3" : "justify-start"}`}
       >
@@ -341,7 +339,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           className="fixed pointer-events-none z-[9999] -translate-y-1/2 transition-all duration-150 ease-out animate-tooltip-pop"
           style={{ top: tooltip.top, left: tooltip.left }}
         >
-          <div className="relative bg-neutral-900 text-white px-3 py-1.5 rounded-lg shadow-xl text-sm font-medium whitespace-nowrap">
+          <div className="relative bg-neutral-900 text-white px-3 py-1.5 rounded-lg shadow-xl text-sm font-medium whitespace-nowrap flex items-center">
             <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-neutral-900 rotate-45 rounded-[2px]"></span>
             {tooltip.text}
           </div>
