@@ -9,15 +9,36 @@ MockMate is a comprehensive AI-powered interview practice application that helps
 
 ## 🎨 Recent Updates
 
-**NEW**: Complete UI redesign to match FinalRound AI's modern dark aesthetic! The landing page now features:
+Over the past few days we delivered major stability and feature work across the stack:
 
-- Professional dark theme with gradients
-- Interactive animations and micro-interactions
-- Mobile-responsive design with smooth transitions
-- Enhanced typography using Inter font family
-- Modular component architecture
+- UI Polish & Theming
+   - Modern dark theme with teal accents, refined typography, and responsive layout
+   - Hover-only scrollbars, improved cards, and dashboard-wide consistency
+   - Favicons, manifest polish, and accessibility improvements (focus, aria-live)
 
-📖 **[View Complete Redesign Summary](UI_REDESIGN_SUMMARY.md)**
+- Onboarding Experience
+   - Presets, smart defaults from recent activity, and live session preview
+   - Gentle validation and micro-coaching with an advanced disclosure for facial analysis
+   - Autosave + Reset to defaults (one-click) with local persistence
+
+- Coding & Judge0 Integration
+   - Secure multi-language execution via Judge0 (RapidAPI) with health endpoint
+   - Local JS-only fallback when Judge0 is not configured; UI disables other langs
+   - Expanded harnesses: JS/Python/Java; limited C++ support; explicit C guidance
+   - API: `/api/coding/health`, `/api/coding/test`, session flows
+   - Guide: see JUDGE0_SETUP_GUIDE.md
+
+- Interview Intelligence
+   - Adaptive difficulty with history tracking and dynamic next-question selection
+   - AI evaluation with robust fallback scoring and follow-up generation
+   - Hybrid question generation (templates + AI) with DB fallbacks
+
+- Dev Productivity & Stability
+   - Mock auth fallback (development) to run without Clerk tokens
+   - Clerk global middleware skipped in mock mode; route-level auth injects test user
+   - Clear server health `/api/health` and coding health `/api/coding/health`
+
+📖 Useful docs: [UI Redesign Summary](UI_REDESIGN_SUMMARY.md) • [Judge0 Setup](JUDGE0_SETUP_GUIDE.md) • [Clerk Setup](CLERK_SETUP_GUIDE.md)
 
 ## 🚀 Features
 
@@ -26,7 +47,7 @@ MockMate is a comprehensive AI-powered interview practice application that helps
 - **Facial Expression Analysis**: Real-time analysis of facial expressions and body language
 - **Detailed Feedback**: AI-powered evaluation of responses with actionable insights
 - **Performance Analytics**: Track progress over time with comprehensive reports
-- **Coding Challenges**: In-browser code editor for technical interviews
+- **Coding Challenges**: In-browser code editor (Monaco) with multi-language support via Judge0; JS local fallback
 - **Multiple Interview Types**: Behavioral, technical, and mixed interview formats
 - **User Management**: Secure authentication and profile management
 
@@ -40,7 +61,7 @@ MockMate is a comprehensive AI-powered interview practice application that helps
 - **Axios** - HTTP client for API requests
 - **React Hook Form** - Performant forms with easy validation
 - **Framer Motion** - Production-ready motion library for React
-- **React Query** - Data fetching and caching library
+- **react-hot-toast**, **lucide-react** for UI affordances
 
 ### Backend
 
@@ -48,7 +69,7 @@ MockMate is a comprehensive AI-powered interview practice application that helps
 - **Express.js** - Fast, unopinionated web framework for Node.js
 - **MongoDB** - NoSQL database for flexible data storage
 - **Mongoose** - MongoDB object modeling for Node.js
-- **JWT** - JSON Web Tokens for secure authentication
+- **Clerk** - Authentication (skipped in dev with mock fallback)
 - **OpenAI API** - AI-powered question generation and response evaluation
 
 ### Additional Tools
@@ -56,6 +77,7 @@ MockMate is a comprehensive AI-powered interview practice application that helps
 - **WebRTC** - Real-time communication for video/audio recording
 - **Face-api.js** - Face detection and expression analysis
 - **Monaco Editor** - Code editor for technical interviews
+- **Judge0 (RapidAPI)** - Sandboxed code execution (multi-language)
 - **Socket.io** - Real-time bidirectional event-based communication
 - **Cloudinary** - Cloud-based media management
 - **Stripe** - Payment processing for subscriptions
@@ -145,12 +167,24 @@ mockmate/
    cp .env.example .env
    ```
 
-   Edit the `.env` file with your configuration:
+   Edit `server/.env` with your configuration (minimal for dev):
 
-   - Database connection string
-   - JWT secret key
-   - OpenAI API key
-   - Other service API keys
+   ```env
+   PORT=5000
+   NODE_ENV=development
+   MONGODB_URI=<your mongodb uri>
+   CLIENT_URL=http://localhost:3000
+   
+   # Dev auth fallback (no Clerk required in dev)
+   MOCK_AUTH_FALLBACK=true
+   
+   # Optional: Judge0 for multi-language code execution
+   JUDGE0_API_URL=https://judge0-ce.p.rapidapi.com
+   RAPIDAPI_KEY=<your rapidapi key>
+   
+   # Optional: OpenAI
+   OPENAI_API_KEY=<your openai api key>
+   ```
 
 4. **Start Development Servers**
 
@@ -198,11 +232,13 @@ NODE_ENV=development
 # Database
 MONGODB_URI=mongodb://localhost:27017/mockmate
 
-# JWT Configuration
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRE=7d
+MOCK_AUTH_FALLBACK=true # dev only to bypass Clerk
 
-# OpenAI Configuration
+# Judge0 (optional for multi-language code execution)
+JUDGE0_API_URL=https://judge0-ce.p.rapidapi.com
+RAPIDAPI_KEY=your_rapidapi_key
+
+# OpenAI (optional)
 OPENAI_API_KEY=your_openai_api_key
 
 # Email Configuration
@@ -234,7 +270,12 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
    - Add your IP address to whitelist
    - Update MONGODB_URI in .env file
 
-## 🚦 API Endpoints
+## 🚦 API Endpoints (selected)
+
+### Health
+
+- `GET /api/health` - Server health
+- `GET /api/coding/health` - Judge0 availability and languages
 
 ### Authentication
 
@@ -258,6 +299,15 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 - `POST /api/questions/generate` - Generate AI questions
 
 ### Reports
+### Coding
+
+- `POST /api/coding/test` - Stateless code execution for a predefined challenge
+- `POST /api/coding/session` - Create coding session (scoped to an interview)
+- `GET /api/coding/session/:sessionId/current` - Get current challenge
+- `POST /api/coding/session/:sessionId/submit` - Submit solution
+- `POST /api/coding/session/:sessionId/next` - Advance to next challenge
+- `GET /api/coding/session/:sessionId/status` - Session progress
+- `POST /api/coding/session/:sessionId/complete` - End session
 
 - `POST /api/reports/generate` - Generate performance report
 - `GET /api/reports` - Get user reports
@@ -270,6 +320,7 @@ The application uses a custom design system built with Tailwind CSS:
 - **Typography**: Inter font family with custom font weights
 - **Components**: Cards, buttons, form inputs, modals, and more
 - **Animations**: Smooth transitions and micro-interactions
+- **Accessibility**: Focus management, aria-live announcements in onboarding
 
 ## 🤝 Contributing
 
