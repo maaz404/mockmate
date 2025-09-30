@@ -1,6 +1,5 @@
 const { v4: uuidv4 } = require("uuid");
-const fs = require("fs").promises;
-const path = require("path");
+/* eslint-disable no-magic-numbers */
 
 const Logger = require("../utils/logger");
 const judge0Service = require("./judge0Service");
@@ -485,7 +484,7 @@ You must write an algorithm with O(log n) runtime complexity.`,
         };
       }
     } catch (error) {
-      console.error("Code submission failed:", error);
+      Logger.error("Code submission failed:", error);
       return {
         success: false,
         error: "Failed to evaluate code submission",
@@ -580,7 +579,7 @@ You must write an algorithm with O(log n) runtime complexity.`,
    * Execute a single test case using Judge0 or fallback
    */
   async executeTest(code, testCase, language, challenge) {
-    const startTime = Date.now();
+    // execution timing is gathered per execution method
 
     try {
       // Use Judge0 if available, otherwise fallback to local execution
@@ -649,6 +648,13 @@ You must write an algorithm with O(log n) runtime complexity.`,
         return this.preparePythonTestCode(code, testCase, challenge);
       case "java":
         return this.prepareJavaTestCode(code, testCase, challenge);
+      case "cpp":
+        return this.prepareCppTestCode(code, testCase, challenge);
+      case "c":
+        // For now, C harness is not implemented; provide clear guidance
+        throw new Error(
+          `Language C is not yet supported for automated tests in this challenge. Please use JavaScript, Python, Java, or C++.`
+        );
       default:
         throw new Error(`Language ${language} not supported`);
     }
@@ -763,9 +769,46 @@ public class Main {
   }
 
   /**
+   * Prepare C++ test code for Judge0
+   * Note: Requires user to implement functions with expected signatures per challenge.
+   */
+  prepareCppTestCode(code, testCase, challenge) {
+    const arr = Array.isArray(testCase.input[0]) ? testCase.input[0] : [];
+    const target = Array.isArray(testCase.input) ? testCase.input[1] : null;
+    // single-arg helper omitted; derive directly in each harness as needed
+
+    // Minimal helpers to print results as JSON-like output
+    const helpers = `#include <iostream>\n#include <vector>\n#include <string>\n#include <utility>\nusing namespace std;\n\nstring vecToJson(const vector<int>& v){\n  string s = "[";\n  for(size_t i=0;i<v.size();++i){ s += to_string(v[i]); if(i+1<v.size()) s += ","; }\n  s += "]";\n  return s;\n}\n`;
+
+    let mainBody = "";
+    switch (challenge.id) {
+      case "two-sum":
+        // Expect user to provide: vector<int> twoSum(vector<int>& nums, int target);
+        mainBody = `\nvector<int> twoSum(vector<int>& nums, int target);\nint main(){\n  vector<int> nums = {${arr.join(
+          ","
+        )}};\n  int target = ${
+          target ?? 0
+        };\n  vector<int> res = twoSum(nums, target);\n  cout << vecToJson(res);\n  return 0;\n}`;
+        break;
+      case "fibonacci":
+        // Expect user to provide: int fib(int n);
+        mainBody = `\nint fib(int n);\nint main(){\n  int n = ${
+          Array.isArray(testCase.input) ? testCase.input[0] : testCase.input
+        };\n  cout << fib(n);\n  return 0;\n}`;
+        break;
+      default:
+        throw new Error(
+          `C++ harness not implemented for challenge '${challenge.id}'. Please choose JavaScript, Python, or Java for this challenge.`
+        );
+    }
+
+    return `${helpers}\n${code}\n${mainBody}`;
+  }
+
+  /**
    * Parse Judge0 output based on language
    */
-  parseJudge0Output(stdout, language) {
+  parseJudge0Output(stdout, _language) {
     try {
       const trimmed = stdout.trim();
       return JSON.parse(trimmed);
@@ -845,7 +888,7 @@ public class Main {
   /**
    * Execute Python test (placeholder)
    */
-  executePythonTest(code, testCase, challenge) {
+  executePythonTest(_code, _testCase, _challenge) {
     // In production, this would use a Python subprocess or container
     throw new Error("Python execution not implemented in this demo");
   }
@@ -863,7 +906,7 @@ public class Main {
   /**
    * Calculate score based on test results
    */
-  calculateScore(testResults, challenge) {
+  calculateScore(testResults, _challenge) {
     const passedTests = testResults.filter((t) => t.passed).length;
     const totalTests = testResults.length;
     const accuracy = passedTests / totalTests;
@@ -891,7 +934,7 @@ public class Main {
     const totalTests = testResults.length;
     const accuracy = passedTests / totalTests;
 
-    let feedback = {
+    const feedback = {
       summary: "",
       strengths: [],
       improvements: [],

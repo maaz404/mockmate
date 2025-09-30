@@ -182,6 +182,24 @@ const InterviewExperiencePage = () => {
     setCodeExecutionResult(null);
 
     try {
+      // If selecting a language other than JS, ensure Judge0 is configured
+      if (codingLanguage !== "javascript") {
+        try {
+          const health = await apiService.get("/coding/health");
+          const available = health?.judge0?.available;
+          if (!available) {
+            setCodeExecutionResult({
+              success: false,
+              error:
+                "Multi-language execution requires Judge0. Add RAPIDAPI_KEY in server/.env and restart the server.",
+            });
+            setIsExecutingCode(false);
+            return;
+          }
+        } catch (_) {
+          // If health check fails, proceed but warn for likely misconfig
+        }
+      }
       const currentQuestion = interview.questions[currentQuestionIndex];
 
       // Create a temporary coding session for testing

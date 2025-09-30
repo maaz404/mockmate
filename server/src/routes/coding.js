@@ -71,6 +71,26 @@ router.post("/session", requireAuth, async (req, res) => {
   }
 });
 
+// @desc    Coding system health (Judge0 availability & languages)
+// @route   GET /api/coding/health
+// @access  Private
+router.get("/health", requireAuth, async (_req, res) => {
+  try {
+    res.json({
+      success: true,
+      judge0: {
+        available: require("../services/judge0Service").isAvailable(),
+        languages: require("../services/judge0Service").getSupportedLanguages(),
+        baseURL:
+          process.env.JUDGE0_API_URL || "https://judge0-ce.p.rapidapi.com",
+        hasKey: !!process.env.RAPIDAPI_KEY,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Health check failed" });
+  }
+});
+
 // @desc    Get current challenge
 // @route   GET /api/coding/session/:sessionId/current
 // @access  Private

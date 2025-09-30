@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
 import {
@@ -12,6 +18,7 @@ import {
   Award,
   Save,
   Code,
+  RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -23,6 +30,9 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
   const [skillInput, setSkillInput] = useState("");
   const [filteredSkills, setFilteredSkills] = useState([]);
   const [profileStrength, setProfileStrength] = useState(0);
+  const [showAdvancedFA, setShowAdvancedFA] = useState(false);
+  const headingRef = useRef(null);
+  const liveRegionRef = useRef(null);
 
   const [formData, setFormData] = useState({
     professionalInfo: {
@@ -44,14 +54,63 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
       interviewTypes: [],
       difficulty: "intermediate",
       focusAreas: [],
-      notifications: {
-        email: true,
-        push: true,
-        interviews: true,
-        progress: true,
+      // default practice settings
+      sessionDuration: 30,
+      preferredLanguages: ["English"],
+      // default facial analysis settings
+      facialAnalysis: {
+        enabled: false,
+        consentGiven: false,
+        autoCalibration: true,
+        showConfidenceMeter: true,
+        showRealtimeFeedback: true,
+        feedbackFrequency: "medium",
       },
     },
   });
+
+  // Reset to defaults handler
+  const handleResetDefaults = useCallback(() => {
+    const defaults = {
+      professionalInfo: {
+        currentRole: "",
+        company: "",
+        experience: "entry",
+        skills: [],
+        skillsToImprove: [],
+        industry: "",
+        careerGoals: "",
+      },
+      interviewGoals: {
+        primaryGoal: "",
+        targetCompanies: [],
+        timeline: "",
+        expectedInterviewDate: null,
+      },
+      preferences: {
+        interviewTypes: [],
+        difficulty: "intermediate",
+        focusAreas: [],
+        sessionDuration: 30,
+        preferredLanguages: ["English"],
+        facialAnalysis: {
+          enabled: false,
+          consentGiven: false,
+          autoCalibration: true,
+          showConfidenceMeter: true,
+          showRealtimeFeedback: true,
+          feedbackFrequency: "medium",
+        },
+      },
+    };
+    setFormData(defaults);
+    try {
+      localStorage.removeItem("onboardingForm");
+    } catch (_) {}
+    setStep(1);
+    setSavedProgress(false);
+    toast.success("Reset to defaults");
+  }, []);
 
   // Tech-focused industries
   const industries = [
@@ -197,33 +256,119 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
   ];
 
   // Step metadata for UI (title, subtitle, icon)
-  const stepMeta = [
-    {
-      title: "Professional Information",
-      subtitle: "Tell us about your professional background",
-      icon: User,
-    },
-    {
-      title: "Skills & Experience",
-      subtitle: "Show your strengths and growth areas",
-      icon: Code,
-    },
-    {
-      title: "Interview Preferences",
-      subtitle: "Customize practice to your style",
-      icon: Target,
-    },
-    {
-      title: "AI Coaching & Practice Settings",
-      subtitle: "Tune session length, language, and optional facial analysis",
-      icon: Settings,
-    },
-    {
-      title: "Interview Goals",
-      subtitle: "Set your target timeline and companies",
-      icon: CheckCircle,
-    },
-  ];
+  const stepMeta = useMemo(
+    () => [
+      {
+        title: "Professional Information",
+        subtitle: "Tell us about your professional background",
+        icon: User,
+      },
+      {
+        title: "Skills & Experience",
+        subtitle: "Show your strengths and growth areas",
+        icon: Code,
+      },
+      {
+        title: "Interview Preferences",
+        subtitle: "Customize practice to your style",
+        icon: Target,
+      },
+      {
+        title: "AI Coaching & Practice Settings",
+        subtitle: "Tune session length, language, and optional facial analysis",
+        icon: Settings,
+      },
+      {
+        title: "Interview Goals",
+        subtitle: "Set your target timeline and companies",
+        icon: CheckCircle,
+      },
+    ],
+    []
+  );
+
+  // Presets for quick start
+  const presets = useMemo(
+    () => [
+      {
+        id: "frontend",
+        label: "Frontend Interview",
+        apply: () => ({
+          interviewTypes: ["technical", "behavioral"],
+          difficulty: "intermediate",
+          focusAreas: ["technical-skills", "communication"],
+          sessionDuration: 30,
+        }),
+      },
+      {
+        id: "system-design",
+        label: "System Design Focus",
+        apply: () => ({
+          interviewTypes: ["system-design", "technical"],
+          difficulty: "advanced",
+          focusAreas: ["problem-solving", "technical-skills"],
+          sessionDuration: 45,
+        }),
+      },
+      {
+        id: "behavioral",
+        label: "Behavioral Intensive",
+        apply: () => ({
+          interviewTypes: ["behavioral"],
+          difficulty: "intermediate",
+          focusAreas: ["communication", "leadership"],
+          sessionDuration: 20,
+        }),
+      },
+    ],
+    []
+  );
+
+  const applyPreset = (preset) => {
+    const patch = preset.apply();
+    setFormData((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        interviewTypes: patch.interviewTypes,
+        difficulty: patch.difficulty,
+        focusAreas: patch.focusAreas,
+        sessionDuration: patch.sessionDuration,
+      },
+    }));
+    toast.success(`${preset.label} preset applied`);
+  };
+
+  // Suggested skills when none selected
+  const suggestedSkills = useMemo(() => {
+    const role = (formData.professionalInfo.currentRole || "").toLowerCase();
+    if (role.includes("front") || role.includes("react")) {
+      return [
+        { name: "JavaScript", category: "programming" },
+        { name: "React", category: "framework" },
+        { name: "CSS", category: "tool" },
+      ];
+    }
+    if (role.includes("back") || role.includes("node")) {
+      return [
+        { name: "Node.js", category: "framework" },
+        { name: "Express", category: "framework" },
+        { name: "MongoDB", category: "tool" },
+      ];
+    }
+    if (role.includes("data")) {
+      return [
+        { name: "Python", category: "programming" },
+        { name: "SQL", category: "tool" },
+        { name: "Pandas", category: "framework" },
+      ];
+    }
+    return [
+      { name: "Problem Solving", category: "soft-skill" },
+      { name: "Communication", category: "soft-skill" },
+      { name: "System Design", category: "domain" },
+    ];
+  }, [formData.professionalInfo.currentRole]);
 
   // Calculate profile strength
   useEffect(() => {
@@ -254,17 +399,142 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
     calculateStrength();
   }, [formData]);
 
+  // Removed duplicate reset handler block during refactor
+
+  // Best-effort server persistence on close
+  const handleClose = useCallback(async () => {
+    try {
+      // Persist progress to server to enable cross-device continuity
+      await api.post("/users/onboarding/save-progress", formData);
+      try {
+        localStorage.setItem("onboardingForm", JSON.stringify(formData));
+      } catch {}
+    } catch (_) {
+      // non-blocking; still close modal
+    } finally {
+      onClose && onClose();
+    }
+  }, [formData, onClose]);
+
   // Close on Escape for accessibility
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e) => {
       if (e.key === "Escape") {
-        onClose && onClose();
+        handleClose();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
+
+  // Hydrate from localStorage when opening
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const cached = localStorage.getItem("onboardingForm");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setFormData((prev) => ({
+          ...prev,
+          ...parsed,
+          preferences: {
+            ...prev.preferences,
+            ...(parsed.preferences || {}),
+            facialAnalysis: {
+              ...prev.preferences.facialAnalysis,
+              ...(parsed.preferences?.facialAnalysis || {}),
+            },
+          },
+        }));
+      }
+    } catch {}
+  }, [isOpen]);
+
+  // Debounced autosave to localStorage when editing
+  useEffect(() => {
+    if (!isOpen) return;
+    const handle = setTimeout(() => {
+      try {
+        localStorage.setItem("onboardingForm", JSON.stringify(formData));
+      } catch {}
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [isOpen, formData]);
+
+  // Smart defaults from recent scheduled sessions
+  useEffect(() => {
+    const hydrateFromActivity = async () => {
+      if (!isOpen) return;
+      try {
+        const res = await api.get(
+          "/users/scheduled-sessions?limit=5&includePast=false"
+        );
+        const sessions = res?.data || res;
+        const list = sessions?.data || sessions || [];
+        if (!Array.isArray(list) || list.length === 0) return;
+
+        const counts = new Map();
+        for (const s of list) {
+          if (!s?.duration) continue;
+          counts.set(s.duration, (counts.get(s.duration) || 0) + 1);
+        }
+        let suggestedDuration = null;
+        if (counts.size > 0) {
+          suggestedDuration = [...counts.entries()].sort(
+            (a, b) => b[1] - a[1]
+          )[0][0];
+        }
+
+        const soonest = list
+          .map((s) => new Date(s.scheduledAt))
+          .filter((d) => !isNaN(d))
+          .sort((a, b) => a - b)[0];
+        let timeline = null;
+        if (soonest) {
+          const diffDays = Math.ceil(
+            (soonest - new Date()) / (1000 * 60 * 60 * 24)
+          );
+          if (diffDays <= 7) timeline = "within-1-week";
+          else if (diffDays <= 28) timeline = "1-4-weeks";
+          else if (diffDays <= 90) timeline = "1-3-months";
+          else timeline = "exploring";
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          interviewGoals: {
+            ...prev.interviewGoals,
+            timeline: timeline || prev.interviewGoals.timeline,
+          },
+          preferences: {
+            ...prev.preferences,
+            sessionDuration:
+              suggestedDuration || prev.preferences.sessionDuration,
+          },
+        }));
+      } catch (_) {
+        // best-effort, ignore
+      }
+    };
+    hydrateFromActivity();
+  }, [isOpen]);
+
+  // Announce step changes and focus heading
+  useEffect(() => {
+    if (!isOpen) return;
+    const titles = stepMeta.map((m) => m.title);
+    const metaTitle = titles[Math.min(step - 1, 4)] || "Onboarding";
+    if (liveRegionRef.current) {
+      liveRegionRef.current.textContent = `Step ${Math.min(
+        step,
+        5
+      )} of 5: ${metaTitle}`;
+    }
+    if (headingRef.current) {
+      headingRef.current.focus();
+    }
+  }, [isOpen, step, stepMeta]);
 
   // Load existing user profile data when modal opens
   useEffect(() => {
@@ -300,12 +570,25 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
           interviewTypes: userProfile.preferences?.interviewTypes || [],
           difficulty: userProfile.preferences?.difficulty || "intermediate",
           focusAreas: userProfile.preferences?.focusAreas || [],
-          notifications: {
-            email: userProfile.preferences?.notifications?.email ?? true,
-            push: userProfile.preferences?.notifications?.push ?? true,
-            interviews:
-              userProfile.preferences?.notifications?.interviews ?? true,
-            progress: userProfile.preferences?.notifications?.progress ?? true,
+          sessionDuration: userProfile.preferences?.sessionDuration ?? 30,
+          preferredLanguages: userProfile.preferences?.preferredLanguages || [
+            "English",
+          ],
+          facialAnalysis: {
+            enabled: userProfile.preferences?.facialAnalysis?.enabled ?? false,
+            consentGiven:
+              userProfile.preferences?.facialAnalysis?.consentGiven ?? false,
+            autoCalibration:
+              userProfile.preferences?.facialAnalysis?.autoCalibration ?? true,
+            showConfidenceMeter:
+              userProfile.preferences?.facialAnalysis?.showConfidenceMeter ??
+              true,
+            showRealtimeFeedback:
+              userProfile.preferences?.facialAnalysis?.showRealtimeFeedback ??
+              true,
+            feedbackFrequency:
+              userProfile.preferences?.facialAnalysis?.feedbackFrequency ||
+              "medium",
           },
         },
       });
@@ -737,6 +1020,27 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
             />
           </div>
         </div>
+
+        {/* Gentle coaching: suggested skills if none selected */}
+        {formData.professionalInfo.skills.length === 0 && (
+          <div className="rounded-lg border border-yellow-300/50 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700 p-3">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+              Try adding a few starter skills based on your role:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestedSkills.map((s) => (
+                <button
+                  key={s.name}
+                  type="button"
+                  onClick={() => handleSkillAdd(s.name, s.category)}
+                  className="px-2.5 py-1 rounded-full text-xs bg-yellow-100 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 hover:bg-yellow-200 dark:hover:bg-yellow-700"
+                >
+                  + {s.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -754,6 +1058,25 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
       </div>
 
       <div className="space-y-6">
+        {/* Quick Presets */}
+        <div>
+          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
+            Quick Presets
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {presets.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p)}
+                className="px-3 py-1.5 rounded-lg text-xs border border-primary-400/50 bg-primary-500/10 hover:bg-primary-500/20 text-primary-700 dark:text-primary-300"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
             Interview Types (select multiple)
@@ -836,7 +1159,13 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
   const renderStep4 = () => (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <Settings className="mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
+        <div className="relative inline-block">
+          <div
+            className="absolute -inset-2 rounded-xl bg-gradient-to-r from-teal-500/20 to-cyan-500/20 blur-md"
+            aria-hidden="true"
+          />
+          <Settings className="relative mx-auto h-12 w-12 text-primary-600 dark:text-primary-400 mb-4" />
+        </div>
         <h3 className="text-xl font-semibold text-surface-900 dark:text-white">
           AI Coaching & Practice Settings
         </h3>
@@ -846,6 +1175,22 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
       </div>
 
       <div className="space-y-6">
+        {/* Live Session Preview */}
+        <div className="rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50/60 dark:bg-surface-800/40 p-3">
+          <div className="text-sm text-surface-700 dark:text-surface-300">
+            <span className="font-medium">Session Preview:</span>{" "}
+            {formData.preferences.sessionDuration} min,{" "}
+            {formData.preferences.preferredLanguages?.[0] || "English"},{" "}
+            {formData.preferences.interviewTypes
+              .map(
+                (t) => interviewTypes.find((it) => it.value === t)?.label || t
+              )
+              .join(" + ") || "No type selected"}
+            , Facial Analysis:{" "}
+            {formData.preferences.facialAnalysis.enabled ? "On" : "Off"}
+          </div>
+        </div>
+
         {/* Session duration */}
         <div>
           <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
@@ -920,93 +1265,111 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
 
           {formData.preferences.facialAnalysis.enabled && (
             <div className="space-y-3 pl-1">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.preferences.facialAnalysis.consentGiven}
-                  onChange={(e) =>
-                    handleInputChange("preferences", "facialAnalysis", {
-                      ...formData.preferences.facialAnalysis,
-                      consentGiven: e.target.checked,
-                    })
-                  }
-                />
-                <span className="text-sm text-surface-700 dark:text-surface-300">
-                  I consent to optional facial analysis during practice
-                </span>
-              </label>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFA((v) => !v)}
+                className="text-xs px-2 py-1 rounded border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
+                aria-expanded={showAdvancedFA}
+                aria-controls="fa-advanced"
+              >
+                {showAdvancedFA ? "Hide Advanced" : "Show Advanced"}
+              </button>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.preferences.facialAnalysis.autoCalibration}
-                  onChange={(e) =>
-                    handleInputChange("preferences", "facialAnalysis", {
-                      ...formData.preferences.facialAnalysis,
-                      autoCalibration: e.target.checked,
-                    })
-                  }
-                />
-                <span className="text-sm text-surface-700 dark:text-surface-300">
-                  Auto calibration
-                </span>
-              </label>
+              {showAdvancedFA && (
+                <div id="fa-advanced" className="space-y-3 mt-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.preferences.facialAnalysis.consentGiven}
+                      onChange={(e) =>
+                        handleInputChange("preferences", "facialAnalysis", {
+                          ...formData.preferences.facialAnalysis,
+                          consentGiven: e.target.checked,
+                        })
+                      }
+                    />
+                    <span className="text-sm text-surface-700 dark:text-surface-300">
+                      I consent to optional facial analysis during practice
+                    </span>
+                  </label>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={
-                    formData.preferences.facialAnalysis.showConfidenceMeter
-                  }
-                  onChange={(e) =>
-                    handleInputChange("preferences", "facialAnalysis", {
-                      ...formData.preferences.facialAnalysis,
-                      showConfidenceMeter: e.target.checked,
-                    })
-                  }
-                />
-                <span className="text-sm text-surface-700 dark:text-surface-300">
-                  Show confidence meter
-                </span>
-              </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={
+                        formData.preferences.facialAnalysis.autoCalibration
+                      }
+                      onChange={(e) =>
+                        handleInputChange("preferences", "facialAnalysis", {
+                          ...formData.preferences.facialAnalysis,
+                          autoCalibration: e.target.checked,
+                        })
+                      }
+                    />
+                    <span className="text-sm text-surface-700 dark:text-surface-300">
+                      Auto calibration
+                    </span>
+                  </label>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={
-                    formData.preferences.facialAnalysis.showRealtimeFeedback
-                  }
-                  onChange={(e) =>
-                    handleInputChange("preferences", "facialAnalysis", {
-                      ...formData.preferences.facialAnalysis,
-                      showRealtimeFeedback: e.target.checked,
-                    })
-                  }
-                />
-                <span className="text-sm text-surface-700 dark:text-surface-300">
-                  Show real‑time feedback
-                </span>
-              </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={
+                        formData.preferences.facialAnalysis.showConfidenceMeter
+                      }
+                      onChange={(e) =>
+                        handleInputChange("preferences", "facialAnalysis", {
+                          ...formData.preferences.facialAnalysis,
+                          showConfidenceMeter: e.target.checked,
+                        })
+                      }
+                    />
+                    <span className="text-sm text-surface-700 dark:text-surface-300">
+                      Show confidence meter
+                    </span>
+                  </label>
 
-              <div>
-                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                  Feedback frequency
-                </label>
-                <select
-                  value={formData.preferences.facialAnalysis.feedbackFrequency}
-                  onChange={(e) =>
-                    handleInputChange("preferences", "facialAnalysis", {
-                      ...formData.preferences.facialAnalysis,
-                      feedbackFrequency: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={
+                        formData.preferences.facialAnalysis.showRealtimeFeedback
+                      }
+                      onChange={(e) =>
+                        handleInputChange("preferences", "facialAnalysis", {
+                          ...formData.preferences.facialAnalysis,
+                          showRealtimeFeedback: e.target.checked,
+                        })
+                      }
+                    />
+                    <span className="text-sm text-surface-700 dark:text-surface-300">
+                      Show real‑time feedback
+                    </span>
+                  </label>
+
+                  <div>
+                    <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                      Feedback frequency
+                    </label>
+                    <select
+                      value={
+                        formData.preferences.facialAnalysis.feedbackFrequency
+                      }
+                      onChange={(e) =>
+                        handleInputChange("preferences", "facialAnalysis", {
+                          ...formData.preferences.facialAnalysis,
+                          feedbackFrequency: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1127,6 +1490,8 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
       aria-modal="true"
       aria-labelledby="onboarding-title"
     >
+      {/* Accessibility live region */}
+      <div ref={liveRegionRef} aria-live="polite" className="sr-only" />
       <div className="modal-panel w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Sticky header */}
         <div className="sticky top-0 z-10 bg-white/90 dark:bg-surface-800/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b border-surface-200 dark:border-surface-700 px-6 py-4">
@@ -1143,7 +1508,9 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
               <div>
                 <h2
                   id="onboarding-title"
-                  className="text-lg sm:text-xl font-semibold text-surface-900 dark:text-white"
+                  className="text-lg sm:text-xl font-semibold text-surface-900 dark:text-white focus:outline-none"
+                  tabIndex={-1}
+                  ref={headingRef}
                 >
                   {stepMeta[Math.min(step - 1, 4)]?.title || "Welcome"}
                 </h2>
@@ -1166,7 +1533,16 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
                 <span>{savedProgress ? "Saved" : "Save"}</span>
               </button>
               <button
-                onClick={onClose}
+                onClick={handleResetDefaults}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-600"
+                title="Reset to defaults"
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span>Reset</span>
+              </button>
+              <button
+                onClick={handleClose}
                 className="p-2 rounded-lg text-surface-500 dark:text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
                 aria-label="Close"
               >
@@ -1227,6 +1603,15 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
           {step === 5 && renderStep5()}
           {step === 6 && renderSuccessStep()}
 
+          {/* Coaching note at bottom for skills step */}
+          {step === 2 && formData.professionalInfo.skills.length === 0 && (
+            <div className="mt-4 rounded-lg border border-yellow-300/50 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700 p-3">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                Tip: add 3–5 skills to get more tailored practice questions.
+              </p>
+            </div>
+          )}
+
           {/* Profile strength */}
           <div className="mt-6 flex items-center justify-between text-xs">
             <span className="text-surface-600 dark:text-surface-400">
@@ -1259,6 +1644,16 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
               }`}
             >
               Previous
+            </button>
+
+            {/* Reset to defaults for quick recovery */}
+            <button
+              onClick={handleResetDefaults}
+              type="button"
+              className="px-4 py-2 rounded-lg font-medium text-surface-700 dark:text-surface-200 bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 shadow-sm"
+              title="Reset all fields to default values"
+            >
+              Reset
             </button>
 
             {step < 5 ? (

@@ -332,17 +332,38 @@ const completeOnboarding = async (req, res) => {
       });
     }
 
-    // Ensure a profile exists; if not, create it from Clerk data on the fly
+    // Ensure a profile exists; if not, create it from Clerk data when available
+    // In development with MOCK_AUTH_FALLBACK, skip Clerk calls and use stub data
+    const usingMockAuth =
+      process.env.NODE_ENV !== "production" &&
+      process.env.MOCK_AUTH_FALLBACK === "true" &&
+      (!req.headers?.authorization || String(userId).startsWith("test-"));
+
     let clerkUser = null;
-    try {
-      // Always attempt to fetch from Clerk (tests expect this)
-      clerkUser = await clerkClient.users.getUser(userId);
-    } catch (clerkError) {
-      console.error("Clerk API error:", clerkError);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to fetch user data from authentication service",
-      });
+    if (!usingMockAuth && process.env.CLERK_SECRET_KEY) {
+      try {
+        clerkUser = await clerkClient.users.getUser(userId);
+      } catch (clerkError) {
+        console.error("Clerk API error:", clerkError);
+        if (process.env.NODE_ENV === "production") {
+          return res.status(500).json({
+            success: false,
+            message: "Failed to fetch user data from authentication service",
+          });
+        }
+      }
+    }
+
+    // Fallback stub user for development
+    if (!clerkUser && usingMockAuth) {
+      clerkUser = {
+        emailAddresses: [
+          { emailAddress: `${userId || "test-user-123"}@example.com` },
+        ],
+        firstName: "Test",
+        lastName: "User",
+        profileImageUrl: null,
+      };
     }
 
     console.log("About to create/update user profile for userId:", userId);
@@ -357,10 +378,10 @@ const completeOnboarding = async (req, res) => {
           onboardingCompleted: true,
         },
         $setOnInsert: {
-          email: clerkUser.emailAddresses[0]?.emailAddress,
-          firstName: clerkUser.firstName,
-          lastName: clerkUser.lastName,
-          profileImage: clerkUser.profileImageUrl,
+          email: clerkUser?.emailAddresses?.[0]?.emailAddress || null,
+          firstName: clerkUser?.firstName || null,
+          lastName: clerkUser?.lastName || null,
+          profileImage: clerkUser?.profileImageUrl || null,
         },
       },
       {

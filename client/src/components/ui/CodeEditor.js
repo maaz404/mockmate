@@ -1,6 +1,7 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { Play, RotateCcw, Settings } from "lucide-react";
+import { apiService } from "../../services/api";
 
 const CodeEditor = ({
   value,
@@ -14,6 +15,8 @@ const CodeEditor = ({
   theme = "vs-dark",
 }) => {
   const editorRef = useRef(null);
+  const [judge0Available, setJudge0Available] = useState(true);
+  const [checkingHealth, setCheckingHealth] = useState(false);
 
   const supportedLanguages = [
     { value: "javascript", label: "JavaScript", ext: "js" },
@@ -47,6 +50,29 @@ const CodeEditor = ({
       }
     });
   };
+
+  // Check Judge0 availability once when the editor mounts
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        setCheckingHealth(true);
+        const health = await apiService.get("/coding/health");
+        if (!cancelled) {
+          setJudge0Available(!!health?.judge0?.available);
+        }
+      } catch (_err) {
+        // If health check fails (e.g., unauthenticated), assume unavailable to be safe
+        if (!cancelled) setJudge0Available(false);
+      } finally {
+        if (!cancelled) setCheckingHealth(false);
+      }
+    };
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleReset = () => {
     if (editorRef.current && onChange) {
@@ -121,17 +147,36 @@ int main() {
             <Settings className="h-4 w-4 text-surface-500" />
             <select
               value={language}
-              onChange={(e) =>
-                onLanguageChange && onLanguageChange(e.target.value)
-              }
+              onChange={(e) => {
+                const next = e.target.value;
+                if (!judge0Available && next !== "javascript") {
+                  // Prevent selecting unsupported language when Judge0 is unavailable
+                  return;
+                }
+                onLanguageChange && onLanguageChange(next);
+              }}
               className="text-sm border border-surface-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
               disabled={readOnly}
             >
-              {supportedLanguages.map((lang) => (
-                <option key={lang.value} value={lang.value}>
-                  {lang.label}
-                </option>
-              ))}
+              {supportedLanguages.map((lang) => {
+                const disabled =
+                  !judge0Available && lang.value !== "javascript";
+                return (
+                  <option
+                    key={lang.value}
+                    value={lang.value}
+                    disabled={disabled}
+                    title={
+                      disabled
+                        ? "Enable Judge0 on the server to use this language"
+                        : undefined
+                    }
+                  >
+                    {lang.label}
+                    {disabled ? " (requires Judge0)" : ""}
+                  </option>
+                );
+              })}
             </select>
           </div>
         </div>
@@ -161,6 +206,26 @@ int main() {
               <span>{loading ? "Running..." : "Run"}</span>
             </button>
           )}
+
+          {/* Judge0 status */}
+          <span
+            className={`ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs ${
+              judge0Available
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-amber-100 text-amber-700"
+            }`}
+            title={
+              judge0Available
+                ? "Judge0 is configured for multi-language execution"
+                : "Judge0 unavailable: only JavaScript can run locally in development"
+            }
+          >
+            {checkingHealth
+              ? "Checking…"
+              : judge0Available
+              ? "Judge0 Ready"
+              : "Local JS only"}
+          </span>
         </div>
       </div>
 

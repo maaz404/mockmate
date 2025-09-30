@@ -112,7 +112,18 @@ app.get("/*.json", (req, res) => {
 });
 
 // Clerk middleware - adds auth context to all API requests only
-app.use("/api", ClerkExpressWithAuth());
+// In development with MOCK_AUTH_FALLBACK=true, skip global Clerk auth
+const useClerkGlobally =
+  process.env.NODE_ENV === "production" ||
+  process.env.MOCK_AUTH_FALLBACK !== "true";
+
+if (useClerkGlobally) {
+  app.use("/api", ClerkExpressWithAuth());
+} else {
+  Logger.warn(
+    "Skipping global Clerk auth (MOCK_AUTH_FALLBACK=true). Route-level auth will use mock user."
+  );
+}
 
 // API routes
 app.use("/api/auth", authRoutes);

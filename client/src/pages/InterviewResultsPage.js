@@ -224,17 +224,37 @@ const InterviewResultsPage = () => {
                           >
                             {qa.type}
                           </span>
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              qa.difficulty === "easy"
-                                ? "bg-green-100 text-green-800"
-                                : qa.difficulty === "medium"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {qa.difficulty}
-                          </span>
+                          {(() => {
+                            const raw = (qa.difficulty || "").toLowerCase();
+                            const norm =
+                              raw === "easy" || raw === "beginner"
+                                ? "beginner"
+                                : raw === "medium" || raw === "intermediate"
+                                ? "intermediate"
+                                : raw === "hard" || raw === "advanced"
+                                ? "advanced"
+                                : raw || "unknown";
+                            const cls =
+                              norm === "beginner"
+                                ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700"
+                                : norm === "intermediate"
+                                ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700"
+                                : norm === "advanced"
+                                ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+                                : "bg-surface-100 text-surface-700 border-surface-200 dark:bg-surface-800/50 dark:text-surface-300 dark:border-surface-700";
+                            const label =
+                              typeof norm === "string"
+                                ? norm.charAt(0).toUpperCase() + norm.slice(1)
+                                : norm;
+                            return (
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium border ${cls}`}
+                                title="Question difficulty"
+                              >
+                                🎯 {label}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                       <div className="text-right ml-4">
@@ -371,6 +391,75 @@ const InterviewResultsPage = () => {
 
           {/* Right Column - Summary & Actions */}
           <div className="space-y-6">
+            {/* Adaptive Summary */}
+            {interview?.config?.adaptiveDifficulty?.enabled && (
+              <div className="card p-6">
+                <h3 className="text-lg font-bold text-surface-900 dark:text-surface-50 mb-4">
+                  Adaptive Summary
+                </h3>
+                {(() => {
+                  const hist =
+                    interview?.config?.adaptiveDifficulty?.difficultyHistory ||
+                    [];
+                  if (!hist.length) {
+                    return (
+                      <div className="text-sm text-surface-600 dark:text-surface-400">
+                        No adaptive changes recorded.
+                      </div>
+                    );
+                  }
+                  let increases = 0;
+                  let decreases = 0;
+                  for (let i = 1; i < hist.length; i++) {
+                    const prev = hist[i - 1].difficulty;
+                    const cur = hist[i].difficulty;
+                    const rank = { beginner: 0, intermediate: 1, advanced: 2 };
+                    if (rank[cur] > rank[prev]) increases++;
+                    else if (rank[cur] < rank[prev]) decreases++;
+                  }
+                  const finalDiff =
+                    interview?.config?.adaptiveDifficulty?.currentDifficulty ||
+                    hist[hist.length - 1].difficulty;
+                  const chip = (d) => {
+                    const cls =
+                      d === "beginner"
+                        ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700"
+                        : d === "intermediate"
+                        ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700"
+                        : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700";
+                    return (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium border ${cls}`}
+                      >
+                        {d.charAt(0).toUpperCase() + d.slice(1)}
+                      </span>
+                    );
+                  };
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-surface-600 dark:text-surface-400">
+                          Increases:
+                        </span>
+                        <span className="font-medium">{increases}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-surface-600 dark:text-surface-400">
+                          Decreases:
+                        </span>
+                        <span className="font-medium">{decreases}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-surface-600 dark:text-surface-400">
+                          Final Difficulty:
+                        </span>
+                        <span className="font-medium">{chip(finalDiff)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             {/* Quick Stats */}
             <div className="card p-6">
               <h3 className="text-lg font-bold text-surface-900 dark:text-surface-50 mb-4">
@@ -413,6 +502,41 @@ const InterviewResultsPage = () => {
                 </div>
               </div>
             </div>
+
+            {/* Difficulty History (Adaptive) */}
+            {interview?.config?.adaptiveDifficulty?.enabled && (
+              <div className="card p-6">
+                <h3 className="text-lg font-bold text-surface-900 dark:text-surface-50 mb-4">
+                  Difficulty History
+                </h3>
+                {interview?.config?.adaptiveDifficulty?.difficultyHistory
+                  ?.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {interview.config.adaptiveDifficulty.difficultyHistory.map(
+                      (h, idx) => (
+                        <span
+                          key={idx}
+                          title={new Date(h.timestamp).toLocaleString()}
+                          className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                            h.difficulty === "beginner"
+                              ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700"
+                              : h.difficulty === "intermediate"
+                              ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700"
+                              : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+                          }`}
+                        >
+                          Q{h.questionIndex + 1}: {h.difficulty}
+                        </span>
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-surface-600 dark:text-surface-400">
+                    No difficulty changes recorded.
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Key Recommendations */}
             <div className="card p-6">

@@ -212,6 +212,7 @@ const InterviewPage = () => {
           `/interviews/${interviewId}/adaptive-question`
         );
         const newQ = resp?.data?.data?.question;
+        const adaptiveInfo = resp?.data?.data?.adaptiveInfo;
         if (newQ) {
           // Normalize to client shape
           const normalized = {
@@ -227,6 +228,14 @@ const InterviewPage = () => {
           }));
           setCurrentQuestionIndex((idx) => idx + 1);
           setQuestionStartTime(Date.now());
+          if (
+            adaptiveInfo?.difficultyChanged &&
+            adaptiveInfo?.currentDifficulty
+          ) {
+            toast(`Difficulty changed to ${adaptiveInfo.currentDifficulty}`, {
+              icon: "🎯",
+            });
+          }
           toast.success(`Next ${normalized.difficulty || ""} question ready`);
         } else {
           // If no question returned, end gracefully
@@ -380,6 +389,34 @@ const InterviewPage = () => {
               <span className="text-sm text-surface-600 dark:text-surface-400">
                 {formatTime(timeRemaining)}
               </span>
+              {/* Difficulty chip */}
+              {(() => {
+                const level =
+                  currentQuestion?.difficulty ||
+                  interview?.config?.adaptiveDifficulty?.currentDifficulty ||
+                  interview?.config?.difficulty ||
+                  "-";
+                const colorClasses =
+                  level === "beginner"
+                    ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700"
+                    : level === "intermediate"
+                    ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700"
+                    : level === "advanced"
+                    ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+                    : "bg-surface-100 text-surface-700 border-surface-200 dark:bg-surface-800/50 dark:text-surface-300 dark:border-surface-700";
+                const label =
+                  typeof level === "string"
+                    ? level.charAt(0).toUpperCase() + level.slice(1)
+                    : level;
+                return (
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${colorClasses}`}
+                    title="Current difficulty"
+                  >
+                    🎯 {label}
+                  </span>
+                );
+              })()}
               {/* Recording status chip */}
               <span
                 className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${

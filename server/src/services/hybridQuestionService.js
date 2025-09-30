@@ -119,8 +119,11 @@ class HybridQuestionService {
     const { jobRole, experienceLevel, interviewType, difficulty } = config;
 
     let templateQuestions = [];
-    const roleTemplates = this.templates[jobRole] || this.templates["software-engineer"];
-    const levelTemplates = roleTemplates[experienceLevel] || roleTemplates["intermediate"];
+    const roleTemplates =
+      this.templates[jobRole] || this.templates["software-engineer"];
+    // Use difficulty tier for selecting templates; default to 'intermediate'
+    const levelTemplates =
+      roleTemplates[difficulty] || roleTemplates["intermediate"];
 
     // Get questions based on interview type
     if (interviewType === "mixed") {
@@ -213,13 +216,22 @@ class HybridQuestionService {
    */
   async generateParaphrasedQuestions(config, count) {
     try {
-      const templateQuestions = await this.getTemplateQuestions(config, count * 2); // Get more templates to paraphrase from
-      const questionsToParaphrase = this.selectRandomQuestions(templateQuestions, count);
+      const templateQuestions = await this.getTemplateQuestions(
+        config,
+        count * 2
+      ); // Get more templates to paraphrase from
+      const questionsToParaphrase = this.selectRandomQuestions(
+        templateQuestions,
+        count
+      );
 
       const paraphrased = [];
       for (const question of questionsToParaphrase) {
         try {
-          const paraphrasedText = await this.paraphraseQuestion(question.text, config);
+          const paraphrasedText = await this.paraphraseQuestion(
+            question.text,
+            config
+          );
           if (paraphrasedText) {
             paraphrased.push({
               text: paraphrasedText,
@@ -232,7 +244,9 @@ class HybridQuestionService {
               originalTemplateId: question.id,
               paraphrasedFrom: question.text,
               generatedAt: new Date(),
-              id: `paraphrased_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              id: `paraphrased_${Date.now()}_${Math.random()
+                .toString(36)
+                .substr(2, 9)}`,
             });
           }
         } catch (error) {
@@ -259,7 +273,10 @@ class HybridQuestionService {
    * @returns {Promise<String>} Paraphrased question
    */
   async paraphraseQuestion(questionText, config) {
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your_openai_api_key_here") {
+    if (
+      !process.env.OPENAI_API_KEY ||
+      process.env.OPENAI_API_KEY === "your_openai_api_key_here"
+    ) {
       return null;
     }
 
@@ -281,18 +298,21 @@ Requirements:
 
 Paraphrased Question:`;
 
-      const response = await aiQuestionService.getOpenAIClient().chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert interviewer who can rephrase questions while maintaining their intent and difficulty.",
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 200,
-      });
+      const response = await aiQuestionService
+        .getOpenAIClient()
+        .chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are an expert interviewer who can rephrase questions while maintaining their intent and difficulty.",
+            },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 200,
+        });
 
       const paraphrased = response.choices[0]?.message?.content?.trim();
       return paraphrased && paraphrased.length > 10 ? paraphrased : null;
@@ -311,10 +331,10 @@ Paraphrased Question:`;
   balanceQuestionTags(questions, targetCount) {
     // Define required tag categories and minimum coverage
     const requiredTags = {
-      "DSA": 0.2,           // 20% DSA
-      "System Design": 0.2,  // 20% System Design
-      "DB": 0.15,           // 15% Database
-      "Behavioral": 0.25,   // 25% Behavioral
+      DSA: 0.2, // 20% DSA
+      "System Design": 0.2, // 20% System Design
+      DB: 0.15, // 15% Database
+      Behavioral: 0.25, // 25% Behavioral
       "Programming Fundamentals": 0.2, // 20% Programming Fundamentals
     };
 
@@ -322,7 +342,7 @@ Paraphrased Question:`;
     const untaggedQuestions = [];
 
     // Categorize questions by primary tag
-    questions.forEach(question => {
+    questions.forEach((question) => {
       const primaryTag = this.getPrimaryTag(question.tags, requiredTags);
       if (primaryTag) {
         if (!taggedQuestions[primaryTag]) {
@@ -339,7 +359,7 @@ Paraphrased Question:`;
     const remainingSlots = { ...requiredTags };
 
     // Fill required minimums
-    Object.keys(requiredTags).forEach(tag => {
+    Object.keys(requiredTags).forEach((tag) => {
       const required = Math.floor(targetCount * requiredTags[tag]);
       const available = taggedQuestions[tag] || [];
       const selected = available.slice(0, required);
@@ -351,8 +371,10 @@ Paraphrased Question:`;
     const remaining = targetCount - balancedQuestions.length;
     if (remaining > 0) {
       const allRemaining = [
-        ...Object.values(taggedQuestions).flat().filter(q => !balancedQuestions.includes(q)),
-        ...untaggedQuestions
+        ...Object.values(taggedQuestions)
+          .flat()
+          .filter((q) => !balancedQuestions.includes(q)),
+        ...untaggedQuestions,
       ];
       balancedQuestions.push(...allRemaining.slice(0, remaining));
     }
@@ -368,7 +390,7 @@ Paraphrased Question:`;
    */
   getPrimaryTag(tags, requiredTags) {
     if (!tags || !Array.isArray(tags)) return null;
-    
+
     for (const tag of tags) {
       if (requiredTags.hasOwnProperty(tag)) {
         return tag;
@@ -388,27 +410,57 @@ Paraphrased Question:`;
     const text = questionText.toLowerCase();
 
     // Technical tags
-    if (text.includes("algorithm") || text.includes("data structure") || text.includes("complexity")) {
+    if (
+      text.includes("algorithm") ||
+      text.includes("data structure") ||
+      text.includes("complexity")
+    ) {
       tags.push("DSA");
     }
-    if (text.includes("database") || text.includes("sql") || text.includes("nosql")) {
+    if (
+      text.includes("database") ||
+      text.includes("sql") ||
+      text.includes("nosql")
+    ) {
       tags.push("DB");
     }
-    if (text.includes("system") || text.includes("design") || text.includes("architecture") || text.includes("scalability")) {
+    if (
+      text.includes("system") ||
+      text.includes("design") ||
+      text.includes("architecture") ||
+      text.includes("scalability")
+    ) {
       tags.push("System Design");
     }
-    if (text.includes("variable") || text.includes("function") || text.includes("programming") || category === "javascript") {
+    if (
+      text.includes("variable") ||
+      text.includes("function") ||
+      text.includes("programming") ||
+      category === "javascript"
+    ) {
       tags.push("Programming Fundamentals");
     }
-    if (text.includes("react") || text.includes("frontend") || text.includes("component")) {
+    if (
+      text.includes("react") ||
+      text.includes("frontend") ||
+      text.includes("component")
+    ) {
       tags.push("Frontend");
     }
-    if (text.includes("api") || text.includes("backend") || text.includes("server")) {
+    if (
+      text.includes("api") ||
+      text.includes("backend") ||
+      text.includes("server")
+    ) {
       tags.push("Backend");
     }
 
     // Behavioral tags
-    if (text.includes("tell me about") || text.includes("describe a time") || text.includes("how do you")) {
+    if (
+      text.includes("tell me about") ||
+      text.includes("describe a time") ||
+      text.includes("how do you")
+    ) {
       tags.push("Behavioral");
     }
 
@@ -424,7 +476,7 @@ Paraphrased Question:`;
   selectRandomQuestions(questions, count) {
     if (!questions || questions.length === 0) return [];
     if (questions.length <= count) return [...questions];
-    
+
     const shuffled = this.shuffleArray([...questions]);
     return shuffled.slice(0, count);
   }
@@ -451,9 +503,9 @@ Paraphrased Question:`;
   async getCachedQuestions(config) {
     try {
       const cacheKey = CachedQuestion.generateCacheKey(config);
-      const cached = await CachedQuestion.findOne({ 
+      const cached = await CachedQuestion.findOne({
         cacheKey,
-        expiresAt: { $gt: new Date() }
+        expiresAt: { $gt: new Date() },
       });
       return cached;
     } catch (error) {
@@ -471,7 +523,7 @@ Paraphrased Question:`;
   async cacheQuestions(config, questions) {
     try {
       const cacheKey = CachedQuestion.generateCacheKey(config);
-      
+
       // Remove existing cache for this configuration
       await CachedQuestion.deleteOne({ cacheKey });
 
@@ -497,7 +549,7 @@ Paraphrased Question:`;
   async clearExpiredCache() {
     try {
       const result = await CachedQuestion.deleteMany({
-        expiresAt: { $lt: new Date() }
+        expiresAt: { $lt: new Date() },
       });
       if (result.deletedCount > 0) {
         Logger.debug(`Cleared ${result.deletedCount} expired cache entries`);
@@ -515,10 +567,10 @@ Paraphrased Question:`;
     try {
       const totalEntries = await CachedQuestion.countDocuments();
       const validEntries = await CachedQuestion.countDocuments({
-        expiresAt: { $gt: new Date() }
+        expiresAt: { $gt: new Date() },
       });
       const totalUsage = await CachedQuestion.aggregate([
-        { $group: { _id: null, totalUsage: { $sum: "$usageCount" } } }
+        { $group: { _id: null, totalUsage: { $sum: "$usageCount" } } },
       ]);
 
       return {

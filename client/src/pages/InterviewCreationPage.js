@@ -168,7 +168,18 @@ const InterviewCreationPage = () => {
         navigate(`/interview/${response.data._id}`);
       }
     } catch (error) {
-      alert("Failed to create interview. Please try again.");
+      // Surface server message if available for easier debugging
+      const serverMsg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to create interview. Please try again.";
+      // eslint-disable-next-line no-console
+      console.error("Create interview failed:", {
+        status: error?.response?.status,
+        data: error?.response?.data,
+      });
+      alert(serverMsg);
     } finally {
       setLoading(false);
     }

@@ -35,11 +35,15 @@ export const MockAuthProvider = ({ children }) => {
       interviewTypes: [],
       difficulty: "intermediate",
       focusAreas: [],
-      notifications: {
-        email: true,
-        push: true,
-        interviews: true,
-        progress: true,
+      sessionDuration: 30,
+      preferredLanguages: ["English"],
+      facialAnalysis: {
+        enabled: false,
+        consentGiven: false,
+        autoCalibration: true,
+        showConfidenceMeter: true,
+        showRealtimeFeedback: true,
+        feedbackFrequency: "medium",
       },
     },
     analytics: {

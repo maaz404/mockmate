@@ -1,15 +1,29 @@
+/* eslint-disable consistent-return, no-magic-numbers */
 const Interview = require("../models/Interview");
 const Question = require("../models/Question");
 const UserProfile = require("../models/UserProfile");
+const mongoose = require("mongoose");
+const { clerkClient } = require("@clerk/clerk-sdk-node");
 const aiQuestionService = require("../services/aiQuestionService");
 const hybridQuestionService = require("../services/hybridQuestionService");
 const { updateAnalytics } = require("./userController");
+const C = require("../utils/constants");
+const Logger = require("../utils/logger");
 
 // Create new interview session
 const createInterview = async (req, res) => {
   try {
     const { userId } = req.auth;
     const config = req.body?.config || req.body;
+
+    // Ensure DB connectivity (helps when MONGODB_URI is missing)
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message:
+          "Database is not connected. Please set MONGODB_URI in server/.env and restart the server.",
+      });
+    }
 
     // Validate configuration
     if (
@@ -24,13 +38,50 @@ const createInterview = async (req, res) => {
       });
     }
 
-    // Get user profile
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    // Get user profile (and auto-create if missing)
+    let userProfile = await UserProfile.findOne({ clerkUserId: userId });
     if (!userProfile) {
-      return res.status(404).json({
-        success: false,
-        message: "User profile not found",
-      });
+      const usingMockAuth =
+        process.env.NODE_ENV !== "production" &&
+        process.env.MOCK_AUTH_FALLBACK === "true" &&
+        (!req.headers?.authorization || String(userId).startsWith("test-"));
+
+      try {
+        let clerkUser = null;
+        if (!usingMockAuth && process.env.CLERK_SECRET_KEY) {
+          clerkUser = await clerkClient.users.getUser(userId);
+        } else if (usingMockAuth) {
+          // Stub user in mock mode
+          clerkUser = {
+            emailAddresses: [
+              { emailAddress: `user-${userId || "test-user-123"}@example.com` },
+            ],
+            firstName: "Test",
+            lastName: "User",
+            profileImageUrl: null,
+          };
+        }
+
+        if (clerkUser) {
+          userProfile = new UserProfile({
+            clerkUserId: userId,
+            email: clerkUser.emailAddresses?.[0]?.emailAddress || "",
+            firstName: clerkUser.firstName || "",
+            lastName: clerkUser.lastName || "",
+            profileImage: clerkUser.profileImageUrl || "",
+          });
+          await userProfile.save();
+        }
+      } catch (e) {
+        Logger.error("Auto-create user profile failed:", e);
+      }
+
+      if (!userProfile) {
+        return res.status(404).json({
+          success: false,
+          message: "User profile not found",
+        });
+      }
     }
 
     // Check interview limits for free users
@@ -62,8 +113,11 @@ const createInterview = async (req, res) => {
         ...config,
         // Keep target questionCount. If adaptive is enabled, don't cap by initial questions
         questionCount: config.adaptiveDifficulty?.enabled
-          ? config.questionCount || 10
-          : Math.min(config.questionCount || 10, questions.length),
+          ? config.questionCount || C.DEFAULT_QUESTION_COUNT
+          : Math.min(
+              config.questionCount || C.DEFAULT_QUESTION_COUNT,
+              questions.length
+            ),
         // Initialize adaptive difficulty if enabled
         adaptiveDifficulty: config.adaptiveDifficulty?.enabled
           ? {
@@ -80,7 +134,9 @@ const createInterview = async (req, res) => {
       questions: questions
         .slice(
           0,
-          config?.adaptiveDifficulty?.enabled ? 1 : config.questionCount || 10
+          config?.adaptiveDifficulty?.enabled
+            ? C.ADAPTIVE_SEED_COUNT
+            : config.questionCount || C.DEFAULT_QUESTION_COUNT
         )
         .map((q) => ({
           questionId: q._id,
@@ -95,16 +151,18 @@ const createInterview = async (req, res) => {
 
     await interview.save();
 
-    res.status(201).json({
+    res.status(C.HTTP_STATUS_CREATED).json({
       success: true,
       message: "Interview created successfully",
       data: interview,
     });
   } catch (error) {
-    console.error("Create interview error:", error);
+    Logger.error("Create interview error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to create interview",
+      error:
+        process.env.NODE_ENV === "development" ? error?.message : undefined,
     });
   }
 };
@@ -156,7 +214,7 @@ const startInterview = async (req, res) => {
       data: interview,
     });
   } catch (error) {
-    console.error("Start interview error:", error);
+    Logger.error("Start interview error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to start interview",
@@ -210,7 +268,7 @@ const submitAnswer = async (req, res) => {
     // AI-powered scoring with enhanced feedback
     let evaluation;
     try {
-      console.log("Evaluating answer with AI for question:", qIndex);
+      Logger.info("Evaluating answer with AI for question:", qIndex);
 
       // Create question object with necessary fields for AI evaluation
       const questionObj = {
@@ -225,9 +283,9 @@ const submitAnswer = async (req, res) => {
         answer,
         interview.config
       );
-      console.log("AI evaluation completed:", evaluation);
+      Logger.info("AI evaluation completed:", evaluation);
     } catch (error) {
-      console.error("AI evaluation failed, using basic scoring:", error);
+      Logger.warn("AI evaluation failed, using basic scoring:", error);
       const questionObj = {
         text: interview.questions[qIndex].questionText,
         category: interview.questions[qIndex].category,
@@ -290,7 +348,7 @@ const submitAnswer = async (req, res) => {
     // Generate follow-up questions automatically after scoring
     let followUpQuestions = null;
     try {
-      console.log("Generating follow-up questions for question:", qIndex);
+      Logger.info("Generating follow-up questions for question:", qIndex);
       followUpQuestions = await aiQuestionService.generateFollowUp(
         interview.questions[qIndex].questionText,
         answer,
@@ -300,13 +358,13 @@ const submitAnswer = async (req, res) => {
       if (followUpQuestions && followUpQuestions.length > 0) {
         interview.questions[qIndex].followUpQuestions = followUpQuestions;
         await interview.save();
-        console.log(
+        Logger.info(
           "Follow-up questions generated and saved:",
           followUpQuestions.length
         );
       }
     } catch (error) {
-      console.error("Follow-up generation failed:", error);
+      Logger.warn("Follow-up generation failed:", error);
       // Continue without follow-ups - non-critical feature
     }
 
@@ -332,9 +390,9 @@ const submitAnswer = async (req, res) => {
           (interview.questions[qIndex].difficulty ||
             interview.config.difficulty),
         scoreBasedRecommendation:
-          responseData.score < 60
+          responseData.score < C.SCORE_EASIER_DOWN_THRESHOLD
             ? "easier"
-            : responseData.score >= 80
+            : responseData.score >= C.SCORE_HARDER_UP_THRESHOLD
             ? "harder"
             : "same",
       };
@@ -346,7 +404,7 @@ const submitAnswer = async (req, res) => {
       data: responseData,
     });
   } catch (error) {
-    console.error("Submit answer error:", error);
+    Logger.error("Submit answer error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to submit answer",
@@ -403,7 +461,7 @@ const generateFollowUp = async (req, res) => {
     }
 
     try {
-      console.log("Generating AI follow-up questions for question:", qIndex);
+      Logger.info("Generating AI follow-up questions for question:", qIndex);
       const followUpQuestions = await aiQuestionService.generateFollowUp(
         question.questionText,
         question.response.text,
@@ -426,7 +484,7 @@ const generateFollowUp = async (req, res) => {
         },
       });
     } catch (error) {
-      console.error("AI follow-up generation failed:", error);
+      Logger.warn("AI follow-up generation failed:", error);
       res.status(500).json({
         success: false,
         message: "Failed to generate follow-up questions",
@@ -439,7 +497,7 @@ const generateFollowUp = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Generate follow-up error:", error);
+    Logger.error("Generate follow-up error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to generate follow-up question",
@@ -475,7 +533,8 @@ const completeInterview = async (req, res) => {
     // Update timing
     interview.timing.completedAt = new Date();
     interview.timing.totalDuration = Math.round(
-      (interview.timing.completedAt - interview.timing.startedAt) / (1000 * 60)
+      (interview.timing.completedAt - interview.timing.startedAt) /
+        C.MINUTE_IN_MS
     );
 
     // Calculate overall results
@@ -507,7 +566,7 @@ const completeInterview = async (req, res) => {
       data: interview,
     });
   } catch (error) {
-    console.error("Complete interview error:", error);
+    Logger.error("Complete interview error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to complete interview",
@@ -545,7 +604,7 @@ const getUserInterviews = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get interviews error:", error);
+    Logger.error("Get interviews error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch interviews",
@@ -596,7 +655,7 @@ const getInterviewDetails = async (req, res) => {
       data: responsePayload,
     });
   } catch (error) {
-    console.error("Get interview details error:", error);
+    Logger.error("Get interview details error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch interview details",
@@ -607,7 +666,7 @@ const getInterviewDetails = async (req, res) => {
 // Helper function to get suitable questions using hybrid approach
 const getQuestionsForInterview = async (config, userProfile) => {
   try {
-    console.log("Generating hybrid questions for config:", config);
+    Logger.info("Generating hybrid questions for config:", config);
 
     // Use hybrid service to generate questions (70% templates, 30% AI)
     const hybridQuestions = await hybridQuestionService.generateHybridQuestions(
@@ -615,21 +674,31 @@ const getQuestionsForInterview = async (config, userProfile) => {
     );
 
     if (hybridQuestions && hybridQuestions.length > 0) {
-      console.log(`Generated ${hybridQuestions.length} hybrid questions`);
+      Logger.info(`Generated ${hybridQuestions.length} hybrid questions`);
 
       // Save questions to database and return the saved documents
       const savedQuestions = [];
       for (const question of hybridQuestions) {
+        // Ensure valid type for Question model (no 'mixed')
+        const inferredType =
+          question.type && question.type !== "mixed"
+            ? question.type
+            : question.category && question.category.includes("behavior")
+            ? "behavioral"
+            : "technical";
         const questionDoc = new Question({
           text: question.text,
           category: question.category,
           difficulty: question.difficulty,
-          type: question.type,
+          type: inferredType,
           tags: question.tags || [],
           experienceLevel: [config.experienceLevel],
           estimatedTime: Math.max(
-            question.estimatedTime || question.timeEstimate * 60 || 180,
-            30
+            question.estimatedTime ||
+              (question.timeEstimate
+                ? question.timeEstimate * C.SEC_PER_MIN
+                : C.DEFAULT_TIME_ALLOC_SEC),
+            C.MIN_TIME_ALLOC_SEC
           ), // Convert minutes to seconds, minimum 30 seconds
           source: question.source || "hybrid",
           generatedAt: question.generatedAt || new Date(),
@@ -644,7 +713,7 @@ const getQuestionsForInterview = async (config, userProfile) => {
       return savedQuestions;
     }
   } catch (error) {
-    console.error(
+    Logger.warn(
       "Hybrid question generation failed, falling back to AI service:",
       error
     );
@@ -662,18 +731,39 @@ const getQuestionsForInterview = async (config, userProfile) => {
     });
 
     if (aiQuestions && aiQuestions.length > 0) {
-      console.log(`Generated ${aiQuestions.length} AI fallback questions`);
+      Logger.info(`Generated ${aiQuestions.length} AI fallback questions`);
 
       // Save AI questions to database
       const savedQuestions = [];
       for (const question of aiQuestions) {
+        // Determine a valid category from enum list if missing/invalid
+        const preferredType =
+          question.type && question.type !== "mixed"
+            ? question.type
+            : question.category &&
+              String(question.category).includes("behavior")
+            ? "behavioral"
+            : "technical";
+        const defaultBehavioral = "communication"; // valid enum
+        const defaultTechnical = "system-design"; // valid enum
+        const safeCategory =
+          question.category && typeof question.category === "string"
+            ? question.category
+            : preferredType === "behavioral"
+            ? defaultBehavioral
+            : defaultTechnical;
+        const safeType = preferredType;
         const questionDoc = new Question({
           text: question.question || question.text,
-          category: question.category || config.interviewType,
+          category: safeCategory,
           difficulty: question.difficulty || config.difficulty,
-          type: config.interviewType,
+          type: safeType,
           experienceLevel: [config.experienceLevel],
-          estimatedTime: Math.max(question.timeLimit * 60 || 180, 30), // Convert minutes to seconds, minimum 30 seconds
+          estimatedTime: Math.max(
+            (question.timeLimit ? question.timeLimit * C.SEC_PER_MIN : 0) ||
+              C.DEFAULT_TIME_ALLOC_SEC,
+            C.MIN_TIME_ALLOC_SEC
+          ), // Convert minutes to seconds, minimum 30 seconds
           isAIGenerated: true,
           keywords: question.followUpHints || [],
           stats: { timesUsed: 0, avgScore: 0 },
@@ -685,7 +775,7 @@ const getQuestionsForInterview = async (config, userProfile) => {
       return savedQuestions;
     }
   } catch (aiError) {
-    console.error(
+    Logger.warn(
       "AI question generation also failed, falling back to database:",
       aiError
     );
@@ -704,16 +794,132 @@ const getQuestionsForInterview = async (config, userProfile) => {
   }
 
   // Get questions with randomization
-  const questions = await Question.aggregate([
-    { $match: query },
-    { $sample: { size: Math.max(config.questionCount * 2, 20) } }, // Get more than needed for variety
-    { $sort: { "stats.timesUsed": 1 } }, // Prefer less used questions
-  ]);
+  let questions = [];
+  try {
+    questions = await Question.aggregate([
+      { $match: query },
+      {
+        $sample: {
+          size: Math.max(
+            (config.questionCount || C.DEFAULT_QUESTION_COUNT) *
+              C.SAMPLE_MULTIPLIER,
+            C.SAMPLE_MIN_SIZE
+          ),
+        },
+      }, // Get more than needed for variety
+      { $sort: { "stats.timesUsed": 1 } }, // Prefer less used questions
+    ]);
+  } catch (dbErr) {
+    Logger.warn(
+      "DB aggregate for questions failed, using final fallback:",
+      dbErr
+    );
+    // Reuse final fallback path below by setting empty array to trigger it
+    questions = [];
+  }
+  if (questions && questions.length > 0) {
+    return questions;
+  }
 
-  return questions;
+  // Final fallback: sanitize curated fallback questions and persist
+  try {
+    Logger.warn("No DB questions found. Using curated fallback questions.");
+
+    const curated = await aiQuestionService.getFallbackQuestions({
+      ...config,
+    });
+
+    // Allowed enums from schema
+    const allowedCategories = Question.schema.path("category").enumValues;
+    const mapDifficulty = (d) => {
+      const m = {
+        easy: "beginner",
+        medium: "intermediate",
+        hard: "advanced",
+      };
+      return (
+        m[d] ||
+        (d === "beginner" || d === "intermediate" || d === "advanced"
+          ? d
+          : config.difficulty)
+      );
+    };
+    const sanitizeCategory = (cat, type) => {
+      if (cat && allowedCategories.includes(cat)) return cat;
+      if (type === "behavioral") return "communication";
+      if (type === "system-design") return "system-design";
+      return "web-development"; // safe technical default
+    };
+
+    const toSave = curated.map((q) => {
+      const type =
+        q.type && q.type !== "mixed"
+          ? q.type
+          : q.category && String(q.category).includes("behavior")
+          ? "behavioral"
+          : "technical";
+      const category = sanitizeCategory(q.category, type);
+      return new Question({
+        text: q.text || q.question,
+        category,
+        difficulty: mapDifficulty(q.difficulty) || config.difficulty,
+        type,
+        experienceLevel: [config.experienceLevel],
+        estimatedTime: Math.max(
+          (q.timeEstimate ? q.timeEstimate * C.SEC_PER_MIN : 0) ||
+            C.DEFAULT_TIME_ALLOC_SEC,
+          C.MIN_TIME_ALLOC_SEC
+        ),
+        isAIGenerated: true,
+        keywords: [],
+        stats: { timesUsed: 0, avgScore: 0 },
+        status: "active",
+      });
+    });
+
+    const saved = [];
+    for (const doc of toSave) {
+      try {
+        // Save individually to skip any that still fail validation
+        const s = await doc.save();
+        saved.push(s);
+      } catch (e) {
+        Logger.warn("Skipping invalid fallback question:", e?.message || e);
+      }
+    }
+
+    return saved;
+  } catch (fallbackErr) {
+    Logger.error("Final fallback failed:", fallbackErr);
+    // As a last resort, create in-memory pseudo questions so the interview can start
+    try {
+      const pseudo = [
+        {
+          _id: new mongoose.Types.ObjectId(),
+          text: `Tell me about a recent challenge in ${
+            config.jobRole || "your role"
+          } and how you approached it.`,
+          category:
+            (config.interviewType === "behavioral"
+              ? "communication"
+              : "web-development") || "web-development",
+          difficulty: config.difficulty,
+          type:
+            config.interviewType === "behavioral" ? "behavioral" : "technical",
+          estimatedTime: C.DEFAULT_TIME_ALLOC_SEC,
+        },
+      ];
+      Logger.warn("Using in-memory pseudo questions as ultimate fallback");
+      return pseudo;
+    } catch (e2) {
+      Logger.error("Failed to build pseudo questions:", e2);
+      return [];
+    }
+  }
 };
 
 // Enhanced fallback scoring function
+// eslint-disable-next-line no-unused-vars
 const calculateBasicScore = (answer, question) => {
   const score = {
     overall: 0,
@@ -980,7 +1186,7 @@ const getAdaptiveQuestion = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get adaptive question error:", error);
+    Logger.error("Get adaptive question error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to generate adaptive question",
@@ -997,8 +1203,6 @@ module.exports = {
   getUserInterviews,
   getInterviewDetails,
   getAdaptiveQuestion,
-  getInterviewResults,
-  markFollowUpsReviewed,
 };
 
 // Compose interview results payload for frontend consumption
@@ -1009,6 +1213,8 @@ const composeResultsPayload = (interviewDoc) => {
     duration: (interviewDoc?.timing?.totalDuration || 0) * 60, // seconds
     questions: interviewDoc?.questions || [],
     completedAt: interviewDoc?.timing?.completedAt || interviewDoc?.updatedAt,
+    // Include full config so clients can access adaptiveDifficulty history
+    config: interviewDoc?.config || {},
   };
 
   const breakdown = interviewDoc?.results?.breakdown || {};
@@ -1082,7 +1288,7 @@ const getInterviewResults = async (req, res) => {
     const payload = composeResultsPayload(interview);
     return res.json({ success: true, data: payload });
   } catch (error) {
-    console.error("Get interview results error:", error);
+    Logger.error("Get interview results error:", error);
     return res
       .status(500)
       .json({ success: false, message: "Failed to fetch interview results" });
@@ -1125,7 +1331,7 @@ const markFollowUpsReviewed = async (req, res) => {
       data: { questionIndex: qIndex, followUpsReviewed: true },
     });
   } catch (error) {
-    console.error("Mark follow-ups reviewed error:", error);
+    Logger.error("Mark follow-ups reviewed error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to update follow-ups reviewed status",

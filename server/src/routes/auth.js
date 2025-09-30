@@ -1,8 +1,10 @@
+/* eslint-disable consistent-return, no-magic-numbers */
 const express = require("express");
 const { clerkClient } = require("@clerk/clerk-sdk-node");
 const requireAuth = require("../middleware/auth");
 const UserProfile = require("../models/UserProfile");
 const { body, validationResult } = require("express-validator");
+const Logger = require("../utils/logger");
 
 const router = express.Router();
 
@@ -22,7 +24,9 @@ router.get("/test", async (req, res) => {
       clerkConfigured: true,
       userCount: testUser.length,
       environment: process.env.NODE_ENV,
-      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ? "Set" : "Missing",
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY
+        ? "Set"
+        : "Missing",
       clerkSecretKey: process.env.CLERK_SECRET_KEY ? "Set" : "Missing",
     });
   } catch (error) {
@@ -32,15 +36,17 @@ router.get("/test", async (req, res) => {
       message: error.message,
       clerkConfigured: false,
       environment: process.env.NODE_ENV,
-      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ? "Set" : "Missing",
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY
+        ? "Set"
+        : "Missing",
       clerkSecretKey: process.env.CLERK_SECRET_KEY ? "Set" : "Missing",
       troubleshooting: {
         step1: "Check if CLERK_SECRET_KEY is set in server/.env",
         step2: "Verify Clerk application exists at https://clerk.com/dashboard",
         step3: "Ensure Google OAuth is enabled in Social Connections",
         step4: "Add http://localhost:3000 to Authorized redirect URIs",
-        step5: "Restart both server and client applications"
-      }
+        step5: "Restart both server and client applications",
+      },
     });
   }
 });
@@ -48,14 +54,22 @@ router.post("/sync", requireAuth, async (req, res) => {
   try {
     const { userId } = req.auth;
 
-    // Get user data from Clerk
-    const clerkUser = await clerkClient.users.getUser(userId);
+    const usingMockAuth =
+      process.env.NODE_ENV !== "production" &&
+      process.env.MOCK_AUTH_FALLBACK === "true" &&
+      (!req.headers?.authorization || String(userId).startsWith("test-"));
 
-    if (!clerkUser) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found in Clerk",
-      });
+    let clerkUser = null;
+    if (!usingMockAuth && process.env.CLERK_SECRET_KEY) {
+      clerkUser = await clerkClient.users.getUser(userId);
+    } else {
+      // Stub user in mock mode
+      clerkUser = {
+        emailAddresses: [{ emailAddress: `${userId}@example.com` }],
+        firstName: "Test",
+        lastName: "User",
+        profileImageUrl: null,
+      };
     }
 
     // Check if user profile already exists
@@ -92,7 +106,7 @@ router.post("/sync", requireAuth, async (req, res) => {
       message: "User profile synced successfully",
     });
   } catch (error) {
-    console.error("Auth sync error:", error);
+    Logger.error("Auth sync error:", error);
     res.status(500).json({
       success: false,
       error: "Failed to sync user profile",
@@ -140,7 +154,7 @@ router.get("/me", requireAuth, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get user error:", error);
+    Logger.error("Get user error:", error);
     res.status(500).json({
       success: false,
       error: "Failed to get user profile",
@@ -209,7 +223,7 @@ router.put(
         message: "Profile updated successfully",
       });
     } catch (error) {
-      console.error("Update profile error:", error);
+      Logger.error("Update profile error:", error);
       res.status(500).json({
         success: false,
         error: "Failed to update profile",
@@ -239,7 +253,7 @@ router.delete("/account", requireAuth, async (req, res) => {
       message: "Account deleted successfully",
     });
   } catch (error) {
-    console.error("Delete account error:", error);
+    Logger.error("Delete account error:", error);
     res.status(500).json({
       success: false,
       error: "Failed to delete account",
@@ -285,7 +299,7 @@ router.post("/avatar", requireAuth, async (req, res) => {
       message: "Avatar updated successfully",
     });
   } catch (error) {
-    console.error("Update avatar error:", error);
+    Logger.error("Update avatar error:", error);
     res.status(500).json({
       success: false,
       error: "Failed to update avatar",
@@ -326,7 +340,7 @@ router.get("/stats", requireAuth, async (req, res) => {
       data: stats,
     });
   } catch (error) {
-    console.error("Get stats error:", error);
+    Logger.error("Get stats error:", error);
     res.status(500).json({
       success: false,
       error: "Failed to get user statistics",
