@@ -21,7 +21,7 @@ const PrivacyConsentModal = ({ isOpen, onConsent, onDecline, _onClose }) => {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto hover-scrollbar"
       >
         <div className="mb-6">
           <div className="flex items-center space-x-3 mb-4">

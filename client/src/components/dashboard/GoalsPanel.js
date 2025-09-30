@@ -24,7 +24,11 @@ export default function GoalsPanel({ goals = [], onToggle }) {
               onChange={() => onToggle?.(idx)}
               className="h-4 w-4 rounded border-surface-600 text-primary-600 focus:ring-primary-500 bg-surface-700"
             />
-            <span className={`text-sm ${g.done ? "line-through text-surface-500" : "text-surface-300"}`}>
+            <span
+              className={`text-sm ${
+                g.done ? "line-through text-surface-500" : "text-surface-300"
+              }`}
+            >
               {g.title}
             </span>
           </label>

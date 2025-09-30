@@ -60,7 +60,10 @@ const createInterview = async (req, res) => {
       userProfile: userProfile._id,
       config: {
         ...config,
-        questionCount: Math.min(config.questionCount || 10, questions.length),
+        // Keep target questionCount. If adaptive is enabled, don't cap by initial questions
+        questionCount: config.adaptiveDifficulty?.enabled
+          ? config.questionCount || 10
+          : Math.min(config.questionCount || 10, questions.length),
         // Initialize adaptive difficulty if enabled
         adaptiveDifficulty: config.adaptiveDifficulty?.enabled
           ? {
@@ -73,14 +76,20 @@ const createInterview = async (req, res) => {
               enabled: false,
             },
       },
-      questions: questions.slice(0, config.questionCount || 10).map((q) => ({
-        questionId: q._id,
-        questionText: q.text,
-        category: q.category,
-        difficulty: q.difficulty,
-        timeAllocated: q.estimatedTime,
-        hasVideo: false, // Default to false, can be enabled based on question type
-      })),
+      // If adaptive is enabled, start with just one seed question so subsequent ones can adapt
+      questions: questions
+        .slice(
+          0,
+          config?.adaptiveDifficulty?.enabled ? 1 : config.questionCount || 10
+        )
+        .map((q) => ({
+          questionId: q._id,
+          questionText: q.text,
+          category: q.category,
+          difficulty: q.difficulty,
+          timeAllocated: q.estimatedTime,
+          hasVideo: false, // Default to false, can be enabled based on question type
+        })),
       status: "scheduled",
     });
 
@@ -988,6 +997,8 @@ module.exports = {
   getUserInterviews,
   getInterviewDetails,
   getAdaptiveQuestion,
+  getInterviewResults,
+  markFollowUpsReviewed,
 };
 
 // Compose interview results payload for frontend consumption
@@ -1115,12 +1126,10 @@ const markFollowUpsReviewed = async (req, res) => {
     });
   } catch (error) {
     console.error("Mark follow-ups reviewed error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to update follow-ups reviewed status",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update follow-ups reviewed status",
+    });
   }
 };
 

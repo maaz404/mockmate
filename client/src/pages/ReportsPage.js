@@ -156,7 +156,7 @@ const ReportsPage = () => {
             No completed interviews yet.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto hover-scrollbar">
             <table className="table-base">
               <thead className="table-head">
                 <tr>

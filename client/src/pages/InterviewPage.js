@@ -196,9 +196,46 @@ const InterviewPage = () => {
       });
       return;
     }
+    const targetCount =
+      interview?.config?.questionCount || interview.questions.length;
     if (currentQuestionIndex < interview.questions.length - 1) {
       setCurrentQuestionIndex((idx) => idx + 1);
       setQuestionStartTime(Date.now());
+    } else if (
+      // At the end of current list
+      interview?.config?.adaptiveDifficulty?.enabled &&
+      interview.questions.length < targetCount
+    ) {
+      try {
+        // Fetch next adaptive question from server and append
+        const resp = await apiService.post(
+          `/interviews/${interviewId}/adaptive-question`
+        );
+        const newQ = resp?.data?.data?.question;
+        if (newQ) {
+          // Normalize to client shape
+          const normalized = {
+            questionId: newQ.id || newQ.questionId,
+            questionText: newQ.text || newQ.questionText,
+            category: newQ.category,
+            difficulty: newQ.difficulty,
+            timeAllocated: newQ.timeAllocated || 300,
+          };
+          setInterview((prev) => ({
+            ...prev,
+            questions: [...(prev.questions || []), normalized],
+          }));
+          setCurrentQuestionIndex((idx) => idx + 1);
+          setQuestionStartTime(Date.now());
+          toast.success(`Next ${normalized.difficulty || ""} question ready`);
+        } else {
+          // If no question returned, end gracefully
+          handleEndInterview();
+        }
+      } catch (_) {
+        // On failure, end interview
+        handleEndInterview();
+      }
     } else {
       handleEndInterview();
     }
@@ -318,8 +355,9 @@ const InterviewPage = () => {
 
   // Now it's safe to access interview data
   const currentQuestion = interview.questions[currentQuestionIndex] || {};
-  const progress =
-    ((currentQuestionIndex + 1) / interview.questions.length) * 100;
+  const targetCount =
+    interview?.config?.questionCount || interview.questions.length;
+  const progress = ((currentQuestionIndex + 1) / targetCount) * 100;
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors">
@@ -337,8 +375,7 @@ const InterviewPage = () => {
             </h1>
             <div className="flex items-center space-x-3">
               <span className="text-sm text-surface-600 dark:text-surface-400">
-                Question {currentQuestionIndex + 1} of{" "}
-                {interview.questions.length}
+                Question {currentQuestionIndex + 1} of {targetCount}
               </span>
               <span className="text-sm text-surface-600 dark:text-surface-400">
                 {formatTime(timeRemaining)}
@@ -572,7 +609,7 @@ const InterviewPage = () => {
                 Previous
               </button>
               <button onClick={handleNext} className="flex-1 btn-primary">
-                {currentQuestionIndex === interview.questions.length - 1
+                {currentQuestionIndex >= targetCount - 1
                   ? "Finish Interview"
                   : "Next Question"}
               </button>

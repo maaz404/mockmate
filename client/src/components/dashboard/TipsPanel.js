@@ -30,9 +30,16 @@ export default function TipsPanel({ tips = [] }) {
       <div className="p-6 space-y-4">
         {list.map((t, idx) => (
           <div key={idx} className="group">
-            <h4 className="text-sm font-medium text-white group-hover:text-primary-300">{t.title}</h4>
+            <h4 className="text-sm font-medium text-white group-hover:text-primary-300">
+              {t.title}
+            </h4>
             <p className="text-sm text-surface-400">{t.desc}</p>
-            <Link to={t.href} className="text-primary-400 hover:text-primary-300 text-xs font-medium">Explore →</Link>
+            <Link
+              to={t.href}
+              className="text-primary-400 hover:text-primary-300 text-xs font-medium"
+            >
+              Explore →
+            </Link>
           </div>
         ))}
       </div>

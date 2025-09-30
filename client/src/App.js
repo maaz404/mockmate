@@ -22,6 +22,7 @@ import MockInterviewPage from "./pages/MockInterviewPage";
 import PracticePage from "./pages/PracticePage";
 import ResourcesPage from "./pages/ResourcesPage";
 import ReportsPage from "./pages/ReportsPage";
+import ScheduledSessionsPage from "./pages/ScheduledSessionsPage";
 import SessionSummaryPage from "./pages/SessionSummaryPage";
 import SupportPage from "./pages/SupportPage";
 import HybridQuestionDemo from "./pages/HybridQuestionDemo";
@@ -229,6 +230,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <ReportsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/scheduled"
+                    element={
+                      <ProtectedRoute>
+                        <ScheduledSessionsPage />
                       </ProtectedRoute>
                     }
                   />

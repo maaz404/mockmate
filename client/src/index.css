@@ -391,3 +391,48 @@
 
 /* Hero CTA button (orange gradient pill) */
 
+/* Hover-visible scrollbar utility: hidden by default, shows on hover with a pleasant style */
+.hover-scrollbar {
+  /* Firefox */
+  scrollbar-width: none;
+  /* Prevent layout shift when scrollbar appears where supported */
+  scrollbar-gutter: stable both-edges;
+}
+.hover-scrollbar:hover {
+  scrollbar-width: thin;
+  /* Thumb and track colors for Firefox on hover */
+  scrollbar-color: rgba(148,163,184,0.7) transparent; /* slate-400ish */
+}
+
+/* WebKit-based browsers */
+.hover-scrollbar::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+.hover-scrollbar:hover::-webkit-scrollbar {
+  width: 8px; /* visible on hover */
+  height: 8px;
+}
+.hover-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hover-scrollbar:hover::-webkit-scrollbar-track {
+  background: linear-gradient(to bottom, rgba(0,0,0,0.03), rgba(0,0,0,0.06));
+  border-radius: 9999px;
+}
+.hover-scrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent; /* hidden */
+}
+.hover-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(148,163,184,0.9), rgba(100,116,139,0.9)); /* slate-400 -> slate-500 */
+  border-radius: 9999px;
+  border: 2px solid rgba(255,255,255,0.6);
+}
+.dark .hover-scrollbar:hover::-webkit-scrollbar-track {
+  background: linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.06));
+}
+.dark .hover-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(148,163,184,0.75), rgba(71,85,105,0.9)); /* slate-400 -> slate-600 */
+  border-color: rgba(2,6,23,0.4); /* slate-950-ish edge */
+}
+

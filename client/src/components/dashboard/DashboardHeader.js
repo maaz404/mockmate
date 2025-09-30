@@ -1,7 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-export default function DashboardHeader({ user, userProfile, onStartInterview }) {
+export default function DashboardHeader({
+  user,
+  userProfile,
+  onStartInterview,
+}) {
   const completeness = userProfile?.profileCompleteness ?? 0;
   const streak = userProfile?.streak?.current ?? 0;
 
@@ -52,10 +56,7 @@ export default function DashboardHeader({ user, userProfile, onStartInterview })
           >
             Start practice
           </button>
-          <Link
-            to="/interview/new"
-            className="btn-outline"
-          >
+          <Link to="/interview/new" className="btn-outline">
             Create interview
           </Link>
         </div>

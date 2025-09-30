@@ -16,12 +16,20 @@ export default function UpcomingCard({ next }) {
               <p className="text-base text-white font-medium">{next.title}</p>
               <p className="text-sm text-surface-400">{next.when}</p>
             </div>
-            <Link to="/interviews" className="btn-outline">Open</Link>
+            <Link to="/interviews" className="btn-outline">
+              Open
+            </Link>
           </div>
         ) : (
           <div className="text-surface-300 text-sm">
-            No session scheduled. 
-            <Link to="/interview/new" className="text-primary-400 hover:text-primary-300 font-medium">Create one</Link> or use Quick Start.
+            No session scheduled.
+            <Link
+              to="/interview/new"
+              className="text-primary-400 hover:text-primary-300 font-medium"
+            >
+              Create one
+            </Link>{" "}
+            or use Quick Start.
           </div>
         )}
       </div>

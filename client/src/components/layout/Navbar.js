@@ -8,7 +8,7 @@ import {
 } from "@clerk/clerk-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Calendar } from "lucide-react";
 import DarkModeToggle from "../ui/DarkModeToggle";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import toast from "react-hot-toast";
@@ -64,6 +64,9 @@ const Navbar = () => {
               <Link to="/dashboard" className="nav-link-dark">
                 Dashboard
               </Link>
+              <Link to="/interviews" className="nav-link-dark">
+                Interviews
+              </Link>
               <Link to="/mock-interview" className="nav-link-dark">
                 Practice
               </Link>
@@ -92,6 +95,13 @@ const Navbar = () => {
                 <span className="text-surface-300 text-sm">
                   Welcome, {user?.firstName}
                 </span>
+                <Link
+                  to="/scheduled"
+                  className="nav-link-dark flex items-center gap-1"
+                  title="Scheduled"
+                >
+                  <Calendar size={18} />
+                </Link>
                 <UserButton
                   appearance={{
                     elements: {
@@ -114,6 +124,13 @@ const Navbar = () => {
           <div className="md:hidden flex items-center space-x-2">
             {/* Mobile Dark Mode Toggle */}
             <DarkModeToggle />
+            <Link
+              to="/scheduled"
+              className="text-surface-300 hover:text-white transition-colors p-2 rounded-lg"
+              title="Scheduled"
+            >
+              <Calendar size={22} />
+            </Link>
 
             {/* Mobile menu button */}
             <button
@@ -183,6 +200,14 @@ const Navbar = () => {
                     role="menuitem"
                   >
                     Dashboard
+                  </Link>
+                  <Link
+                    to="/interviews"
+                    className="block nav-link-dark"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    role="menuitem"
+                  >
+                    Interviews
                   </Link>
                   <Link
                     to="/mock-interview"

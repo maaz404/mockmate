@@ -14,6 +14,7 @@ const InterviewCreationPage = () => {
     duration: 30,
     difficulty: "medium",
     focusAreas: [],
+    adaptiveDifficultyEnabled: true,
   });
   const [loading, setLoading] = useState(false);
 
@@ -145,6 +146,7 @@ const InterviewCreationPage = () => {
         easy: "beginner",
         medium: "intermediate",
         hard: "advanced",
+        mixed: "intermediate",
       };
 
       // Create interview
@@ -156,6 +158,7 @@ const InterviewCreationPage = () => {
             formData.experienceLevel,
           difficulty:
             difficultyMapping[formData.difficulty] || formData.difficulty,
+          adaptiveDifficulty: { enabled: !!formData.adaptiveDifficultyEnabled },
           questionCount: Math.floor(formData.duration / 3), // Roughly 3 minutes per question
         },
       });
@@ -237,6 +240,34 @@ const InterviewCreationPage = () => {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Adaptive Difficulty */}
+            <div className="p-4 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800/40">
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.adaptiveDifficultyEnabled}
+                  onChange={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      adaptiveDifficultyEnabled:
+                        !prev.adaptiveDifficultyEnabled,
+                    }))
+                  }
+                  className="mt-1 text-primary-500 bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 focus:ring-primary-500"
+                />
+                <span>
+                  <span className="block font-medium text-surface-900 dark:text-surface-50">
+                    Adaptive Difficulty
+                  </span>
+                  <span className="block text-sm text-surface-600 dark:text-surface-400">
+                    Adjusts the difficulty of upcoming questions based on your
+                    performance. Starts at the selected difficulty and adapts
+                    each question.
+                  </span>
+                </span>
+              </label>
             </div>
 
             {/* Interview Type */}

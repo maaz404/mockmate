@@ -85,7 +85,7 @@ const InterviewHistoryPage = () => {
               </button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto hover-scrollbar">
               <table className="table-base">
                 <thead className="table-head">
                   <tr>
@@ -143,6 +143,16 @@ const InterviewHistoryPage = () => {
                               }
                             >
                               Results
+                            </button>
+                          )}
+                          {i.status === "completed" && (
+                            <button
+                              className="btn-ghost"
+                              onClick={() =>
+                                navigate(`/session-summary/${i._id}`)
+                              }
+                            >
+                              Summary
                             </button>
                           )}
                         </div>

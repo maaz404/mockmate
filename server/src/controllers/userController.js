@@ -1,6 +1,7 @@
 /* eslint-disable no-console, consistent-return, no-magic-numbers */
 const UserProfile = require("../models/UserProfile");
 const { clerkClient } = require("@clerk/clerk-sdk-node");
+const Interview = require("../models/Interview");
 const ScheduledSession = require("../models/ScheduledSession");
 
 // Get or create user profile
@@ -78,7 +79,7 @@ const getProfile = async (req, res) => {
 const saveOnboardingProgress = async (req, res) => {
   try {
     const { userId } = req.auth;
-  const progressData = req.body;
+    const progressData = req.body;
 
     console.log("Save onboarding progress - userId:", userId);
     console.log("Progress data:", JSON.stringify(progressData, null, 2));
@@ -561,18 +562,40 @@ module.exports = {
 const getScheduledSessions = async (req, res) => {
   try {
     const { userId } = req.auth;
-    const { limit = 3 } = req.query;
+    const { limit = 3, page = 1, includePast, status } = req.query;
 
     const now = new Date();
-    const sessions = await ScheduledSession.find({
-      userId,
-      status: "scheduled",
-      scheduledAt: { $gte: now },
-    })
-      .sort({ scheduledAt: 1 })
-      .limit(Number(limit));
+    const baseQuery = { userId };
+    if (!status || status === "scheduled") {
+      baseQuery.status = "scheduled";
+    } else if (status && status !== "all") {
+      baseQuery.status = status; // completed | canceled
+    }
+    if (!includePast || includePast === "false") {
+      baseQuery.scheduledAt = { $gte: now };
+    }
 
-    return res.json({ success: true, data: sessions });
+    const perPage = Number(limit);
+    const currentPage = Math.max(1, Number(page));
+
+    const [sessions, total] = await Promise.all([
+      ScheduledSession.find(baseQuery)
+        .sort({ scheduledAt: 1 })
+        .limit(perPage)
+        .skip((currentPage - 1) * perPage),
+      ScheduledSession.countDocuments(baseQuery),
+    ]);
+
+    return res.json({
+      success: true,
+      data: sessions,
+      pagination: {
+        current: currentPage,
+        total,
+        pages: Math.ceil(total / perPage),
+        limit: perPage,
+      },
+    });
   } catch (error) {
     console.error("Get scheduled sessions error:", error);
     return res
@@ -647,6 +670,36 @@ const deleteScheduledSession = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Failed to delete scheduled session" });
+  }
+};
+
+// Update session status (scheduled | completed | canceled)
+const updateScheduledSessionStatus = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { id } = req.params;
+    const { status } = req.body;
+    const allowed = ["scheduled", "completed", "canceled"];
+    if (!allowed.includes(status)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid status" });
+    }
+    const doc = await ScheduledSession.findOneAndUpdate(
+      { _id: id, userId },
+      { $set: { status } },
+      { new: true }
+    );
+    if (!doc)
+      return res
+        .status(404)
+        .json({ success: false, message: "Session not found" });
+    return res.json({ success: true, data: doc });
+  } catch (error) {
+    console.error("Update session status error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update status" });
   }
 };
 
@@ -761,11 +814,147 @@ const getDynamicTips = async (req, res) => {
       });
     }
 
-    // Default fallbacks
+    // Deeper analysis from recent completed interviews (lightweight)
+    try {
+      const recent = await Interview.find({ userId, status: "completed" })
+        .sort({ updatedAt: -1 })
+        .limit(5)
+        .select(
+          "results.breakdown questions.category questions.followUpsReviewed questions.score.rubricScores"
+        );
+
+      // Aggregate breakdown averages
+      const agg = {
+        technical: [],
+        communication: [],
+        problemSolving: [],
+        behavioral: [],
+      };
+      for (const doc of recent) {
+        const b = doc?.results?.breakdown || {};
+        if (typeof b.technical === "number") agg.technical.push(b.technical);
+        if (typeof b.communication === "number")
+          agg.communication.push(b.communication);
+        if (typeof b.problemSolving === "number")
+          agg.problemSolving.push(b.problemSolving);
+        if (typeof b.behavioral === "number") agg.behavioral.push(b.behavioral);
+      }
+
+      const avgOf = (arr) =>
+        arr.length
+          ? Math.round(arr.reduce((s, n) => s + n, 0) / arr.length)
+          : null;
+      const avgs = {
+        technical: avgOf(agg.technical),
+        communication: avgOf(agg.communication),
+        problemSolving: avgOf(agg.problemSolving),
+        behavioral: avgOf(agg.behavioral),
+      };
+
+      Object.entries(avgs).forEach(([key, val]) => {
+        if (val !== null && val < 60) {
+          const map = {
+            technical: {
+              title: "Strengthen technical depth",
+              desc: "Target weak topics from recent sessions; practice with timed drills.",
+              href: "/practice",
+            },
+            communication: {
+              title: "Clarify communication",
+              desc: "Practice concise framing and narration of thought process.",
+              href: "/resources",
+            },
+            problemSolving: {
+              title: "Sharpen problem solving",
+              desc: "Break down problems, state assumptions, and compare approaches.",
+              href: "/practice",
+            },
+            behavioral: {
+              title: "Improve behavioral responses",
+              desc: "Use STAR and emphasize measurable results and learnings.",
+              href: "/resources",
+            },
+          };
+          tips.push(map[key]);
+        }
+      });
+
+      // Rubric weaknesses (clarity/depth)
+      let lowClarityCount = 0;
+      let lowDepthCount = 0;
+      for (const doc of recent) {
+        for (const q of doc?.questions || []) {
+          const r = q?.score?.rubricScores || {};
+          if (typeof r.clarity === "number" && r.clarity <= 2)
+            lowClarityCount += 1;
+          if (typeof r.depth === "number" && r.depth <= 2) lowDepthCount += 1;
+        }
+      }
+      if (lowClarityCount >= 2) {
+        tips.push({
+          title: "Boost clarity",
+          desc: "Practice structuring answers with signposting and concise language.",
+          href: "/resources",
+        });
+      }
+      if (lowDepthCount >= 2) {
+        tips.push({
+          title: "Increase depth",
+          desc: "Add deeper reasoning and trade-off analysis in technical responses.",
+          href: "/practice",
+        });
+      }
+
+      // Category frequency hint
+      const categoryCounts = {};
+      for (const doc of recent) {
+        for (const q of doc?.questions || []) {
+          const cat = q.category || "general";
+          categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+        }
+      }
+      const topCat = Object.entries(categoryCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name]) => name)[0];
+      if (topCat) {
+        tips.push({
+          title: `Practice more in ${topCat}`,
+          desc: "Double down on your most frequent category to build fluency.",
+          href: "/practice",
+        });
+      }
+
+      // Follow-ups reviewed signal (encourage action)
+      const totalFollowupsReviewed = recent.reduce(
+        (acc, doc) =>
+          acc +
+          (doc?.questions || []).filter((q) => q.followUpsReviewed).length,
+        0
+      );
+      if (totalFollowupsReviewed === 0) {
+        tips.push({
+          title: "Review follow-ups",
+          desc: "Use AI follow-up questions to close gaps immediately after answers.",
+          href: "/interviews",
+        });
+      }
+    } catch (e) {
+      // Non-critical; keep fallbacks
+    }
+
+    // Default fallbacks if still empty
     if (tips.length === 0) {
       tips.push(
-        { title: "Warm up daily", desc: "Short, frequent practice beats cramming.", href: "/practice" },
-        { title: "Revisit feedback", desc: "Address flagged areas from previous sessions.", href: "/interviews" }
+        {
+          title: "Warm up daily",
+          desc: "Short, frequent practice beats cramming.",
+          href: "/practice",
+        },
+        {
+          title: "Revisit feedback",
+          desc: "Address flagged areas from previous sessions.",
+          href: "/interviews",
+        }
       );
     }
 
@@ -782,6 +971,7 @@ const getDynamicTips = async (req, res) => {
 module.exports.getScheduledSessions = getScheduledSessions;
 module.exports.upsertScheduledSession = upsertScheduledSession;
 module.exports.deleteScheduledSession = deleteScheduledSession;
+module.exports.updateScheduledSessionStatus = updateScheduledSessionStatus;
 module.exports.getGoals = getGoals;
 module.exports.updateGoals = updateGoals;
 module.exports.getDynamicTips = getDynamicTips;

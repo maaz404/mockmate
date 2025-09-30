@@ -644,7 +644,7 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
               placeholder="Search for skills (e.g., React, Python, SQL)"
             />
             {filteredSkills.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-lg shadow-lg max-h-40 overflow-y-auto hover-scrollbar">
                 {filteredSkills.map((skill) => (
                   <button
                     key={`${skill.category}-${skill.name}`}
@@ -671,7 +671,7 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                 Your Skills & Confidence Levels
               </label>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+              <div className="space-y-2 max-h-40 overflow-y-auto hover-scrollbar">
                 {formData.professionalInfo.skills.map((skill) => (
                   <div
                     key={skill.name}
@@ -1214,7 +1214,7 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
         </div>
 
         {/* Scrollable content */}
-        <div className="px-6 py-5 overflow-y-auto">
+        <div className="px-6 py-5 overflow-y-auto hover-scrollbar">
           <p className="mb-4 text-sm text-surface-600 dark:text-surface-400 hidden sm:block">
             {stepMeta[Math.min(step - 1, 4)]?.subtitle}
           </p>

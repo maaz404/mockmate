@@ -12,6 +12,7 @@ const {
   getScheduledSessions,
   upsertScheduledSession,
   deleteScheduledSession,
+  updateScheduledSessionStatus,
   getGoals,
   updateGoals,
   getDynamicTips,
@@ -24,7 +25,9 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // eslint-disable-next-line no-magic-numbers
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1000000000)}`;
+    const uniqueSuffix = `${Date.now()}-${Math.round(
+      Math.random() * 1000000000
+    )}`;
     const ext = file.originalname.split(".").pop();
     cb(null, `${file.fieldname}-${uniqueSuffix}.${ext}`);
   },
@@ -101,6 +104,12 @@ router.put("/scheduled-sessions/:id", requireAuth, upsertScheduledSession);
 // @desc Delete scheduled session
 // @route DELETE /api/users/scheduled-sessions/:id
 router.delete("/scheduled-sessions/:id", requireAuth, deleteScheduledSession);
+// @desc Update status
+router.patch(
+  "/scheduled-sessions/:id/status",
+  requireAuth,
+  updateScheduledSessionStatus
+);
 
 // Goals
 // @desc Get goals

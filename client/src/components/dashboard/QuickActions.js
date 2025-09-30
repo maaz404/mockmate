@@ -1,6 +1,6 @@
 import React from "react";
 
-const QuickActions = ({ onStartInterview, userProfile }) => {
+const QuickActions = ({ onStartInterview, userProfile, onQuickSchedule }) => {
   const interviewTypes = [
     {
       type: "technical",
@@ -94,6 +94,16 @@ const QuickActions = ({ onStartInterview, userProfile }) => {
                   <p className="text-sm text-surface-400 mt-1 group-hover:text-surface-300 transition-colors">
                     {interview.description}
                   </p>
+                  <button
+                    type="button"
+                    className="mt-2 text-xs text-primary-400 hover:text-primary-300"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onQuickSchedule?.(interview.type);
+                    }}
+                  >
+                    Quick Schedule
+                  </button>
                 </div>
               </div>
 

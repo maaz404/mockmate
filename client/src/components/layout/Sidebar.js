@@ -73,6 +73,25 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           ),
         },
         {
+          name: "Scheduled Sessions",
+          path: "/scheduled",
+          icon: (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2h-2m-10 0H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          ),
+        },
+        {
           name: "Create Interview",
           path: "/interview/new",
           icon: (
@@ -168,6 +187,87 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+              />
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
+      section: "Labs",
+      items: [
+        {
+          name: "Comprehensive Dashboard",
+          path: "/comprehensive-dashboard",
+          icon: (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"
+              />
+            </svg>
+          ),
+        },
+        {
+          name: "Hybrid Demo",
+          path: "/demo",
+          icon: (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6v6l4 2"
+              />
+            </svg>
+          ),
+        },
+        {
+          name: "Coding Demo",
+          path: "/coding-demo",
+          icon: (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 7h18M3 12h18M3 17h18"
+              />
+            </svg>
+          ),
+        },
+        {
+          name: "Video Demo",
+          path: "/video-demo",
+          icon: (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
               />
             </svg>
           ),
@@ -442,7 +542,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
         {/* Navigation */}
         <nav
-          className={`flex-1 overflow-y-auto ${
+          className={`flex-1 overflow-y-auto hover-scrollbar ${
             isCollapsed ? "px-2 py-1" : "px-3 py-4"
           } ${isCollapsed ? "space-y-1" : "space-y-4"}`}
         >

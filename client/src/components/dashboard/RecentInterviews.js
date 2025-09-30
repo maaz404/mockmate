@@ -1,7 +1,7 @@
 import React from "react";
 import { format } from "date-fns";
 
-const RecentInterviews = ({ interviews, onViewAll }) => {
+const RecentInterviews = ({ interviews, onViewAll, onOpen, onResults }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case "completed":
@@ -96,8 +96,23 @@ const RecentInterviews = ({ interviews, onViewAll }) => {
                       </div>
                     )}
                 </div>
-
-                <div className="ml-4 flex-shrink-0">
+                <div className="ml-4 flex-shrink-0 flex items-center gap-3">
+                  <div className="hidden md:flex items-center gap-2">
+                    <button
+                      className="text-xs text-primary-400 hover:text-primary-300"
+                      onClick={() => onOpen?.(interview)}
+                    >
+                      Open
+                    </button>
+                    {interview.status === "completed" && (
+                      <button
+                        className="text-xs text-green-400 hover:text-green-300"
+                        onClick={() => onResults?.(interview)}
+                      >
+                        Results
+                      </button>
+                    )}
+                  </div>
                   {interview.status === "completed" ? (
                     <div className="text-green-400">
                       <svg
