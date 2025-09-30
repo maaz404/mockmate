@@ -9,10 +9,15 @@ const { updateAnalytics } = require("./userController");
 const createInterview = async (req, res) => {
   try {
     const { userId } = req.auth;
-    const { config } = req.body;
+    const config = req.body?.config || req.body;
 
     // Validate configuration
-    if (!config.jobRole || !config.experienceLevel || !config.interviewType) {
+    if (
+      !config ||
+      !config.jobRole ||
+      !config.experienceLevel ||
+      !config.interviewType
+    ) {
       return res.status(400).json({
         success: false,
         message: "Missing required interview configuration",
@@ -556,9 +561,29 @@ const getInterviewDetails = async (req, res) => {
       });
     }
 
-    res.json({
+    // Provide a client-friendly shape while preserving original document
+    const interviewObj = interview.toObject();
+    const clientQuestions = (interviewObj.questions || []).map((q) => ({
+      ...q,
+      text: q.questionText, // align with frontend usage
+      // Infer a simple type for styling; default to technical
+      type:
+        q.type ||
+        (q.category && q.category.includes("behavior")
+          ? "behavioral"
+          : "technical"),
+    }));
+
+    const responsePayload = {
+      ...interviewObj,
+      jobRole: interviewObj.config?.jobRole,
+      duration: interviewObj.config?.duration, // minutes
+      questions: clientQuestions,
+    };
+
+    return res.json({
       success: true,
-      data: interview,
+      data: responsePayload,
     });
   } catch (error) {
     console.error("Get interview details error:", error);

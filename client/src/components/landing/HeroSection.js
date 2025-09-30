@@ -56,7 +56,7 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="font-extrabold tracking-tight text-surface-900 dark:text-white max-w-4xl mx-auto leading-[1.1] text-[38px] sm:text-[48px] md:text-[56px] lg:text-[64px] xl:text-[64px]"
+          className="font-extrabold tracking-tight text-surface-900 dark:text-white max-w-5xl mx-auto leading-[1.08] text-[40px] sm:text-[50px] md:text-[60px] lg:text-[72px] xl:text-[80px]"
         >
           Land Your Next Job in{" "}
           <span className="text-surface-900">30 Days*</span> or Less
@@ -68,7 +68,7 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mt-6 text-[20px] sm:text-[20px] text-surface-600 dark:text-surface-400 max-w-3xl mx-auto"
+          className="mt-6 text-[20px] sm:text-[22px] text-surface-600 dark:text-surface-400 max-w-2xl mx-auto"
         >
           AI-powered tools to help you ace interviews, apply faster, and land
           offers with confidence.

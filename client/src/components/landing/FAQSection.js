@@ -63,7 +63,10 @@ const FAQSection = () => {
   };
 
   return (
-    <section id="faq" className="section-padding bg-surface-50">
+    <section
+      id="faq"
+      className="section-padding bg-surface-50 dark:bg-surface-900"
+    >
       <div className="max-w-4xl mx-auto container-padding">
         {/* Section Header */}
         <motion.div
@@ -73,18 +76,21 @@ const FAQSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center space-x-2 bg-white border border-surface-200 rounded-full px-4 py-2 mb-6">
-            <HelpCircle size={16} className="text-primary-600" />
-            <span className="text-surface-700 text-sm font-medium">
+          <div className="inline-flex items-center space-x-2 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-full px-4 py-2 mb-6">
+            <HelpCircle
+              size={16}
+              className="text-primary-600 dark:text-primary-400"
+            />
+            <span className="text-surface-700 dark:text-surface-300 text-sm font-medium">
               Technical Documentation
             </span>
           </div>
 
-          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 mb-6">
+          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 dark:text-white mb-6">
             Technical <span className="gradient-text">Overview</span>
           </h2>
 
-          <p className="text-xl text-surface-600">
+          <p className="text-xl text-surface-600 dark:text-surface-400">
             Comprehensive answers to technical questions about the system
             architecture, implementation details, and development methodologies
             used in the MockMate project.
@@ -92,7 +98,11 @@ const FAQSection = () => {
         </motion.div>
 
         {/* FAQ Accordion */}
-        <div className="space-y-4" role="region" aria-label="Frequently asked questions">
+        <div
+          className="space-y-4"
+          role="region"
+          aria-label="Frequently asked questions"
+        >
           {faqs.map((faq, index) => (
             <motion.div
               key={index}
@@ -100,23 +110,29 @@ const FAQSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white rounded-xl border border-surface-200 overflow-hidden"
+              className="bg-white dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 overflow-hidden"
             >
               <button
                 onClick={() => toggleFAQ(index)}
-                className="w-full px-6 py-6 text-left flex items-center justify-between hover:bg-surface-50 focus:bg-surface-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
+                className="w-full px-6 py-6 text-left flex items-center justify-between hover:bg-surface-50 dark:hover:bg-surface-700/50 focus:bg-surface-50 dark:focus:bg-surface-700/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
                 aria-expanded={openFAQ === index}
                 aria-controls={`faq-answer-${index}`}
                 id={`faq-question-${index}`}
               >
-                <h3 className="text-lg font-semibold text-surface-900 pr-4">
+                <h3 className="text-lg font-semibold text-surface-900 dark:text-white pr-4">
                   {faq.question}
                 </h3>
                 <div className="flex-shrink-0" aria-hidden="true">
                   {openFAQ === index ? (
-                    <Minus size={20} className="text-primary-600" />
+                    <Minus
+                      size={20}
+                      className="text-primary-600 dark:text-primary-400"
+                    />
                   ) : (
-                    <Plus size={20} className="text-surface-400" />
+                    <Plus
+                      size={20}
+                      className="text-surface-400 dark:text-surface-500"
+                    />
                   )}
                 </div>
               </button>
@@ -134,8 +150,8 @@ const FAQSection = () => {
                     aria-labelledby={`faq-question-${index}`}
                   >
                     <div className="px-6 pb-6">
-                      <div className="border-t border-surface-200 pt-4">
-                        <p className="text-surface-700 leading-relaxed">
+                      <div className="border-t border-surface-200 dark:border-surface-700 pt-4">
+                        <p className="text-surface-700 dark:text-surface-300 leading-relaxed">
                           {faq.answer}
                         </p>
                       </div>
@@ -155,24 +171,24 @@ const FAQSection = () => {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="text-center mt-12"
         >
-          <div className="bg-white rounded-2xl shadow-surface border border-surface-200 p-8">
+          <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-surface border border-surface-200 dark:border-surface-700 p-8">
             <h3 className="text-2xl font-bold text-surface-900 mb-4">
               Still have questions?
             </h3>
-            <p className="text-surface-600 mb-6">
+            <p className="text-surface-600 dark:text-surface-400 mb-6">
               Our team is here to help you succeed. Reach out and we'll get back
               to you within 24 hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a 
-                href="mailto:support@mockmate.com" 
+              <a
+                href="mailto:support@mockmate.com"
                 className="btn-primary"
                 aria-label="Contact MockMate support team via email"
               >
                 Contact Support
               </a>
-              <a 
-                href="/help" 
+              <a
+                href="/help"
                 className="btn-secondary"
                 aria-label="Visit MockMate help center"
               >

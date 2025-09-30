@@ -165,7 +165,7 @@
   }
   
   .card {
-    @apply bg-surface-50 rounded-2xl shadow-surface-md border border-surface-200 p-6 transition-all duration-300 hover:shadow-surface-lg focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2;
+    @apply bg-surface-50 dark:bg-surface-800 rounded-2xl shadow-surface-md dark:shadow-surface-lg border border-surface-200 dark:border-surface-700 p-6 transition-all duration-300 hover:shadow-surface-lg focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-surface-900;
   }
 
   .card-dark {
@@ -227,11 +227,13 @@
 
   /* Sidebar links */
   .sidebar-link {
-    @apply flex items-center gap-3 text-sm font-medium text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-700 px-3 py-2 rounded-lg transition-colors;
+    /* Higher contrast on darker sidebar */
+    @apply flex items-center gap-3 text-sm font-medium text-surface-700 dark:text-surface-200 hover:text-surface-900 dark:hover:text-white hover:bg-white/70 dark:hover:bg-white/5 px-3 py-2 rounded-lg transition-colors;
   }
 
   .sidebar-link-active {
-    @apply bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-r-2 border-primary-500;
+    /* Clear active state with subtle pill and border accent */
+    @apply bg-white/80 dark:bg-white/5 text-primary-700 dark:text-primary-400 border-r-2 border-primary-500 shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)];
   }
 
   /* Modal */

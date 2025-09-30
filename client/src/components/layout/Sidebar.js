@@ -272,18 +272,28 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       <Link
         to={item.path}
         onClick={() => setIsMobileOpen(false)} // Close mobile menu when clicking nav item
-        className={`sidebar-link items-center ${
-          isActive(item.path) ? "sidebar-link-active" : ""
-        } ${isCollapsed ? "justify-center px-3" : "justify-start"}`}
+        className={`${
+          isCollapsed
+            ? "w-full h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-surface-100 dark:hover:bg-surface-800"
+            : "sidebar-link items-center justify-start"
+        } ${
+          isActive(item.path)
+            ? isCollapsed
+              ? "bg-surface-100 dark:bg-surface-800"
+              : "sidebar-link-active"
+            : ""
+        }`}
       >
         <span
           className={`flex-shrink-0 ${
             isActive(item.path)
-              ? "text-primary-500 dark:text-primary-400"
-              : "text-surface-500 dark:text-surface-400"
+              ? "text-primary-600 dark:text-primary-400"
+              : "text-surface-800 dark:text-surface-300"
           }`}
         >
-          {React.cloneElement(item.icon, { className: "w-[18px] h-[18px]" })}
+          {React.cloneElement(item.icon, {
+            className: "w-[20px] h-[20px]",
+          })}
         </span>
         {!isCollapsed && <span className="ml-1.5 truncate">{item.name}</span>}
       </Link>
@@ -349,8 +359,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       {/* Sidebar */}
       <div
         className={`
-          fixed top-0 left-0 z-50 h-full bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 transition-all duration-300 shadow-lg flex flex-col overflow-hidden
-          ${isCollapsed ? "w-12" : "w-52"}
+          fixed top-0 left-0 z-50 h-full
+          bg-[#F6FAFD] dark:bg-surface-900
+          transition-all duration-300 shadow-none border-r border-surface-200 dark:border-surface-800
+          flex flex-col overflow-hidden
+          ${isCollapsed ? "w-16" : "w-52"}
           ${
             isMobileOpen
               ? "translate-x-0"
@@ -358,12 +371,12 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           }
         `}
       >
-        {/* Header */}
-        <div className="flex items-center h-12 px-2 border-b border-surface-200 dark:border-surface-800">
-          {!isCollapsed && (
+        {/* Header: logo with always-visible toggle arrow adjacent to it */}
+        <div className="flex items-center h-12 px-2 border-b border-surface-300/60 dark:border-surface-700/60 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.02)]">
+          {!isCollapsed ? (
             <>
-              <Link to="/" className="flex items-center space-x-2 flex-1">
-                <div className="w-6 h-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+              <Link to="/" className="flex items-center space-x-2">
+                <div className="w-6 h-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-[0_0_0_2px_rgba(255,255,255,0.2)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.08)]">
                   <span className="text-white font-bold text-xs">M</span>
                 </div>
                 <span className="text-base font-bold text-surface-900 dark:text-white">
@@ -372,11 +385,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               </Link>
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-all duration-200"
+                className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
                 aria-label="Collapse sidebar"
               >
                 <svg
-                  className="w-4 h-4 transition-transform duration-200"
+                  className="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -390,21 +403,20 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 </svg>
               </button>
             </>
-          )}
-          {isCollapsed && (
+          ) : (
             <div className="flex items-center justify-between w-full">
-              <Link to="/" className="flex items-center justify-center flex-1">
+              <Link to="/" className="flex items-center justify-center">
                 <div className="w-6 h-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-xs">M</span>
                 </div>
               </Link>
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-all duration-200"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
                 aria-label="Expand sidebar"
               >
                 <svg
-                  className="w-4 h-4 transition-transform duration-200 rotate-180"
+                  className="w-4 h-4 rotate-180"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -422,7 +434,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+        <nav
+          className={`flex-1 overflow-y-auto ${
+            isCollapsed ? "px-2 py-1" : "px-3 py-4"
+          } ${isCollapsed ? "space-y-1" : "space-y-4"}`}
+        >
           {navigationItems.map((section) => (
             <div key={section.section}>
               {!isCollapsed && (
@@ -430,40 +446,55 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                   {section.section}
                 </h3>
               )}
-              <div className="space-y-1">
+              <div className={isCollapsed ? "space-y-1.5" : "space-y-1"}>
                 {section.items.map(renderNavItem)}
               </div>
             </div>
           ))}
+
+          {/* Theme toggle removed from nav */}
         </nav>
 
         {/* User section */}
-        <div className="mt-auto border-t border-surface-200 dark:border-surface-800 p-2 space-y-2">
-          {/* Dark Mode Toggle - Always visible */}
-          <div
-            className={`flex items-center ${
-              isCollapsed ? "justify-center" : "justify-between px-2"
-            }`}
-          >
-            {!isCollapsed && (
+        <div
+          className={`mt-auto border-t border-surface-200 dark:border-surface-800 ${
+            isCollapsed ? "p-1 space-y-1" : "p-2 space-y-2"
+          }`}
+        >
+          {/* Dark Mode Toggle - bottom placement like before */}
+          {isCollapsed ? (
+            <div
+              className="flex items-center justify-center"
+              onMouseEnter={(e) => showTooltip(e, "Toggle theme")}
+              onMouseMove={(e) => showTooltip(e, "Toggle theme")}
+              onMouseLeave={hideTooltip}
+              onFocus={(e) => showTooltip(e, "Toggle theme")}
+              onBlur={hideTooltip}
+            >
+              <div className="w-full h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-surface-100 dark:hover:bg-surface-800">
+                <DarkModeToggle className="p-0 bg-transparent hover:bg-transparent focus:ring-0" />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between px-2">
               <span className="text-xs text-surface-500 dark:text-surface-400 font-medium">
                 Theme
               </span>
-            )}
-            <DarkModeToggle />
-          </div>
+              <DarkModeToggle />
+            </div>
+          )}
 
           <SignedIn>
             <div
               className={`flex items-center ${
-                isCollapsed ? "justify-center" : "space-x-2 px-2"
+                isCollapsed ? "justify-center h-8" : "space-x-2 px-2 h-8"
               }`}
             >
               <UserButton
                 afterSignOutUrl="/"
                 appearance={{
                   elements: {
-                    avatarBox: "w-7 h-7",
+                    avatarBox: "w-[22px] h-[22px]",
                     userButtonPopoverCard: "shadow-lg",
                     userButtonPopoverActionButton:
                       "text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700",

@@ -104,15 +104,15 @@ const SessionSummaryPage = () => {
   const getPerformanceColor = (level) => {
     switch (level) {
       case "excellent":
-        return "text-green-600 bg-green-100";
+        return "text-green-600 bg-green-100 dark:text-green-300 dark:bg-green-500/10";
       case "good":
-        return "text-blue-600 bg-blue-100";
+        return "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-500/10";
       case "average":
-        return "text-yellow-600 bg-yellow-100";
+        return "text-yellow-600 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-500/10";
       case "needs-improvement":
-        return "text-red-600 bg-red-100";
+        return "text-red-600 bg-red-100 dark:text-red-300 dark:bg-red-500/10";
       default:
-        return "text-surface-600 bg-surface-100";
+        return "text-surface-600 bg-surface-100 dark:text-surface-300 dark:bg-surface-700/50";
     }
   };
 
@@ -147,11 +147,11 @@ const SessionSummaryPage = () => {
   };
 
   const UpgradeModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-surface-800 rounded-lg max-w-md w-full p-6 border border-surface-200 dark:border-surface-700">
         <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
-            <FileText className="h-6 w-6 text-blue-600" />
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-500/20 mb-4">
+            <FileText className="h-6 w-6 text-blue-600 dark:text-blue-300" />
           </div>
           <h3 className="text-lg font-medium text-surface-900 dark:text-surface-50 mb-2">
             Upgrade to Pro for PDF Export

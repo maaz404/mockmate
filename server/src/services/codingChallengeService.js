@@ -424,13 +424,13 @@ You must write an algorithm with O(log n) runtime complexity.`,
         const executionResult = {
           success: true,
           testResults,
-          score
+          score,
         };
-        
+
         const codeReview = await codeReviewService.reviewCode(
-          code, 
-          language, 
-          challenge, 
+          code,
+          language,
+          challenge,
           executionResult
         );
 
@@ -456,20 +456,19 @@ You must write an algorithm with O(log n) runtime complexity.`,
           passedTests: testResults.filter((t) => t.passed).length,
           totalTests: testResults.length,
           feedback: this.generateCodeFeedback(testResults, code, challenge),
-          codeReview
+          codeReview,
         };
-        
       } catch (executionError) {
         // Handle execution failure
         const executionResult = {
           success: false,
-          error: executionError.message
+          error: executionError.message,
         };
-        
+
         const codeReview = await codeReviewService.reviewCode(
-          code, 
-          language, 
-          challenge, 
+          code,
+          language,
+          challenge,
           executionResult
         );
 
@@ -482,7 +481,7 @@ You must write an algorithm with O(log n) runtime complexity.`,
           success: false,
           error: executionError.message,
           submissionId,
-          codeReview
+          codeReview,
         };
       }
     } catch (error) {
@@ -536,6 +535,48 @@ You must write an algorithm with O(log n) runtime complexity.`,
   }
 
   /**
+   * Stateless code test without requiring a session (used by /api/coding/test)
+   */
+  async testCode(challengeId, code, language = "javascript") {
+    const challenge = this.predefinedChallenges[challengeId];
+    if (!challenge) {
+      return { success: false, error: "Challenge not found" };
+    }
+
+    try {
+      const testResults = await this.runTests(challenge, code, language);
+      const score = this.calculateScore(testResults, challenge);
+
+      const executionResult = { success: true, testResults, score };
+      const codeReview = await codeReviewService.reviewCode(
+        code,
+        language,
+        challenge,
+        executionResult
+      );
+
+      return {
+        success: true,
+        testResults,
+        score,
+        passedTests: testResults.filter((t) => t.passed).length,
+        totalTests: testResults.length,
+        feedback: this.generateCodeFeedback(testResults, code, challenge),
+        codeReview,
+      };
+    } catch (error) {
+      const executionResult = { success: false, error: error.message };
+      const codeReview = await codeReviewService.reviewCode(
+        code,
+        language,
+        challenge,
+        executionResult
+      );
+      return { success: false, error: error.message, codeReview };
+    }
+  }
+
+  /**
    * Execute a single test case using Judge0 or fallback
    */
   async executeTest(code, testCase, language, challenge) {
@@ -544,7 +585,12 @@ You must write an algorithm with O(log n) runtime complexity.`,
     try {
       // Use Judge0 if available, otherwise fallback to local execution
       if (judge0Service.isAvailable()) {
-        return await this.executeWithJudge0(code, testCase, language, challenge);
+        return await this.executeWithJudge0(
+          code,
+          testCase,
+          language,
+          challenge
+        );
       } else {
         // Fallback to local execution (for development/testing)
         return await this.executeLocally(code, testCase, language, challenge);
@@ -560,22 +606,32 @@ You must write an algorithm with O(log n) runtime complexity.`,
   async executeWithJudge0(code, testCase, language, challenge) {
     try {
       // Prepare test code for Judge0
-      const testCode = this.prepareTestCode(code, testCase, language, challenge);
-      
+      const testCode = this.prepareTestCode(
+        code,
+        testCase,
+        language,
+        challenge
+      );
+
       // Execute using Judge0
       const result = await judge0Service.executeCode(testCode, language);
-      
+
       // Parse Judge0 result
-      if (result.status.id === 3) { // Accepted
+      if (result.status.id === 3) {
+        // Accepted
         const output = this.parseJudge0Output(result.stdout, language);
         return {
           output,
           executionTime: result.time * 1000, // Convert to milliseconds
           memoryUsed: result.memory || 0,
-          judge0Result: result
+          judge0Result: result,
         };
       } else {
-        throw new Error(`Execution failed: ${result.stderr || result.compile_output || 'Unknown error'}`);
+        throw new Error(
+          `Execution failed: ${
+            result.stderr || result.compile_output || "Unknown error"
+          }`
+        );
       }
     } catch (error) {
       throw new Error(`Judge0 execution failed: ${error.message}`);
@@ -587,11 +643,11 @@ You must write an algorithm with O(log n) runtime complexity.`,
    */
   prepareTestCode(code, testCase, language, challenge) {
     switch (language) {
-      case 'javascript':
+      case "javascript":
         return this.prepareJavaScriptTestCode(code, testCase, challenge);
-      case 'python':
+      case "python":
         return this.preparePythonTestCode(code, testCase, challenge);
-      case 'java':
+      case "java":
         return this.prepareJavaTestCode(code, testCase, challenge);
       default:
         throw new Error(`Language ${language} not supported`);

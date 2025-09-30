@@ -87,7 +87,10 @@ const PricingSection = () => {
   };
 
   return (
-    <section id="pricing" className="section-padding bg-white">
+    <section
+      id="pricing"
+      className="section-padding bg-white dark:bg-surface-900"
+    >
       <div className="max-w-7xl mx-auto container-padding">
         {/* Section Header */}
         <motion.div
@@ -97,23 +100,23 @@ const PricingSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 mb-6">
+          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 dark:text-white mb-6">
             Choose Your <span className="gradient-text">Success Plan</span>
           </h2>
 
-          <p className="text-xl text-surface-600 max-w-3xl mx-auto mb-8">
+          <p className="text-xl text-surface-600 dark:text-surface-400 max-w-3xl mx-auto mb-8">
             Invest in your career with plans designed to help you land your
             dream job faster and with more confidence.
           </p>
 
           {/* Billing Toggle */}
-          <div className="inline-flex items-center bg-surface-100 rounded-lg p-1">
+          <div className="inline-flex items-center bg-surface-100 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700 rounded-lg p-1">
             <button
               onClick={() => setIsAnnual(false)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 !isAnnual
-                  ? "bg-white text-surface-900 shadow-sm"
-                  : "text-surface-600 hover:text-surface-900"
+                  ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
+                  : "text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white"
               }`}
             >
               Monthly
@@ -122,12 +125,12 @@ const PricingSection = () => {
               onClick={() => setIsAnnual(true)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 isAnnual
-                  ? "bg-white text-surface-900 shadow-sm"
-                  : "text-surface-600 hover:text-surface-900"
+                  ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
+                  : "text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white"
               }`}
             >
               Annual
-              <span className="ml-1 text-xs text-green-600 font-semibold">
+              <span className="ml-1 text-xs text-green-600 dark:text-green-400 font-semibold">
                 Save 20%
               </span>
             </button>
@@ -159,8 +162,8 @@ const PricingSection = () => {
                 <div
                   className={`card h-full flex flex-col ${
                     plan.popular
-                      ? "border-primary-200 shadow-surface-xl"
-                      : "border-surface-200"
+                      ? "border-primary-200 dark:border-primary-400/30 shadow-surface-xl"
+                      : "border-surface-200 dark:border-surface-700"
                   }`}
                 >
                   {/* Header */}
@@ -172,21 +175,23 @@ const PricingSection = () => {
                         </div>
                       )}
                       <div>
-                        <h3 className="text-2xl font-bold text-surface-900">
+                        <h3 className="text-2xl font-bold text-surface-900 dark:text-white">
                           {plan.name}
                         </h3>
                       </div>
                     </div>
 
-                    <p className="text-surface-600 mb-4">{plan.description}</p>
+                    <p className="text-surface-600 dark:text-surface-300 mb-4">
+                      {plan.description}
+                    </p>
 
                     {/* Price */}
                     <div className="mb-2">
-                      <span className="text-4xl font-bold text-surface-900">
+                      <span className="text-4xl font-bold text-surface-900 dark:text-white">
                         {getPrice(plan)}
                       </span>
                       {plan.price.monthly > 0 && (
-                        <span className="text-surface-600 text-lg">
+                        <span className="text-surface-600 dark:text-surface-300 text-lg">
                           /{isAnnual ? "month" : "month"}
                         </span>
                       )}
@@ -194,7 +199,7 @@ const PricingSection = () => {
 
                     {/* Savings */}
                     {isAnnual && getSavings(plan) && (
-                      <div className="text-green-600 text-sm font-medium">
+                      <div className="text-green-600 dark:text-green-400 text-sm font-medium">
                         {getSavings(plan)}
                       </div>
                     )}
@@ -208,10 +213,13 @@ const PricingSection = () => {
                           key={featureIndex}
                           className="flex items-start space-x-3"
                         >
-                          <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Check size={12} className="text-green-600" />
+                          <div className="w-5 h-5 bg-green-100 dark:bg-green-500/10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <Check
+                              size={12}
+                              className="text-green-600 dark:text-green-400"
+                            />
                           </div>
-                          <span className="text-surface-700 text-sm">
+                          <span className="text-surface-700 dark:text-surface-300 text-sm">
                             {feature}
                           </span>
                         </li>
@@ -248,18 +256,18 @@ const PricingSection = () => {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="text-center mt-12"
         >
-          <p className="text-surface-600">
+          <p className="text-surface-600 dark:text-surface-400">
             Have questions about our plans?{" "}
             <a
               href="#faq"
-              className="text-primary-600 hover:text-primary-700 font-medium"
+              className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
             >
               Check our FAQ
             </a>{" "}
             or{" "}
             <a
               href="#contact"
-              className="text-primary-600 hover:text-primary-700 font-medium"
+              className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
             >
               contact our team
             </a>

@@ -133,7 +133,10 @@ const SystemArchitectureSection = () => {
   };
 
   return (
-    <section id="architecture" className="section-padding bg-white">
+    <section
+      id="architecture"
+      className="section-padding bg-white dark:bg-surface-900"
+    >
       <div className="max-w-7xl mx-auto container-padding">
         {/* Section Header */}
         <motion.div
@@ -143,18 +146,21 @@ const SystemArchitectureSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center space-x-2 bg-surface-100 rounded-full px-4 py-2 mb-6">
-            <Layers size={16} className="text-primary-600" />
-            <span className="text-surface-700 text-sm font-medium">
+          <div className="inline-flex items-center space-x-2 bg-surface-100 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700 rounded-full px-4 py-2 mb-6">
+            <Layers
+              size={16}
+              className="text-primary-600 dark:text-primary-400"
+            />
+            <span className="text-surface-700 dark:text-surface-300 text-sm font-medium">
               System Design
             </span>
           </div>
 
-          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 mb-6">
+          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 dark:text-white mb-6">
             System <span className="gradient-text">Architecture</span>
           </h2>
 
-          <p className="text-xl text-surface-600 max-w-3xl mx-auto">
+          <p className="text-xl text-surface-600 dark:text-surface-400 max-w-3xl mx-auto">
             A comprehensive overview of the technical architecture, showcasing
             modern full-stack development practices and scalable system design
             principles implemented in MockMate.
@@ -187,11 +193,11 @@ const SystemArchitectureSection = () => {
                   </div>
 
                   {/* Content */}
-                  <h3 className="text-xl font-semibold text-surface-900 mb-3">
+                  <h3 className="text-xl font-semibold text-surface-900 dark:text-white mb-3">
                     {component.name}
                   </h3>
 
-                  <p className="text-surface-600 mb-4 leading-relaxed">
+                  <p className="text-surface-600 dark:text-surface-300 mb-4 leading-relaxed">
                     {component.description}
                   </p>
 
@@ -200,7 +206,7 @@ const SystemArchitectureSection = () => {
                     {component.technologies.map((tech, techIndex) => (
                       <div
                         key={techIndex}
-                        className="flex items-center text-sm text-surface-700"
+                        className="flex items-center text-sm text-surface-700 dark:text-surface-300"
                       >
                         <div className="w-1.5 h-1.5 bg-primary-500 rounded-full mr-3 flex-shrink-0"></div>
                         {tech}
@@ -209,15 +215,15 @@ const SystemArchitectureSection = () => {
                   </div>
 
                   {/* Connections */}
-                  <div className="border-t border-surface-200 pt-4">
-                    <div className="text-xs text-surface-500 mb-2">
+                  <div className="border-t border-surface-200 dark:border-surface-700 pt-4">
+                    <div className="text-xs text-surface-500 dark:text-surface-400 mb-2">
                       Connects to:
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {component.connections.map((connection, connIndex) => (
                         <span
                           key={connIndex}
-                          className="bg-surface-100 text-surface-700 text-xs px-2 py-1 rounded-full"
+                          className="bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 text-xs px-2 py-1 rounded-full"
                         >
                           {connection}
                         </span>
@@ -236,16 +242,19 @@ const SystemArchitectureSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="bg-gradient-to-r from-surface-50 to-surface-100 rounded-2xl p-8"
+          className="bg-gradient-to-r from-surface-50 to-surface-100 dark:from-surface-800 dark:to-surface-700 rounded-2xl p-8 border border-surface-200 dark:border-surface-700"
         >
           <div className="text-center mb-8">
-            <div className="inline-flex items-center space-x-2 bg-white rounded-full px-4 py-2 mb-4">
-              <GitBranch size={16} className="text-primary-600" />
-              <span className="text-surface-700 text-sm font-medium">
+            <div className="inline-flex items-center space-x-2 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-full px-4 py-2 mb-4">
+              <GitBranch
+                size={16}
+                className="text-primary-600 dark:text-primary-400"
+              />
+              <span className="text-surface-700 dark:text-surface-300 text-sm font-medium">
                 Technical Specifications
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-surface-900">
+            <h3 className="text-2xl font-bold text-surface-900 dark:text-white">
               System Overview & Metrics
             </h3>
           </div>
@@ -258,15 +267,15 @@ const SystemArchitectureSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
-                className="bg-white rounded-xl p-6 shadow-surface border border-surface-200"
+                className="bg-white dark:bg-surface-800 rounded-xl p-6 shadow-surface border border-surface-200 dark:border-surface-700"
               >
-                <div className="text-3xl font-bold text-surface-900 mb-2">
+                <div className="text-3xl font-bold text-surface-900 dark:text-surface-100 mb-2">
                   {stat.metric}
                 </div>
-                <div className="text-surface-800 font-medium mb-2">
+                <div className="text-surface-800 dark:text-surface-200 font-medium mb-2">
                   {stat.label}
                 </div>
-                <div className="text-surface-600 text-sm">
+                <div className="text-surface-600 dark:text-surface-400 text-sm">
                   {stat.description}
                 </div>
               </motion.div>

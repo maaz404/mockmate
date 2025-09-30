@@ -7,6 +7,7 @@ const rateLimit = require("express-rate-limit");
 const dotenv = require("dotenv");
 const { ClerkExpressWithAuth } = require("@clerk/clerk-sdk-node");
 const connectDB = require("./config/database");
+const Logger = require("./utils/logger");
 
 // Load environment variables
 dotenv.config();
@@ -37,9 +38,14 @@ connectDB();
 app.use(helmet());
 
 // Rate limiting
+// Default rate-limit window (ms)
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+const DEFAULT_MAX_REQUESTS = 100;
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  windowMs:
+    parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || FIFTEEN_MINUTES_MS,
+  max:
+    parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || DEFAULT_MAX_REQUESTS,
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
@@ -93,7 +99,8 @@ app.get("/api/health", (req, res) => {
 
 // Public routes that don't need authentication
 app.get("/favicon.ico", (req, res) => {
-  res.status(204).end();
+  const NO_CONTENT = 204;
+  return res.status(NO_CONTENT).end();
 });
 
 // Handle webpack hot reload files and other static files
@@ -120,17 +127,18 @@ app.use("/api/coding", codingRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-let PORT = parseInt(process.env.PORT, 10) || 5000;
+const DEFAULT_PORT = 5000;
+const PORT = parseInt(process.env.PORT, 10) || DEFAULT_PORT;
 let server;
 
 function startServer(port) {
   try {
     server = app
       .listen(port, () => {
-        console.log(
+        Logger.info(
           `🚀 MockMate server is running on port ${port} in ${process.env.NODE_ENV} mode`
         );
-        console.log(
+        Logger.info(
           `🔐 Clerk authentication is ${
             process.env.CLERK_SECRET_KEY ? "configured" : "NOT configured"
           }`
@@ -139,17 +147,17 @@ function startServer(port) {
       .on("error", (err) => {
         if (err.code === "EADDRINUSE") {
           const nextPort = port + 1;
-          console.warn(
+          Logger.warn(
             `Port ${port} is in use. Attempting to use port ${nextPort}...`
           );
           startServer(nextPort);
         } else {
-          console.error("Server failed to start:", err);
+          Logger.error("Server failed to start:", err);
           process.exit(1);
         }
       });
   } catch (err) {
-    console.error("Unexpected error while starting server:", err);
+    Logger.error("Unexpected error while starting server:", err);
     process.exit(1);
   }
 }
@@ -157,8 +165,8 @@ function startServer(port) {
 startServer(PORT);
 
 // Handle unhandled promise rejections
-process.on("unhandledRejection", (err, promise) => {
-  console.log(`Error: ${err.message}`);
+process.on("unhandledRejection", (err, _promise) => {
+  Logger.error(`Unhandled Rejection: ${err.message}`);
   // Close server & exit process
   server.close(() => {
     process.exit(1);
@@ -167,8 +175,8 @@ process.on("unhandledRejection", (err, promise) => {
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (err) => {
-  console.log(`Error: ${err.message}`);
-  console.log("Shutting down the server due to Uncaught Exception");
+  Logger.error(`Uncaught Exception: ${err.message}`);
+  Logger.error("Shutting down the server due to Uncaught Exception");
   process.exit(1);
 });
 

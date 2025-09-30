@@ -96,7 +96,7 @@ const ProjectInfoSection = () => {
   };
 
   return (
-    <section className="section-padding bg-surface-50">
+    <section className="section-padding bg-surface-50 dark:bg-surface-900">
       <div className="max-w-7xl mx-auto container-padding">
         {/* Section Header */}
         <motion.div
@@ -106,19 +106,22 @@ const ProjectInfoSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center space-x-2 bg-white border border-surface-200 rounded-full px-4 py-2 mb-6">
-            <Target size={16} className="text-primary-600" />
-            <span className="text-surface-700 text-sm font-medium">
+          <div className="inline-flex items-center space-x-2 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-full px-4 py-2 mb-6">
+            <Target
+              size={16}
+              className="text-primary-600 dark:text-primary-400"
+            />
+            <span className="text-surface-700 dark:text-surface-300 text-sm font-medium">
               Project Overview
             </span>
           </div>
 
-          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 mb-6">
+          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 dark:text-white mb-6">
             Academic Project{" "}
             <span className="gradient-text">Documentation</span>
           </h2>
 
-          <p className="text-xl text-surface-600 max-w-3xl mx-auto">
+          <p className="text-xl text-surface-600 dark:text-surface-400 max-w-3xl mx-auto">
             A comprehensive final year project demonstrating advanced web
             development skills, modern software architecture, and practical
             application of computer science principles.
@@ -138,7 +141,7 @@ const ProjectInfoSection = () => {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="group"
               >
-                <div className="bg-white rounded-2xl shadow-surface border border-surface-200 p-6 hover:shadow-surface-lg group-hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
+                <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-surface border border-surface-200 dark:border-surface-700 p-6 hover:shadow-surface-lg group-hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
                   {/* Icon and Category */}
                   <div className="flex items-center justify-between mb-4">
                     <div
@@ -148,16 +151,16 @@ const ProjectInfoSection = () => {
                     >
                       <Icon size={24} />
                     </div>
-                    <div className="bg-surface-100 text-surface-600 text-xs font-medium px-3 py-1 rounded-full">
+                    <div className="bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 text-xs font-medium px-3 py-1 rounded-full">
                       {info.category}
                     </div>
                   </div>
 
                   {/* Content */}
-                  <h3 className="text-lg font-semibold text-surface-900 mb-3">
+                  <h3 className="text-lg font-semibold text-surface-900 dark:text-white mb-3">
                     {info.title}
                   </h3>
-                  <p className="text-surface-700 leading-relaxed flex-grow">
+                  <p className="text-surface-700 dark:text-surface-300 leading-relaxed flex-grow">
                     {info.content}
                   </p>
                 </div>
@@ -174,10 +177,13 @@ const ProjectInfoSection = () => {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="text-center"
         >
-          <div className="bg-white rounded-2xl shadow-surface border border-surface-200 p-8 max-w-5xl mx-auto">
+          <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-surface border border-surface-200 dark:border-surface-700 p-8 max-w-5xl mx-auto">
             <div className="flex items-center justify-center space-x-2 mb-6">
-              <CheckCircle size={20} className="text-green-600" />
-              <span className="text-surface-800 font-semibold">
+              <CheckCircle
+                size={20}
+                className="text-green-600 dark:text-green-400"
+              />
+              <span className="text-surface-800 dark:text-surface-200 font-semibold">
                 Project Achievements
               </span>
             </div>
@@ -191,13 +197,13 @@ const ProjectInfoSection = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
                 >
-                  <div className="text-3xl font-bold text-surface-900 mb-2">
+                  <div className="text-3xl font-bold text-surface-900 dark:text-surface-100 mb-2">
                     {achievement.metric}
                   </div>
-                  <div className="text-surface-800 font-medium mb-1">
+                  <div className="text-surface-800 dark:text-surface-200 font-medium mb-1">
                     {achievement.label}
                   </div>
-                  <div className="text-surface-600 text-sm">
+                  <div className="text-surface-600 dark:text-surface-400 text-sm">
                     {achievement.description}
                   </div>
                 </motion.div>

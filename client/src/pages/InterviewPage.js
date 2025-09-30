@@ -317,7 +317,7 @@ const InterviewPage = () => {
                     }`}
                   >
                     <div
-                      className={`bg-white w-4 h-4 rounded-full transition-transform ${
+                      className={`bg-white dark:bg-surface-100 w-4 h-4 rounded-full transition-transform ${
                         settings.videoRecording ? "transform translate-x-6" : ""
                       }`}
                     ></div>
@@ -334,7 +334,7 @@ const InterviewPage = () => {
                     }`}
                   >
                     <div
-                      className={`bg-white w-4 h-4 rounded-full transition-transform ${
+                      className={`bg-white dark:bg-surface-100 w-4 h-4 rounded-full transition-transform ${
                         settings.audioRecording ? "transform translate-x-6" : ""
                       }`}
                     ></div>
@@ -351,7 +351,7 @@ const InterviewPage = () => {
                     }`}
                   >
                     <div
-                      className={`bg-white w-4 h-4 rounded-full transition-transform ${
+                      className={`bg-white dark:bg-surface-100 w-4 h-4 rounded-full transition-transform ${
                         settings.questionAudio ? "transform translate-x-6" : ""
                       }`}
                     ></div>

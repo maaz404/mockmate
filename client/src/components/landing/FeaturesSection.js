@@ -68,7 +68,10 @@ const FeaturesSection = () => {
   };
 
   return (
-    <section id="features" className="section-padding bg-white">
+    <section
+      id="features"
+      className="section-padding bg-white dark:bg-surface-900"
+    >
       <div className="max-w-7xl mx-auto container-padding">
         {/* Section Header */}
         <motion.div
@@ -78,18 +81,21 @@ const FeaturesSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center space-x-2 bg-surface-100 rounded-full px-4 py-2 mb-6">
-            <Sparkles size={16} className="text-primary-600" />
-            <span className="text-surface-700 text-sm font-medium">
+          <div className="inline-flex items-center space-x-2 bg-surface-100 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700 rounded-full px-4 py-2 mb-6">
+            <Sparkles
+              size={16}
+              className="text-primary-600 dark:text-primary-400"
+            />
+            <span className="text-surface-700 dark:text-surface-300 text-sm font-medium">
               Technical Implementation
             </span>
           </div>
 
-          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 mb-6">
+          <h2 className="text-4xl lg:text-5xl font-bold text-surface-900 dark:text-white mb-6">
             Core System <span className="gradient-text">Architecture</span>
           </h2>
 
-          <p className="text-xl text-surface-600 max-w-3xl mx-auto">
+          <p className="text-xl text-surface-600 dark:text-surface-400 max-w-3xl mx-auto">
             MockMate demonstrates modern full-stack development practices with
             advanced algorithms, real-time processing, and scalable architecture
             designed for optimal performance and user experience.
@@ -118,11 +124,11 @@ const FeaturesSection = () => {
                     <Icon size={24} />
                   </div>
 
-                  <h3 className="text-xl font-semibold text-surface-900 mb-3">
+                  <h3 className="text-xl font-semibold text-surface-900 dark:text-white mb-3">
                     {feature.title}
                   </h3>
 
-                  <p className="text-surface-600 leading-relaxed">
+                  <p className="text-surface-600 dark:text-surface-300 leading-relaxed">
                     {feature.description}
                   </p>
                 </div>
@@ -141,18 +147,21 @@ const FeaturesSection = () => {
         >
           {/* Left Content */}
           <div>
-            <div className="inline-flex items-center space-x-2 bg-primary-50 border border-primary-200 rounded-full px-4 py-2 mb-6">
-              <MessageSquare size={16} className="text-primary-600" />
-              <span className="text-primary-700 text-sm font-medium">
+            <div className="inline-flex items-center space-x-2 bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-400/30 rounded-full px-4 py-2 mb-6">
+              <MessageSquare
+                size={16}
+                className="text-primary-600 dark:text-primary-400"
+              />
+              <span className="text-primary-700 dark:text-primary-300 text-sm font-medium">
                 System Demo
               </span>
             </div>
 
-            <h3 className="text-3xl lg:text-4xl font-bold text-surface-900 mb-6">
+            <h3 className="text-3xl lg:text-4xl font-bold text-surface-900 dark:text-white mb-6">
               Advanced AI Processing & Feedback Engine
             </h3>
 
-            <p className="text-lg text-surface-600 mb-8">
+            <p className="text-lg text-surface-600 dark:text-surface-300 mb-8">
               The system employs natural language processing algorithms and
               machine learning models to analyze interview responses, providing
               comprehensive feedback through sophisticated data processing
@@ -167,10 +176,12 @@ const FeaturesSection = () => {
                 "MongoDB aggregation for performance analytics",
               ].map((item, index) => (
                 <div key={index} className="flex items-center space-x-3">
-                  <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                  <div className="w-6 h-6 bg-primary-100 dark:bg-primary-400/20 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-primary-600 dark:bg-primary-400 rounded-full"></div>
                   </div>
-                  <span className="text-surface-700">{item}</span>
+                  <span className="text-surface-700 dark:text-surface-300">
+                    {item}
+                  </span>
                 </div>
               ))}
             </div>
@@ -178,35 +189,35 @@ const FeaturesSection = () => {
 
           {/* Right Visual */}
           <div className="relative">
-            <div className="bg-gradient-to-br from-primary-50 to-accent-50 rounded-2xl p-8">
-              <div className="bg-white rounded-xl shadow-surface-lg p-6">
+            <div className="bg-gradient-to-br from-primary-50 to-accent-50 dark:from-surface-800 dark:to-surface-700 rounded-2xl p-8">
+              <div className="bg-white dark:bg-surface-800 rounded-xl shadow-surface-lg p-6 border border-surface-200 dark:border-surface-700">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center">
                     <Brain size={20} className="text-white" />
                   </div>
                   <div>
-                    <div className="font-semibold text-surface-900">
+                    <div className="font-semibold text-surface-900 dark:text-white">
                       Processing Engine
                     </div>
-                    <div className="text-surface-500 text-sm">
+                    <div className="text-surface-500 dark:text-surface-400 text-sm">
                       Analyzing semantic patterns...
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="text-green-700 font-medium text-sm">
+                  <div className="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-400/30 rounded-lg p-3">
+                    <div className="text-green-700 dark:text-green-300 font-medium text-sm">
                       ✓ Semantic coherence: 92%
                     </div>
                   </div>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <div className="text-yellow-700 font-medium text-sm">
+                  <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-400/30 rounded-lg p-3">
+                    <div className="text-yellow-700 dark:text-yellow-300 font-medium text-sm">
                       ⚠ Technical depth improvement
                     </div>
                   </div>
-                  <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
-                    <div className="text-primary-700 font-medium text-sm">
+                  <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-400/30 rounded-lg p-3">
+                    <div className="text-primary-700 dark:text-primary-300 font-medium text-sm">
                       💡 Algorithm optimization potential
                     </div>
                   </div>
@@ -218,9 +229,9 @@ const FeaturesSection = () => {
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="absolute -top-4 -right-4 bg-white rounded-lg shadow-surface-md p-3 border border-surface-200"
+              className="absolute -top-4 -right-4 bg-white dark:bg-surface-800 rounded-lg shadow-surface-md p-3 border border-surface-200 dark:border-surface-700"
             >
-              <div className="text-surface-900 font-semibold text-sm">
+              <div className="text-surface-900 dark:text-surface-100 font-semibold text-sm">
                 Processing: 94ms
               </div>
             </motion.div>
