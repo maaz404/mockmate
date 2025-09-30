@@ -11,7 +11,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set the token function for API calls
     setAuthToken(getToken);
   }, [getToken]);
 
@@ -53,8 +52,21 @@ export const AuthProvider = ({ children }) => {
           await api.post("/auth/sync");
 
           // Get user profile
-          const response = await api.get("/users/profile");
-          setUserProfile(response.data.data);
+          try {
+            const response = await api.get("/users/profile");
+            setUserProfile(response.data.data);
+          } catch (err) {
+            // If profile endpoint returns 404 early in onboarding, ignore and keep minimal profile
+            setUserProfile(
+              (prev) =>
+                prev || {
+                  firstName: user?.firstName || "",
+                  lastName: user?.lastName || "",
+                  email: user?.primaryEmailAddress?.emailAddress || "",
+                  onboardingCompleted: false,
+                }
+            );
+          }
           // eslint-disable-next-line no-console
           // console.log('User profile synced successfully');
         } catch (error) {

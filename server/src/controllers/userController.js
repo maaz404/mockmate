@@ -1,6 +1,7 @@
 /* eslint-disable no-console, consistent-return, no-magic-numbers */
 const UserProfile = require("../models/UserProfile");
 const { clerkClient } = require("@clerk/clerk-sdk-node");
+const ScheduledSession = require("../models/ScheduledSession");
 
 // Get or create user profile
 const getProfile = async (req, res) => {
@@ -77,7 +78,7 @@ const getProfile = async (req, res) => {
 const saveOnboardingProgress = async (req, res) => {
   try {
     const { userId } = req.auth;
-    let progressData = req.body;
+  const progressData = req.body;
 
     console.log("Save onboarding progress - userId:", userId);
     console.log("Progress data:", JSON.stringify(progressData, null, 2));
@@ -553,3 +554,234 @@ module.exports = {
   updateAnalytics,
   uploadResume,
 };
+
+// =============== Dashboard extensions: Scheduled Sessions, Goals, Tips ===============
+
+// Get upcoming scheduled sessions for the current user (next N, default 3)
+const getScheduledSessions = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { limit = 3 } = req.query;
+
+    const now = new Date();
+    const sessions = await ScheduledSession.find({
+      userId,
+      status: "scheduled",
+      scheduledAt: { $gte: now },
+    })
+      .sort({ scheduledAt: 1 })
+      .limit(Number(limit));
+
+    return res.json({ success: true, data: sessions });
+  } catch (error) {
+    console.error("Get scheduled sessions error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch scheduled sessions" });
+  }
+};
+
+// Create or update a scheduled session
+const upsertScheduledSession = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { id } = req.params; // optional for update
+    const { title, type, duration, scheduledAt, notes, status } = req.body;
+
+    if (!title || !scheduledAt) {
+      return res.status(400).json({
+        success: false,
+        message: "Title and scheduledAt are required",
+      });
+    }
+
+    const payload = {
+      userId,
+      title,
+      type,
+      duration,
+      scheduledAt,
+      notes,
+    };
+    if (status) payload.status = status;
+
+    let sessionDoc;
+    if (id) {
+      sessionDoc = await ScheduledSession.findOneAndUpdate(
+        { _id: id, userId },
+        { $set: payload },
+        { new: true }
+      );
+      if (!sessionDoc) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Session not found" });
+      }
+    } else {
+      sessionDoc = await ScheduledSession.create(payload);
+    }
+
+    return res.json({ success: true, data: sessionDoc });
+  } catch (error) {
+    console.error("Upsert scheduled session error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to save scheduled session" });
+  }
+};
+
+// Delete a scheduled session
+const deleteScheduledSession = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { id } = req.params;
+    const result = await ScheduledSession.deleteOne({ _id: id, userId });
+    if (result.deletedCount === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Session not found" });
+    }
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Delete scheduled session error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to delete scheduled session" });
+  }
+};
+
+// Get or update goals embedded in the user profile
+const getGoals = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const userProfile = await UserProfile.findOne(
+      { clerkUserId: userId },
+      { goals: 1 }
+    );
+    if (!userProfile) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User profile not found" });
+    }
+    return res.json({ success: true, data: userProfile.goals || [] });
+  } catch (error) {
+    console.error("Get goals error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch goals" });
+  }
+};
+
+const updateGoals = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { goals } = req.body;
+    if (!Array.isArray(goals)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Goals must be an array" });
+    }
+    const userProfile = await UserProfile.findOneAndUpdate(
+      { clerkUserId: userId },
+      { $set: { goals } },
+      { new: true }
+    );
+    if (!userProfile) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User profile not found" });
+    }
+    return res.json({ success: true, data: userProfile.goals });
+  } catch (error) {
+    console.error("Update goals error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update goals" });
+  }
+};
+
+// Simple dynamic tips based on analytics and recent interview outcomes
+const getDynamicTips = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const userProfile = await UserProfile.findOne(
+      { clerkUserId: userId },
+      { analytics: 1 }
+    );
+    if (!userProfile) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User profile not found" });
+    }
+
+    const tips = [];
+    const avg = userProfile.analytics?.averageScore || 0;
+    const strong = userProfile.analytics?.strongAreas || [];
+    const weak = userProfile.analytics?.improvementAreas || [];
+
+    if (avg < 60) {
+      tips.push({
+        title: "Focus on fundamentals",
+        desc: "Revisit core concepts and practice structured answers to boost baseline.",
+        href: "/resources",
+      });
+    } else if (avg < 80) {
+      tips.push({
+        title: "Add concrete examples",
+        desc: "Use STAR to anchor your responses with measurable outcomes.",
+        href: "/resources",
+      });
+    } else {
+      tips.push({
+        title: "Push difficulty",
+        desc: "Try advanced rounds or longer sessions to stretch your capability.",
+        href: "/practice",
+      });
+    }
+
+    if (weak.includes("communication")) {
+      tips.push({
+        title: "Tighten delivery",
+        desc: "Practice concise framing; lead with your conclusion, then justify.",
+        href: "/practice",
+      });
+    }
+    if (weak.includes("technical")) {
+      tips.push({
+        title: "Increase technical depth",
+        desc: "Drill topics that appeared in recent interviews with targeted katas.",
+        href: "/practice",
+      });
+    }
+    if (strong.includes("leadership")) {
+      tips.push({
+        title: "Showcase leadership",
+        desc: "Highlight initiatives where you influenced outcomes across teams.",
+        href: "/interviews",
+      });
+    }
+
+    // Default fallbacks
+    if (tips.length === 0) {
+      tips.push(
+        { title: "Warm up daily", desc: "Short, frequent practice beats cramming.", href: "/practice" },
+        { title: "Revisit feedback", desc: "Address flagged areas from previous sessions.", href: "/interviews" }
+      );
+    }
+
+    return res.json({ success: true, data: tips.slice(0, 5) });
+  } catch (error) {
+    console.error("Get dynamic tips error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to generate tips" });
+  }
+};
+
+// Export new handlers
+module.exports.getScheduledSessions = getScheduledSessions;
+module.exports.upsertScheduledSession = upsertScheduledSession;
+module.exports.deleteScheduledSession = deleteScheduledSession;
+module.exports.getGoals = getGoals;
+module.exports.updateGoals = updateGoals;
+module.exports.getDynamicTips = getDynamicTips;

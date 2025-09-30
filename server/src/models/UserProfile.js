@@ -217,6 +217,15 @@ const userProfileSchema = new mongoose.Schema(
       nextResetDate: Date,
     },
 
+    // Simple weekly goals for dashboard
+    goals: [
+      {
+        title: { type: String, required: true },
+        done: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
     // Profile Completion
     onboardingCompleted: {
       type: Boolean,

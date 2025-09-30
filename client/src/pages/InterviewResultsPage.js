@@ -263,6 +263,16 @@ const InterviewResultsPage = () => {
                       <p className="text-surface-700 dark:text-surface-300 text-sm">
                         {qa.userAnswer}
                       </p>
+                      {qa.userNotes && (
+                        <div className="mt-3 p-3 rounded-lg bg-surface-100 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700">
+                          <div className="text-xs uppercase tracking-wide text-surface-500 dark:text-surface-400 mb-1">
+                            Your Notes
+                          </div>
+                          <p className="text-sm text-surface-700 dark:text-surface-300 whitespace-pre-line">
+                            {qa.userNotes}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-4">
@@ -475,7 +485,7 @@ const InterviewResultsPage = () => {
                 </button>
 
                 <button
-                  onClick={() => navigate("/interview/create")}
+                  onClick={() => navigate("/interview/new")}
                   className="btn-secondary w-full"
                 >
                   🎯 Start New Interview

@@ -5,7 +5,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-screen bg-white dark:bg-surface-900 flex items-center overflow-hidden transition-colors duration-200">
+    <section className="relative min-h-screen bg-white dark:bg-black flex items-center overflow-hidden transition-colors duration-200">
       {/* Curve graphic accent (bottom-right) */}
       <svg
         className="pointer-events-none absolute right-0 bottom-[-10vh] w-[70vw] h-[50vh] hidden md:block"
@@ -51,24 +51,25 @@ const HeroSection = () => {
           </span>
         </motion.div>
 
-        {/* Main Headline (paraphrased for originality) */}
+        {/* Main Headline */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="font-extrabold tracking-tight text-surface-900 dark:text-white max-w-5xl mx-auto leading-[1.08] text-[40px] sm:text-[50px] md:text-[60px] lg:text-[72px] xl:text-[80px]"
+          className="font-extrabold tracking-tight text-surface-900 dark:text-white max-w-5xl mx-auto text-[32px] sm:text-[40px] md:text-[56px] lg:text-[56px] xl:text-[56px] leading-[1.2]"
         >
           Land Your Next Job in{" "}
-          <span className="text-surface-900">30 Days*</span> or Less
-          <br className="hidden sm:block" /> with MockMate.
+          <span className="text-surface-900">30 Days*</span>
+          <br />
+          or Less with MockMate.
         </motion.h1>
 
-        {/* Subheadline (paraphrased) */}
+        {/* Subheadline */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mt-6 text-[20px] sm:text-[22px] text-surface-600 dark:text-surface-400 max-w-2xl mx-auto"
+          className="mt-6 text-[18px] sm:text-[20px] text-surface-600 dark:text-surface-400 max-w-3xl mx-auto whitespace-normal md:whitespace-nowrap"
         >
           AI-powered tools to help you ace interviews, apply faster, and land
           offers with confidence.
@@ -83,7 +84,7 @@ const HeroSection = () => {
         >
           <Link
             to="/register"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-[16px] text-white shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 transition-all duration-200 hover-lift hover-press bg-gradient-to-r from-orange-500 to-orange-400 group"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-[16px] text-white shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-200 hover-lift hover-press bg-gradient-primary group"
             aria-label="Get started with MockMate"
           >
             Get started with Interview Copilot

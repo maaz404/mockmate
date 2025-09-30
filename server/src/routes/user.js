@@ -9,6 +9,12 @@ const {
   completeOnboarding,
   saveOnboardingProgress,
   uploadResume,
+  getScheduledSessions,
+  upsertScheduledSession,
+  deleteScheduledSession,
+  getGoals,
+  updateGoals,
+  getDynamicTips,
 } = require("../controllers/userController");
 
 // Configure multer for file uploads
@@ -17,21 +23,17 @@ const storage = multer.diskStorage({
     cb(null, "uploads/resumes");
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname +
-        "-" +
-        uniqueSuffix +
-        "." +
-        file.originalname.split(".").pop()
-    );
+    // eslint-disable-next-line no-magic-numbers
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1000000000)}`;
+    const ext = file.originalname.split(".").pop();
+    cb(null, `${file.fieldname}-${uniqueSuffix}.${ext}`);
   },
 });
 
 const upload = multer({
-  storage: storage,
+  storage,
   limits: {
+    // eslint-disable-next-line no-magic-numbers
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: (req, file, cb) => {
@@ -85,5 +87,31 @@ router.post("/onboarding/save-progress", requireAuth, saveOnboardingProgress);
 // @route   POST /api/users/resume
 // @access  Private
 router.post("/resume", requireAuth, upload.single("resume"), uploadResume);
+
+// Scheduled sessions
+// @desc Get upcoming scheduled sessions
+// @route GET /api/users/scheduled-sessions
+router.get("/scheduled-sessions", requireAuth, getScheduledSessions);
+// @desc Create scheduled session
+// @route POST /api/users/scheduled-sessions
+router.post("/scheduled-sessions", requireAuth, upsertScheduledSession);
+// @desc Update scheduled session
+// @route PUT /api/users/scheduled-sessions/:id
+router.put("/scheduled-sessions/:id", requireAuth, upsertScheduledSession);
+// @desc Delete scheduled session
+// @route DELETE /api/users/scheduled-sessions/:id
+router.delete("/scheduled-sessions/:id", requireAuth, deleteScheduledSession);
+
+// Goals
+// @desc Get goals
+// @route GET /api/users/goals
+router.get("/goals", requireAuth, getGoals);
+// @desc Update goals
+// @route PUT /api/users/goals
+router.put("/goals", requireAuth, updateGoals);
+
+// Dynamic tips
+// @desc GET /api/users/tips
+router.get("/tips", requireAuth, getDynamicTips);
 
 module.exports = router;

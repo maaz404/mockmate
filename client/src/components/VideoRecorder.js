@@ -6,11 +6,24 @@ const VideoRecorder = ({
   interviewId,
   currentQuestionIndex,
   onVideoUploaded,
+  onRecordingChange,
+  onPermissionChange,
+  audioEnabled = true,
   className = "",
 }) => {
   const webcamRef = useRef(null);
   const [hasCamera, setHasCamera] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+  const [devices, setDevices] = useState({ audioIn: [], videoIn: [] });
+  const [selectedDevice, setSelectedDevice] = useState({
+    audio: "default",
+    video: "default",
+  });
+  const [videoConstraints, setVideoConstraints] = useState({
+    width: 1280,
+    height: 720,
+    facingMode: "user",
+  });
 
   const {
     isRecording,
@@ -45,6 +58,37 @@ const VideoRecorder = ({
     checkCamera();
   }, []);
 
+  // Enumerate devices and preselect defaults
+  useEffect(() => {
+    const enumerate = async () => {
+      try {
+        if (!navigator.mediaDevices?.enumerateDevices) return;
+        const list = await navigator.mediaDevices.enumerateDevices();
+        const audioIn = list.filter((d) => d.kind === "audioinput");
+        const videoIn = list.filter((d) => d.kind === "videoinput");
+        setDevices({ audioIn, videoIn });
+        if (videoIn.length && selectedDevice.video === "default") {
+          setSelectedDevice((s) => ({ ...s, video: videoIn[0].deviceId }));
+          setVideoConstraints((vc) => ({
+            ...vc,
+            deviceId: { exact: videoIn[0].deviceId },
+          }));
+        }
+        if (audioIn.length && selectedDevice.audio === "default") {
+          setSelectedDevice((s) => ({ ...s, audio: audioIn[0].deviceId }));
+        }
+      } catch (_) {}
+    };
+    enumerate();
+  }, [selectedDevice.video, selectedDevice.audio]);
+
+  // Report permission status to parent
+  useEffect(() => {
+    if (typeof onPermissionChange === "function") {
+      onPermissionChange({ camera: hasCamera, error: cameraError });
+    }
+  }, [hasCamera, cameraError, onPermissionChange]);
+
   // Start recording session when component mounts
   useEffect(() => {
     if (hasCamera && !sessionStarted) {
@@ -67,6 +111,13 @@ const VideoRecorder = ({
     stopRecording();
   };
 
+  // Notify parent when recording state changes
+  useEffect(() => {
+    if (typeof onRecordingChange === "function") {
+      onRecordingChange(isRecording);
+    }
+  }, [isRecording, onRecordingChange]);
+
   // Handle upload video
   const handleUploadVideo = async () => {
     const success = await uploadVideo(currentQuestionIndex);
@@ -88,9 +139,9 @@ const VideoRecorder = ({
   if (cameraError) {
     return (
       <div
-        className={`bg-red-900/50 border border-red-700 rounded-lg p-6 text-center ${className}`}
+        className={`card border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 p-6 text-center ${className}`}
       >
-        <div className="text-red-400 mb-4">
+        <div className="mb-4">
           <svg
             className="w-12 h-12 mx-auto mb-2"
             fill="none"
@@ -105,10 +156,24 @@ const VideoRecorder = ({
             />
           </svg>
         </div>
-        <p className="text-white font-medium">{cameraError}</p>
-        <p className="text-surface-500 text-sm mt-2">
-          Please allow camera access to record video responses
-        </p>
+        <p className="font-medium">{cameraError}</p>
+        <div className="text-surface-700 dark:text-surface-300 text-sm mt-3 space-y-1">
+          <p>Tips to fix:</p>
+          <ul className="list-disc list-inside text-left mx-auto inline-block">
+            <li>
+              Click the lock icon in your browser’s address bar and allow Camera
+              and Microphone.
+            </li>
+            <li>
+              Check OS privacy settings (Camera & Microphone) and ensure browser
+              access is allowed.
+            </li>
+            <li>
+              If you have multiple devices, pick the correct camera/mic in
+              browser settings.
+            </li>
+          </ul>
+        </div>
       </div>
     );
   }
@@ -119,14 +184,16 @@ const VideoRecorder = ({
       <div className="bg-black rounded-lg overflow-hidden aspect-video relative">
         {hasCamera ? (
           <Webcam
+            key={`${selectedDevice.video}|${selectedDevice.audio}`}
             ref={webcamRef}
-            audio={true}
+            audio={audioEnabled}
             className="w-full h-full object-cover"
-            videoConstraints={{
-              width: 1280,
-              height: 720,
-              facingMode: "user",
-            }}
+            videoConstraints={videoConstraints}
+            audioConstraints={
+              selectedDevice.audio && selectedDevice.audio !== "default"
+                ? { deviceId: { exact: selectedDevice.audio } }
+                : true
+            }
             onUserMediaError={() => {
               setCameraError("Failed to access camera");
             }}
@@ -268,6 +335,59 @@ const VideoRecorder = ({
             </button>
           </>
         )}
+      </div>
+
+      {/* Device selectors */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="text-sm">
+          <label className="block mb-1 text-surface-500">Camera</label>
+          <select
+            className="form-input-dark w-full"
+            value={selectedDevice.video}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedDevice((s) => ({ ...s, video: id }));
+              setVideoConstraints((vc) => ({ ...vc, deviceId: { exact: id } }));
+            }}
+          >
+            {devices.videoIn.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || `Camera ${d.deviceId.slice(0, 6)}`}
+              </option>
+            ))}
+          </select>
+          {selectedDevice.video && (
+            <div className="mt-1 text-xs text-surface-500 truncate">
+              Using:{" "}
+              {devices.videoIn.find((d) => d.deviceId === selectedDevice.video)
+                ?.label || selectedDevice.video}
+            </div>
+          )}
+        </div>
+        <div className="text-sm">
+          <label className="block mb-1 text-surface-500">Microphone</label>
+          <select
+            className="form-input-dark w-full"
+            value={selectedDevice.audio}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedDevice((s) => ({ ...s, audio: id }));
+            }}
+          >
+            {devices.audioIn.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || `Mic ${d.deviceId.slice(0, 6)}`}
+              </option>
+            ))}
+          </select>
+          {selectedDevice.audio && (
+            <div className="mt-1 text-xs text-surface-500 truncate">
+              Using:{" "}
+              {devices.audioIn.find((d) => d.deviceId === selectedDevice.audio)
+                ?.label || selectedDevice.audio}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Error Display */}

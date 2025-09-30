@@ -1,7 +1,16 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
+import {
+  SignedIn,
+  SignedOut,
+  UserButton,
+  useUser,
+  useAuth,
+} from "@clerk/clerk-react";
+import toast from "react-hot-toast";
+import ConfirmDialog from "../ui/ConfirmDialog";
 import DarkModeToggle from "../ui/DarkModeToggle";
+import BrandLogo from "../ui/BrandLogo";
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -31,6 +40,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const hideTooltip = () => setTooltip((prev) => ({ ...prev, visible: false }));
   const location = useLocation();
   const { user } = useUser();
+  const { signOut } = useAuth();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const navigationItems = [
     {
@@ -376,10 +387,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           {!isCollapsed ? (
             <>
               <Link to="/" className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-[0_0_0_2px_rgba(255,255,255,0.2)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.08)]">
-                  <span className="text-white font-bold text-xs">M</span>
-                </div>
-                <span className="text-base font-bold text-surface-900 dark:text-white">
+                <BrandLogo size="sm" variant="mark" />
+                <span className="brand-wordmark text-[15px] leading-none select-none">
                   MockMate
                 </span>
               </Link>
@@ -406,9 +415,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           ) : (
             <div className="flex items-center justify-between w-full">
               <Link to="/" className="flex items-center justify-center">
-                <div className="w-6 h-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">M</span>
-                </div>
+                <BrandLogo size="xs" variant="mark" className="rounded-md" />
               </Link>
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
@@ -520,6 +527,52 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 </button>
               </div>
             )}
+
+            {/* Secondary Sign out action */}
+            <div className={isCollapsed ? "px-1" : "px-2 mt-2"}>
+              <button
+                onClick={() => setConfirmOpen(true)}
+                className={`${
+                  isCollapsed
+                    ? "w-full h-8 flex items-center justify-center rounded-lg"
+                    : "w-full text-left px-3 py-2"
+                } text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-xs font-medium`}
+              >
+                <span className="inline-flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7"
+                    />
+                  </svg>
+                  {!isCollapsed && <span>Sign out</span>}
+                </span>
+              </button>
+            </div>
+            <ConfirmDialog
+              open={confirmOpen}
+              title="Sign out?"
+              description="You will be redirected to the sign-in page."
+              confirmText="Sign out"
+              onClose={() => setConfirmOpen(false)}
+              onConfirm={async () => {
+                setConfirmOpen(false);
+                try {
+                  toast.success("Signed out");
+                  await signOut({ redirectUrl: "/login" });
+                } catch (_) {
+                  toast.success("Signed out");
+                  window.location.href = "/login";
+                }
+              }}
+            />
           </SignedIn>
 
           <SignedOut>

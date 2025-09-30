@@ -116,9 +116,7 @@ export const interviewService = {
       );
       return response.data;
     } catch (error) {
-      throw new Error(
-        error.response?.data?.error || "Failed to submit answer"
-      );
+      throw new Error(error.response?.data?.error || "Failed to submit answer");
     }
   },
 
@@ -159,9 +157,11 @@ export const questionService = {
  */
 export const reportService = {
   // Generate interview report
-  generateReport: async (interviewId) => {
+  generateReport: async (interviewId, reportType = "comprehensive") => {
     try {
-      const response = await api.post("/reports/generate", { interviewId });
+      const response = await api.post(`/reports/generate/${interviewId}`, {
+        reportType,
+      });
       return response.data;
     } catch (error) {
       throw new Error(
@@ -177,6 +177,18 @@ export const reportService = {
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || "Failed to get reports");
+    }
+  },
+
+  // Get a specific report for an interview
+  getReportByInterview: async (interviewId, type = "comprehensive") => {
+    try {
+      const response = await api.get(`/reports/${interviewId}?type=${type}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.error || "Failed to get the report"
+      );
     }
   },
 };

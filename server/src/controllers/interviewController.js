@@ -161,7 +161,7 @@ const submitAnswer = async (req, res) => {
     const { userId } = req.auth;
     const interviewId = req.params.interviewId || req.params.id;
     const { questionIndex } = req.params;
-    const { answer, timeSpent } = req.body;
+    const { answer, timeSpent, notes } = req.body;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -193,6 +193,7 @@ const submitAnswer = async (req, res) => {
     // Update question response
     interview.questions[qIndex].response = {
       text: answer,
+      notes: notes || "",
       submittedAt: new Date(),
     };
     interview.questions[qIndex].timeSpent = timeSpent || 0;
@@ -304,7 +305,7 @@ const submitAnswer = async (req, res) => {
     const responseData = {
       questionIndex: qIndex,
       score: interview.questions[qIndex].score?.overall || evaluation.score,
-      followUpQuestions: followUpQuestions,
+      followUpQuestions,
     };
 
     // Add adaptive difficulty info if enabled
@@ -1010,6 +1011,8 @@ const composeResultsPayload = (interviewDoc) => {
       type: q.category?.includes("behavior") ? "behavioral" : "technical",
       difficulty: q.difficulty || interviewDoc?.config?.difficulty || "",
       userAnswer: q.response?.text || "",
+      userNotes: q.response?.notes || "",
+      followUpsReviewed: !!q.followUpsReviewed,
       timeSpent: q.timeSpent || 0,
       score: q.score
         ? {
@@ -1022,6 +1025,7 @@ const composeResultsPayload = (interviewDoc) => {
         improvements: q.feedback?.improvements || [],
         modelAnswer: q.feedback?.modelAnswer || "",
       },
+      followUpQuestions: (q.followUpQuestions || []).map((f) => f.text || f),
     })),
     recommendations:
       interviewDoc?.results?.feedback?.recommendations &&
@@ -1075,3 +1079,49 @@ const getInterviewResults = async (req, res) => {
 };
 
 module.exports.getInterviewResults = getInterviewResults;
+
+// Mark follow-ups reviewed for a specific question
+const markFollowUpsReviewed = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const interviewId = req.params.interviewId || req.params.id;
+    const { questionIndex } = req.params;
+
+    const interview = await Interview.findOne({ _id: interviewId, userId });
+    if (!interview) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Interview not found" });
+    }
+
+    const qIndex = parseInt(questionIndex);
+    if (
+      Number.isNaN(qIndex) ||
+      qIndex < 0 ||
+      qIndex >= interview.questions.length
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid question index" });
+    }
+
+    interview.questions[qIndex].followUpsReviewed = true;
+    interview.questions[qIndex].followUpsReviewedAt = new Date();
+    await interview.save();
+
+    return res.json({
+      success: true,
+      data: { questionIndex: qIndex, followUpsReviewed: true },
+    });
+  } catch (error) {
+    console.error("Mark follow-ups reviewed error:", error);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to update follow-ups reviewed status",
+      });
+  }
+};
+
+module.exports.markFollowUpsReviewed = markFollowUpsReviewed;

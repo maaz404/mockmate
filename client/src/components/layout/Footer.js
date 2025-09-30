@@ -1,5 +1,6 @@
 import React from "react";
 import { Github, Twitter, Linkedin, Mail } from "lucide-react";
+import BrandLogo from "../ui/BrandLogo";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -43,17 +44,14 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-surface-900 dark:bg-surface-950 text-surface-300 border-t border-surface-800 dark:border-surface-800">
+    <footer className="bg-black text-surface-300 border-t border-surface-800">
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           {/* Company Info */}
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-2 mb-2">
-              <div className="w-6 h-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xs">M</span>
-              </div>
-              <span className="text-base font-bold text-white">MockMate</span>
+              <BrandLogo size="sm" />
             </div>
             <p className="text-surface-400 mb-3 max-w-md text-xs leading-relaxed">
               A comprehensive full-stack web application demonstrating modern

@@ -6,6 +6,10 @@ import StatsCard from "../components/dashboard/StatsCard";
 import RecentInterviews from "../components/dashboard/RecentInterviews";
 import QuickActions from "../components/dashboard/QuickActions";
 import ProgressChart from "../components/dashboard/ProgressChart";
+import DashboardHeader from "../components/dashboard/DashboardHeader";
+import GoalsPanel from "../components/dashboard/GoalsPanel";
+import TipsPanel from "../components/dashboard/TipsPanel";
+import UpcomingCard from "../components/dashboard/UpcomingCard";
 import { apiService } from "../services/api";
 
 const DashboardPage = () => {
@@ -15,6 +19,9 @@ const DashboardPage = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [recentInterviews, setRecentInterviews] = useState([]);
+  const [scheduled, setScheduled] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [tips, setTips] = useState([]);
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -39,6 +46,30 @@ const DashboardPage = () => {
       // Fetch recent interviews
       const interviewsResponse = await apiService.get("/interviews?limit=5");
       setRecentInterviews(interviewsResponse.data?.interviews || []);
+
+      // Fetch upcoming scheduled sessions
+      try {
+        const schedRes = await apiService.get("/users/scheduled-sessions?limit=3");
+        setScheduled(schedRes.data || []);
+      } catch (_e) {
+        setScheduled([]);
+      }
+
+      // Fetch goals
+      try {
+        const goalsRes = await apiService.get("/users/goals");
+        setGoals(goalsRes.data || []);
+      } catch (_e) {
+        setGoals([]);
+      }
+
+      // Fetch dynamic tips
+      try {
+        const tipsRes = await apiService.get("/users/tips");
+        setTips(tipsRes.data || []);
+      } catch (_e) {
+        setTips([]);
+      }
     } catch (error) {
       // Handle dashboard data fetching error
       setAnalytics(null);
@@ -46,6 +77,18 @@ const DashboardPage = () => {
       setRecentInterviews([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Persist goal toggle
+  const toggleGoal = async (index) => {
+    const nextGoals = goals.map((g, i) => (i === index ? { ...g, done: !g.done } : g));
+    setGoals(nextGoals);
+    try {
+      await apiService.put("/users/goals", { goals: nextGoals });
+    } catch (_e) {
+      // revert on error
+      setGoals(goals);
     }
   };
 
@@ -135,41 +178,7 @@ const DashboardPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-surface-900 dark:text-white">
-                Welcome back, {user?.firstName || "there"}! 👋
-              </h1>
-              <p className="mt-2 text-surface-600 dark:text-surface-300">
-                {userProfile?.onboardingCompleted
-                  ? "Ready for your next interview practice session?"
-                  : "Let's get your profile set up first!"}
-              </p>
-            </div>
-
-            {/* Profile Completeness */}
-            {userProfile && userProfile.profileCompleteness < 100 && (
-              <div className="bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-500/20 rounded-xl p-4">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-primary-100 dark:bg-primary-500/20 rounded-full flex items-center justify-center">
-                      <span className="text-primary-600 dark:text-primary-400 text-sm font-medium">
-                        {userProfile.profileCompleteness}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-primary-900 dark:text-primary-300">
-                      Complete your profile
-                    </p>
-                    <p className="text-xs text-primary-600 dark:text-primary-400">
-                      Get better interview recommendations
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <DashboardHeader user={user} userProfile={userProfile} onStartInterview={startQuickInterview} />
         </div>
 
         {/* Stats Grid */}
@@ -198,8 +207,11 @@ const DashboardPage = () => {
           </div>
 
           {/* Progress Chart */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-8">
             <ProgressChart analytics={analytics} />
+            <UpcomingCard next={scheduled[0] ? { title: scheduled[0].title, when: new Date(scheduled[0].scheduledAt).toLocaleString() } : null} />
+            <GoalsPanel goals={goals} onToggle={toggleGoal} />
+            <TipsPanel tips={tips} />
           </div>
         </div>
 

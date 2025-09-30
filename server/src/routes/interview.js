@@ -11,6 +11,7 @@ const {
   completeInterview,
   getAdaptiveQuestion,
   getInterviewResults,
+  markFollowUpsReviewed,
 } = require("../controllers/interviewController");
 
 // @desc    Create interview session
@@ -65,5 +66,17 @@ router.get("/:id/results", requireAuth, (req, res) => {
   req.params.interviewId = req.params.id;
   return getInterviewResults(req, res);
 });
+
+// @desc    Mark follow-ups reviewed for a question
+// @route   POST /api/interviews/:id/followups-reviewed/:questionIndex
+// @access  Private
+router.post(
+  "/:id/followups-reviewed/:questionIndex",
+  requireAuth,
+  (req, res) => {
+    req.params.interviewId = req.params.id;
+    return markFollowUpsReviewed(req, res);
+  }
+);
 
 module.exports = router;

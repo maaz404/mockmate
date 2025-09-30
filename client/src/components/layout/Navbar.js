@@ -1,13 +1,25 @@
 import React, { useState } from "react";
-import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
-import { Link } from "react-router-dom";
+import {
+  SignedIn,
+  SignedOut,
+  UserButton,
+  useUser,
+  useAuth,
+} from "@clerk/clerk-react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import DarkModeToggle from "../ui/DarkModeToggle";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import toast from "react-hot-toast";
+import BrandLogo from "../ui/BrandLogo";
 
 const Navbar = () => {
   const { user } = useUser();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const navigation = [
     { name: "Features", href: "#features" },
@@ -20,7 +32,7 @@ const Navbar = () => {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-surface-900/95 backdrop-blur-lg border-b border-surface-700"
+      className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-lg border-b border-surface-800"
     >
       <div className="max-w-7xl mx-auto container-padding">
         <div className="flex justify-between items-center h-16">
@@ -28,18 +40,13 @@ const Navbar = () => {
           <div className="flex items-center">
             <Link
               to="/"
-              className="flex items-center space-x-2 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
+              className="flex items-center space-x-2 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-black"
               aria-label="MockMate home"
             >
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <span
-                  className="text-white font-bold text-lg"
-                  aria-hidden="true"
-                >
-                  M
-                </span>
-              </div>
-              <span className="text-xl font-bold text-white">MockMate</span>
+              <BrandLogo size="md" />
+              <span className="hidden md:inline-block brand-wordmark text-sm leading-none select-none">
+                MockMate
+              </span>
             </Link>
           </div>
 
@@ -93,6 +100,12 @@ const Navbar = () => {
                     },
                   }}
                 />
+                <button
+                  onClick={() => setConfirmOpen(true)}
+                  className="nav-link-dark"
+                >
+                  Sign out
+                </button>
               </div>
             </SignedIn>
           </div>
@@ -105,7 +118,7 @@ const Navbar = () => {
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-surface-300 hover:text-white transition-colors p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900"
+              className="text-surface-300 hover:text-white transition-colors p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-black"
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-menu"
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
@@ -192,11 +205,39 @@ const Navbar = () => {
                       {user?.firstName}
                     </span>
                   </div>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setConfirmOpen(true);
+                    }}
+                    className="mt-3 block w-full text-left nav-link-dark px-2"
+                    role="menuitem"
+                  >
+                    Sign out
+                  </button>
                 </SignedIn>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+        {/* Confirm dialog */}
+        <ConfirmDialog
+          open={confirmOpen}
+          title="Sign out?"
+          description="You will be redirected to the sign-in page."
+          confirmText="Sign out"
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={async () => {
+            setConfirmOpen(false);
+            try {
+              toast.success("Signed out");
+              await signOut({ redirectUrl: "/login" });
+            } catch (_) {
+              toast.success("Signed out");
+              navigate("/login");
+            }
+          }}
+        />
       </div>
     </motion.nav>
   );

@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@clerk/clerk-react": "^5.46.0",
+    "@fontsource/archivo-black": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
     "@mediapipe/face_mesh": "^0.4.1633559619",
     "@monaco-editor/react": "^4.6.0",
@@ -38,6 +39,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
+    "icons": "node scripts/generate-icons.js",
     "build:prod": "NODE_ENV=production npm run build",
     "analyze": "npm run build && npx serve -s build",
     "clean": "rm -rf build node_modules && npm install"
@@ -62,7 +64,9 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32"
+    "png-to-ico": "^2.1.8",
+    "postcss": "^8.4.32",
+    "sharp": "^0.33.5"
   },
   "proxy": "http://localhost:5000"
 }

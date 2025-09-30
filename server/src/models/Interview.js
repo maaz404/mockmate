@@ -96,9 +96,17 @@ const interviewSchema = new mongoose.Schema(
         timeSpent: Number, // seconds
         response: {
           text: String,
+          // User's own notes captured alongside the answer
+          notes: String,
           audioUrl: String, // for future voice responses
           submittedAt: Date,
         },
+        // Whether the user reviewed AI follow-up questions for this prompt
+        followUpsReviewed: {
+          type: Boolean,
+          default: false,
+        },
+        followUpsReviewedAt: Date,
         video: {
           filename: String,
           path: String,
@@ -110,9 +118,9 @@ const interviewSchema = new mongoose.Schema(
             generatedAt: Date,
             status: {
               type: String,
-              enum: ['pending', 'completed', 'failed'],
-              default: 'pending'
-            }
+              enum: ["pending", "completed", "failed"],
+              default: "pending",
+            },
           },
           // Facial Expression Analysis Results
           facialAnalysis: {
@@ -176,18 +184,20 @@ const interviewSchema = new mongoose.Schema(
               totalFrames: Number,
               faceDetectedFrames: Number,
               detectionRate: Number,
-              recommendations: [{
-                type: String,
-                message: String,
-                priority: {
+              recommendations: [
+                {
                   type: String,
-                  enum: ['low', 'medium', 'high'],
-                  default: 'medium',
+                  message: String,
+                  priority: {
+                    type: String,
+                    enum: ["low", "medium", "high"],
+                    default: "medium",
+                  },
                 },
-              }],
+              ],
             },
             analysisTimestamp: Date,
-          }
+          },
         },
         score: {
           overall: {
@@ -238,13 +248,13 @@ const interviewSchema = new mongoose.Schema(
             type: {
               type: String,
               enum: ["clarification", "example", "technical", "challenge"],
-              default: "clarification"
+              default: "clarification",
             },
             generatedAt: {
               type: Date,
-              default: Date.now
-            }
-          }
+              default: Date.now,
+            },
+          },
         ],
       },
     ],

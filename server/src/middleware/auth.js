@@ -6,15 +6,15 @@ const Logger = require("../utils/logger");
  * Uses Clerk Express middleware to verify JWT tokens
  */
 const requireAuth = (req, res, next) => {
-  // In development, if Clerk already parsed a valid token, use it; otherwise fall back to a test user
+  // In development, allow fallback only if explicitly enabled
   if (process.env.NODE_ENV !== "production") {
     if (req.auth && (req.auth.userId || req.auth.id)) {
-      // Token already validated upstream by ClerkExpressWithAuth
       return next();
     }
-    // Silent fallback to a deterministic test identity (no noisy logs)
-    req.auth = { userId: "test-user-123", id: "test-user-123" };
-    return next();
+    if (process.env.MOCK_AUTH_FALLBACK === "true") {
+      req.auth = { userId: "test-user-123", id: "test-user-123" };
+      return next();
+    }
   }
 
   // In production, use Clerk authentication

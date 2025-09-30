@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children }) => {
 
   // Redirect to sign-in if not authenticated
   if (!isSignedIn) {
-    return <RedirectToSignIn redirectUrl="/dashboard" />;
+    return <RedirectToSignIn signInUrl="/login" />;
   }
 
   // Render protected content if authenticated

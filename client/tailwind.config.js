@@ -5,18 +5,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary: Blue (#2563EB) - Main brand color
+        // Primary: Teal brand derived from logo (#14b8a6)
         primary: {
-          50: "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb", // Main primary color
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
+          50: "#f0fdfa",
+          100: "#ccfbf1",
+          200: "#99f6e4",
+          300: "#5eead4",
+          400: "#2dd4bf",
+          500: "#14b8a6", // Teal brand
+          600: "#0d9488",
+          700: "#0f766e",
+          800: "#115e59",
+          900: "#134e4a",
         },
         // Secondary: Purple (#7C3AED) - Accent color
         secondary: {
@@ -99,6 +99,13 @@ module.exports = {
       fontFamily: {
         sans: ["Inter", "Helvetica Neue", "Arial", "sans-serif"],
         display: ["Inter", "Helvetica Neue", "Arial", "sans-serif"],
+        brand: [
+          "'Archivo Black'",
+          "Inter",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+        ],
       },
       fontSize: {
         xs: ["0.75rem", { lineHeight: "1rem" }],
@@ -119,11 +126,11 @@ module.exports = {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-        "gradient-primary": "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)", // Primary blue gradient
+        "gradient-primary": "linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)", // Teal brand gradient
         "gradient-secondary":
           "linear-gradient(135deg, #7c3aed 0%, #6b21a8 100%)", // Secondary purple gradient
         "gradient-accent": "linear-gradient(135deg, #d946ef 0%, #a21caf 100%)",
-        "gradient-dark": "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+        "gradient-dark": "linear-gradient(135deg, #0b0f14 0%, #000000 100%)",
       },
       boxShadow: {
         glow: "0 0 20px rgba(37, 99, 235, 0.15)", // Primary blue glow

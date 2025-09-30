@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { SignUp, useAuth } from "@clerk/clerk-react";
+import { useTheme } from "../../context/ThemeContext";
 import AuthLoadingSpinner from "../../components/ui/AuthLoadingSpinner";
 
 const RegisterPage = () => {
   const { isLoaded } = useAuth();
   const [showTimeout, setShowTimeout] = useState(false);
+  const { theme } = useTheme();
 
   // Add a reasonable timeout to show content even if Clerk is slow to load
   useEffect(() => {
@@ -45,51 +47,96 @@ const RegisterPage = () => {
             path="/register"
             redirectUrl="/dashboard"
             appearance={{
-              elements: {
-                formButtonPrimary:
-                  "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
-                card: "shadow-none bg-transparent",
-                headerTitle: "hidden",
-                headerSubtitle: "hidden",
-                socialButtonsBlockButton:
-                  "border border-surface-600 hover:bg-surface-700 bg-surface-800 text-white rounded-lg transition-all duration-200",
-                socialButtonsBlockButtonText: "text-white font-medium",
-                formFieldInput:
-                  "bg-surface-700 border-surface-600 text-white placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
-                footerActionLink:
-                  "text-primary-400 hover:text-primary-300 transition-colors duration-200",
-                formFieldLabel: "text-surface-200",
-                formResendCodeLink:
-                  "text-primary-400 hover:text-primary-300 transition-colors duration-200",
-                identityPreviewText: "text-surface-300",
-                identityPreviewEditButtonIcon: "text-surface-400",
-                formFieldSuccessText: "text-green-400",
-                formFieldErrorText: "text-red-400",
-                identityPreview: "bg-surface-700 border-surface-600",
-                otpCodeFieldInput:
-                  "bg-surface-700 border-surface-600 text-white transition-all duration-200",
-                spinner: "text-primary-500",
-                formFieldAction: "text-primary-400 hover:text-primary-300",
-              },
-              variables: {
-                colorPrimary: "#3b82f6",
-                colorBackground: "transparent",
-                colorInputBackground: "#334155",
-                colorInputText: "#ffffff",
-                colorText: "#ffffff",
-                colorTextSecondary: "#cbd5e1",
-                colorNeutral: "#64748b",
-                colorSuccess: "#10b981",
-                colorWarning: "#f59e0b",
-                colorDanger: "#ef4444",
-              },
+              elements:
+                theme === "dark"
+                  ? {
+                      formButtonPrimary:
+                        "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
+                      card: "shadow-none bg-transparent",
+                      headerTitle: "hidden",
+                      headerSubtitle: "hidden",
+                      socialButtonsBlockButton:
+                        "border border-surface-600 hover:bg-surface-700 bg-surface-800 text-white rounded-lg transition-all duration-200",
+                      socialButtonsBlockButtonText: "text-white font-medium",
+                      formFieldInput:
+                        "bg-surface-700 border-surface-600 text-white placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
+                      footerActionLink:
+                        "text-primary-400 hover:text-primary-300 transition-colors duration-200",
+                      formFieldLabel: "text-surface-200",
+                      formResendCodeLink:
+                        "text-primary-400 hover:text-primary-300 transition-colors duration-200",
+                      identityPreviewText: "text-surface-300",
+                      identityPreviewEditButtonIcon: "text-surface-400",
+                      formFieldSuccessText: "text-green-400",
+                      formFieldErrorText: "text-red-400",
+                      identityPreview: "bg-surface-700 border-surface-600",
+                      otpCodeFieldInput:
+                        "bg-surface-700 border-surface-600 text-white transition-all duration-200",
+                      spinner: "text-primary-500",
+                      formFieldAction:
+                        "text-primary-400 hover:text-primary-300",
+                    }
+                  : {
+                      formButtonPrimary:
+                        "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
+                      card: "shadow-none bg-transparent",
+                      headerTitle: "hidden",
+                      headerSubtitle: "hidden",
+                      socialButtonsBlockButton:
+                        "border border-surface-300 hover:bg-surface-50 bg-white text-surface-800 rounded-lg transition-all duration-200",
+                      socialButtonsBlockButtonText:
+                        "text-surface-800 font-medium",
+                      formFieldInput:
+                        "bg-white border-surface-300 text-surface-900 placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
+                      footerActionLink:
+                        "text-primary-600 hover:text-primary-700 transition-colors duration-200",
+                      formFieldLabel: "text-surface-700",
+                      formResendCodeLink:
+                        "text-primary-600 hover:text-primary-700 transition-colors duration-200",
+                      identityPreviewText: "text-surface-700",
+                      identityPreviewEditButtonIcon: "text-surface-500",
+                      formFieldSuccessText: "text-green-600",
+                      formFieldErrorText: "text-red-600",
+                      identityPreview: "bg-white border-surface-200",
+                      otpCodeFieldInput:
+                        "bg-white border-surface-300 text-surface-900 transition-all duration-200",
+                      spinner: "text-primary-500",
+                      formFieldAction:
+                        "text-primary-600 hover:text-primary-700",
+                    },
+              variables:
+                theme === "dark"
+                  ? {
+                      colorPrimary: "#3b82f6",
+                      colorBackground: "transparent",
+                      colorInputBackground: "#334155",
+                      colorInputText: "#ffffff",
+                      colorText: "#ffffff",
+                      colorTextSecondary: "#cbd5e1",
+                      colorNeutral: "#64748b",
+                      colorSuccess: "#10b981",
+                      colorWarning: "#f59e0b",
+                      colorDanger: "#ef4444",
+                    }
+                  : {
+                      colorPrimary: "#2563eb",
+                      colorBackground: "transparent",
+                      colorInputBackground: "#ffffff",
+                      colorInputText: "#0f172a",
+                      colorText: "#0f172a",
+                      colorTextSecondary: "#475569",
+                      colorNeutral: "#64748b",
+                      colorSuccess: "#16a34a",
+                      colorWarning: "#ea580c",
+                      colorDanger: "#dc2626",
+                    },
             }}
           />
         </div>
 
         {/* Additional info */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-surface-300">
+          <p className="text-sm text-surface-600 dark:text-surface-300">
             Already have an account?{" "}
             <a
               href="/login"
