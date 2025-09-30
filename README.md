@@ -12,31 +12,35 @@ MockMate is a comprehensive AI-powered interview practice application that helps
 Over the past few days we delivered major stability and feature work across the stack:
 
 - UI Polish & Theming
-   - Modern dark theme with teal accents, refined typography, and responsive layout
-   - Hover-only scrollbars, improved cards, and dashboard-wide consistency
-   - Favicons, manifest polish, and accessibility improvements (focus, aria-live)
+
+  - Modern dark theme with teal accents, refined typography, and responsive layout
+  - Hover-only scrollbars, improved cards, and dashboard-wide consistency
+  - Favicons, manifest polish, and accessibility improvements (focus, aria-live)
 
 - Onboarding Experience
-   - Presets, smart defaults from recent activity, and live session preview
-   - Gentle validation and micro-coaching with an advanced disclosure for facial analysis
-   - Autosave + Reset to defaults (one-click) with local persistence
+
+  - Presets, smart defaults from recent activity, and live session preview
+  - Gentle validation and micro-coaching with an advanced disclosure for facial analysis
+  - Autosave + Reset to defaults (one-click) with local persistence
 
 - Coding & Judge0 Integration
-   - Secure multi-language execution via Judge0 (RapidAPI) with health endpoint
-   - Local JS-only fallback when Judge0 is not configured; UI disables other langs
-   - Expanded harnesses: JS/Python/Java; limited C++ support; explicit C guidance
-   - API: `/api/coding/health`, `/api/coding/test`, session flows
-   - Guide: see JUDGE0_SETUP_GUIDE.md
+
+  - Secure multi-language execution via Judge0 (RapidAPI) with health endpoint
+  - Local JS-only fallback when Judge0 is not configured; UI disables other langs
+  - Expanded harnesses: JS/Python/Java; limited C++ support; explicit C guidance
+  - API: `/api/coding/health`, `/api/coding/test`, session flows
+  - Guide: see JUDGE0_SETUP_GUIDE.md
 
 - Interview Intelligence
-   - Adaptive difficulty with history tracking and dynamic next-question selection
-   - AI evaluation with robust fallback scoring and follow-up generation
-   - Hybrid question generation (templates + AI) with DB fallbacks
+
+  - Adaptive difficulty with history tracking and dynamic next-question selection
+  - AI evaluation with robust fallback scoring and follow-up generation
+  - Hybrid question generation (templates + AI) with DB fallbacks
 
 - Dev Productivity & Stability
-   - Mock auth fallback (development) to run without Clerk tokens
-   - Clerk global middleware skipped in mock mode; route-level auth injects test user
-   - Clear server health `/api/health` and coding health `/api/coding/health`
+  - Mock auth fallback (development) to run without Clerk tokens
+  - Clerk global middleware skipped in mock mode; route-level auth injects test user
+  - Clear server health `/api/health` and coding health `/api/coding/health`
 
 📖 Useful docs: [UI Redesign Summary](UI_REDESIGN_SUMMARY.md) • [Judge0 Setup](JUDGE0_SETUP_GUIDE.md) • [Clerk Setup](CLERK_SETUP_GUIDE.md)
 
@@ -174,14 +178,14 @@ mockmate/
    NODE_ENV=development
    MONGODB_URI=<your mongodb uri>
    CLIENT_URL=http://localhost:3000
-   
+
    # Dev auth fallback (no Clerk required in dev)
    MOCK_AUTH_FALLBACK=true
-   
+
    # Optional: Judge0 for multi-language code execution
    JUDGE0_API_URL=https://judge0-ce.p.rapidapi.com
    RAPIDAPI_KEY=<your rapidapi key>
-   
+
    # Optional: OpenAI
    OPENAI_API_KEY=<your openai api key>
    ```
@@ -299,6 +303,7 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 - `POST /api/questions/generate` - Generate AI questions
 
 ### Reports
+
 ### Coding
 
 - `POST /api/coding/test` - Stateless code execution for a predefined challenge
