@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import VideoRecorder from "../components/VideoRecorder";
+import RecordingUploader from "../components/interview/RecordingUploader";
 import toast from "react-hot-toast";
 import { apiService } from "../services/api";
 
@@ -524,6 +525,17 @@ const InterviewPage = () => {
                 </div>
               </div>
             )}
+
+            {/* Session Recording Uploader */}
+            <div className="card p-4">
+              <h3 className="text-lg font-semibold mb-2">
+                Upload session recording
+              </h3>
+              <p className="text-sm text-surface-600 dark:text-surface-400 mb-3">
+                If you recorded externally, attach your full session video here.
+              </p>
+              <RecordingUploader sessionId={interview?._id || interviewId} />
+            </div>
 
             {/* Video Status */}
             {currentQuestion.hasVideo && (

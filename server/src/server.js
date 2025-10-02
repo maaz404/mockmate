@@ -5,14 +5,17 @@ const compression = require("compression");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const dotenv = require("dotenv");
+const path = require("path");
+// Load environment variables BEFORE loading config/env so ENV gets real values
+if (process.env.NODE_ENV !== "test") {
+  dotenv.config({ path: path.resolve(__dirname, "../.env") });
+}
 const { ClerkExpressWithAuth } = require("@clerk/clerk-sdk-node");
 const connectDB = require("./config/database");
 const Logger = require("./utils/logger");
 const { ENV, validateEnv } = require("./config/env");
-
-// Load environment variables (avoid overriding during tests)
+// Validate env after loading
 if (process.env.NODE_ENV !== "test") {
-  dotenv.config();
   validateEnv();
 }
 
@@ -95,12 +98,14 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Health check route (before Clerk middleware)
+const { isDbConnected } = require("./config/database");
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     status: "OK",
     message: "MockMate API is running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
+    ok: typeof isDbConnected === "function" ? isDbConnected() : true,
   });
 });
 // Additional health diagnostics

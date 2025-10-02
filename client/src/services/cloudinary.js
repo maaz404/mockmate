@@ -1,17 +1,29 @@
 import api from "./api";
 
-export async function getSignedParams({ folder, resourceType = "auto", uploadPreset }) {
+export async function getSignedParams({
+  folder,
+  resourceType = "auto",
+  uploadPreset,
+}) {
   const params = new URLSearchParams();
   if (folder) params.append("folder", folder);
   if (resourceType) params.append("resource_type", resourceType);
   if (uploadPreset) params.append("upload_preset", uploadPreset);
   const { data } = await api.get(`/uploads/sign?${params.toString()}`);
-  if (!data?.success) throw new Error(data?.message || "Failed to get signature");
+  if (!data?.success)
+    throw new Error(data?.message || "Failed to get signature");
   return data.data;
 }
 
-export async function directUpload(file, { folder, resourceType = "auto", onProgress, uploadPreset }) {
-  const { cloudName, apiKey, timestamp, signature } = await getSignedParams({ folder, resourceType, uploadPreset });
+export async function directUpload(
+  file,
+  { folder, resourceType = "auto", onProgress, uploadPreset }
+) {
+  const { cloudName, apiKey, timestamp, signature } = await getSignedParams({
+    folder,
+    resourceType,
+    uploadPreset,
+  });
   const form = new FormData();
   form.append("file", file);
   form.append("api_key", apiKey);

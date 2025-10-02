@@ -30,7 +30,7 @@ const getSignedUploadParams = async (req, res) => {
 
     const paramsToSign = {
       timestamp,
-  folder, // normalized folder used for signing
+      folder, // normalized folder used for signing
       resource_type,
       overwrite,
     };

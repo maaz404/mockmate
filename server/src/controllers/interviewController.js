@@ -543,36 +543,34 @@ const completeInterview = async (req, res) => {
     interview.results.performance = interview.getPerformanceLevel();
     interview.status = "completed";
 
-      // Compute metrics
-      const totalQuestions = (interview.questions || []).length;
-      const validScores = (interview.questions || [])
-        .map((q) => q?.score?.overall)
-        .filter((n) => typeof n === "number");
-      const avgScore =
-        validScores.length > 0
-          ? Math.round(
-              validScores.reduce((s, n) => s + n, 0) / validScores.length
-            )
-          : 0;
-      const times = (interview.questions || [])
-        .map((q) => q?.timeSpent)
-        .filter((n) => typeof n === "number");
-      const avgAnswerDurationMs =
-        times.length > 0
-          ? Math.round(
-              (times.reduce((s, n) => s + n, 0) / times.length) * 1000
-            )
-          : 0;
-      const totalDurationMs =
-        typeof interview.timing?.totalDuration === "number"
-          ? interview.timing.totalDuration * 60 * 1000
-          : 0;
-      interview.metrics = {
-        totalQuestions,
-        avgScore,
-        avgAnswerDurationMs,
-        totalDurationMs,
-      };
+    // Compute metrics
+    const totalQuestions = (interview.questions || []).length;
+    const validScores = (interview.questions || [])
+      .map((q) => q?.score?.overall)
+      .filter((n) => typeof n === "number");
+    const avgScore =
+      validScores.length > 0
+        ? Math.round(
+            validScores.reduce((s, n) => s + n, 0) / validScores.length
+          )
+        : 0;
+    const times = (interview.questions || [])
+      .map((q) => q?.timeSpent)
+      .filter((n) => typeof n === "number");
+    const avgAnswerDurationMs =
+      times.length > 0
+        ? Math.round((times.reduce((s, n) => s + n, 0) / times.length) * 1000)
+        : 0;
+    const totalDurationMs =
+      typeof interview.timing?.totalDuration === "number"
+        ? interview.timing.totalDuration * 60 * 1000
+        : 0;
+    interview.metrics = {
+      totalQuestions,
+      avgScore,
+      avgAnswerDurationMs,
+      totalDurationMs,
+    };
 
     await interview.save();
 

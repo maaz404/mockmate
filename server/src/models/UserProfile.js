@@ -21,9 +21,9 @@ const userProfileSchema = new mongoose.Schema(
     lastName: String,
     profileImage: String,
 
-  // Cloudinary-managed media
-  avatar: { type: AssetSchema },
-  resume: { type: AssetSchema },
+    // Cloudinary-managed media
+    avatar: { type: AssetSchema },
+    resume: { type: AssetSchema },
 
     // Professional Details
     professionalInfo: {

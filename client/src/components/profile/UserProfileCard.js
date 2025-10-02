@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import { Briefcase, Award, Camera, Edit3, Save, X } from "lucide-react";
 import { apiService } from "../../services/api";
+import AvatarUploader from "./AvatarUploader";
+import ResumeUploader from "./ResumeUploader";
 
 const UserProfileCard = () => {
   const { user, userProfile, updateProfile, loading } = useAuthContext();
@@ -135,9 +137,9 @@ const UserProfileCard = () => {
               alt="Profile"
               className="w-16 h-16 rounded-full border-2 border-surface-200"
             />
-            <button className="absolute -bottom-1 -right-1 bg-primary-600 text-white p-1 rounded-full hover:bg-primary-700 transition-colors">
-              <Camera className="h-3 w-3" />
-            </button>
+            <div className="absolute -bottom-1 -right-1">
+              <AvatarUploader />
+            </div>
           </div>
           <div>
             {isEditing ? (
@@ -398,6 +400,23 @@ const UserProfileCard = () => {
           </div>
         </div>
       )}
+
+      {/* Media Section */}
+      <div className="mt-6 pt-6 border-t border-surface-200">
+        <h3 className="font-medium text-surface-900 mb-2 flex items-center gap-2">
+          <Camera className="h-5 w-5 text-primary-600" /> Media
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-surface-600 mb-1">Update Avatar</p>
+            <AvatarUploader />
+          </div>
+          <div>
+            <p className="text-sm text-surface-600 mb-1">Upload Resume (PDF)</p>
+            <ResumeUploader />
+          </div>
+        </div>
+      </div>
 
       {/* Profile Completeness */}
       <div className="mt-6 pt-6 border-t border-surface-200">

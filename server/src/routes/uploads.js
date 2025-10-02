@@ -1,6 +1,9 @@
 const express = require("express");
 const requireAuth = require("../middleware/auth");
-const { getSignedUploadParams, destroyByPublicId } = require("../controllers/uploadController");
+const {
+  getSignedUploadParams,
+  destroyByPublicId,
+} = require("../controllers/uploadController");
 
 const router = express.Router();
 

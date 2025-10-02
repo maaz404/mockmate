@@ -121,7 +121,11 @@ const C = require("../utils/constants");
 // @route   DELETE /api/interviews/:id
 // @access  Private
 router.delete("/:id", requireAuth, dbReady, (req, res) =>
-  req.useInMemory ? res.status(C.HTTP_STATUS_NOT_IMPLEMENTED).json({ success: false, message: "Not supported in memory mode" }) : deleteInterview(req, res)
+  req.useInMemory
+    ? res
+        .status(C.HTTP_STATUS_NOT_IMPLEMENTED)
+        .json({ success: false, message: "Not supported in memory mode" })
+    : deleteInterview(req, res)
 );
 
 module.exports = router;

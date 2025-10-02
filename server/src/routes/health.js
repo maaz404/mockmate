@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
+const { isDbConnected } = require("../config/database");
 
 router.get("/db-test", async (_req, res) => {
   try {
@@ -14,6 +15,7 @@ router.get("/db-test", async (_req, res) => {
 
     const payload = {
       success: state === 1,
+      ok: typeof isDbConnected === "function" ? isDbConnected() : state === 1,
       state: statusMap[state] || String(state),
       uri: process.env.MONGODB_URI ? "present" : "missing",
     };
