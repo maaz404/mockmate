@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const AssetSchema = require("./common/Asset");
 
 // Interview Session Schema
 const interviewSchema = new mongoose.Schema(
@@ -79,6 +80,22 @@ const interviewSchema = new mongoose.Schema(
       type: String,
       enum: ["scheduled", "in-progress", "completed", "abandoned"],
       default: "scheduled",
+    },
+
+    // Session Media (Cloudinary assets)
+    recording: { type: AssetSchema },
+    snapshots: { type: [AssetSchema], default: [] },
+    transcript: { type: AssetSchema },
+
+    // Metrics for analytics linkage
+    metrics: {
+      totalQuestions: Number,
+      avgScore: Number,
+      avgAnswerDurationMs: Number,
+      totalDurationMs: Number,
+      eyeContactScore: Number,
+      fillerWordsPerMin: Number,
+      wpm: Number,
     },
 
     // Questions and Responses
@@ -409,10 +426,13 @@ interviewSchema.methods.calculateOverallScore = function () {
 // Determine performance level based on score
 interviewSchema.methods.getPerformanceLevel = function () {
   const score = this.results.overallScore || 0;
+  const EXCELLENT_THRESHOLD = 85;
+  const GOOD_THRESHOLD = 70;
+  const AVERAGE_THRESHOLD = 50;
 
-  if (score >= 85) return "excellent";
-  if (score >= 70) return "good";
-  if (score >= 50) return "average";
+  if (score >= EXCELLENT_THRESHOLD) return "excellent";
+  if (score >= GOOD_THRESHOLD) return "good";
+  if (score >= AVERAGE_THRESHOLD) return "average";
   return "needs-improvement";
 };
 

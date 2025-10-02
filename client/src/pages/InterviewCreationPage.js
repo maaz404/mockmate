@@ -199,7 +199,7 @@ const InterviewCreationPage = () => {
         <div className="bg-white dark:bg-surface-800/60 backdrop-blur-sm rounded-xl shadow-lg dark:shadow-surface-lg border border-surface-200 dark:border-surface-700">
           {/* Header */}
           <div className="px-8 py-6 border-b border-surface-200 dark:border-surface-700">
-            <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
+            <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
               Create New Interview
             </h1>
             <p className="text-surface-600 dark:text-surface-300 mt-2">

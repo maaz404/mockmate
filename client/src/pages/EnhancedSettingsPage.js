@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuthContext } from "../context/AuthContext";
 import UserProfileCard from "../components/profile/UserProfileCard";
 import OnboardingModal from "../components/onboarding/OnboardingModal";
@@ -12,6 +12,7 @@ const SettingsPage = () => {
   const [preferences, setPreferences] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [loading, setLoading] = useState(false);
+  const onboardingCardRef = useRef(null);
 
   useEffect(() => {
     if (userProfile?.preferences) {
@@ -95,7 +96,7 @@ const SettingsPage = () => {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
+          <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
             Settings
           </h1>
           <p className="text-surface-600 dark:text-surface-400 mt-2">
@@ -135,7 +136,7 @@ const SettingsPage = () => {
               <div className="space-y-6">
                 <UserProfileCard />
 
-                <div className="card p-6">
+                <div className="card p-6" ref={onboardingCardRef}>
                   <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
                     Onboarding
                   </h3>
@@ -722,6 +723,8 @@ const SettingsPage = () => {
       <OnboardingModal
         isOpen={showOnboarding}
         onClose={() => setShowOnboarding(false)}
+        anchorRef={onboardingCardRef}
+        centerOverAnchor={false}
       />
     </div>
   );

@@ -42,7 +42,7 @@ const LoginPage = () => {
       </div>
 
       <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-bold text-surface-900 dark:text-surface-50">
+        <h2 className="font-heading mt-6 text-center text-3xl font-bold text-surface-900 dark:text-surface-50">
           Sign in to MockMate
         </h2>
         <p className="mt-2 text-center text-sm text-surface-600 dark:text-surface-300">

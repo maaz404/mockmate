@@ -9,6 +9,8 @@ const {
   completeOnboarding,
   saveOnboardingProgress,
   uploadResume,
+  updateAvatar,
+  updateResumeAsset,
   getScheduledSessions,
   upsertScheduledSession,
   deleteScheduledSession,
@@ -95,6 +97,10 @@ router.post("/onboarding/save-progress", requireAuth, saveOnboardingProgress);
 // @route   POST /api/users/resume
 // @access  Private
 router.post("/resume", requireAuth, upload.single("resume"), uploadResume);
+
+// Cloudinary-backed profile media attach endpoints
+router.put("/profile/avatar", requireAuth, updateAvatar);
+router.put("/profile/resume", requireAuth, updateResumeAsset);
 
 // Scheduled sessions
 // @desc Get upcoming scheduled sessions

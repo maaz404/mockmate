@@ -12,59 +12,92 @@ const {
   getAdaptiveQuestion,
   getInterviewResults,
   markFollowUpsReviewed,
+  deleteInterview,
 } = require("../controllers/interviewController");
+const dbReady = require("../middleware/dbReady");
+const inMem = require("../services/inMemoryInterviewService");
 
 // @desc    Create interview session
 // @route   POST /api/interviews
 // @access  Private
-router.post("/", requireAuth, createInterview);
+router.post("/", requireAuth, dbReady, (req, res) =>
+  req.useInMemory ? inMem.createInterview(req, res) : createInterview(req, res)
+);
 
 // @desc    Get user interviews
 // @route   GET /api/interviews
 // @access  Private
-router.get("/", requireAuth, getUserInterviews);
+router.get("/", requireAuth, dbReady, (req, res) =>
+  req.useInMemory
+    ? inMem.getUserInterviews(req, res)
+    : getUserInterviews(req, res)
+);
 
 // @desc    Get specific interview
 // @route   GET /api/interviews/:id
 // @access  Private
-router.get("/:id", requireAuth, getInterviewDetails);
+router.get("/:id", requireAuth, dbReady, (req, res) =>
+  req.useInMemory
+    ? inMem.getInterviewDetails(req, res)
+    : getInterviewDetails(req, res)
+);
 
 // @desc    Generate questions for interview
 // @route   POST /api/interviews/:id/questions
 // @access  Private
-router.post("/:id/questions", requireAuth, startInterview); // This will generate questions
+router.post("/:id/questions", requireAuth, dbReady, (req, res) =>
+  req.useInMemory ? inMem.startInterview(req, res) : startInterview(req, res)
+); // This will generate questions
 
 // @desc    Start interview session
 // @route   PUT /api/interviews/:id/start
 // @access  Private
-router.put("/:id/start", requireAuth, startInterview);
+router.put("/:id/start", requireAuth, dbReady, (req, res) =>
+  req.useInMemory ? inMem.startInterview(req, res) : startInterview(req, res)
+);
 
 // @desc    Submit answer to question
 // @route   POST /api/interviews/:id/answer/:questionIndex
 // @access  Private
-router.post("/:id/answer/:questionIndex", requireAuth, submitAnswer);
+router.post("/:id/answer/:questionIndex", requireAuth, dbReady, (req, res) =>
+  req.useInMemory ? inMem.submitAnswer(req, res) : submitAnswer(req, res)
+);
 
 // @desc    Generate follow-up question
 // @route   POST /api/interviews/:id/followup/:questionIndex
 // @access  Private
-router.post("/:id/followup/:questionIndex", requireAuth, generateFollowUp);
+router.post("/:id/followup/:questionIndex", requireAuth, dbReady, (req, res) =>
+  req.useInMemory
+    ? inMem.generateFollowUp(req, res)
+    : generateFollowUp(req, res)
+);
 
 // @desc    Get next adaptive question
 // @route   POST /api/interviews/:id/adaptive-question
 // @access  Private
-router.post("/:id/adaptive-question", requireAuth, getAdaptiveQuestion);
+router.post("/:id/adaptive-question", requireAuth, dbReady, (req, res) =>
+  req.useInMemory
+    ? inMem.getAdaptiveQuestion(req, res)
+    : getAdaptiveQuestion(req, res)
+);
 
 // @desc    Complete interview with final submission
 // @route   POST /api/interviews/:id/complete
 // @access  Private
-router.post("/:id/complete", requireAuth, completeInterview);
+router.post("/:id/complete", requireAuth, dbReady, (req, res) =>
+  req.useInMemory
+    ? inMem.completeInterview(req, res)
+    : completeInterview(req, res)
+);
 
 // @desc    Get interview results (formatted)
 // @route   GET /api/interviews/:id/results
 // @access  Private
-router.get("/:id/results", requireAuth, (req, res) => {
+router.get("/:id/results", requireAuth, dbReady, (req, res) => {
   req.params.interviewId = req.params.id;
-  return getInterviewResults(req, res);
+  return req.useInMemory
+    ? inMem.getInterviewResults(req, res)
+    : getInterviewResults(req, res);
 });
 
 // @desc    Mark follow-ups reviewed for a question
@@ -73,10 +106,22 @@ router.get("/:id/results", requireAuth, (req, res) => {
 router.post(
   "/:id/followups-reviewed/:questionIndex",
   requireAuth,
+  dbReady,
   (req, res) => {
     req.params.interviewId = req.params.id;
-    return markFollowUpsReviewed(req, res);
+    return req.useInMemory
+      ? inMem.markFollowUpsReviewed(req, res)
+      : markFollowUpsReviewed(req, res);
   }
+);
+
+const C = require("../utils/constants");
+
+// @desc    Delete interview (with Cloudinary cleanup)
+// @route   DELETE /api/interviews/:id
+// @access  Private
+router.delete("/:id", requireAuth, dbReady, (req, res) =>
+  req.useInMemory ? res.status(C.HTTP_STATUS_NOT_IMPLEMENTED).json({ success: false, message: "Not supported in memory mode" }) : deleteInterview(req, res)
 );
 
 module.exports = router;

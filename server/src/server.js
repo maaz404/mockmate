@@ -25,6 +25,9 @@ const reportRoutes = require("./routes/report");
 const videoRoutes = require("./routes/video");
 const codingRoutes = require("./routes/coding");
 const chatbotRoutes = require("./routes/chatbot");
+const healthRoutes = require("./routes/health");
+const uploadRoutes = require("./routes/uploads");
+const interviewMediaRoutes = require("./routes/interviewMedia");
 
 // Import middleware
 const errorHandler = require("./middleware/errorHandler");
@@ -100,6 +103,8 @@ app.get("/api/health", (req, res) => {
     environment: process.env.NODE_ENV,
   });
 });
+// Additional health diagnostics
+app.use("/api/health", healthRoutes);
 
 // Public routes that don't need authentication
 app.get("/favicon.ico", (req, res) => {
@@ -117,7 +122,8 @@ app.get("/*.json", (req, res) => {
 
 // Clerk middleware - adds auth context to all API requests only
 // In development with MOCK_AUTH_FALLBACK=true, skip global Clerk auth
-const useClerkGlobally = ENV.NODE_ENV === "production" || !ENV.MOCK_AUTH_FALLBACK;
+const useClerkGlobally =
+  ENV.NODE_ENV === "production" || !ENV.MOCK_AUTH_FALLBACK;
 
 if (useClerkGlobally) {
   app.use("/api", ClerkExpressWithAuth());
@@ -131,11 +137,13 @@ if (useClerkGlobally) {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/interviews", interviewRoutes);
+app.use("/api/interviews", interviewMediaRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/video", videoRoutes);
 app.use("/api/coding", codingRoutes);
 app.use("/api/chatbot", chatbotRoutes);
+app.use("/api/uploads", uploadRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFound);

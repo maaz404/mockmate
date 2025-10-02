@@ -7,6 +7,7 @@ const { clerkClient } = require("@clerk/clerk-sdk-node");
 const aiQuestionService = require("../services/aiQuestionService");
 const hybridQuestionService = require("../services/hybridQuestionService");
 const { updateAnalytics } = require("./userController");
+const { destroyByPrefix } = require("./uploadController");
 const C = require("../utils/constants");
 const Logger = require("../utils/logger");
 
@@ -541,6 +542,37 @@ const completeInterview = async (req, res) => {
     interview.calculateOverallScore();
     interview.results.performance = interview.getPerformanceLevel();
     interview.status = "completed";
+
+      // Compute metrics
+      const totalQuestions = (interview.questions || []).length;
+      const validScores = (interview.questions || [])
+        .map((q) => q?.score?.overall)
+        .filter((n) => typeof n === "number");
+      const avgScore =
+        validScores.length > 0
+          ? Math.round(
+              validScores.reduce((s, n) => s + n, 0) / validScores.length
+            )
+          : 0;
+      const times = (interview.questions || [])
+        .map((q) => q?.timeSpent)
+        .filter((n) => typeof n === "number");
+      const avgAnswerDurationMs =
+        times.length > 0
+          ? Math.round(
+              (times.reduce((s, n) => s + n, 0) / times.length) * 1000
+            )
+          : 0;
+      const totalDurationMs =
+        typeof interview.timing?.totalDuration === "number"
+          ? interview.timing.totalDuration * 60 * 1000
+          : 0;
+      interview.metrics = {
+        totalQuestions,
+        avgScore,
+        avgAnswerDurationMs,
+        totalDurationMs,
+      };
 
     await interview.save();
 
@@ -1340,3 +1372,36 @@ const markFollowUpsReviewed = async (req, res) => {
 };
 
 module.exports.markFollowUpsReviewed = markFollowUpsReviewed;
+
+// Delete interview with Cloudinary cleanup by prefix
+const deleteInterview = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const { id } = req.params;
+    const doc = await Interview.findOne({ _id: id, userId }).lean();
+    if (!doc) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Interview not found" });
+    }
+
+    const prefix = `mockmate/dev/users/${userId}/sessions/${id}`;
+    // Clean up all resource types
+    try {
+      await destroyByPrefix(prefix, "image");
+      await destroyByPrefix(prefix, "video");
+      await destroyByPrefix(prefix, "raw");
+    } catch (_e) {
+      // Best-effort cleanup
+    }
+
+    await Interview.deleteOne({ _id: id, userId });
+    return res.json({ success: true });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to delete interview" });
+  }
+};
+
+module.exports.deleteInterview = deleteInterview;

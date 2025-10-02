@@ -2,7 +2,7 @@ const SupportPage = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
+        <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
           Help & Support
         </h1>
         <p className="mt-2 text-surface-500 dark:text-surface-400">
@@ -12,12 +12,12 @@ const SupportPage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="card flex flex-col">
-          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
+          <h3 className="font-heading text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
             Frequently Asked Questions
           </h3>
           <div className="space-y-3 flex-1">
             <div className="border-b border-surface-200 dark:border-surface-700 pb-3">
-              <h4 className="font-medium text-surface-900 dark:text-surface-50">
+              <h4 className="font-heading font-medium text-surface-900 dark:text-surface-50">
                 How do I start an interview?
               </h4>
               <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
@@ -25,7 +25,7 @@ const SupportPage = () => {
               </p>
             </div>
             <div className="border-b border-surface-200 dark:border-surface-700 pb-3">
-              <h4 className="font-medium text-surface-900 dark:text-surface-50">
+              <h4 className="font-heading font-medium text-surface-900 dark:text-surface-50">
                 Can I practice specific question types?
               </h4>
               <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
@@ -39,7 +39,7 @@ const SupportPage = () => {
         </div>
 
         <div className="card flex flex-col">
-          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
+          <h3 className="font-heading text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
             Contact Support
           </h3>
           <p className="text-surface-500 dark:text-surface-400 mb-6">
@@ -57,7 +57,7 @@ const SupportPage = () => {
       </div>
 
       <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-2xl p-8">
-        <h3 className="text-xl font-semibold text-surface-900 dark:text-surface-50 mb-4">
+        <h3 className="font-heading text-xl font-semibold text-surface-900 dark:text-surface-50 mb-4">
           Feature Requests
         </h3>
         <p className="text-surface-500 dark:text-surface-400 mb-6">

@@ -5,7 +5,7 @@ const MockInterviewPage = () => {
     <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200 p-6">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
+          <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
             Mock Interview Practice
           </h1>
           <p className="mt-2 text-surface-600 dark:text-surface-400">

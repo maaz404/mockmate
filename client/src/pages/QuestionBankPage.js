@@ -80,7 +80,7 @@ const QuestionBankPage = () => {
     <div className="p-6 bg-surface-50 dark:bg-surface-900 min-h-screen transition-colors duration-200">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
+          <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
             Question Bank
           </h1>
           <p className="mt-2 text-surface-600 dark:text-surface-400">
@@ -100,7 +100,7 @@ const QuestionBankPage = () => {
               >
                 {category.icon}
               </div>
-              <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
+              <h3 className="font-heading text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
                 {category.name}
               </h3>
               <p className="text-surface-600 dark:text-surface-400 mb-4">

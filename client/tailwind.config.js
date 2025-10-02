@@ -99,6 +99,14 @@ module.exports = {
       fontFamily: {
         sans: ["Inter", "Helvetica Neue", "Arial", "sans-serif"],
         display: ["Inter", "Helvetica Neue", "Arial", "sans-serif"],
+        heading: [
+          "Söhne",
+          "Sohne",
+          "Inter",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+        ],
         brand: [
           "'Archivo Black'",
           "Inter",

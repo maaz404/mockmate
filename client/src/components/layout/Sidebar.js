@@ -73,25 +73,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           ),
         },
         {
-          name: "Scheduled Sessions",
-          path: "/scheduled",
-          icon: (
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2h-2m-10 0H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-          ),
-        },
-        {
           name: "Create Interview",
           path: "/interview/new",
           icon: (
@@ -106,6 +87,25 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
+            </svg>
+          ),
+        },
+        {
+          name: "Scheduled Sessions",
+          path: "/scheduled",
+          icon: (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2h-2m-10 0H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
           ),

@@ -93,11 +93,21 @@ const DashboardPage = () => {
         if (prefs.density) setDensity(prefs.density);
         if (prefs.upcomingView) {
           setUpcomingView(prefs.upcomingView);
-          try { localStorage.setItem("mm.dashboard.upcoming.view", prefs.upcomingView); } catch {}
+          try {
+            localStorage.setItem(
+              "mm.dashboard.upcoming.view",
+              prefs.upcomingView
+            );
+          } catch {}
         }
         if (typeof prefs.thisWeekOnly === "boolean") {
           setThisWeekOnly(prefs.thisWeekOnly);
-          try { localStorage.setItem("mm.dashboard.upcoming.weekOnly", prefs.thisWeekOnly ? "1" : "0"); } catch {}
+          try {
+            localStorage.setItem(
+              "mm.dashboard.upcoming.weekOnly",
+              prefs.thisWeekOnly ? "1" : "0"
+            );
+          } catch {}
         }
       } catch {}
 
@@ -186,25 +196,34 @@ const DashboardPage = () => {
 
   // Persist UpcomingList preferences (debounced)
   useEffect(() => {
-    try { localStorage.setItem("mm.dashboard.upcoming.view", upcomingView); } catch {}
+    try {
+      localStorage.setItem("mm.dashboard.upcoming.view", upcomingView);
+    } catch {}
     if (savePrefDebounceRef.current) clearTimeout(savePrefDebounceRef.current);
     savePrefDebounceRef.current = setTimeout(async () => {
       try {
         await apiService.put("/users/dashboard/preferences", { upcomingView });
       } catch {}
     }, 400);
-    return () => savePrefDebounceRef.current && clearTimeout(savePrefDebounceRef.current);
+    return () =>
+      savePrefDebounceRef.current && clearTimeout(savePrefDebounceRef.current);
   }, [upcomingView]);
 
   useEffect(() => {
-    try { localStorage.setItem("mm.dashboard.upcoming.weekOnly", thisWeekOnly ? "1" : "0"); } catch {}
+    try {
+      localStorage.setItem(
+        "mm.dashboard.upcoming.weekOnly",
+        thisWeekOnly ? "1" : "0"
+      );
+    } catch {}
     if (savePrefDebounceRef.current) clearTimeout(savePrefDebounceRef.current);
     savePrefDebounceRef.current = setTimeout(async () => {
       try {
         await apiService.put("/users/dashboard/preferences", { thisWeekOnly });
       } catch {}
     }, 400);
-    return () => savePrefDebounceRef.current && clearTimeout(savePrefDebounceRef.current);
+    return () =>
+      savePrefDebounceRef.current && clearTimeout(savePrefDebounceRef.current);
   }, [thisWeekOnly]);
 
   // Command palette keyboard shortcut

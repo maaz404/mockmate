@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const AssetSchema = require("./common/Asset");
 
 // User Profile Schema (extends Clerk user data)
 const userProfileSchema = new mongoose.Schema(
@@ -19,6 +20,10 @@ const userProfileSchema = new mongoose.Schema(
     firstName: String,
     lastName: String,
     profileImage: String,
+
+  // Cloudinary-managed media
+  avatar: { type: AssetSchema },
+  resume: { type: AssetSchema },
 
     // Professional Details
     professionalInfo: {
@@ -58,6 +63,7 @@ const userProfileSchema = new mongoose.Schema(
         },
       ],
       careerGoals: String,
+      // Deprecated resume fields kept for backward compatibility
       resume: {
         filename: String,
         url: String,

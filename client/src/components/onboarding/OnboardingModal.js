@@ -4,6 +4,7 @@ import React, {
   useMemo,
   useRef,
   useCallback,
+  useLayoutEffect,
 } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -22,7 +23,13 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
+const OnboardingModal = ({
+  isOpen,
+  onClose,
+  onComplete,
+  anchorRef,
+  centerOverAnchor = false,
+}) => {
   const { refreshProfile, userProfile } = useAuthContext();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -33,6 +40,7 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
   const [showAdvancedFA, setShowAdvancedFA] = useState(false);
   const headingRef = useRef(null);
   const liveRegionRef = useRef(null);
+  const [anchorOffset, setAnchorOffset] = useState({ x: 0, y: 0 });
 
   const [formData, setFormData] = useState({
     professionalInfo: {
@@ -112,6 +120,9 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
     toast.success("Reset to defaults");
   }, []);
 
+  // Allow page scroll while modal is open (no body scroll lock)
+  useEffect(() => {}, [isOpen]);
+
   // Tech-focused industries
   const industries = [
     "Software Development",
@@ -180,6 +191,7 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
       "Kafka",
       "Linux",
       "Bash",
+      "SQL",
     ],
     "soft-skill": [
       "Communication",
@@ -206,6 +218,45 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
       "Microservices",
     ],
   };
+
+  // Optional: center over an anchor element (settings onboarding card)
+  useLayoutEffect(() => {
+    if (!isOpen || !centerOverAnchor) {
+      setAnchorOffset({ x: 0, y: 0 });
+      return;
+    }
+    try {
+      const node = anchorRef?.current;
+      if (!node) {
+        setAnchorOffset({ x: 0, y: 0 });
+        return;
+      }
+      const compute = () => {
+        const rect = node.getBoundingClientRect();
+        const viewportW =
+          window.innerWidth || document.documentElement.clientWidth;
+        const viewportH =
+          window.innerHeight || document.documentElement.clientHeight;
+        const anchorCenterX = rect.left + rect.width / 2;
+        const anchorCenterY = rect.top + rect.height / 2;
+        const viewportCenterX = viewportW / 2;
+        const viewportCenterY = viewportH / 2;
+        setAnchorOffset({
+          x: anchorCenterX - viewportCenterX,
+          y: anchorCenterY - viewportCenterY,
+        });
+      };
+      compute();
+      window.addEventListener("resize", compute);
+      window.addEventListener("scroll", compute, { passive: true });
+      return () => {
+        window.removeEventListener("resize", compute);
+        window.removeEventListener("scroll", compute);
+      };
+    } catch (_e) {
+      setAnchorOffset({ x: 0, y: 0 });
+    }
+  }, [isOpen, anchorRef, centerOverAnchor]);
 
   const interviewTypes = [
     { value: "technical", label: "Technical" },
@@ -532,7 +583,13 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
       )} of 5: ${metaTitle}`;
     }
     if (headingRef.current) {
-      headingRef.current.focus();
+      try {
+        // Prevent scroll jump when focusing heading inside fixed modal
+        headingRef.current.focus({ preventScroll: true });
+      } catch (_err) {
+        // Fallback for browsers that don't support preventScroll
+        headingRef.current.focus();
+      }
     }
   }, [isOpen, step, stepMeta]);
 
@@ -796,7 +853,7 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
           <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
             Job Title
@@ -912,112 +969,117 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
             Select your skills and rate your confidence level
           </p>
         </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left column: search + skills to improve */}
+          <div className="space-y-4">
+            <div className="relative">
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                Add Skills
+              </label>
+              <input
+                type="text"
+                value={skillInput}
+                onChange={(e) => handleSkillInputChange(e.target.value)}
+                className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                placeholder="Search for skills (e.g., React, Python, SQL)"
+              />
+              {filteredSkills.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-lg shadow-lg max-h-40 overflow-y-auto hover-scrollbar">
+                  {filteredSkills.map((skill) => (
+                    <button
+                      key={`${skill.category}-${skill.name}`}
+                      onClick={() => {
+                        handleSkillAdd(skill.name, skill.category);
+                        setSkillInput("");
+                        setFilteredSkills([]);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-surface-100 dark:hover:bg-surface-600 text-surface-900 dark:text-white text-sm"
+                    >
+                      <span className="font-medium">{skill.name}</span>
+                      <span className="text-surface-500 dark:text-surface-400 ml-2">
+                        ({skill.category})
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-        <div className="space-y-4">
-          {/* Skill Search and Add */}
-          <div className="relative">
-            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-              Add Skills
-            </label>
-            <input
-              type="text"
-              value={skillInput}
-              onChange={(e) => handleSkillInputChange(e.target.value)}
-              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              placeholder="Search for skills (e.g., React, Python, SQL)"
-            />
-            {filteredSkills.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-lg shadow-lg max-h-40 overflow-y-auto hover-scrollbar">
-                {filteredSkills.map((skill) => (
-                  <button
-                    key={`${skill.category}-${skill.name}`}
-                    onClick={() => {
-                      handleSkillAdd(skill.name, skill.category);
-                      setSkillInput("");
-                      setFilteredSkills([]);
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-surface-100 dark:hover:bg-surface-600 text-surface-900 dark:text-white text-sm"
-                  >
-                    <span className="font-medium">{skill.name}</span>
-                    <span className="text-surface-500 dark:text-surface-400 ml-2">
-                      ({skill.category})
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Selected Skills with Confidence */}
-          {formData.professionalInfo.skills.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-                Your Skills & Confidence Levels
+                Skills to Improve (optional)
               </label>
-              <div className="space-y-2 max-h-40 overflow-y-auto hover-scrollbar">
-                {formData.professionalInfo.skills.map((skill) => (
-                  <div
-                    key={skill.name}
-                    className="flex items-center justify-between p-2 bg-surface-100 dark:bg-surface-700 rounded-lg"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleSkillRemove(skill.name)}
-                        className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                      <span className="text-sm font-medium text-surface-900 dark:text-white">
-                        {skill.name}
-                      </span>
-                      <span className="text-xs text-surface-500 dark:text-surface-400 bg-surface-200 dark:bg-surface-600 px-2 py-1 rounded">
-                        {skill.category}
-                      </span>
-                    </div>
-                    <select
-                      value={skill.confidence}
-                      onChange={(e) =>
-                        handleSkillConfidenceChange(skill.name, e.target.value)
-                      }
-                      className="text-sm border border-surface-300 dark:border-surface-600 rounded px-2 py-1 bg-white dark:bg-surface-700 text-surface-900 dark:text-white"
-                    >
-                      <option value={1}>Beginner</option>
-                      <option value={2}>Basic</option>
-                      <option value={3}>Intermediate</option>
-                      <option value={4}>Advanced</option>
-                      <option value={5}>Expert</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
+              <input
+                type="text"
+                value={formData.professionalInfo.skillsToImprove
+                  .map((s) => s.name || s)
+                  .join(", ")}
+                onChange={(e) => {
+                  const skillNames = e.target.value.split(", ").filter(Boolean);
+                  const skillsToImprove = skillNames.map((name) => ({
+                    name,
+                    priority: "medium",
+                  }));
+                  handleInputChange(
+                    "professionalInfo",
+                    "skillsToImprove",
+                    skillsToImprove
+                  );
+                }}
+                className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                placeholder="e.g., System Design, Algorithms, Leadership"
+              />
             </div>
-          )}
+          </div>
 
-          {/* Skills to Improve */}
+          {/* Right column: selected skills list */}
           <div>
-            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-              Skills to Improve (optional)
-            </label>
-            <input
-              type="text"
-              value={formData.professionalInfo.skillsToImprove
-                .map((s) => s.name || s)
-                .join(", ")}
-              onChange={(e) => {
-                const skillNames = e.target.value.split(", ").filter(Boolean);
-                const skillsToImprove = skillNames.map((name) => ({
-                  name,
-                  priority: "medium",
-                }));
-                handleInputChange(
-                  "professionalInfo",
-                  "skillsToImprove",
-                  skillsToImprove
-                );
-              }}
-              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              placeholder="e.g., System Design, Algorithms, Leadership"
-            />
+            {formData.professionalInfo.skills.length > 0 && (
+              <>
+                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                  Your Skills & Confidence Levels
+                </label>
+                <div className="space-y-2 max-h-64 overflow-y-auto hover-scrollbar">
+                  {formData.professionalInfo.skills.map((skill) => (
+                    <div
+                      key={skill.name}
+                      className="flex items-center justify-between p-2 bg-surface-100 dark:bg-surface-700 rounded-lg"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleSkillRemove(skill.name)}
+                          className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <span className="text-sm font-medium text-surface-900 dark:text-white">
+                          {skill.name}
+                        </span>
+                        <span className="text-xs text-surface-500 dark:text-surface-400 bg-surface-200 dark:bg-surface-600 px-2 py-1 rounded">
+                          {skill.category}
+                        </span>
+                      </div>
+                      <select
+                        value={skill.confidence}
+                        onChange={(e) =>
+                          handleSkillConfidenceChange(
+                            skill.name,
+                            e.target.value
+                          )
+                        }
+                        className="text-sm border border-surface-300 dark:border-surface-600 rounded px-2 py-1 bg-white dark:bg-surface-700 text-surface-900 dark:text-white"
+                      >
+                        <option value={1}>Beginner</option>
+                        <option value={2}>Basic</option>
+                        <option value={3}>Intermediate</option>
+                        <option value={4}>Advanced</option>
+                        <option value={5}>Expert</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -1056,100 +1118,106 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
           Customize your interview practice
         </p>
       </div>
-
-      <div className="space-y-6">
-        {/* Quick Presets */}
-        <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
-            Quick Presets
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {presets.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => applyPreset(p)}
-                className="px-3 py-1.5 rounded-lg text-xs border border-primary-400/50 bg-primary-500/10 hover:bg-primary-500/20 text-primary-700 dark:text-primary-300"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
-            Interview Types (select multiple)
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {interviewTypes.map((type) => (
-              <label
-                key={type.value}
-                className="flex items-center space-x-2 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={formData.preferences.interviewTypes.includes(
-                    type.value
-                  )}
-                  onChange={() =>
-                    handleArrayToggle(
-                      "preferences",
-                      "interviewTypes",
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left column: types + focus areas */}
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
+              Interview Types (select multiple)
+            </label>
+            <div className="flex flex-col gap-2">
+              {interviewTypes.map((type) => (
+                <label
+                  key={type.value}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.preferences.interviewTypes.includes(
                       type.value
-                    )
-                  }
-                  className="rounded border-surface-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
-                />
-                <span className="text-sm text-surface-700 dark:text-surface-300">
-                  {type.label}
-                </span>
-              </label>
-            ))}
+                    )}
+                    onChange={() =>
+                      handleArrayToggle(
+                        "preferences",
+                        "interviewTypes",
+                        type.value
+                      )
+                    }
+                    className="rounded border-surface-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-surface-700 dark:text-surface-300">
+                    {type.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
+              Focus Areas (select multiple)
+            </label>
+            <div className="flex flex-col gap-2">
+              {focusAreas.map((area) => (
+                <label
+                  key={area.value}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.preferences.focusAreas.includes(
+                      area.value
+                    )}
+                    onChange={() =>
+                      handleArrayToggle("preferences", "focusAreas", area.value)
+                    }
+                    className="rounded border-surface-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-surface-700 dark:text-surface-300">
+                    {area.label}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-            Difficulty Level
-          </label>
-          <select
-            value={formData.preferences.difficulty}
-            onChange={(e) =>
-              handleInputChange("preferences", "difficulty", e.target.value)
-            }
-            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-          >
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-            <option value="expert">Expert</option>
-          </select>
-        </div>
+        {/* Right column: presets + difficulty */}
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
+              Quick Presets
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {presets.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  className="px-3 py-1.5 rounded-lg text-xs border border-primary-400/50 bg-primary-500/10 hover:bg-primary-500/20 text-primary-700 dark:text-primary-300"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-3">
-            Focus Areas (select multiple)
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {focusAreas.map((area) => (
-              <label
-                key={area.value}
-                className="flex items-center space-x-2 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={formData.preferences.focusAreas.includes(area.value)}
-                  onChange={() =>
-                    handleArrayToggle("preferences", "focusAreas", area.value)
-                  }
-                  className="rounded border-surface-300 dark:border-surface-600 text-primary-600 bg-white dark:bg-surface-700 focus:ring-primary-500"
-                />
-                <span className="text-sm text-surface-700 dark:text-surface-300">
-                  {area.label}
-                </span>
-              </label>
-            ))}
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              Difficulty Level
+            </label>
+            <select
+              value={formData.preferences.difficulty}
+              onChange={(e) =>
+                handleInputChange("preferences", "difficulty", e.target.value)
+              }
+              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+              <option value="expert">Expert</option>
+            </select>
           </div>
         </div>
       </div>
@@ -1173,74 +1241,73 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
           Personalize your sessions and optional facial analysis
         </p>
       </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left: preview, duration, language */}
+        <div className="space-y-6">
+          <div className="rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50/60 dark:bg-surface-800/40 p-3">
+            <div className="text-sm text-surface-700 dark:text-surface-300">
+              <span className="font-medium">Session Preview:</span>{" "}
+              {formData.preferences.sessionDuration} min,{" "}
+              {formData.preferences.preferredLanguages?.[0] || "English"},{" "}
+              {formData.preferences.interviewTypes
+                .map(
+                  (t) => interviewTypes.find((it) => it.value === t)?.label || t
+                )
+                .join(" + ") || "No type selected"}
+              , Facial Analysis:{" "}
+              {formData.preferences.facialAnalysis.enabled ? "On" : "Off"}
+            </div>
+          </div>
 
-      <div className="space-y-6">
-        {/* Live Session Preview */}
-        <div className="rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50/60 dark:bg-surface-800/40 p-3">
-          <div className="text-sm text-surface-700 dark:text-surface-300">
-            <span className="font-medium">Session Preview:</span>{" "}
-            {formData.preferences.sessionDuration} min,{" "}
-            {formData.preferences.preferredLanguages?.[0] || "English"},{" "}
-            {formData.preferences.interviewTypes
-              .map(
-                (t) => interviewTypes.find((it) => it.value === t)?.label || t
-              )
-              .join(" + ") || "No type selected"}
-            , Facial Analysis:{" "}
-            {formData.preferences.facialAnalysis.enabled ? "On" : "Off"}
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              Session Duration (minutes)
+            </label>
+            <input
+              type="range"
+              min={15}
+              max={120}
+              step={15}
+              value={formData.preferences.sessionDuration}
+              onChange={(e) =>
+                handleInputChange(
+                  "preferences",
+                  "sessionDuration",
+                  parseInt(e.target.value)
+                )
+              }
+              className="w-full"
+            />
+            <div className="mt-1 text-sm text-surface-600 dark:text-surface-400">
+              {formData.preferences.sessionDuration} minutes
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              Preferred Language
+            </label>
+            <select
+              value={formData.preferences.preferredLanguages?.[0] || "English"}
+              onChange={(e) =>
+                handleInputChange("preferences", "preferredLanguages", [
+                  e.target.value,
+                ])
+              }
+              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            >
+              {["English", "Spanish", "French", "German", "Hindi", "Urdu"].map(
+                (lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                )
+              )}
+            </select>
           </div>
         </div>
 
-        {/* Session duration */}
-        <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-            Session Duration (minutes)
-          </label>
-          <input
-            type="range"
-            min={15}
-            max={120}
-            step={15}
-            value={formData.preferences.sessionDuration}
-            onChange={(e) =>
-              handleInputChange(
-                "preferences",
-                "sessionDuration",
-                parseInt(e.target.value)
-              )
-            }
-            className="w-full"
-          />
-          <div className="mt-1 text-sm text-surface-600 dark:text-surface-400">
-            {formData.preferences.sessionDuration} minutes
-          </div>
-        </div>
-
-        {/* Preferred language */}
-        <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-            Preferred Language
-          </label>
-          <select
-            value={formData.preferences.preferredLanguages?.[0] || "English"}
-            onChange={(e) =>
-              handleInputChange("preferences", "preferredLanguages", [
-                e.target.value,
-              ])
-            }
-            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-          >
-            {["English", "Spanish", "French", "German", "Hindi", "Urdu"].map(
-              (lang) => (
-                <option key={lang} value={lang}>
-                  {lang}
-                </option>
-              )
-            )}
-          </select>
-        </div>
-
-        {/* Facial analysis */}
+        {/* Right: facial analysis settings */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
@@ -1388,26 +1455,51 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
           Set your interview preparation goals
         </p>
       </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              Primary Interview Goal
+            </label>
+            <select
+              value={formData.interviewGoals.primaryGoal}
+              onChange={(e) =>
+                handleInputChange(
+                  "interviewGoals",
+                  "primaryGoal",
+                  e.target.value
+                )
+              }
+              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            >
+              <option value="">Select your primary goal</option>
+              {primaryGoals.map((goal) => (
+                <option key={goal.value} value={goal.value}>
+                  {goal.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-            Primary Interview Goal
-          </label>
-          <select
-            value={formData.interviewGoals.primaryGoal}
-            onChange={(e) =>
-              handleInputChange("interviewGoals", "primaryGoal", e.target.value)
-            }
-            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-          >
-            <option value="">Select your primary goal</option>
-            {primaryGoals.map((goal) => (
-              <option key={goal.value} value={goal.value}>
-                {goal.label}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              Interview Timeline
+            </label>
+            <select
+              value={formData.interviewGoals.timeline}
+              onChange={(e) =>
+                handleInputChange("interviewGoals", "timeline", e.target.value)
+              }
+              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            >
+              <option value="">Select timeline</option>
+              {timelines.map((timeline) => (
+                <option key={timeline.value} value={timeline.value}>
+                  {timeline.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>
@@ -1427,26 +1519,6 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
             className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             placeholder="e.g., Google, Meta, Amazon, Netflix"
           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-            Interview Timeline
-          </label>
-          <select
-            value={formData.interviewGoals.timeline}
-            onChange={(e) =>
-              handleInputChange("interviewGoals", "timeline", e.target.value)
-            }
-            className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-          >
-            <option value="">Select timeline</option>
-            {timelines.map((timeline) => (
-              <option key={timeline.value} value={timeline.value}>
-                {timeline.label}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
     </div>
@@ -1490,188 +1562,192 @@ const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
       aria-modal="true"
       aria-labelledby="onboarding-title"
     >
-      {/* Accessibility live region */}
       <div ref={liveRegionRef} aria-live="polite" className="sr-only" />
-      <div className="modal-panel w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col">
-        {/* Sticky header */}
-        <div className="sticky top-0 z-10 bg-white/90 dark:bg-surface-800/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b border-surface-200 dark:border-surface-700 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {(() => {
-                const MetaIcon = stepMeta[Math.min(step - 1, 4)]?.icon || User;
-                return (
-                  <div className="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
-                    <MetaIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                  </div>
-                );
-              })()}
-              <div>
-                <h2
-                  id="onboarding-title"
-                  className="text-lg sm:text-xl font-semibold text-surface-900 dark:text-white focus:outline-none"
-                  tabIndex={-1}
-                  ref={headingRef}
+      <div
+        className="transform-gpu"
+        style={
+          centerOverAnchor && anchorRef?.current
+            ? {
+                transform: `translate(${anchorOffset.x}px, ${anchorOffset.y}px)`,
+              }
+            : undefined
+        }
+      >
+        <div className="modal-panel w-full max-w-6xl overflow-hidden max-h-[90vh] flex flex-col animate-in-scale">
+          {/* Sticky header */}
+          <div className="sticky top-0 z-10 bg-white/90 dark:bg-surface-800/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-b border-surface-200 dark:border-surface-700 px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const MetaIcon =
+                    stepMeta[Math.min(step - 1, 4)]?.icon || User;
+                  return (
+                    <div className="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
+                      <MetaIcon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                    </div>
+                  );
+                })()}
+                <div>
+                  <h2
+                    id="onboarding-title"
+                    className="text-lg sm:text-xl font-semibold text-surface-900 dark:text-white focus:outline-none"
+                    tabIndex={-1}
+                    ref={headingRef}
+                  >
+                    {stepMeta[Math.min(step - 1, 4)]?.title || "Welcome"}
+                  </h2>
+                  <p className="text-xs text-surface-500 dark:text-surface-400">
+                    Step {Math.min(step, 5)} of 5
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSaveProgress}
+                  disabled={loading}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    savedProgress
+                      ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300"
+                      : "bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-600"
+                  }`}
                 >
-                  {stepMeta[Math.min(step - 1, 4)]?.title || "Welcome"}
-                </h2>
-                <p className="text-xs text-surface-500 dark:text-surface-400">
-                  Step {Math.min(step, 5)} of 5
-                </p>
+                  <Save className="h-4 w-4" />
+                  <span>{savedProgress ? "Saved" : "Save"}</span>
+                </button>
+                <button
+                  onClick={handleResetDefaults}
+                  disabled={loading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-600"
+                  title="Reset to defaults"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span>Reset</span>
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="p-2 rounded-lg text-surface-500 dark:text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            {/* Progress */}
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-2">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <div
+                    key={s}
+                    className="flex-1 flex items-center last:flex-none"
+                  >
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold shadow-sm ${
+                        s < step
+                          ? "bg-primary-600 text-white"
+                          : s === step
+                          ? "bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-200"
+                          : "bg-surface-200 dark:bg-surface-700 text-surface-500"
+                      }`}
+                    >
+                      {s < step ? "✓" : s}
+                    </div>
+                    {s < 5 && (
+                      <div className="flex-1 h-1 mx-2 rounded-full bg-surface-200 dark:bg-surface-700 overflow-hidden">
+                        <div
+                          className={`h-1 rounded-full transition-all duration-300 ${
+                            s < step
+                              ? "bg-primary-500 w-full"
+                              : s === step
+                              ? "bg-primary-300 w-1/2"
+                              : "w-0"
+                          }`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable content (keep scroll within card; page scroll restored) */}
+          <div className="flex-1 min-h-0 px-8 py-6 overflow-y-auto overscroll-contain touch-pan-y hover-scrollbar">
+            <p className="mb-4 text-sm text-surface-600 dark:text-surface-400 hidden sm:block">
+              {stepMeta[Math.min(step - 1, 4)]?.subtitle}
+            </p>
+
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
+            {step === 4 && renderStep4()}
+            {step === 5 && renderStep5()}
+            {step === 6 && renderSuccessStep()}
+
+            {step === 2 && formData.professionalInfo.skills.length === 0 && (
+              <div className="mt-4 rounded-lg border border-yellow-300/50 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700 p-3">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                  Tip: add 3–5 skills to get more tailored practice questions.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-between text-xs">
+              <span className="text-surface-600 dark:text-surface-400">
+                Profile Strength
+              </span>
+              <div className="flex items-center gap-2">
+                <div className="w-28 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-2 bg-gradient-to-r from-yellow-400 to-green-500 rounded-full"
+                    style={{ width: `${profileStrength}%` }}
+                  />
+                </div>
+                <span className="text-surface-700 dark:text-surface-300 font-medium">
+                  {profileStrength}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky footer */}
+          <div className="sticky bottom-0 z-10 border-t border-surface-200 dark:border-surface-700 bg-white/90 dark:bg-surface-800/90 backdrop-blur px-6 py-4">
+            <div className="flex justify-between">
               <button
-                onClick={handleSaveProgress}
-                disabled={loading}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  savedProgress
-                    ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300"
+                onClick={handlePrevious}
+                disabled={step === 1}
+                className={`px-5 py-2 rounded-lg font-medium transition-all shadow-sm ${
+                  step === 1
+                    ? "bg-surface-100 dark:bg-surface-700 text-surface-400 cursor-not-allowed"
                     : "bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-600"
                 }`}
               >
-                <Save className="h-4 w-4" />
-                <span>{savedProgress ? "Saved" : "Save"}</span>
+                Previous
               </button>
               <button
                 onClick={handleResetDefaults}
-                disabled={loading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-600"
-                title="Reset to defaults"
+                type="button"
+                className="px-4 py-2 rounded-lg font-medium text-surface-700 dark:text-surface-200 bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 shadow-sm"
+                title="Reset all fields to default values"
               >
-                <RotateCcw className="h-4 w-4" />
-                <span>Reset</span>
+                Reset
               </button>
-              <button
-                onClick={handleClose}
-                className="p-2 rounded-lg text-surface-500 dark:text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Progress */}
-          <div className="mt-3">
-            <div className="flex items-center justify-between mb-2">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <div
-                  key={s}
-                  className="flex-1 flex items-center last:flex-none"
+              {step < 5 ? (
+                <button
+                  onClick={handleNext}
+                  className="px-6 py-2 rounded-lg font-semibold text-white shadow-sm bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
                 >
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold shadow-sm ${
-                      s < step
-                        ? "bg-primary-600 text-white"
-                        : s === step
-                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-200"
-                        : "bg-surface-200 dark:bg-surface-700 text-surface-500"
-                    }`}
-                  >
-                    {s < step ? "✓" : s}
-                  </div>
-                  {s < 5 && (
-                    <div className="flex-1 h-1 mx-2 rounded-full bg-surface-200 dark:bg-surface-700 overflow-hidden">
-                      <div
-                        className={`h-1 rounded-full transition-all duration-300 ${
-                          s < step
-                            ? "bg-primary-500 w-full"
-                            : s === step
-                            ? "bg-primary-300 w-1/2"
-                            : "w-0"
-                        }`}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
+                  Next
+                </button>
+              ) : (
+                <button
+                  onClick={handleComplete}
+                  disabled={loading}
+                  className="px-6 py-2 rounded-lg font-semibold text-white shadow-sm bg-green-600 hover:bg-green-700 disabled:opacity-60"
+                >
+                  {loading ? "Completing..." : "Complete Setup"}
+                </button>
+              )}
             </div>
-          </div>
-        </div>
-
-        {/* Scrollable content */}
-        <div className="px-6 py-5 overflow-y-auto hover-scrollbar">
-          <p className="mb-4 text-sm text-surface-600 dark:text-surface-400 hidden sm:block">
-            {stepMeta[Math.min(step - 1, 4)]?.subtitle}
-          </p>
-
-          {/* Step Content */}
-          {step === 1 && renderStep1()}
-          {step === 2 && renderStep2()}
-          {step === 3 && renderStep3()}
-          {step === 4 && renderStep4()}
-          {step === 5 && renderStep5()}
-          {step === 6 && renderSuccessStep()}
-
-          {/* Coaching note at bottom for skills step */}
-          {step === 2 && formData.professionalInfo.skills.length === 0 && (
-            <div className="mt-4 rounded-lg border border-yellow-300/50 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700 p-3">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
-                Tip: add 3–5 skills to get more tailored practice questions.
-              </p>
-            </div>
-          )}
-
-          {/* Profile strength */}
-          <div className="mt-6 flex items-center justify-between text-xs">
-            <span className="text-surface-600 dark:text-surface-400">
-              Profile Strength
-            </span>
-            <div className="flex items-center gap-2">
-              <div className="w-28 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
-                <div
-                  className="h-2 bg-gradient-to-r from-yellow-400 to-green-500 rounded-full"
-                  style={{ width: `${profileStrength}%` }}
-                />
-              </div>
-              <span className="text-surface-700 dark:text-surface-300 font-medium">
-                {profileStrength}%
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Sticky footer */}
-        <div className="sticky bottom-0 z-10 border-t border-surface-200 dark:border-surface-700 bg-white/90 dark:bg-surface-800/90 backdrop-blur px-6 py-4">
-          <div className="flex justify-between">
-            <button
-              onClick={handlePrevious}
-              disabled={step === 1}
-              className={`px-5 py-2 rounded-lg font-medium transition-all shadow-sm ${
-                step === 1
-                  ? "bg-surface-100 dark:bg-surface-700 text-surface-400 cursor-not-allowed"
-                  : "bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-600"
-              }`}
-            >
-              Previous
-            </button>
-
-            {/* Reset to defaults for quick recovery */}
-            <button
-              onClick={handleResetDefaults}
-              type="button"
-              className="px-4 py-2 rounded-lg font-medium text-surface-700 dark:text-surface-200 bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 shadow-sm"
-              title="Reset all fields to default values"
-            >
-              Reset
-            </button>
-
-            {step < 5 ? (
-              <button
-                onClick={handleNext}
-                className="px-6 py-2 rounded-lg font-semibold text-white shadow-sm bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
-              >
-                Next
-              </button>
-            ) : (
-              <button
-                onClick={handleComplete}
-                disabled={loading}
-                className="px-6 py-2 rounded-lg font-semibold text-white shadow-sm bg-green-600 hover:bg-green-700 disabled:opacity-60"
-              >
-                {loading ? "Completing..." : "Complete Setup"}
-              </button>
-            )}
           </div>
         </div>
       </div>

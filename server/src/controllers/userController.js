@@ -341,13 +341,17 @@ const completeOnboarding = async (req, res) => {
 
     let clerkUser = null;
     const shouldCallClerk =
-      !usingMockAuth && (process.env.CLERK_SECRET_KEY || process.env.NODE_ENV === "test");
+      !usingMockAuth &&
+      (process.env.CLERK_SECRET_KEY || process.env.NODE_ENV === "test");
     if (shouldCallClerk) {
       try {
         clerkUser = await clerkClient.users.getUser(userId);
       } catch (clerkError) {
         console.error("Clerk API error:", clerkError);
-        if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "test") {
+        if (
+          process.env.NODE_ENV === "production" ||
+          process.env.NODE_ENV === "test"
+        ) {
           return res.status(500).json({
             success: false,
             message: "Failed to fetch user data from authentication service",
@@ -524,6 +528,104 @@ const updateAnalytics = async (userId, analyticsUpdate) => {
   }
 };
 
+// Normalize Cloudinary asset subset from client
+function normalizeAsset(input) {
+  if (!input) return null;
+  const {
+    public_id,
+    publicId,
+    resource_type,
+    resourceType,
+    secure_url,
+    secureUrl,
+    bytes,
+    width,
+    height,
+    duration,
+    format,
+    version,
+    tags,
+    context,
+    uploadedAt,
+    processedAt,
+  } = input;
+  const pid = publicId || public_id;
+  const rt = resourceType || resource_type;
+  const url = secureUrl || secure_url;
+  if (!pid || !rt || !url) return null;
+  return {
+    publicId: pid,
+    resourceType: rt,
+    secureUrl: url,
+    bytes,
+    width,
+    height,
+    duration,
+    format,
+    version,
+    tags,
+    context,
+    uploadedAt: uploadedAt ? new Date(uploadedAt) : new Date(),
+    processedAt: processedAt ? new Date(processedAt) : undefined,
+  };
+}
+
+// PUT /api/users/profile/avatar
+const updateAvatar = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const asset = normalizeAsset(req.body);
+    if (!asset) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid asset payload" });
+    }
+    const profile = await UserProfile.findOneAndUpdate(
+      { clerkUserId: userId },
+      { $set: { avatar: asset } },
+      { new: true }
+    ).lean();
+    if (!profile) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User profile not found" });
+    }
+    return res.json({ success: true, data: profile });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update avatar" });
+  }
+};
+
+// PUT /api/users/profile/resume
+const updateResumeAsset = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const asset = normalizeAsset(req.body);
+    if (!asset) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid asset payload" });
+    }
+    const profile = await UserProfile.findOneAndUpdate(
+      { clerkUserId: userId },
+      { $set: { resume: asset } },
+      { new: true }
+    ).lean();
+    if (!profile) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User profile not found" });
+    }
+    return res.json({ success: true, data: profile });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update resume" });
+  }
+};
+
 // Upload resume
 const uploadResume = async (req, res) => {
   try {
@@ -626,6 +728,8 @@ module.exports = {
   getAnalytics,
   updateAnalytics,
   uploadResume,
+  updateAvatar,
+  updateResumeAsset,
 };
 
 // =============== Dashboard extensions: Scheduled Sessions, Goals, Tips ===============

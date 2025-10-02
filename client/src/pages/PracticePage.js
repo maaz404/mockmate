@@ -5,7 +5,7 @@ const PracticePage = () => {
     <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
       <main className="px-6 py-8 max-w-6xl mx-auto w-full">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
+          <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
             Practice Sessions
           </h1>
           <p className="mt-2 text-surface-600 dark:text-surface-400">

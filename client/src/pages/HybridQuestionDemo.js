@@ -104,7 +104,7 @@ const HybridQuestionDemo = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50 mb-2">
-            Hybrid Question Generation Demo
+            Hybrid Question Demo
           </h1>
           <p className="text-surface-600 dark:text-surface-400">
             Showcasing template-based + AI-generated interview questions with

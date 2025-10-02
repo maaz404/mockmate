@@ -30,11 +30,15 @@ function validateEnv() {
       process.exit(1);
     }
     if (!ENV.CLERK_SECRET_KEY) {
-      Logger.warn("CLERK_SECRET_KEY not set; authentication will fail in production");
+      Logger.warn(
+        "CLERK_SECRET_KEY not set; authentication will fail in production"
+      );
     }
   } else {
     if (!ENV.MONGODB_URI) {
-      Logger.warn("MONGODB_URI not set; continuing in development without DB connection");
+      Logger.warn(
+        "MONGODB_URI not set; continuing in development without DB connection"
+      );
     }
   }
 }
