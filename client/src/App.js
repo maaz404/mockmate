@@ -30,6 +30,8 @@ import CodingChallengeDemo from "./pages/CodingChallengeDemo";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import ChatbotWidget from "./components/ui/ChatbotWidget";
+import { useAuth } from "@clerk/clerk-react";
 
 import VideoRecordingDemo from "./components/VideoRecordingDemo";
 
@@ -52,6 +54,12 @@ function OneTimeSignOutGate({ children }) {
     }
   }, [isLoaded, isSignedIn, signOut]);
   return children;
+}
+
+function ChatbotWrapper() {
+  const { isSignedIn } = useAuth();
+  const allowInDev = process.env.NODE_ENV !== "production";
+  return isSignedIn || allowInDev ? <ChatbotWidget /> : null;
 }
 
 function App() {
@@ -261,6 +269,7 @@ function App() {
               </Layout>
             </Router>
             <Toaster position="top-right" />
+            <ChatbotWrapper />
           </OneTimeSignOutGate>
         </AuthProvider>
       </ThemeProvider>

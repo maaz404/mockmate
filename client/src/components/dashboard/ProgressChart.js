@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import {
   LineChart,
   Line,
@@ -10,15 +11,39 @@ import {
 } from "recharts";
 
 const ProgressChart = ({ analytics }) => {
-  // Mock data for demonstration - in real app, this would come from API
-  const mockProgressData = [
-    { name: "Week 1", score: 45 },
-    { name: "Week 2", score: 52 },
-    { name: "Week 3", score: 58 },
-    { name: "Week 4", score: 65 },
-    { name: "Week 5", score: 72 },
-    { name: "Week 6", score: analytics?.analytics?.averageScore || 75 },
-  ];
+  const [range, setRange] = useState(() => {
+    try {
+      return localStorage.getItem("mm.dashboard.progress.range") || "6w";
+    } catch {
+      return "6w";
+    }
+  });
+
+  const mockProgressData = useMemo(() => {
+    const base = [45, 52, 58, 65, 72, analytics?.analytics?.averageScore || 75];
+    const labels =
+      range === "12w"
+        ? [
+            "W1",
+            "W2",
+            "W3",
+            "W4",
+            "W5",
+            "W6",
+            "W7",
+            "W8",
+            "W9",
+            "W10",
+            "W11",
+            "W12",
+          ]
+        : ["W1", "W2", "W3", "W4", "W5", "W6"];
+    const values = range === "12w" ? [...base, 68, 74, 76, 79, 81, 83] : base;
+    return labels.map((name, i) => ({
+      name,
+      score: values[i] ?? values[values.length - 1],
+    }));
+  }, [analytics, range]);
 
   const improvementAreas = analytics?.analytics?.improvementAreas || [
     "Technical Communication",
@@ -32,26 +57,74 @@ const ProgressChart = ({ analytics }) => {
     "Teamwork",
   ];
 
+  const coachTip = (() => {
+    const avg = analytics?.analytics?.averageScore || 0;
+    if (avg < 60)
+      return "Focus on fundamentals this week to lift your baseline.";
+    if (avg < 80)
+      return "You're improving—add concrete examples for extra points.";
+    return "Great momentum! Try a harder session to stretch your skills.";
+  })();
+
   return (
     <div className="space-y-6">
       {/* Progress Chart */}
       <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-6">
-        <h3 className="text-lg font-medium text-white mb-4">
-          Performance Trend
-        </h3>
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-[11px] uppercase tracking-wide text-surface-400">
+            Progress
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="text-[11px] text-surface-400">Range</div>
+            <div className="inline-flex rounded-md border border-surface-700 overflow-hidden">
+              <button
+                className={`px-2 py-1 text-[11px] ${
+                  range === "6w"
+                    ? "bg-surface-800 text-white"
+                    : "text-surface-300 hover:bg-surface-800"
+                }`}
+                onClick={() => {
+                  setRange("6w");
+                  try {
+                    localStorage.setItem("mm.dashboard.progress.range", "6w");
+                  } catch {}
+                }}
+                aria-pressed={range === "6w"}
+              >
+                6w
+              </button>
+              <button
+                className={`px-2 py-1 text-[11px] border-l border-surface-700 ${
+                  range === "12w"
+                    ? "bg-surface-800 text-white"
+                    : "text-surface-300 hover:bg-surface-800"
+                }`}
+                onClick={() => {
+                  setRange("12w");
+                  try {
+                    localStorage.setItem("mm.dashboard.progress.range", "12w");
+                  } catch {}
+                }}
+                aria-pressed={range === "12w"}
+              >
+                12w
+              </button>
+            </div>
+          </div>
+        </div>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={mockProgressData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis dataKey="name" stroke="#94a3b8" />
               <YAxis domain={[0, 100]} stroke="#94a3b8" />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [`${value}%`, "Score"]}
                 contentStyle={{
-                  backgroundColor: '#1e293b',
-                  border: '1px solid #475569',
-                  borderRadius: '8px',
-                  color: '#f8fafc'
+                  backgroundColor: "#1e293b",
+                  border: "1px solid #475569",
+                  borderRadius: "8px",
+                  color: "#f8fafc",
                 }}
               />
               <Line
@@ -61,6 +134,14 @@ const ProgressChart = ({ analytics }) => {
                 strokeWidth="3"
                 dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
               />
+              {/* Target benchmark line at 70% */}
+              <Line
+                type="monotone"
+                dataKey={() => 70}
+                stroke="#10B981"
+                strokeDasharray="6 4"
+                dot={false}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -68,7 +149,12 @@ const ProgressChart = ({ analytics }) => {
 
       {/* Strong Areas */}
       <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-6">
-        <h3 className="text-lg font-medium text-white mb-4">Strong Areas</h3>
+        <div className="mb-4">
+          <p className="text-[11px] uppercase tracking-wide text-surface-400">
+            Insights
+          </p>
+          <h3 className="text-lg font-semibold text-white">Strong Areas</h3>
+        </div>
         <div className="space-y-2">
           {strongAreas.map((area, index) => (
             <div key={index} className="flex items-center">
@@ -81,7 +167,12 @@ const ProgressChart = ({ analytics }) => {
 
       {/* Areas for Improvement */}
       <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-6">
-        <h3 className="text-lg font-medium text-white mb-4">Focus Areas</h3>
+        <div className="mb-4">
+          <p className="text-[11px] uppercase tracking-wide text-surface-400">
+            Recommendations
+          </p>
+          <h3 className="text-lg font-semibold text-white">Focus Areas</h3>
+        </div>
         <div className="space-y-2">
           {improvementAreas.map((area, index) => (
             <div key={index} className="flex items-center">
@@ -90,10 +181,18 @@ const ProgressChart = ({ analytics }) => {
             </div>
           ))}
         </div>
-        <div className="mt-4">
+        <div className="mt-4 flex items-center justify-between">
           <button className="text-sm text-primary-400 hover:text-primary-300 font-medium transition-colors">
             Practice these areas →
           </button>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="text-xs text-surface-400"
+          >
+            Coach tip: {coachTip}
+          </motion.div>
         </div>
       </div>
     </div>

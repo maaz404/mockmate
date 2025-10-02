@@ -340,12 +340,14 @@ const completeOnboarding = async (req, res) => {
       (!req.headers?.authorization || String(userId).startsWith("test-"));
 
     let clerkUser = null;
-    if (!usingMockAuth && process.env.CLERK_SECRET_KEY) {
+    const shouldCallClerk =
+      !usingMockAuth && (process.env.CLERK_SECRET_KEY || process.env.NODE_ENV === "test");
+    if (shouldCallClerk) {
       try {
         clerkUser = await clerkClient.users.getUser(userId);
       } catch (clerkError) {
         console.error("Clerk API error:", clerkError);
-        if (process.env.NODE_ENV === "production") {
+        if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "test") {
           return res.status(500).json({
             success: false,
             message: "Failed to fetch user data from authentication service",
@@ -566,6 +568,55 @@ const uploadResume = async (req, res) => {
     });
   }
 };
+
+// ===== Dashboard Preferences (cross-device UI state) =====
+async function getDashboardPreferences(req, res) {
+  try {
+    const { userId } = req.auth;
+    const profile = await UserProfile.findOne(
+      { clerkUserId: userId },
+      { "preferences.dashboard": 1, _id: 0 }
+    ).lean();
+    return res.json({
+      success: true,
+      data: profile?.preferences?.dashboard || {},
+    });
+  } catch (error) {
+    console.error("Get dashboard preferences error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load preferences" });
+  }
+}
+
+async function updateDashboardPreferences(req, res) {
+  try {
+    const { userId } = req.auth;
+    const { density, upcomingView, thisWeekOnly } = req.body || {};
+    const update = {};
+    if (density) update["preferences.dashboard.density"] = density;
+    if (upcomingView)
+      update["preferences.dashboard.upcomingView"] = upcomingView;
+    if (typeof thisWeekOnly === "boolean")
+      update["preferences.dashboard.thisWeekOnly"] = thisWeekOnly;
+
+    const profile = await UserProfile.findOneAndUpdate(
+      { clerkUserId: userId },
+      { $set: update },
+      { new: true }
+    ).lean();
+
+    return res.json({
+      success: true,
+      data: profile?.preferences?.dashboard || {},
+    });
+  } catch (error) {
+    console.error("Update dashboard preferences error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update preferences" });
+  }
+}
 
 module.exports = {
   getProfile,
@@ -996,3 +1047,155 @@ module.exports.updateScheduledSessionStatus = updateScheduledSessionStatus;
 module.exports.getGoals = getGoals;
 module.exports.updateGoals = updateGoals;
 module.exports.getDynamicTips = getDynamicTips;
+
+// ================= Dashboard Summary Aggregation =================
+// GET /api/users/dashboard/summary
+async function getDashboardSummary(req, res) {
+  try {
+    const { userId } = req.auth;
+    // Query params with sensible defaults
+    const interviewsLimit = Math.max(
+      1,
+      parseInt(req.query.interviewsLimit, 10) || 5
+    );
+    const scheduledLimit = Math.max(
+      1,
+      parseInt(req.query.scheduledLimit, 10) || 3
+    );
+    const scheduledStatus = (
+      req.query.scheduledStatus || "scheduled"
+    ).toLowerCase();
+    const includePast =
+      String(req.query.includePast || "false").toLowerCase() === "true";
+
+    const sectionsWithErrors = [];
+
+    // Build scheduled query
+    const now = new Date();
+    const scheduledQuery = { userId };
+    if (scheduledStatus !== "all") {
+      // allowlist validation
+      const allowed = ["scheduled", "completed", "canceled"];
+      scheduledQuery.status = allowed.includes(scheduledStatus)
+        ? scheduledStatus
+        : "scheduled";
+    }
+    if (!includePast) {
+      scheduledQuery.scheduledAt = { $gte: now };
+    }
+
+    const tasks = {
+      profile: UserProfile.findOne({ clerkUserId: userId })
+        .select(
+          "clerkUserId email firstName lastName profileImage professionalInfo onboardingCompleted subscription"
+        )
+        .lean()
+        .exec(),
+      analytics: UserProfile.findOne({ clerkUserId: userId })
+        .select("analytics subscription")
+        .lean()
+        .exec(),
+      recentInterviews: Interview.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(interviewsLimit)
+        .select(
+          "_id createdAt updatedAt status results.breakdown questions.category config.jobRole config.interviewType config.difficulty"
+        )
+        .lean()
+        .exec(),
+      scheduled: (async () => {
+        const [items, total] = await Promise.all([
+          ScheduledSession.find(scheduledQuery)
+            .sort({ scheduledAt: 1 })
+            .limit(scheduledLimit)
+            .lean()
+            .exec(),
+          ScheduledSession.countDocuments(scheduledQuery),
+        ]);
+        return {
+          items,
+          pagination: {
+            total,
+            limit: scheduledLimit,
+            pages: Math.ceil(total / scheduledLimit) || 1,
+            current: 1,
+          },
+        };
+      })(),
+      goals: UserProfile.findOne({ clerkUserId: userId })
+        .select("goals")
+        .lean()
+        .exec(),
+      tips: (async () => {
+        // Reuse internal logic by calling getDynamicTips helpers directly is complex here;
+        // instead, perform a lightweight tip generation similar to getDynamicTips
+        const profile = await UserProfile.findOne({ clerkUserId: userId })
+          .select("analytics")
+          .lean()
+          .exec();
+        const tips = [];
+        const avg = profile?.analytics?.averageScore || 0;
+        if (avg < 60) {
+          tips.push({
+            title: "Focus on fundamentals",
+            desc: "Revisit core concepts and practice structured answers to boost baseline.",
+            href: "/resources",
+          });
+        } else if (avg < 80) {
+          tips.push({
+            title: "Add concrete examples",
+            desc: "Use STAR to anchor your responses with measurable outcomes.",
+            href: "/resources",
+          });
+        } else {
+          tips.push({
+            title: "Push difficulty",
+            desc: "Try advanced rounds or longer sessions to stretch your capability.",
+            href: "/practice",
+          });
+        }
+        return tips;
+      })(),
+    };
+
+    const [profileR, analyticsR, recentR, scheduledR, goalsR, tipsR] =
+      await Promise.allSettled([
+        tasks.profile,
+        tasks.analytics,
+        tasks.recentInterviews,
+        tasks.scheduled,
+        tasks.goals,
+        tasks.tips,
+      ]);
+
+    const pick = (r, name) => {
+      if (r.status === "fulfilled") return r.value;
+      sectionsWithErrors.push(name);
+      return null;
+    };
+
+    const payload = {
+      profile: pick(profileR, "profile"),
+      analytics: pick(analyticsR, "analytics"),
+      recentInterviews: pick(recentR, "recentInterviews") || [],
+      scheduled: pick(scheduledR, "scheduled") || {
+        items: [],
+        pagination: { total: 0, limit: scheduledLimit, pages: 1, current: 1 },
+      },
+      goals: pick(goalsR, "goals")?.goals || [],
+      tips: pick(tipsR, "tips") || [],
+      sectionsWithErrors,
+    };
+
+    return res.json({ success: true, data: payload });
+  } catch (error) {
+    console.error("Dashboard summary error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load dashboard summary" });
+  }
+}
+
+module.exports.getDashboardSummary = getDashboardSummary;
+module.exports.getDashboardPreferences = getDashboardPreferences;
+module.exports.updateDashboardPreferences = updateDashboardPreferences;

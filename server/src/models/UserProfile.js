@@ -145,6 +145,23 @@ const userProfileSchema = new mongoose.Schema(
           default: true,
         },
       },
+      // Dashboard UI Preferences (for cross-device consistency)
+      dashboard: {
+        density: {
+          type: String,
+          enum: ["comfortable", "compact"],
+          default: "comfortable",
+        },
+        upcomingView: {
+          type: String,
+          enum: ["list", "week"],
+          default: "list",
+        },
+        thisWeekOnly: {
+          type: Boolean,
+          default: false,
+        },
+      },
       // Facial Expression Analysis Settings
       facialAnalysis: {
         enabled: {

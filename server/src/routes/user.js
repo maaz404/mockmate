@@ -16,9 +16,13 @@ const {
   getGoals,
   updateGoals,
   getDynamicTips,
+  getDashboardSummary,
+  getDashboardPreferences,
+  updateDashboardPreferences,
 } = require("../controllers/userController");
 
 // Configure multer for file uploads
+/* eslint-disable no-magic-numbers */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/resumes");
@@ -32,6 +36,7 @@ const storage = multer.diskStorage({
     cb(null, `${file.fieldname}-${uniqueSuffix}.${ext}`);
   },
 });
+/* eslint-enable no-magic-numbers */
 
 const upload = multer({
   storage,
@@ -122,5 +127,15 @@ router.put("/goals", requireAuth, updateGoals);
 // Dynamic tips
 // @desc GET /api/users/tips
 router.get("/tips", requireAuth, getDynamicTips);
+
+// Dashboard summary (aggregated)
+// @desc GET /api/users/dashboard/summary
+router.get("/dashboard/summary", requireAuth, getDashboardSummary);
+
+// Dashboard preferences
+// @desc GET /api/users/dashboard/preferences
+router.get("/dashboard/preferences", requireAuth, getDashboardPreferences);
+// @desc PUT /api/users/dashboard/preferences
+router.put("/dashboard/preferences", requireAuth, updateDashboardPreferences);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export default function SchedulerModal({
   open,
@@ -7,6 +7,8 @@ export default function SchedulerModal({
   onDelete,
   initial,
 }) {
+  const dialogRef = useRef(null);
+  const firstFieldRef = useRef(null);
   const [title, setTitle] = useState("");
   const [type, setType] = useState("technical");
   const [duration, setDuration] = useState(30);
@@ -25,8 +27,41 @@ export default function SchedulerModal({
           : ""
       );
       setNotes(initial?.notes || "");
+      // focus first field
+      setTimeout(() => firstFieldRef.current?.focus(), 0);
     }
   }, [open, initial]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose?.();
+      }
+      if (e.key === "Tab") {
+        // rudimentary focus trap
+        const focusable = dialogRef.current?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable || focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -53,17 +88,32 @@ export default function SchedulerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-md rounded-xl border border-surface-700 bg-surface-900 p-6 shadow-surface-xl">
-        <h3 className="text-lg font-semibold text-white mb-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        ref={dialogRef}
+        className="w-full max-w-md rounded-xl border border-surface-700 bg-surface-900 p-6 shadow-surface-xl"
+      >
+        <h3
+          className="text-lg font-semibold text-white mb-4"
+          id="scheduler-title"
+        >
           {initial ? "Edit" : "Schedule"} Practice
         </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+          aria-labelledby="scheduler-title"
+        >
           <div>
             <label className="block text-sm text-surface-300 mb-1">Title</label>
             <input
               className="w-full bg-surface-800 border border-surface-700 rounded-md px-3 py-2 text-white"
               value={title}
+              ref={firstFieldRef}
               onChange={(e) => setTitle(e.target.value)}
             />
             {errors.title && (

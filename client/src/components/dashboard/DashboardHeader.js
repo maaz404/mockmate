@@ -10,7 +10,7 @@ export default function DashboardHeader({
   const streak = userProfile?.streak?.current ?? 0;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-800 bg-white/70 dark:bg-black/50 backdrop-blur-md p-6 shadow-surface-md dark:shadow-surface-lg">
+    <div className="relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-800 bg-white/70 dark:bg-black/50 backdrop-blur-md p-6 shadow-surface-md dark:shadow-surface-lg sticky top-4 z-10">
       {/* Accent gradient blur */}
       <div className="pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-gradient-primary opacity-20 blur-3xl" />
 
@@ -53,10 +53,15 @@ export default function DashboardHeader({
           <button
             onClick={() => onStartInterview?.("mixed")}
             className="btn-primary"
+            aria-label="Start practice"
           >
             Start practice
           </button>
-          <Link to="/interview/new" className="btn-outline">
+          <Link
+            to="/interview/new"
+            className="btn-outline"
+            aria-label="Create interview"
+          >
             Create interview
           </Link>
         </div>

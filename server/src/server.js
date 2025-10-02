@@ -8,9 +8,13 @@ const dotenv = require("dotenv");
 const { ClerkExpressWithAuth } = require("@clerk/clerk-sdk-node");
 const connectDB = require("./config/database");
 const Logger = require("./utils/logger");
+const { ENV, validateEnv } = require("./config/env");
 
-// Load environment variables
-dotenv.config();
+// Load environment variables (avoid overriding during tests)
+if (process.env.NODE_ENV !== "test") {
+  dotenv.config();
+  validateEnv();
+}
 
 // Import routes
 const authRoutes = require("./routes/auth");
@@ -20,6 +24,7 @@ const questionRoutes = require("./routes/question");
 const reportRoutes = require("./routes/report");
 const videoRoutes = require("./routes/video");
 const codingRoutes = require("./routes/coding");
+const chatbotRoutes = require("./routes/chatbot");
 
 // Import middleware
 const errorHandler = require("./middleware/errorHandler");
@@ -39,13 +44,16 @@ app.use(helmet());
 
 // Rate limiting
 // Default rate-limit window (ms)
-const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+// eslint-disable-next-line no-magic-numbers
+const SECOND_MS = 1000;
+// eslint-disable-next-line no-magic-numbers
+const MINUTE_MS = 60 * SECOND_MS;
+// eslint-disable-next-line no-magic-numbers
+const FIFTEEN_MINUTES_MS = 15 * MINUTE_MS;
 const DEFAULT_MAX_REQUESTS = 100;
 const limiter = rateLimit({
-  windowMs:
-    parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || FIFTEEN_MINUTES_MS,
-  max:
-    parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || DEFAULT_MAX_REQUESTS,
+  windowMs: ENV.RATE_LIMIT_WINDOW_MS || FIFTEEN_MINUTES_MS,
+  max: ENV.RATE_LIMIT_MAX_REQUESTS || DEFAULT_MAX_REQUESTS,
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
@@ -55,11 +63,7 @@ app.use(limiter);
 // CORS configuration
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3001", // Added for your current setup
-      process.env.CLIENT_URL || "http://localhost:3000",
-    ],
+    origin: ENV.CORS_ORIGINS,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
@@ -113,9 +117,7 @@ app.get("/*.json", (req, res) => {
 
 // Clerk middleware - adds auth context to all API requests only
 // In development with MOCK_AUTH_FALLBACK=true, skip global Clerk auth
-const useClerkGlobally =
-  process.env.NODE_ENV === "production" ||
-  process.env.MOCK_AUTH_FALLBACK !== "true";
+const useClerkGlobally = ENV.NODE_ENV === "production" || !ENV.MOCK_AUTH_FALLBACK;
 
 if (useClerkGlobally) {
   app.use("/api", ClerkExpressWithAuth());
@@ -133,13 +135,14 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/video", videoRoutes);
 app.use("/api/coding", codingRoutes);
+app.use("/api/chatbot", chatbotRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFound);
 app.use(errorHandler);
 
 const DEFAULT_PORT = 5000;
-const PORT = parseInt(process.env.PORT, 10) || DEFAULT_PORT;
+const PORT = ENV.PORT || DEFAULT_PORT;
 let server;
 
 function startServer(port) {
@@ -151,7 +154,7 @@ function startServer(port) {
         );
         Logger.info(
           `🔐 Clerk authentication is ${
-            process.env.CLERK_SECRET_KEY ? "configured" : "NOT configured"
+            ENV.CLERK_SECRET_KEY ? "configured" : "NOT configured"
           }`
         );
       })
