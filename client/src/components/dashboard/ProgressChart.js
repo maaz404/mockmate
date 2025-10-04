@@ -106,7 +106,7 @@ const ProgressChart = ({ analytics, metrics }) => {
   return (
     <div className="space-y-6">
       {/* Progress Chart */}
-  <div className="surface-elevated dark:bg-surface-800/50 p-6">
+      <div className="surface-elevated dark:bg-surface-800/50 p-6">
         <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
           <p className="text-[11px] uppercase tracking-wide text-surface-400">
             Progress
@@ -209,14 +209,44 @@ const ProgressChart = ({ analytics, metrics }) => {
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={progressData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#475569' : '#cbd5e1'} />
-              <XAxis dataKey="name" stroke={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'} />
-              <YAxis yAxisId="left" domain={[0, 100]} stroke={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke={
+                  typeof window !== "undefined" &&
+                  document.documentElement.classList.contains("dark")
+                    ? "#475569"
+                    : "#cbd5e1"
+                }
+              />
+              <XAxis
+                dataKey="name"
+                stroke={
+                  typeof window !== "undefined" &&
+                  document.documentElement.classList.contains("dark")
+                    ? "#94a3b8"
+                    : "#64748b"
+                }
+              />
+              <YAxis
+                yAxisId="left"
+                domain={[0, 100]}
+                stroke={
+                  typeof window !== "undefined" &&
+                  document.documentElement.classList.contains("dark")
+                    ? "#94a3b8"
+                    : "#64748b"
+                }
+              />
               <YAxis
                 yAxisId="right"
                 orientation="right"
                 allowDecimals={false}
-                stroke={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'}
+                stroke={
+                  typeof window !== "undefined" &&
+                  document.documentElement.classList.contains("dark")
+                    ? "#94a3b8"
+                    : "#64748b"
+                }
               />
               <Tooltip
                 formatter={(value, key, p) => {
@@ -232,18 +262,20 @@ const ProgressChart = ({ analytics, metrics }) => {
                   `Week ${label} (Benchmark: ${benchmark}%)`
                 }
                 contentStyle={() => {
-                  const dark = typeof window !== 'undefined' && document.documentElement.classList.contains('dark');
+                  const dark =
+                    typeof window !== "undefined" &&
+                    document.documentElement.classList.contains("dark");
                   return {
-                    background: dark ? '#1e293b' : 'rgba(255,255,255,0.95)',
-                    border: `1px solid ${dark ? '#475569' : '#e2e8f0'}`,
-                    borderRadius: '8px',
-                    color: dark ? '#f8fafc' : '#1e293b',
+                    background: dark ? "#1e293b" : "rgba(255,255,255,0.95)",
+                    border: `1px solid ${dark ? "#475569" : "#e2e8f0"}`,
+                    borderRadius: "8px",
+                    color: dark ? "#f8fafc" : "#1e293b",
                     boxShadow: dark
-                      ? '0 4px 14px -2px rgba(0,0,0,0.5)'
-                      : '0 4px 12px -2px rgba(0,0,0,0.08), 0 8px 24px -6px rgba(0,0,0,0.08)'
+                      ? "0 4px 14px -2px rgba(0,0,0,0.5)"
+                      : "0 4px 12px -2px rgba(0,0,0,0.08), 0 8px 24px -6px rgba(0,0,0,0.08)",
                   };
                 }}
-                wrapperStyle={{ outline: 'none' }}
+                wrapperStyle={{ outline: "none" }}
               />
               {showVelocity && (
                 <Bar
@@ -295,7 +327,7 @@ const ProgressChart = ({ analytics, metrics }) => {
       </div>
 
       {/* Strong Areas */}
-  <div className="surface-elevated dark:bg-surface-800/50 p-6">
+      <div className="surface-elevated dark:bg-surface-800/50 p-6">
         <div className="mb-4">
           <p className="text-[11px] uppercase tracking-wide text-surface-400">
             Insights
@@ -313,7 +345,7 @@ const ProgressChart = ({ analytics, metrics }) => {
       </div>
 
       {/* Areas for Improvement */}
-  <div className="surface-elevated dark:bg-surface-800/50 p-6">
+      <div className="surface-elevated dark:bg-surface-800/50 p-6">
         <div className="mb-4">
           <p className="text-[11px] uppercase tracking-wide text-surface-400">
             Recommendations

@@ -134,7 +134,7 @@ export default function UpcomingList({
   const listGap = density === "compact" ? "space-y-2" : "space-y-3";
 
   return (
-  <div className="surface-elevated dark:bg-surface-800/50">
+    <div className="surface-elevated dark:bg-surface-800/50">
       <div className="px-4 py-3 border-b border-surface-700 flex items-center justify-between gap-2">
         <div>
           <p className="text-[11px] uppercase tracking-wide text-surface-400">

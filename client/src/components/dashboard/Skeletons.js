@@ -1,9 +1,7 @@
 import React from "react";
 
 export const CardSkeleton = ({ lines = 3, className = "" }) => (
-  <div
-  className={`surface-elevated dark:bg-surface-800/50 p-6 ${className}`}
-  >
+  <div className={`surface-elevated dark:bg-surface-800/50 p-6 ${className}`}>
     <div className="h-5 w-40 bg-surface-700/60 rounded mb-4" />
     {Array.from({ length: lines }).map((_, i) => (
       <div
@@ -17,10 +15,7 @@ export const CardSkeleton = ({ lines = 3, className = "" }) => (
 export const GridSkeleton = ({ cards = 4 }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     {Array.from({ length: cards }).map((_, i) => (
-      <div
-        key={i}
-  className="surface-elevated dark:bg-surface-800/50 p-4"
-      >
+      <div key={i} className="surface-elevated dark:bg-surface-800/50 p-4">
         <div className="h-4 w-24 bg-surface-700/60 rounded mb-2" />
         <div className="h-8 w-20 bg-surface-700/40 rounded" />
       </div>

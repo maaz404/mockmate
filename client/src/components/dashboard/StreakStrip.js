@@ -8,14 +8,14 @@ const dayColor = (active) =>
 const StreakStrip = ({ days }) => {
   if (!days || !days.length)
     return (
-  <div className="surface-elevated dark:bg-surface-800/50 p-5 text-sm text-surface-400">
+      <div className="surface-elevated dark:bg-surface-800/50 p-5 text-sm text-surface-400">
         No activity yet.
       </div>
     );
   const activeCount = days.filter((d) => d.active).length;
   const pct = Math.round((activeCount / days.length) * 100);
   return (
-  <div className="surface-elevated dark:bg-surface-800/50 p-5">
+    <div className="surface-elevated dark:bg-surface-800/50 p-5">
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="text-[11px] uppercase tracking-wide text-surface-400">

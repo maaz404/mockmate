@@ -3,7 +3,7 @@ import React from "react";
 const CategoryCoverage = ({ coverage }) => {
   if (!coverage || coverage.length === 0) {
     return (
-  <div className="surface-elevated dark:bg-surface-800/50 p-6">
+      <div className="surface-elevated dark:bg-surface-800/50 p-6">
         <p className="text-sm text-surface-400">
           No category data yet. Complete some interviews to see coverage.
         </p>
@@ -11,7 +11,7 @@ const CategoryCoverage = ({ coverage }) => {
     );
   }
   return (
-  <div className="surface-elevated dark:bg-surface-800/50 p-6">
+    <div className="surface-elevated dark:bg-surface-800/50 p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-wide text-surface-400">

@@ -23,7 +23,7 @@ export default function TipsPanel({ tips = [] }) {
   const list = tips.length ? tips : fallback;
 
   return (
-  <div className="surface-elevated dark:bg-surface-800/50">
+    <div className="surface-elevated dark:bg-surface-800/50">
       <div className="p-6 border-b border-surface-700">
         <p className="text-[11px] uppercase tracking-wide text-surface-400">
           Guidance

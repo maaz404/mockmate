@@ -39,18 +39,18 @@ import VideoRecordingDemo from "./components/VideoRecordingDemo";
 // Get the Clerk publishable key
 const clerkPubKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 const SIGN_OUT_ON_START =
-  (process.env.REACT_APP_SIGN_OUT_ON_START || "true").toLowerCase() === "true";
+  (process.env.REACT_APP_SIGN_OUT_ON_START || "false").toLowerCase() === "true"; // default disabled to prevent unexpected blank page during onboarding
 
 function OneTimeSignOutGate({ children }) {
-  // Sign out on initial load if a session exists and feature is enabled
+  // Keep hooks unconditionally to satisfy Rules of Hooks
   const { isSignedIn, isLoaded, signOut } = require("@clerk/clerk-react");
   const ReactRef = require("react");
   const ranRef = ReactRef.useRef(false);
   ReactRef.useEffect(() => {
+    if (!SIGN_OUT_ON_START) return; // feature disabled
     if (ranRef.current || !isLoaded) return;
     ranRef.current = true;
-    if (SIGN_OUT_ON_START && isSignedIn) {
-      // Fire and forget
+    if (isSignedIn) {
       signOut().catch(() => {});
     }
   }, [isLoaded, isSignedIn, signOut]);

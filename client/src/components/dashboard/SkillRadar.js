@@ -17,7 +17,7 @@ const SkillRadar = ({ skills }) => {
     prev: s.prevScore ?? null,
   }));
   return (
-  <div className="surface-elevated dark:bg-surface-800/50 p-6">
+    <div className="surface-elevated dark:bg-surface-800/50 p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-wide text-surface-400">
