@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { SignUp, useAuth } from "@clerk/clerk-react";
+import { SignUp, useAuth, useUser } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
 import AuthLoadingSpinner from "../../components/ui/AuthLoadingSpinner";
 
 const RegisterPage = () => {
   const { isLoaded } = useAuth();
+  const { user } = useUser();
+  const navigate = useNavigate();
   const [showTimeout, setShowTimeout] = useState(false);
   const { theme } = useTheme();
 
@@ -17,8 +20,35 @@ const RegisterPage = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Show the SignUp component if Clerk is loaded OR after timeout
+  // Detect verification status
+  const emailStatus = user?.primaryEmailAddress?.verification?.status;
+  const isVerified = emailStatus === "verified";
   const shouldShowSignUp = isLoaded || showTimeout;
+
+  // When user becomes verified (and is on /register), navigate manually
+  useEffect(() => {
+    if (isVerified) {
+      // eslint-disable-next-line no-console
+      console.debug("[RegisterPage] Email verified. Navigating to /dashboard");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isVerified, navigate]);
+
+  // Poll for verification if user exists but not verified (handles separate tab verification)
+  useEffect(() => {
+    if (!user || isVerified) return;
+    const id = setInterval(async () => {
+      try {
+        // eslint-disable-next-line no-console
+        console.debug("[RegisterPage] polling verification status...");
+        await user.reload();
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[RegisterPage] reload failed", e);
+      }
+    }, 4000);
+    return () => clearInterval(id);
+  }, [user, isVerified]);
 
   if (!shouldShowSignUp) {
     return <AuthLoadingSpinner message="Initializing authentication..." />;
@@ -45,11 +75,8 @@ const RegisterPage = () => {
           <SignUp
             routing="path"
             path="/register"
-            // Use afterSignUpUrl only when email already verified; otherwise Clerk handles verification screen internally.
-            // We still keep a redirect target but rely on Clerk's built-in flow.
-            afterSignUpUrl="/dashboard"
             signInUrl="/login"
-            // Debug events
+            // Remove automatic redirect; handle manually when verified
             unsafeMetadata={{ source: "register-page" }}
             // (Clerk v5) Use localization or event listeners if needed
             // We can optionally intercept but for now rely on default. Add debug styling to see step component.
@@ -138,9 +165,26 @@ const RegisterPage = () => {
                       colorDanger: "#dc2626",
                     },
             }}
-            // Add a simple fallback spinner for manual verification waiting states
-            // (If user completes email verification in same tab, Clerk should proceed automatically.)
+            // Instrumentation callbacks
+            afterSignUp={(res) => {
+              // eslint-disable-next-line no-console
+              console.debug("[RegisterPage] afterSignUp callback", res);
+              // Some flows persist unverified state, rely on manual redirect effect above.
+            }}
+            signUpStart={(ctx) => {
+              // eslint-disable-next-line no-console
+              console.debug("[RegisterPage] signUpStart", ctx);
+            }}
+            signUpComplete={(ctx) => {
+              // eslint-disable-next-line no-console
+              console.debug("[RegisterPage] signUpComplete", ctx);
+            }}
           />
+          {!isVerified && user && (
+            <div className="mt-4 text-center text-xs text-surface-500 dark:text-surface-400">
+              Status: {emailStatus || "unknown"} (waiting for verification)
+            </div>
+          )}
         </div>
 
         {/* Additional info */}

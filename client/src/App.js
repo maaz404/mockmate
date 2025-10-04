@@ -118,7 +118,6 @@ function App() {
       signInUrl="/login"
       signUpUrl="/register"
       afterSignInUrl="/dashboard"
-      afterSignUpUrl="/dashboard"
     >
       <ThemeProvider>
         <AuthProvider>
