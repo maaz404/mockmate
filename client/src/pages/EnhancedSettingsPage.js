@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuthContext } from "../context/AuthContext";
 import UserProfileCard from "../components/profile/UserProfileCard";
 import OnboardingModal from "../components/onboarding/OnboardingModal";
-import { Settings, Bell, Shield, Eye, Trash2, Download } from "lucide-react";
+import { Settings, Bell, Shield, Eye, Trash2, Download, Monitor } from "lucide-react";
+import { useDesignSystem } from "../context/DesignSystemProvider";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -76,10 +77,13 @@ const SettingsPage = () => {
     }
   };
 
+  const { density, reducedMotion, toggleDensity, toggleMotion } = useDesignSystem();
+
   const tabs = [
     { id: "profile", label: "Profile", icon: Settings },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "privacy", label: "Privacy & Security", icon: Shield },
+    { id: "interface", label: "Interface", icon: Monitor },
     { id: "data", label: "Data Management", icon: Download },
   ];
 
@@ -641,6 +645,47 @@ const SettingsPage = () => {
                       <button className="btn-outline text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20">
                         Sign Out All Devices
                       </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "interface" && (
+              <div className="space-y-6">
+                <div className="card p-6 transition-colors duration-200">
+                  <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-6">
+                    Interface Preferences
+                  </h3>
+                  <div className="space-y-8">
+                    <div className="flex items-start justify-between gap-6">
+                      <div>
+                        <h4 className="font-medium text-surface-900 dark:text-surface-50">Density</h4>
+                        <p className="text-sm text-surface-600 dark:text-surface-400">Toggle between comfortable and compact spacing.</p>
+                      </div>
+                      <button
+                        onClick={toggleDensity}
+                        className="px-4 py-2 rounded-md text-sm font-medium bg-surface-200 dark:bg-surface-700 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                        aria-pressed={density === 'compact'}
+                      >
+                        {density === 'compact' ? 'Compact (Click to Relax)' : 'Comfortable (Click to Compact)'}
+                      </button>
+                    </div>
+                    <div className="flex items-start justify-between gap-6">
+                      <div>
+                        <h4 className="font-medium text-surface-900 dark:text-surface-50">Reduced Motion</h4>
+                        <p className="text-sm text-surface-600 dark:text-surface-400">Minimize animations for accessibility or preference.</p>
+                      </div>
+                      <button
+                        onClick={toggleMotion}
+                        className="px-4 py-2 rounded-md text-sm font-medium bg-surface-200 dark:bg-surface-700 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                        aria-pressed={reducedMotion}
+                      >
+                        {reducedMotion ? 'Reduced Motion: On' : 'Reduced Motion: Off'}
+                      </button>
+                    </div>
+                    <div className="pt-4 border-t border-surface-200 dark:border-surface-700 text-xs text-surface-500 dark:text-surface-400">
+                      Preferences are stored locally and applied instantly.
                     </div>
                   </div>
                 </div>

@@ -3,6 +3,8 @@ import HybridQuestionGenerator from "../components/ui/HybridQuestionGenerator";
 import StyledSelect from "../components/ui/StyledSelect";
 import QuestionCard from "../components/ui/QuestionCard";
 import toast from "react-hot-toast";
+import Modal from "../components/ui/Modal";
+import TagPill from "../components/ui/TagPill";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
@@ -143,6 +145,16 @@ const QuestionBankPage = () => {
         if (storedTagLogic === "AND") setTagLogic("AND");
         const storedHighlightStyle = localStorage.getItem("qb_highlightStyle");
         if (storedHighlightStyle === "border") setHighlightStyle("border");
+        const storedExportCols = localStorage.getItem("qb_exportColumns");
+        if (storedExportCols) {
+          try {
+            const parsed = JSON.parse(storedExportCols);
+            if (Array.isArray(parsed) && parsed.length) {
+              const valid = parsed.filter((c) => ["id","text","category","difficulty","tags","source"].includes(c));
+              if (valid.length) setExportColumns(valid);
+            }
+          } catch(_) {}
+        }
         // Clean up deprecated keys if they exist
         try {
           localStorage.removeItem("qb_jobRole");
@@ -165,8 +177,9 @@ const QuestionBankPage = () => {
       localStorage.setItem("qb_multiTags", JSON.stringify(multiTags));
       localStorage.setItem("qb_tagLogic", tagLogic);
       localStorage.setItem("qb_highlightStyle", highlightStyle);
+      localStorage.setItem("qb_exportColumns", JSON.stringify(exportColumns));
     } catch (_) {}
-  }, [tagFilter, sortMode, favorites, appendMode, rawSearch, showFavoritesOnly, tagMode, multiTags, tagLogic, highlightStyle]);
+  }, [tagFilter, sortMode, favorites, appendMode, rawSearch, showFavoritesOnly, tagMode, multiTags, tagLogic, highlightStyle, exportColumns]);
 
   // Debounce raw search into searchQuery
   React.useEffect(() => {
@@ -793,24 +806,12 @@ const QuestionBankPage = () => {
                     {uniqueTags.map((t) => {
                       const active = multiTags.includes(t);
                       return (
-                        <button
+                        <TagPill
                           key={t}
-                          type="button"
-                          onClick={() =>
-                            setMultiTags((prev) =>
-                              prev.includes(t)
-                                ? prev.filter((x) => x !== t)
-                                : [...prev, t]
-                            )
-                          }
-                          className={`px-2 py-1 rounded-full text-xs border transition ${
-                            active
-                              ? "bg-primary-600 text-white border-primary-600"
-                              : "bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-600"
-                          }`}
-                        >
-                          {t}
-                        </button>
+                          label={t}
+                          active={active}
+                          onClick={() => setMultiTags((prev) => prev.includes(t) ? prev.filter(x=>x!==t) : [...prev, t])}
+                        />
                       );
                     })}
                   </div>
@@ -910,18 +911,14 @@ const QuestionBankPage = () => {
                 {multiTags.map((t) => {
                   const count = filteredSortedQuestions.filter((q) => (q.tags || []).includes(t)).length;
                   return (
-                    <button
+                    <TagPill
                       key={t}
-                      onClick={() => setMultiTags((prev) => prev.filter((x) => x !== t))}
-                      className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-700 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition"
-                      aria-label={`Remove tag ${t}`}
-                    >
-                      <span>{t}</span>
-                      <span className="text-[10px] font-semibold bg-primary-600 text-white px-1.5 py-0.5 rounded-full">{count}</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                      label={t}
+                      active
+                      count={count}
+                      onClick={() => setMultiTags((prev)=> prev.filter(x=>x!==t))}
+                      onRemove={() => setMultiTags((prev)=> prev.filter(x=>x!==t))}
+                    />
                   );
                 })}
                 <button
@@ -1039,63 +1036,56 @@ const QuestionBankPage = () => {
                   : `Generated ${lastGenerationInfo.count} questions`)}
             </span>
           </div>
-          {showSmallFavModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-              <div className="bg-white dark:bg-surface-800 rounded-xl shadow-lg p-6 w-full max-w-sm border border-surface-200 dark:border-surface-600">
-                <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">Small Favorites Set</h3>
-                <p className="text-sm text-surface-600 dark:text-surface-300 mb-4">
-                  Only {pendingFavSubset?.length || 0} favorite question{(pendingFavSubset?.length||0)===1?"":"s"}. Start interview anyway?
-                </p>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => {
-                      setShowSmallFavModal(false);
-                      setPendingFavSubset(null);
-                    }}
-                    className="px-3 py-2 text-sm rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => {
-                      const subset = pendingFavSubset || [];
-                      setShowSmallFavModal(false);
-                      setPendingFavSubset(null);
-                      if (!subset.length) return;
-                      const first = subset[0];
-                      const questionIds = subset.map((q, i) => q.id || q._id || `hash_${(q.text||"" ).length}_${i}`);
-                      const config = {
-                        jobRole: selectedJobRole,
-                        experienceLevel: selectedExperience || first.experienceLevel || "intermediate",
-                        interviewType: "mixed",
-                        difficulty: first.difficulty || "intermediate",
-                        duration: Math.min(60, Math.max(15, subset.length * 5)),
-                        questionCount: subset.length,
-                        adaptiveDifficulty: { enabled: false },
-                        questionIds,
-                      };
-                      (async () => {
-                        try {
-                          const { data: envelope } = await api.post("/interviews", { config, questions: subset, questionIds });
-                          if (!envelope?.success) throw new Error(envelope?.message || "Create failed");
-                          const interviewId = envelope.data._id || envelope.data.id;
-                          const { data: startEnv } = await api.put(`/interviews/${interviewId}/start`);
-                          if (!startEnv?.success) throw new Error(startEnv?.message || "Start failed");
-                          toast.success("Interview (favorites subset) started");
-                          navigate(`/interview/${interviewId}`);
-                        } catch (err) {
-                          toast.error(err.message || "Failed to start interview");
-                        }
-                      })();
-                    }}
-                    className="px-3 py-2 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
-                  >
-                    Start
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <Modal
+            isOpen={showSmallFavModal}
+            onClose={() => { setShowSmallFavModal(false); setPendingFavSubset(null); }}
+            title="Small Favorites Set"
+            size="sm"
+            footer={<>
+              <button
+                onClick={() => { setShowSmallFavModal(false); setPendingFavSubset(null); }}
+                className="px-3 py-2 text-sm rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600"
+              >Cancel</button>
+              <button
+                onClick={() => {
+                  const subset = pendingFavSubset || [];
+                  setShowSmallFavModal(false);
+                  setPendingFavSubset(null);
+                  if (!subset.length) return;
+                  const first = subset[0];
+                  const questionIds = subset.map((q, i) => q.id || q._id || `hash_${(q.text||"" ).length}_${i}`);
+                  const config = {
+                    jobRole: selectedJobRole,
+                    experienceLevel: selectedExperience || first.experienceLevel || "intermediate",
+                    interviewType: "mixed",
+                    difficulty: first.difficulty || "intermediate",
+                    duration: Math.min(60, Math.max(15, subset.length * 5)),
+                    questionCount: subset.length,
+                    adaptiveDifficulty: { enabled: false },
+                    questionIds,
+                  };
+                  (async () => {
+                    try {
+                      const { data: envelope } = await api.post("/interviews", { config, questions: subset, questionIds });
+                      if (!envelope?.success) throw new Error(envelope?.message || "Create failed");
+                      const interviewId = envelope.data._id || envelope.data.id;
+                      const { data: startEnv } = await api.put(`/interviews/${interviewId}/start`);
+                      if (!startEnv?.success) throw new Error(startEnv?.message || "Start failed");
+                      toast.success("Interview (favorites subset) started");
+                      navigate(`/interview/${interviewId}`);
+                    } catch (err) {
+                      toast.error(err.message || "Failed to start interview");
+                    }
+                  })();
+                }}
+                className="px-3 py-2 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
+              >Start</button>
+            </>}
+          >
+            <p className="text-sm text-surface-600 dark:text-surface-300">
+              Only {pendingFavSubset?.length || 0} favorite question{(pendingFavSubset?.length||0)===1?"":"s"}. Start interview anyway?
+            </p>
+          </Modal>
           </>
         )}
       </div>
