@@ -113,11 +113,7 @@ function App() {
   return (
     <ClerkProvider
       publishableKey={clerkKey}
-      appearance={{
-        baseTheme: undefined,
-      }}
-      // Add proper redirect URLs for OAuth
-      redirectUrl={window.location.origin}
+      appearance={{ baseTheme: undefined }}
       signInUrl="/login"
       signUpUrl="/register"
       afterSignInUrl="/dashboard"

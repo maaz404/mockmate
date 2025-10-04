@@ -1,6 +1,7 @@
 import React from "react";
 import { useAuth, RedirectToSignIn } from "@clerk/clerk-react";
 import LoadingSpinner from "../ui/LoadingSpinner";
+import EmailVerificationGate from "./EmailVerificationGate";
 
 /**
  * Protected Route component that wraps pages requiring authentication
@@ -21,7 +22,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // Render protected content if authenticated
-  return children;
+  return <EmailVerificationGate>{children}</EmailVerificationGate>;
 };
 
 export default ProtectedRoute;

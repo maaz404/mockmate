@@ -115,6 +115,35 @@ router.post("/sync", requireAuth, async (req, res) => {
   }
 });
 
+// Lightweight whoami debugging route
+router.get("/whoami", requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    let clerkUser = null;
+    if (process.env.CLERK_SECRET_KEY) {
+      try {
+        clerkUser = await clerkClient.users.getUser(userId);
+      } catch (e) {
+        clerkUser = null;
+      }
+    }
+    return res.status(200).json({
+      success: true,
+      auth: req.auth,
+      emailVerified:
+        clerkUser?.primaryEmailAddress?.verification?.status === "verified",
+      emailStatus:
+        clerkUser?.primaryEmailAddress?.verification?.status || "unknown",
+    });
+  } catch (e) {
+    return res.status(500).json({
+      success: false,
+      error: "whoami_failed",
+      message: e.message,
+    });
+  }
+});
+
 /**
  * @desc    Get current user profile
  * @route   GET /api/auth/me
