@@ -169,7 +169,14 @@ const RegisterPage = () => {
             afterSignUp={(res) => {
               // eslint-disable-next-line no-console
               console.debug("[RegisterPage] afterSignUp callback", res);
-              // Some flows persist unverified state, rely on manual redirect effect above.
+              // Redirect to dashboard after signup; EmailVerificationGate / ProtectedRoute
+              // will handle any remaining verification gating if required.
+              try {
+                navigate("/dashboard", { replace: true });
+              } catch (e) {
+                // eslint-disable-next-line no-console
+                console.warn("[RegisterPage] navigation to /dashboard failed", e);
+              }
             }}
             signUpStart={(ctx) => {
               // eslint-disable-next-line no-console

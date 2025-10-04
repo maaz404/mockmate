@@ -17,9 +17,12 @@ class GlobalErrorBoundary extends React.Component {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-surface-900 px-4">
         <div className="max-w-md w-full surface-elevated dark:bg-surface-800/60 p-8 text-center">
-          <h1 className="text-xl font-semibold mb-3 text-red-600 dark:text-red-400">Something went wrong</h1>
+          <h1 className="text-xl font-semibold mb-3 text-red-600 dark:text-red-400">
+            Something went wrong
+          </h1>
           <p className="text-sm text-surface-600 dark:text-surface-300 mb-4">
-            An unexpected error occurred while loading the app. Try refreshing the page. If the problem persists, please report the issue.
+            An unexpected error occurred while loading the app. Try refreshing
+            the page. If the problem persists, please report the issue.
           </p>
           {process.env.NODE_ENV === "development" && (
             <pre className="text-xs text-left whitespace-pre-wrap bg-surface-100 dark:bg-surface-900/40 p-3 rounded border border-surface-200 dark:border-surface-700 max-h-60 overflow-auto">
