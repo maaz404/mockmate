@@ -27,8 +27,12 @@ const StreakStrip = ({ days }) => {
         {days.map((d) => (
           <div
             key={d.date}
+            role="listitem"
+            aria-label={`${d.date} ${d.active ? "active practice day" : "no practice"}`}
+            data-active={d.active ? "1" : "0"}
             title={`${d.date} • ${d.active ? "Active" : "Idle"}`}
-            className={`h-4 rounded border ${dayColor(d.active)} transition-colors`}
+            className={`h-4 rounded border ${dayColor(d.active)} transition-colors focus:outline-none focus:ring-1 focus:ring-primary-500`}
+            tabIndex={0}
           />
         ))}
       </div>

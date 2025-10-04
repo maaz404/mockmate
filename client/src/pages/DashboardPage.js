@@ -26,6 +26,7 @@ const CategoryCoverage = lazy(() => import("../components/dashboard/CategoryCove
 const FollowUpsUsage = lazy(() => import("../components/dashboard/FollowUpsUsage"));
 const ActivityIndicator = lazy(() => import("../components/dashboard/ActivityIndicator"));
 const StreakWidget = lazy(() => import("../components/dashboard/StreakStrip"));
+const SkillRadar = lazy(() => import("../components/dashboard/SkillRadar"));
 
 const DashboardPage = () => {
   const { user, isLoaded } = useUser();
@@ -54,6 +55,9 @@ const DashboardPage = () => {
     } catch {
       return {};
     }
+  });
+  const [mode, setMode] = useState(() => {
+    try { return localStorage.getItem("mm.dashboard.mode") || "full"; } catch { return "full"; }
   });
   const [density, setDensity] = useState(() => {
     try {
@@ -254,6 +258,9 @@ const DashboardPage = () => {
       localStorage.setItem("mm.dashboard.collapsed", JSON.stringify(collapsed));
     } catch {}
   }, [collapsed]);
+  useEffect(() => {
+    try { localStorage.setItem("mm.dashboard.mode", mode); } catch {}
+  }, [mode]);
 
   const toggleCollapse = (key) =>
     setCollapsed((c) => ({ ...c, [key]: !c[key] }));
@@ -501,6 +508,26 @@ const DashboardPage = () => {
             userProfile={userProfile}
             onStartInterview={startQuickInterview}
           />
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-[11px]">
+            <div className="inline-flex items-center gap-2">
+              <span className="text-surface-400">Dashboard Mode:</span>
+              <div className="inline-flex rounded-md border border-surface-700 overflow-hidden">
+                <button
+                  className={`px-2 py-1 ${mode === "essential" ? "bg-surface-800 text-white" : "text-surface-300 hover:bg-surface-800"}`}
+                  onClick={() => setMode("essential")}
+                  aria-pressed={mode === "essential"}
+                >Essential</button>
+                <button
+                  className={`px-2 py-1 border-l border-surface-700 ${mode === "full" ? "bg-surface-800 text-white" : "text-surface-300 hover:bg-surface-800"}`}
+                  onClick={() => setMode("full")}
+                  aria-pressed={mode === "full"}
+                >Full</button>
+              </div>
+            </div>
+            {mode === "essential" && (
+              <span className="text-surface-500">Advanced analytics hidden (switch to Full to view)</span>
+            )}
+          </div>
         </div>
 
         {/* Section errors banner (non-blocking) */}
@@ -655,9 +682,7 @@ const DashboardPage = () => {
 
           {/* Right column top: Progress and Goals/Tips */}
           <div className="lg:col-span-1 space-y-8">
-            {loading ? (
-              <CardSkeleton lines={4} />
-            ) : (
+            {loading ? <CardSkeleton lines={4} /> : (
               <ProgressChart analytics={analytics} metrics={metrics} />
             )}
             {loading ? (
@@ -671,8 +696,15 @@ const DashboardPage = () => {
               </div>
             )}
             {loading ? <CardSkeleton lines={4} /> : <TipsPanel tips={tips} />}
+            {mode === "full" && (
+              <Suspense fallback={<CardSkeleton lines={4} />}>
+                {!loading && metrics?.skillDimensions?.length && (
+                  <SkillRadar skills={metrics.skillDimensions} />
+                )}
+              </Suspense>
+            )}
             {/* New Metrics Widgets */}
-            <Suspense fallback={<CardSkeleton lines={3} />}>
+            {mode === "full" && <Suspense fallback={<CardSkeleton lines={3} />}>
               {!loading && metrics && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -689,8 +721,8 @@ const DashboardPage = () => {
                   )}
                 </div>
               )}
-            </Suspense>
-            <Suspense fallback={<CardSkeleton lines={4} />}>
+            </Suspense>}
+            {mode === "full" && <Suspense fallback={<CardSkeleton lines={4} />}>
               {!loading && metrics && metrics.categoryCoverage && metrics.categoryCoverage.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -707,8 +739,8 @@ const DashboardPage = () => {
                   )}
                 </div>
               )}
-            </Suspense>
-            <Suspense fallback={<CardSkeleton lines={3} />}>
+            </Suspense>}
+            {mode === "full" && <Suspense fallback={<CardSkeleton lines={3} />}>
               {!loading && metrics && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -725,8 +757,8 @@ const DashboardPage = () => {
                   )}
                 </div>
               )}
-            </Suspense>
-            <Suspense fallback={<CardSkeleton lines={3} />}>
+            </Suspense>}
+            {mode === "full" && <Suspense fallback={<CardSkeleton lines={3} />}>
               {!loading && metrics?.streakDays && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -746,7 +778,7 @@ const DashboardPage = () => {
                   )}
                 </div>
               )}
-            </Suspense>
+            </Suspense>}
           </div>
         </div>
 
