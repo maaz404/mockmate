@@ -19,7 +19,6 @@ import StatsCard from "../components/dashboard/StatsCard";
 import RecentInterviews from "../components/dashboard/RecentInterviews";
 import QuickActions from "../components/dashboard/QuickActions";
 import DashboardHero from "../components/dashboard/DashboardHero";
-import KpiRibbon from "../components/dashboard/KpiRibbon";
 import AnalyticsTabs from "../components/dashboard/AnalyticsTabs";
 import QuickActionDock from "../components/dashboard/QuickActionDock";
 import ProgressChart from "../components/dashboard/ProgressChart";
@@ -659,10 +658,10 @@ const DashboardPage = () => {
     : [];
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-surface-900 via-surface-900 to-surface-950 py-8 transition-colors duration-200">
+    <div className="relative min-h-screen bg-surface-50 dark:bg-gradient-to-br dark:from-surface-900 dark:via-surface-900 dark:to-surface-950 py-8 transition-colors duration-200">
       {/* Decorative grid overlay */}
-      <div className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(circle_at_center,black,transparent)] opacity-[0.35]">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:40px_40px]" />
+      <div className="pointer-events-none absolute inset-0 dark:[mask-image:radial-gradient(circle_at_center,black,transparent)] opacity-[0.35]">
+        <div className="absolute inset-0 hidden dark:block bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:40px_40px]" />
       </div>
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Sticky countdown banner for next session within 60 minutes */}
@@ -693,8 +692,6 @@ const DashboardPage = () => {
             onboardingCompleted={!!userProfile?.onboardingCompleted}
             onStart={startQuickInterview}
             onCreate={() => navigate('/interview/new')}
-          />
-          <KpiRibbon
             nextSession={scheduled?.[0]?.scheduledAt}
             consistency={metrics?.consistencyScore}
             openGoals={(goals||[]).filter(g=>!g.done).length}
