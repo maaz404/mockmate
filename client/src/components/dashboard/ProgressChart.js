@@ -1,6 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  ComposedChart,
+  Line,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const ProgressChart = ({ analytics, metrics }) => {
   const [range, setRange] = useState(() => {
@@ -19,7 +28,14 @@ const ProgressChart = ({ analytics, metrics }) => {
     }
   });
   const [benchmark, setBenchmark] = useState(() => {
-    try { return parseInt(localStorage.getItem("mm.dashboard.progress.benchmark"), 10) || 70; } catch { return 70; }
+    try {
+      return (
+        parseInt(localStorage.getItem("mm.dashboard.progress.benchmark"), 10) ||
+        70
+      );
+    } catch {
+      return 70;
+    }
   });
 
   const progressData = useMemo(() => {
@@ -58,7 +74,12 @@ const ProgressChart = ({ analytics, metrics }) => {
           ]
         : ["W1", "W2", "W3", "W4", "W5", "W6"];
     const values = range === "12w" ? [...base, 68, 74, 76, 79, 81, 83] : base;
-    return labels.map((name, i) => ({ name, score: values[i], hasData: true, interviews: Math.max(1, Math.round(Math.random()*2)) }));
+    return labels.map((name, i) => ({
+      name,
+      score: values[i],
+      hasData: true,
+      interviews: Math.max(1, Math.round(Math.random() * 2)),
+    }));
   }, [analytics, metrics, range]);
 
   const improvementAreas = analytics?.analytics?.improvementAreas || [
@@ -87,10 +108,14 @@ const ProgressChart = ({ analytics, metrics }) => {
       {/* Progress Chart */}
       <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-6">
         <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
-          <p className="text-[11px] uppercase tracking-wide text-surface-400">Progress</p>
+          <p className="text-[11px] uppercase tracking-wide text-surface-400">
+            Progress
+          </p>
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-1 text-[11px]">
-              <label htmlFor="benchmark-input" className="text-surface-400">Benchmark</label>
+              <label htmlFor="benchmark-input" className="text-surface-400">
+                Benchmark
+              </label>
               <input
                 id="benchmark-input"
                 type="number"
@@ -98,24 +123,46 @@ const ProgressChart = ({ analytics, metrics }) => {
                 max={100}
                 value={benchmark}
                 onChange={(e) => {
-                  const val = Math.max(10, Math.min(100, parseInt(e.target.value || '0', 10)));
+                  const val = Math.max(
+                    10,
+                    Math.min(100, parseInt(e.target.value || "0", 10))
+                  );
                   setBenchmark(val);
-                  try { localStorage.setItem("mm.dashboard.progress.benchmark", String(val)); } catch {}
+                  try {
+                    localStorage.setItem(
+                      "mm.dashboard.progress.benchmark",
+                      String(val)
+                    );
+                  } catch {}
                 }}
                 className="w-14 bg-surface-900 border border-surface-700 rounded px-1 py-0.5 text-[11px] text-surface-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
             </div>
             <div className="flex items-center gap-3 text-[11px]">
-              <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-indigo-400/70 border border-indigo-400"></span><span className="text-surface-400">Interviews</span></div>
-              <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-500"></span><span className="text-surface-400">Avg Score</span></div>
-              <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm border border-green-400"></span><span className="text-surface-400">Benchmark</span></div>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-sm bg-indigo-400/70 border border-indigo-400"></span>
+                <span className="text-surface-400">Interviews</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-sm bg-blue-500"></span>
+                <span className="text-surface-400">Avg Score</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-sm border border-green-400"></span>
+                <span className="text-surface-400">Benchmark</span>
+              </div>
             </div>
             <button
               className="text-[11px] px-2 py-1 rounded-md border border-surface-700 hover:bg-surface-700/60 text-surface-300"
               onClick={() => {
                 setShowVelocity((v) => {
                   const next = !v;
-                  try { localStorage.setItem("mm.dashboard.progress.showVelocity", next ? "1" : "0"); } catch {}
+                  try {
+                    localStorage.setItem(
+                      "mm.dashboard.progress.showVelocity",
+                      next ? "1" : "0"
+                    );
+                  } catch {}
                   return next;
                 });
               }}
@@ -178,11 +225,12 @@ const ProgressChart = ({ analytics, metrics }) => {
                       `${value}%${p?.payload?.hasData ? "" : " (no data)"}`,
                       "Avg Score",
                     ];
-                  if (key === "interviews")
-                    return [value, "Interviews"];
+                  if (key === "interviews") return [value, "Interviews"];
                   return [value, key];
                 }}
-                labelFormatter={(label) => `Week ${label} (Benchmark: ${benchmark}%)`}
+                labelFormatter={(label) =>
+                  `Week ${label} (Benchmark: ${benchmark}%)`
+                }
                 contentStyle={{
                   backgroundColor: "#1e293b",
                   border: "1px solid #475569",

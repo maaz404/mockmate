@@ -23,6 +23,7 @@ const {
   getDashboardPreferences,
   updateDashboardPreferences,
   getDashboardMetrics,
+  getDashboardRecommendation,
 } = require("../controllers/userController");
 
 // Multer storage for resume uploads
@@ -157,6 +158,14 @@ router.get(
   requireAuth,
   ensureUserProfile,
   getDashboardMetrics
+);
+
+// Next best action recommendation (Phase 3 Option A)
+router.get(
+  "/dashboard/recommendation",
+  requireAuth,
+  ensureUserProfile,
+  getDashboardRecommendation
 );
 
 module.exports = router;

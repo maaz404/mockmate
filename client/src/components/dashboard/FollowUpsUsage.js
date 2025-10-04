@@ -8,10 +8,16 @@ const FollowUpsUsage = ({ followUps }) => {
     <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-[11px] uppercase tracking-wide text-surface-400">Feedback Utilization</p>
-          <h3 className="text-lg font-semibold text-white">Follow-ups Reviewed</h3>
+          <p className="text-[11px] uppercase tracking-wide text-surface-400">
+            Feedback Utilization
+          </p>
+          <h3 className="text-lg font-semibold text-white">
+            Follow-ups Reviewed
+          </h3>
         </div>
-        <div className="text-xs text-surface-400">{reviewed}/{total}</div>
+        <div className="text-xs text-surface-400">
+          {reviewed}/{total}
+        </div>
       </div>
       <div className="relative h-3 rounded-full bg-surface-700 overflow-hidden">
         <div

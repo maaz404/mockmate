@@ -1,4 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  Suspense,
+  lazy,
+} from "react";
+import { motion } from "framer-motion";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
@@ -10,6 +18,10 @@ import {
 import StatsCard from "../components/dashboard/StatsCard";
 import RecentInterviews from "../components/dashboard/RecentInterviews";
 import QuickActions from "../components/dashboard/QuickActions";
+import DashboardHero from "../components/dashboard/DashboardHero";
+import KpiRibbon from "../components/dashboard/KpiRibbon";
+import AnalyticsTabs from "../components/dashboard/AnalyticsTabs";
+import QuickActionDock from "../components/dashboard/QuickActionDock";
 import ProgressChart from "../components/dashboard/ProgressChart";
 import DashboardHeader from "../components/dashboard/DashboardHeader";
 import GoalsPanel from "../components/dashboard/GoalsPanel";
@@ -21,12 +33,20 @@ import toast from "react-hot-toast";
 import { apiService } from "../services/api";
 import CommandPalette from "../components/ui/CommandPalette";
 import { formatRelativeCountdown, isWithinNextMs } from "../utils/datetime";
-// Lazy-loaded new metric widgets (Phase 1 extensions)
+import {
+  getDashboardCache,
+  isDashboardCacheFresh,
+  setDashboardCache,
+} from "../utils/dashboardCache";
+// Lazy-loaded metric widgets used in analytics tabs
+const SkillRadar = lazy(() => import("../components/dashboard/SkillRadar"));
+const ActivityIndicator = lazy(() => import("../components/dashboard/ActivityIndicator"));
 const CategoryCoverage = lazy(() => import("../components/dashboard/CategoryCoverage"));
 const FollowUpsUsage = lazy(() => import("../components/dashboard/FollowUpsUsage"));
-const ActivityIndicator = lazy(() => import("../components/dashboard/ActivityIndicator"));
 const StreakWidget = lazy(() => import("../components/dashboard/StreakStrip"));
-const SkillRadar = lazy(() => import("../components/dashboard/SkillRadar"));
+const NextBestActionCard = lazy(() =>
+  import("../components/dashboard/NextBestActionCard")
+);
 
 const DashboardPage = () => {
   const { user, isLoaded } = useUser();
@@ -36,6 +56,29 @@ const DashboardPage = () => {
   const [analytics, setAnalytics] = useState(null);
   const [recentInterviews, setRecentInterviews] = useState([]);
   const [metrics, setMetrics] = useState(null); // enhanced time-series & coverage
+  const [recommendation, setRecommendation] = useState(null); // next best action
+  const [metricsFetchedAt, setMetricsFetchedAt] = useState(null); // timestamp for freshness indicator
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsHorizon, setMetricsHorizon] = useState(() => {
+    try {
+      const v = parseInt(
+        localStorage.getItem("mm.dashboard.metricsHorizon"),
+        10
+      );
+      return !isNaN(v) ? v : 8;
+    } catch {
+      return 8;
+    }
+  }); // 4-24 weeks
+  const [benchmark, setBenchmark] = useState(() => {
+    try {
+      const v = parseInt(localStorage.getItem("mm.dashboard.benchmark"), 10);
+      return !isNaN(v) ? v : 70;
+    } catch {
+      return 70;
+    }
+  }); // target score 0-100
+  const prefSyncDebounceRef = useRef();
   const [scheduled, setScheduled] = useState([]);
   const [schedPage, setSchedPage] = useState(1);
   const [schedPagination, setSchedPagination] = useState(null);
@@ -57,8 +100,19 @@ const DashboardPage = () => {
     }
   });
   const [mode, setMode] = useState(() => {
-    try { return localStorage.getItem("mm.dashboard.mode") || "full"; } catch { return "full"; }
+    try {
+      return localStorage.getItem("mm.dashboard.mode") || "full";
+    } catch {
+      return "full";
+    }
   });
+  const [statsMode, setStatsMode] = useState(() => {
+    try {
+      return localStorage.getItem("mm.dashboard.statsMode") || "regular";
+    } catch {
+      return "regular";
+    }
+  }); // 'regular' | 'mini'
   const [modeAnnounce, setModeAnnounce] = useState("");
   const [density, setDensity] = useState(() => {
     try {
@@ -100,6 +154,50 @@ const DashboardPage = () => {
     [statusFilter]
   );
 
+  const fetchMetricsAndRecommendation = useCallback(
+    async (h) => {
+      const horizon = Math.min(24, Math.max(4, h || metricsHorizon));
+      // Use cache if fresh
+      if (isDashboardCacheFresh(horizon)) {
+        const cache = getDashboardCache();
+        setMetrics(cache.metrics || null);
+        setRecommendation(cache.recommendation || null);
+        return; // skip network
+      }
+      setMetricsLoading(true);
+      let newMetrics = null;
+      try {
+        const metricsRes = await apiService.get(
+          `/users/dashboard/metrics?horizon=${horizon}`
+        );
+        newMetrics = metricsRes.data || null;
+        setMetrics(newMetrics);
+      } catch (e) {
+        setMetrics(null);
+      } finally {
+        setMetricsLoading(false);
+      }
+      let newReco = null;
+      try {
+        const recoRes = await apiService.get(
+          `/users/dashboard/recommendation?horizon=${horizon}`
+        );
+        newReco = recoRes.data || null;
+        setRecommendation(newReco);
+      } catch (_er) {
+        setRecommendation(null);
+      }
+      // Update cache after both fetch attempts
+      setDashboardCache({
+        metrics: newMetrics,
+        recommendation: newReco,
+        horizon,
+      });
+      setMetricsFetchedAt(Date.now());
+    },
+    [metricsHorizon]
+  );
+
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -126,6 +224,21 @@ const DashboardPage = () => {
               "mm.dashboard.upcoming.weekOnly",
               prefs.thisWeekOnly ? "1" : "0"
             );
+          } catch {}
+        }
+        if (prefs.metricsHorizon && !isNaN(prefs.metricsHorizon)) {
+          setMetricsHorizon(prefs.metricsHorizon);
+          try {
+            localStorage.setItem(
+              "mm.dashboard.metricsHorizon",
+              prefs.metricsHorizon
+            );
+          } catch {}
+        }
+        if (prefs.benchmark && !isNaN(prefs.benchmark)) {
+          setBenchmark(prefs.benchmark);
+          try {
+            localStorage.setItem("mm.dashboard.benchmark", prefs.benchmark);
           } catch {}
         }
       } catch {}
@@ -170,13 +283,8 @@ const DashboardPage = () => {
         Array.isArray(data.sectionsWithErrors) ? data.sectionsWithErrors : []
       );
 
-      // Fire metrics in parallel (non-blocking). If it fails, we keep fallback (mock progress)
-      try {
-        const metricsRes = await apiService.get("/users/dashboard/metrics");
-        setMetrics(metricsRes.data || null);
-      } catch (e) {
-        setMetrics(null);
-      }
+      // Kick off initial metrics & recommendation fetch (separate to allow horizon changes without full dashboard refetch)
+      fetchMetricsAndRecommendation(metricsHorizon);
     } catch (error) {
       // fallback: attempt old individual routes minimally
       try {
@@ -200,13 +308,70 @@ const DashboardPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadScheduled, statusFilter]);
+  }, [
+    loadScheduled,
+    statusFilter,
+    fetchMetricsAndRecommendation,
+    metricsHorizon,
+  ]);
 
   useEffect(() => {
     if (isLoaded && user) {
       fetchDashboardData();
     }
   }, [isLoaded, user, fetchDashboardData]);
+
+  // (moved above)
+
+  // Refetch when horizon changes (after initial load)
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+    fetchMetricsAndRecommendation(metricsHorizon);
+  }, [metricsHorizon, isLoaded, user, fetchMetricsAndRecommendation]);
+
+  // Persist and sync metricsHorizon / benchmark preferences (debounced) and refetch recommendation when benchmark changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("mm.dashboard.metricsHorizon", metricsHorizon);
+    } catch {}
+    if (prefSyncDebounceRef.current) clearTimeout(prefSyncDebounceRef.current);
+    prefSyncDebounceRef.current = setTimeout(async () => {
+      try {
+        await apiService.put("/users/dashboard/preferences", {
+          metricsHorizon,
+          benchmark,
+        });
+      } catch {}
+    }, 450);
+    return () =>
+      prefSyncDebounceRef.current && clearTimeout(prefSyncDebounceRef.current);
+  }, [metricsHorizon, benchmark]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mm.dashboard.benchmark", benchmark);
+    } catch {}
+    if (prefSyncDebounceRef.current) clearTimeout(prefSyncDebounceRef.current);
+    prefSyncDebounceRef.current = setTimeout(async () => {
+      try {
+        await apiService.put("/users/dashboard/preferences", {
+          metricsHorizon,
+          benchmark,
+        });
+      } catch {}
+      // Only recommendation logic depends on benchmark (metrics unaffected), so refetch recommendation alone
+      try {
+        const recoRes = await apiService.get(
+          `/users/dashboard/recommendation?horizon=${metricsHorizon}`
+        );
+        setRecommendation(recoRes.data || null);
+      } catch {
+        setRecommendation(null);
+      }
+    }, 450);
+    return () =>
+      prefSyncDebounceRef.current && clearTimeout(prefSyncDebounceRef.current);
+  }, [benchmark, metricsHorizon]);
 
   // Persist density selection
   useEffect(() => {
@@ -260,9 +425,22 @@ const DashboardPage = () => {
     } catch {}
   }, [collapsed]);
   useEffect(() => {
-    try { localStorage.setItem("mm.dashboard.mode", mode); } catch {}
-    setModeAnnounce(`Dashboard mode set to ${mode === 'full' ? 'Full (all analytics visible)' : 'Essential (advanced analytics hidden)'}`);
+    try {
+      localStorage.setItem("mm.dashboard.mode", mode);
+    } catch {}
+    setModeAnnounce(
+      `Dashboard mode set to ${
+        mode === "full"
+          ? "Full (all analytics visible)"
+          : "Essential (advanced analytics hidden)"
+      }`
+    );
   }, [mode]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("mm.dashboard.statsMode", statsMode);
+    } catch {}
+  }, [statsMode]);
 
   const toggleCollapse = (key) =>
     setCollapsed((c) => ({ ...c, [key]: !c[key] }));
@@ -482,8 +660,12 @@ const DashboardPage = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-surface-900 py-8 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="relative min-h-screen bg-gradient-to-br from-surface-900 via-surface-900 to-surface-950 py-8 transition-colors duration-200">
+      {/* Decorative grid overlay */}
+      <div className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(circle_at_center,black,transparent)] opacity-[0.35]">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:40px_40px]" />
+      </div>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Sticky countdown banner for next session within 60 minutes */}
         {scheduled?.[0]?.scheduledAt &&
           isWithinNextMs(scheduled[0].scheduledAt, 60 * 60 * 1000) && (
@@ -503,33 +685,58 @@ const DashboardPage = () => {
               </button>
             </div>
           )}
-        {/* Header */}
-        <div className="mb-8">
+        {/* Hero + KPI Ribbon + Original Header Controls */}
+        <div className="space-y-6 mb-8">
+          <DashboardHero
+            user={user}
+            profileCompleteness={userProfile?.analytics?.profileCompleteness || 0}
+            onStart={startQuickInterview}
+            onCreate={() => navigate('/interview/new')}
+          />
+          <KpiRibbon
+            nextSession={scheduled?.[0]?.scheduledAt}
+            consistency={metrics?.consistencyScore}
+            openGoals={(goals||[]).filter(g=>!g.done).length}
+          />
           <DashboardHeader
             user={user}
             userProfile={userProfile}
             onStartInterview={startQuickInterview}
           />
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-[11px]">
+          <div className="mt-2 flex flex-wrap items-center gap-4 text-[11px]">
             <div className="inline-flex items-center gap-2">
               <span className="text-surface-400">Dashboard Mode:</span>
               <div className="inline-flex rounded-md border border-surface-700 overflow-hidden">
                 <button
-                  className={`px-2 py-1 ${mode === "essential" ? "bg-surface-800 text-white" : "text-surface-300 hover:bg-surface-800"}`}
+                  className={`px-2 py-1 ${
+                    mode === "essential"
+                      ? "bg-surface-800 text-white"
+                      : "text-surface-300 hover:bg-surface-800"
+                  }`}
                   onClick={() => setMode("essential")}
                   aria-pressed={mode === "essential"}
-                >Essential</button>
+                >
+                  Essential
+                </button>
                 <button
-                  className={`px-2 py-1 border-l border-surface-700 ${mode === "full" ? "bg-surface-800 text-white" : "text-surface-300 hover:bg-surface-800"}`}
+                  className={`px-2 py-1 border-l border-surface-700 ${
+                    mode === "full"
+                      ? "bg-surface-800 text-white"
+                      : "text-surface-300 hover:bg-surface-800"
+                  }`}
                   onClick={() => setMode("full")}
                   aria-pressed={mode === "full"}
-                >Full</button>
+                >
+                  Full
+                </button>
               </div>
             </div>
             {mode === "essential" && (
-              <span className="text-surface-500">Advanced analytics hidden (switch to Full to view)</span>
+              <span className="text-surface-500">
+                Advanced analytics hidden (switch to Full to view)
+              </span>
             )}
-            {mode === "full" && (
+            {mode === "full" &&
               (() => {
                 const anyCollapsed = Object.values(collapsed).some(Boolean);
                 if (!anyCollapsed) return null;
@@ -537,12 +744,15 @@ const DashboardPage = () => {
                   <button
                     className="text-[11px] px-2 py-1 rounded-md border border-surface-700 hover:bg-surface-700/60 text-surface-300"
                     onClick={() => setCollapsed({})}
-                  >Show All</button>
+                  >
+                    Show All
+                  </button>
                 );
-              })()
-            )}
+              })()}
           </div>
-          <div aria-live="polite" className="sr-only">{modeAnnounce}</div>
+          <div aria-live="polite" className="sr-only">
+            {modeAnnounce}
+          </div>
         </div>
 
         {/* Section errors banner (non-blocking) */}
@@ -558,12 +768,68 @@ const DashboardPage = () => {
           <GridSkeleton />
         ) : (
           analytics && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {stats.map((stat, index) => (
-                <StatsCard key={index} {...stat} />
-              ))}
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-surface-500 dark:text-surface-300 tracking-wide uppercase flex items-center gap-2">
+                Key Metrics
+                {metricsFetchedAt && (
+                  <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-colors ${Date.now()-metricsFetchedAt < 30000 ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40':'bg-surface-700/40 text-surface-400 border-surface-600'}`}>● <span>{Math.round((Date.now()-metricsFetchedAt)/1000)}s</span></span>
+                )}
+              </h2>
+              <div className="flex items-center gap-2 text-[11px]">
+                <button
+                  className={`px-2 py-1 rounded-md border border-surface-600/40 dark:border-surface-600 ${
+                    statsMode === "regular"
+                      ? "bg-surface-800 text-white"
+                      : "text-surface-400 hover:text-surface-200"
+                  }`}
+                  onClick={() => setStatsMode("regular")}
+                  aria-pressed={statsMode === "regular"}
+                >
+                  Full
+                </button>
+                <button
+                  className={`px-2 py-1 rounded-md border border-surface-600/40 dark:border-surface-600 ${
+                    statsMode === "mini"
+                      ? "bg-surface-800 text-white"
+                      : "text-surface-400 hover:text-surface-200"
+                  }`}
+                  onClick={() => setStatsMode("mini")}
+                  aria-pressed={statsMode === "mini"}
+                >
+                  Mini
+                </button>
+              </div>
             </div>
           )
+        )}
+        {!loading && analytics && (
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: {
+                opacity: 1,
+                y: 0,
+                transition: { staggerChildren: 0.07, delayChildren: 0.05 },
+              },
+            }}
+            initial="hidden"
+            animate="show"
+            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 ${
+              statsMode === "mini" ? "items-stretch" : ""
+            }`}
+          >
+            {stats.map((stat, index) => (
+              <motion.div
+                key={index}
+                variants={{
+                  hidden: { opacity: 0, y: 15 },
+                  show: { opacity: 1, y: 0 },
+                }}
+              >
+                <StatsCard {...stat} compact={statsMode === "mini"} />
+              </motion.div>
+            ))}
+          </motion.div>
         )}
 
         {/* Quick Actions */}
@@ -697,8 +963,101 @@ const DashboardPage = () => {
 
           {/* Right column top: Progress and Goals/Tips */}
           <div className="lg:col-span-1 space-y-8">
-            {loading ? <CardSkeleton lines={4} /> : (
-              <ProgressChart analytics={analytics} metrics={metrics} />
+            <Suspense
+              fallback={
+                <div className="bg-surface-800/50 rounded-xl p-5 text-xs text-surface-400">
+                  Loading recommendation...
+                </div>
+              }
+            >
+              <NextBestActionCard
+                recommendation={recommendation}
+                metrics={metrics}
+                benchmark={benchmark}
+                horizonWeeks={metricsHorizon}
+                userProfile={userProfile}
+                onStartTargeted={async (config) => {
+                  try {
+                    const response = await apiService.post("/interviews", {
+                      config,
+                    });
+                    if (response.success) {
+                      toast.success("Targeted session created");
+                      navigate(`/interview/${response.data._id}`);
+                    } else {
+                      toast.error("Failed to create targeted session");
+                    }
+                  } catch {
+                    toast.error("Failed to create targeted session");
+                  }
+                }}
+              />
+            </Suspense>
+            <div className="h-px bg-gradient-to-r from-transparent via-surface-600/60 to-transparent my-4" />
+            {/* Horizon & Benchmark Controls */}
+            <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-4 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-surface-400">
+                    Analytics Scope
+                  </p>
+                  <h3 className="text-sm font-semibold text-white">
+                    Horizon & Benchmark
+                  </h3>
+                </div>
+                {metricsLoading && (
+                  <span className="text-[10px] text-surface-500 animate-pulse">
+                    Loading…
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[11px] text-surface-400">Horizon (weeks)</span>
+                  <select
+                    className="bg-surface-900 border border-surface-600 rounded-md px-2 py-1 text-sm text-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-600"
+                    value={metricsHorizon}
+                    onChange={(e) => setMetricsHorizon(parseInt(e.target.value, 10))}
+                  >
+                    {[4,8,12,24].map(w => <option key={w} value={w}>{w} weeks</option>)}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[11px] text-surface-400 flex items-center justify-between">Benchmark <span className="text-surface-500">{benchmark}%</span></span>
+                  <input
+                    type="range"
+                    min={40}
+                    max={95}
+                    step={1}
+                    value={benchmark}
+                    aria-valuemin={40}
+                    aria-valuemax={95}
+                    aria-valuenow={benchmark}
+                    onChange={(e) => setBenchmark(parseInt(e.target.value, 10))}
+                    className="w-full accent-primary-500 cursor-pointer"
+                  />
+                </label>
+              </div>
+              <p className="text-[10px] text-surface-500 leading-snug">Horizon shapes trend & coverage analysis; benchmark influences readiness and warm-up recommendations.</p>
+            </div>
+            {loading || metricsLoading ? (
+              <div className="relative rounded-xl border border-surface-700/70 bg-surface-800/40 backdrop-blur-sm p-6 overflow-hidden animate-pulse">
+                <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.06)_40%,rgba(255,255,255,0)_80%)] bg-[length:200%_100%] animate-[shimmer_2s_infinite]" />
+                <div className="h-5 w-40 bg-surface-700/60 rounded mb-4" />
+                <div className="h-48 w-full rounded bg-surface-700/40" />
+                <style>{`@keyframes shimmer {0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+              </div>
+            ) : (
+              <motion.div
+                variants={{ hidden:{opacity:0, scale:.97}, show:{opacity:1, scale:1, transition:{duration:.4}} }}
+                initial="hidden"
+                animate="show"
+                className="relative rounded-xl border border-surface-700/70 bg-surface-800/50 backdrop-blur-sm p-4 overflow-hidden"
+              >
+                <div className="pointer-events-none absolute -top-16 -left-16 w-64 h-64 bg-primary-600/10 blur-3xl rounded-full" />
+                <div className="pointer-events-none absolute -bottom-10 -right-10 w-72 h-72 bg-fuchsia-600/10 blur-3xl rounded-full" />
+                <ProgressChart analytics={analytics} metrics={metrics} />
+              </motion.div>
             )}
             {loading ? (
               <CardSkeleton lines={4} />
@@ -706,141 +1065,101 @@ const DashboardPage = () => {
               <GoalsPanel goals={goals} onToggle={toggleGoal} />
             )}
             {followupsReviewedRecently && (
-              <div className="text-xs text-green-400">
-                Nice work reviewing follow-ups recently—keep it up!
-              </div>
+              <div className="text-xs text-green-400">Nice work reviewing follow-ups recently—keep it up!</div>
             )}
             {loading ? <CardSkeleton lines={4} /> : <TipsPanel tips={tips} />}
             {mode === "full" && (
-              <Suspense fallback={<CardSkeleton lines={4} />}>
-                {!loading && metrics?.skillDimensions?.length && (
-                  <SkillRadar skills={metrics.skillDimensions} />
+              <Suspense fallback={<CardSkeleton lines={5} />}>                
+                <AnalyticsTabs
+                  loading={loading || metricsLoading}
+                  components={{
+                    radar: metrics?.skillDimensions?.length ? <SkillRadar skills={metrics.skillDimensions} /> : <div className="text-xs text-surface-500">No skill data yet.</div>,
+                    tags: metrics?.tagCoverage ? (
+                      <div>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {metrics.tagCoverage.top.map(t => (
+                            <span key={t.tag} className="px-2 py-0.5 rounded-full bg-surface-700 text-[11px] text-surface-300 border border-surface-600">{t.tag}<span className="ml-1 text-surface-500">{t.count}</span></span>
+                          ))}
+                        </div>
+                        {metrics.tagCoverage.missingSuggestions?.length > 0 && (
+                          <div className="text-[11px] text-surface-400">Try: {metrics.tagCoverage.missingSuggestions.slice(0,4).join(', ')}</div>
+                        )}
+                      </div>
+                    ) : <div className="text-xs text-surface-500">No tag data yet.</div>,
+                    coverage: metrics?.categoryCoverage?.length ? <CategoryCoverage coverage={metrics.categoryCoverage} /> : <div className="text-xs text-surface-500">No coverage data yet.</div>,
+                    consistency: metrics?.consistencyScore != null ? (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-surface-400 mb-1">Practice Consistency</p>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-white">{metrics.consistencyScore}%</span>
+                          <span className="text-[10px] text-surface-500">Last {metricsHorizon}w</span>
+                        </div>
+                        <div className="mt-1 h-2 rounded bg-surface-700 overflow-hidden">
+                          <div className="h-full bg-primary-500" style={{ width: `${metrics.consistencyScore}%` }} />
+                        </div>
+                        <p className="mt-2 text-[11px] text-surface-400">
+                          {metrics.consistencyScore < 40
+                            ? 'Build a daily micro-practice habit.'
+                            : metrics.consistencyScore < 70
+                            ? 'Solid cadence—push for more active days.'
+                            : 'Great consistency—maintain momentum!'}
+                        </p>
+                      </div>
+                    ) : <div className="text-xs text-surface-500">No consistency data yet.</div>,
+                    activity: metrics?.lastPracticeAt ? <ActivityIndicator lastPracticeAt={metrics.lastPracticeAt} /> : <div className="text-xs text-surface-500">No activity yet.</div>,
+                    followups: metrics?.followUps ? <FollowUpsUsage followUps={metrics.followUps} /> : <div className="text-xs text-surface-500">No follow-ups yet.</div>,
+                    streak: metrics?.streakDays ? <StreakWidget days={metrics.streakDays} /> : <div className="text-xs text-surface-500">No streak yet.</div>
+                  }}
+                />
+              </Suspense>
+            )}
+            {mode === "full" && (
+              <Suspense fallback={<CardSkeleton lines={3} />}>
+                {!loading && metrics && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">
+                        Follow-ups
+                      </h4>
+                      <button
+                        className="text-[10px] text-surface-500 hover:text-surface-300"
+                        onClick={() => toggleCollapse("followups")}
+                      >
+                        {collapsed.followups ? "Expand" : "Collapse"}
+                      </button>
+                    </div>
+                    {!collapsed.followups && (
+                      <FollowUpsUsage followUps={metrics.followUps} />
+                    )}
+                  </div>
                 )}
               </Suspense>
             )}
-            {mode === "full" && metrics?.tagCoverage && (
-              <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-5">
-                <div className="flex items-center justify-between mb-2">
+            {mode === "full" && (
+              <Suspense fallback={<CardSkeleton lines={3} />}>
+                {!loading && metrics?.streakDays && (
                   <div>
-                    <p className="text-[11px] uppercase tracking-wide text-surface-400">Tags</p>
-                    <h3 className="text-sm font-semibold text-white">Tag Coverage</h3>
-                  </div>
-                  {metrics.tagCoverage.missingSuggestions?.length > 0 && (
-                    <span className="text-[10px] text-surface-500">
-                      +{metrics.tagCoverage.missingSuggestions.length} suggestions
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {metrics.tagCoverage.top.map((t) => (
-                    <span key={t.tag} className="px-2 py-0.5 rounded-full bg-surface-700 text-[11px] text-surface-300 border border-surface-600">
-                      {t.tag}
-                      <span className="ml-1 text-surface-500">{t.count}</span>
-                    </span>
-                  ))}
-                </div>
-                {metrics.tagCoverage.missingSuggestions?.length > 0 && (
-                  <div className="text-[11px] text-surface-400">
-                    Try: {metrics.tagCoverage.missingSuggestions.slice(0,4).join(', ')}
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">
+                        Streak
+                      </h4>
+                      <button
+                        className="text-[10px] text-surface-500 hover:text-surface-300"
+                        onClick={() => toggleCollapse("streak")}
+                      >
+                        {collapsed.streak ? "Expand" : "Collapse"}
+                      </button>
+                    </div>
+                    {!collapsed.streak && (
+                      <React.Suspense fallback={<CardSkeleton lines={2} />}>
+                        {/* Lazy import inline to avoid top-level bundle impact */}
+                        <StreakWidget days={metrics.streakDays} />
+                      </React.Suspense>
+                    )}
                   </div>
                 )}
-              </div>
+              </Suspense>
             )}
-            {mode === "full" && metrics?.consistencyScore != null && (
-              <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-5">
-                <p className="text-[11px] uppercase tracking-wide text-surface-400 mb-1">Consistency</p>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">Practice Consistency</h3>
-                  <span className="text-primary-300 text-sm font-medium">{metrics.consistencyScore}%</span>
-                </div>
-                <div className="mt-3 h-2 rounded bg-surface-700 overflow-hidden">
-                  <div className="h-full bg-primary-500" style={{ width: `${metrics.consistencyScore}%` }} />
-                </div>
-                <p className="mt-2 text-[11px] text-surface-400">
-                  {metrics.consistencyScore < 40
-                    ? 'Build a daily micro-practice habit.'
-                    : metrics.consistencyScore < 70
-                    ? 'Solid cadence—push for more active days.'
-                    : 'Great consistency—maintain momentum!'}
-                </p>
-              </div>
-            )}
-            {/* New Metrics Widgets */}
-            {mode === "full" && <Suspense fallback={<CardSkeleton lines={3} />}>
-              {!loading && metrics && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">Activity</h4>
-                    <button
-                      className="text-[10px] text-surface-500 hover:text-surface-300"
-                      onClick={() => toggleCollapse("activity")}
-                    >
-                      {collapsed.activity ? "Expand" : "Collapse"}
-                    </button>
-                  </div>
-                  {!collapsed.activity && (
-                    <ActivityIndicator lastPracticeAt={metrics.lastPracticeAt} />
-                  )}
-                </div>
-              )}
-            </Suspense>}
-            {mode === "full" && <Suspense fallback={<CardSkeleton lines={4} />}>
-              {!loading && metrics && metrics.categoryCoverage && metrics.categoryCoverage.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">Coverage</h4>
-                    <button
-                      className="text-[10px] text-surface-500 hover:text-surface-300"
-                      onClick={() => toggleCollapse("coverage")}
-                    >
-                      {collapsed.coverage ? "Expand" : "Collapse"}
-                    </button>
-                  </div>
-                  {!collapsed.coverage && (
-                    <CategoryCoverage coverage={metrics.categoryCoverage} />
-                  )}
-                </div>
-              )}
-            </Suspense>}
-            {mode === "full" && <Suspense fallback={<CardSkeleton lines={3} />}>
-              {!loading && metrics && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">Follow-ups</h4>
-                    <button
-                      className="text-[10px] text-surface-500 hover:text-surface-300"
-                      onClick={() => toggleCollapse("followups")}
-                    >
-                      {collapsed.followups ? "Expand" : "Collapse"}
-                    </button>
-                  </div>
-                  {!collapsed.followups && (
-                    <FollowUpsUsage followUps={metrics.followUps} />
-                  )}
-                </div>
-              )}
-            </Suspense>}
-            {mode === "full" && <Suspense fallback={<CardSkeleton lines={3} />}>
-              {!loading && metrics?.streakDays && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">Streak</h4>
-                    <button
-                      className="text-[10px] text-surface-500 hover:text-surface-300"
-                      onClick={() => toggleCollapse("streak")}
-                    >
-                      {collapsed.streak ? "Expand" : "Collapse"}
-                    </button>
-                  </div>
-                  {!collapsed.streak && (
-                    <React.Suspense fallback={<CardSkeleton lines={2} />}>
-                      {/* Lazy import inline to avoid top-level bundle impact */}
-                      <StreakWidget days={metrics.streakDays} />
-                    </React.Suspense>
-                  )}
-                </div>
-              )}
-            </Suspense>}
           </div>
         </div>
 
@@ -863,6 +1182,25 @@ const DashboardPage = () => {
         open={cmdOpen}
         onClose={() => setCmdOpen(false)}
         onAction={handleCommand}
+      />
+      <QuickActionDock
+        onStart={startQuickInterview}
+        onSchedule={() => { setEditSession(null); setShowScheduler(true); }}
+        onExport={() => {
+          try {
+            const blob = new Blob([JSON.stringify({
+              generatedAt: new Date().toISOString(),
+              metrics,
+              recommendation,
+              horizon: metricsHorizon,
+              benchmark
+            }, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob); const a=document.createElement('a');
+            a.href=url; a.download='dashboard-insights.json'; a.click(); URL.revokeObjectURL(url);
+            toast.success('Insights exported');
+          } catch { toast.error('Export failed'); }
+        }}
+        onScrollTop={() => window.scrollTo({ top:0, behavior:'smooth' })}
       />
     </div>
   );

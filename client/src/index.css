@@ -224,6 +224,20 @@
   .card-dark {
     @apply bg-surface-800 rounded-2xl shadow-surface-lg border border-surface-700 p-6 transition-all duration-300 hover:shadow-glow focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 focus-within:ring-offset-surface-900;
   }
+
+  /* Dashboard consistent card variations */
+  .dashboard-card {
+    @apply card-dark relative overflow-hidden; /* inherits padding */
+  }
+  .dashboard-card-accent {
+    @apply dashboard-card border-t-2 border-t-primary-500/60 shadow-surface-lg;
+  }
+  .dashboard-section-title {
+    @apply text-xs font-semibold tracking-wide uppercase text-surface-500 dark:text-surface-400;
+  }
+  .dashboard-divider {
+    @apply h-px bg-surface-200 dark:bg-surface-700/70 rounded; 
+  }
   
   .gradient-bg {
     @apply bg-gradient-dark;

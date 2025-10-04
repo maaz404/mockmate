@@ -4,7 +4,9 @@ const CategoryCoverage = ({ coverage }) => {
   if (!coverage || coverage.length === 0) {
     return (
       <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-6">
-        <p className="text-sm text-surface-400">No category data yet. Complete some interviews to see coverage.</p>
+        <p className="text-sm text-surface-400">
+          No category data yet. Complete some interviews to see coverage.
+        </p>
       </div>
     );
   }
@@ -12,8 +14,12 @@ const CategoryCoverage = ({ coverage }) => {
     <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <p className="text-[11px] uppercase tracking-wide text-surface-400">Coverage</p>
-          <h3 className="text-lg font-semibold text-white">Category Coverage</h3>
+          <p className="text-[11px] uppercase tracking-wide text-surface-400">
+            Coverage
+          </p>
+          <h3 className="text-lg font-semibold text-white">
+            Category Coverage
+          </h3>
         </div>
       </div>
       <div className="space-y-3">
@@ -22,7 +28,9 @@ const CategoryCoverage = ({ coverage }) => {
           return (
             <div key={c.category} className="group">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-surface-300 group-hover:text-white transition-colors truncate max-w-[55%]">{c.category}</span>
+                <span className="text-surface-300 group-hover:text-white transition-colors truncate max-w-[55%]">
+                  {c.category}
+                </span>
                 <span className="text-surface-500 text-xs">{c.count} q</span>
               </div>
               <div className="mt-1 flex items-center gap-2">
@@ -32,7 +40,9 @@ const CategoryCoverage = ({ coverage }) => {
                     style={{ width: `${Math.min(100, c.count * 8)}%` }}
                   />
                 </div>
-                <div className="w-10 text-right text-xs text-surface-400 group-hover:text-surface-300">{score}</div>
+                <div className="w-10 text-right text-xs text-surface-400 group-hover:text-surface-300">
+                  {score}
+                </div>
               </div>
             </div>
           );

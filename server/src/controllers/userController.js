@@ -613,7 +613,8 @@ async function getDashboardPreferences(req, res) {
 async function updateDashboardPreferences(req, res) {
   try {
     const { userId } = req.auth;
-    const { density, upcomingView, thisWeekOnly, metricsHorizon, benchmark } = req.body || {};
+    const { density, upcomingView, thisWeekOnly, metricsHorizon, benchmark } =
+      req.body || {};
     const update = {};
     if (density) update["preferences.dashboard.density"] = density;
     if (upcomingView)
@@ -1209,6 +1210,272 @@ module.exports.getDashboardSummary = getDashboardSummary;
 module.exports.getDashboardPreferences = getDashboardPreferences;
 module.exports.updateDashboardPreferences = updateDashboardPreferences;
 
+// ================= Dashboard Recommendation =================
+// GET /api/users/dashboard/recommendation
+// Lightweight heuristic engine producing a single "next best action" card.
+async function getDashboardRecommendation(req, res) {
+  try {
+    const { userId } = req.auth;
+    const horizonWeeks = Math.min(
+      24,
+      Math.max(4, parseInt(req.query.horizon || "8", 10) || 8)
+    );
+    const now = new Date();
+    const horizonStart = new Date(
+      now.getTime() - horizonWeeks * 7 * 24 * 60 * 60 * 1000
+    );
+
+    // Fetch relevant documents in parallel
+    const [profile, interviews, upcoming] = await Promise.all([
+      UserProfile.findOne({ clerkUserId: userId })
+        .select("analytics preferences.dashboard")
+        .lean()
+        .exec(),
+      Interview.find({
+        userId,
+        status: { $in: ["completed"] },
+        createdAt: { $gte: horizonStart },
+      })
+        .select(
+          "createdAt results.overallScore questions.category questions.tags"
+        )
+        .lean()
+        .exec(),
+      ScheduledSession.find({ userId, scheduledAt: { $gte: now } })
+        .sort({ scheduledAt: 1 })
+        .limit(1)
+        .lean()
+        .exec(),
+    ]);
+
+    // Early fallback if no interviews
+    if (!interviews.length) {
+      return ok(res, {
+        title: "Start Your First Interview",
+        reason: "No completed practice sessions yet—kickstart your progress.",
+        actions: [
+          {
+            label: "Create Technical Session",
+            href: "/interview/new?type=technical",
+          },
+          { label: "View Quick Start", href: "/dashboard#quick" },
+        ],
+        meta: { type: "onboarding" },
+      });
+    }
+
+    // Build skill dimensions (reuse simplified mapping similar to metrics)
+    const dimensionBuckets = {
+      Technical: [/system/i, /data/i, /algo/i, /code/i, /design/i],
+      Communication: [/behavior/i, /communication/i, /team/i, /conflict/i],
+      Systems: [/design/i, /scalab/i, /system/i, /architecture/i],
+      Behavioral: [/behavior/i, /leadership/i, /team/i, /motivation/i],
+    };
+    const completedChrono = interviews
+      .filter((iv) => iv.results?.overallScore != null)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const mid = Math.floor(completedChrono.length / 2) || 0;
+    const older = completedChrono.slice(0, mid);
+    const newer = completedChrono.slice(mid);
+
+    const accumulate = (arr) => {
+      const agg = {};
+      for (const dim of Object.keys(dimensionBuckets)) {
+        agg[dim] = { sum: 0, count: 0 };
+      }
+      for (const iv of arr) {
+        const score = iv.results.overallScore;
+        const cats = new Set((iv.questions || []).map((q) => q.category || ""));
+        for (const dim of Object.keys(dimensionBuckets)) {
+          if (
+            [...cats].some((c) =>
+              dimensionBuckets[dim].some((re) => re.test(c))
+            )
+          ) {
+            agg[dim].sum += score;
+            agg[dim].count += 1;
+          }
+        }
+      }
+      return agg;
+    };
+    const prevAgg = accumulate(older);
+    const currAgg = accumulate(newer);
+    const dimensions = Object.keys(dimensionBuckets).map((d) => {
+      const prev = prevAgg[d].count
+        ? Math.round(prevAgg[d].sum / prevAgg[d].count)
+        : null;
+      const curr = currAgg[d].count
+        ? Math.round(currAgg[d].sum / currAgg[d].count)
+        : null;
+      const delta = prev != null && curr != null ? curr - prev : null;
+      return { dimension: d, prev, curr, delta };
+    });
+
+    // Tag coverage: aggregate real tags
+    const tagCounts = new Map();
+    for (const iv of interviews) {
+      for (const q of iv.questions || []) {
+        if (Array.isArray(q.tags)) {
+          for (const t of q.tags) {
+            if (t) tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
+          }
+        }
+      }
+    }
+    const sortedTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
+    const weakestTag = sortedTags.slice(-1)[0];
+
+    // Consistency score (active unique days)
+    const daySet = new Set(
+      interviews.map((iv) => {
+        const d = new Date(iv.createdAt);
+        return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
+      })
+    );
+    const consistencyScore = Math.min(
+      100,
+      Math.round((daySet.size / (horizonWeeks * 7)) * 100)
+    );
+
+    const nextSession = upcoming?.[0];
+    const hoursToNext = nextSession
+      ? (new Date(nextSession.scheduledAt).getTime() - now.getTime()) /
+        (1000 * 60 * 60)
+      : null;
+
+    const benchmarkPref = profile?.preferences?.dashboard?.benchmark || 70;
+    const avgScore = profile?.analytics?.averageScore || null;
+
+    // Recommendation priority
+    let rec = null;
+
+    if (consistencyScore < 50) {
+      rec = {
+        title: "Boost Your Consistency",
+        reason: `Active days are only ${consistencyScore}% of horizon — short daily drills will accelerate improvement.`,
+        actions: [
+          {
+            label: "Start 10-min Mixed Drill",
+            href: "/interview/new?type=mixed&duration=10",
+          },
+          { label: "Schedule Daily Micro Session", href: "/scheduled" },
+        ],
+        meta: { type: "consistency", consistencyScore },
+      };
+    }
+
+    if (!rec) {
+      const negativeDeltas = dimensions.filter(
+        (d) => d.delta != null && d.delta < 0
+      );
+      negativeDeltas.sort((a, b) => a.delta - b.delta); // most negative first
+      if (negativeDeltas.length && negativeDeltas[0].delta <= -8) {
+        const worst = negativeDeltas[0];
+        rec = {
+          title: `Reinforce ${worst.dimension}`,
+          reason: `${worst.dimension} dropped ${Math.abs(
+            worst.delta
+          )} points vs previous period. Targeted practice can recover momentum.`,
+          actions: [
+            {
+              label: `Start ${worst.dimension} Session`,
+              href: `/interview/new?type=mixed&focus=${encodeURIComponent(
+                worst.dimension.toLowerCase()
+              )}`,
+            },
+            {
+              label: "Review Past Answers",
+              href: `/interviews?filter=${encodeURIComponent(
+                worst.dimension.toLowerCase()
+              )}`,
+            },
+          ],
+          meta: {
+            type: "dimension",
+            dimension: worst.dimension,
+            delta: worst.delta,
+          },
+        };
+      }
+    }
+
+    if (!rec && weakestTag && weakestTag[1] <= 2) {
+      rec = {
+        title: `Broaden Tag: ${weakestTag[0]}`,
+        reason: `Tag "${weakestTag[0]}" appears only ${weakestTag[1]} time(s) in recent practice. Increasing coverage improves adaptability.`,
+        actions: [
+          {
+            label: "Generate Questions",
+            href: `/question-bank?addTag=${encodeURIComponent(weakestTag[0])}`,
+          },
+          {
+            label: "Start Focused Drill",
+            href: `/interview/new?tags=${encodeURIComponent(weakestTag[0])}`,
+          },
+        ],
+        meta: { type: "tag", tag: weakestTag[0], count: weakestTag[1] },
+      };
+    }
+
+    if (
+      !rec &&
+      hoursToNext != null &&
+      hoursToNext < 48 &&
+      avgScore != null &&
+      avgScore < benchmarkPref
+    ) {
+      rec = {
+        title: "Pre-Session Warm-up",
+        reason: `Upcoming session in ${Math.round(
+          hoursToNext
+        )}h and average score (${avgScore}%) below benchmark (${benchmarkPref}%). A warm-up can boost readiness.`,
+        actions: [
+          {
+            label: "Start 15-min Warm-up",
+            href: "/interview/new?type=mixed&duration=15",
+          },
+          { label: "Review Last Session", href: "/interviews" },
+        ],
+        meta: {
+          type: "upcoming",
+          hoursToNext,
+          avgScore,
+          benchmark: benchmarkPref,
+        },
+      };
+    }
+
+    if (!rec) {
+      rec = {
+        title: "Maintain Momentum",
+        reason:
+          "No urgent weaknesses detected. Keep steady practice to consolidate gains.",
+        actions: [
+          {
+            label: "Adaptive Mixed Session",
+            href: "/interview/new?type=mixed&adaptive=1",
+          },
+          { label: "Schedule Next Session", href: "/scheduled" },
+        ],
+        meta: { type: "steady" },
+      };
+    }
+
+    return ok(res, rec);
+  } catch (error) {
+    console.error("Dashboard recommendation error:", error);
+    return fail(
+      res,
+      500,
+      "DASHBOARD_RECOMMENDATION_FAILED",
+      "Failed to generate recommendation"
+    );
+  }
+}
+
+module.exports.getDashboardRecommendation = getDashboardRecommendation;
+
 // ================= Dashboard Metrics (Phase 1) =================
 // GET /api/users/dashboard/metrics
 // Provides richer time-series + coverage metrics used for enhanced dashboard widgets.
@@ -1224,7 +1491,8 @@ const dashboardMetricsCache = {
     }
     return entry.data;
   },
-  set(key, data, ttlMs = 60 * 1000) { // 1 minute TTL default
+  set(key, data, ttlMs = 60 * 1000) {
+    // 1 minute TTL default
     this.store.set(key, { data, expires: Date.now() + ttlMs });
   },
 };
@@ -1233,12 +1501,20 @@ async function getDashboardMetrics(req, res) {
   try {
     const { userId } = req.auth;
     // Horizon: default last 8 ISO weeks (including current)
-    const weeksBack = Math.min(24, Math.max(1, parseInt(req.query.weeks || req.query.horizon || "8", 10) || 8)); // cap at 24 weeks now
+    const weeksBack = Math.min(
+      24,
+      Math.max(
+        1,
+        parseInt(req.query.weeks || req.query.horizon || "8", 10) || 8
+      )
+    ); // cap at 24 weeks now
     const cacheKey = `${userId}:${weeksBack}`;
     const cached = dashboardMetricsCache.get(cacheKey);
     if (!req.query.force && cached) return ok(res, cached);
     const now = new Date();
-    const horizonStart = new Date(now.getTime() - weeksBack * 7 * 24 * 60 * 60 * 1000);
+    const horizonStart = new Date(
+      now.getTime() - weeksBack * 7 * 24 * 60 * 60 * 1000
+    );
 
     // Fetch completed interviews within horizon (plus a small buffer week for accurate weekly bucket edge)
     const interviews = await Interview.find({
@@ -1256,7 +1532,9 @@ async function getDashboardMetrics(req, res) {
     const isoWeekKey = (d) => {
       const date = new Date(d);
       // ISO week algorithm
-      const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const tmp = new Date(
+        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+      );
       const dayNum = tmp.getUTCDay() || 7;
       tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
       const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
@@ -1290,23 +1568,29 @@ async function getDashboardMetrics(req, res) {
         }
       }
       if (iv.status === "completed") {
-        if (!lastPracticeAt || new Date(iv.createdAt) > new Date(lastPracticeAt)) {
+        if (
+          !lastPracticeAt ||
+          new Date(iv.createdAt) > new Date(lastPracticeAt)
+        ) {
           lastPracticeAt = iv.createdAt;
         }
         // Category coverage from questions
         (iv.questions || []).forEach((q) => {
           const cat = q.category || "Uncategorized";
-            if (!categoryAgg[cat]) categoryAgg[cat] = { count: 0, scoreSum: 0, scoreCount: 0 };
-            categoryAgg[cat].count += 1;
-            if (iv.results?.overallScore != null) {
-              categoryAgg[cat].scoreSum += iv.results.overallScore;
-              categoryAgg[cat].scoreCount += 1;
-            }
-            // Follow-ups
-            if (q.followUps) {
-              followUpsTotal += Array.isArray(q.followUps) ? q.followUps.length : 1;
-            }
-            if (q.followUpsReviewed) followUpsReviewed += 1; // flag means user reviewed set
+          if (!categoryAgg[cat])
+            categoryAgg[cat] = { count: 0, scoreSum: 0, scoreCount: 0 };
+          categoryAgg[cat].count += 1;
+          if (iv.results?.overallScore != null) {
+            categoryAgg[cat].scoreSum += iv.results.overallScore;
+            categoryAgg[cat].scoreCount += 1;
+          }
+          // Follow-ups
+          if (q.followUps) {
+            followUpsTotal += Array.isArray(q.followUps)
+              ? q.followUps.length
+              : 1;
+          }
+          if (q.followUpsReviewed) followUpsReviewed += 1; // flag means user reviewed set
         });
       }
     }
@@ -1343,7 +1627,9 @@ async function getDashboardMetrics(req, res) {
     }
     // Prepare for previous vs current split: sort completed interviews chronologically
     const completedChrono = interviews
-      .filter((iv) => iv.status === "completed" && iv.results?.overallScore != null)
+      .filter(
+        (iv) => iv.status === "completed" && iv.results?.overallScore != null
+      )
       .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     const mid = Math.floor(completedChrono.length / 2) || 0;
     const older = completedChrono.slice(0, mid);
@@ -1356,10 +1642,10 @@ async function getDashboardMetrics(req, res) {
         const cats = new Set((iv.questions || []).map((q) => q.category || ""));
         for (const dim of Object.keys(dimensionBuckets)) {
           const patterns = dimensionBuckets[dim];
-            if ([...cats].some((c) => patterns.some((re) => re.test(c)))) {
-              target[dim].scoreSum += score;
-              target[dim].scoreCount += 1;
-            }
+          if ([...cats].some((c) => patterns.some((re) => re.test(c)))) {
+            target[dim].scoreSum += score;
+            target[dim].scoreCount += 1;
+          }
         }
       }
     };
@@ -1407,12 +1693,12 @@ async function getDashboardMetrics(req, res) {
         );
         for (let i = 20; i >= 0; i--) {
           const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-            days.push({
-              date: d.toISOString().split("T")[0],
-              active: activeSet.has(
-                `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`
-              ),
-            });
+          days.push({
+            date: d.toISOString().split("T")[0],
+            active: activeSet.has(
+              `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`
+            ),
+          });
         }
         return days;
       })(),
@@ -1437,8 +1723,19 @@ async function getDashboardMetrics(req, res) {
           .map(([tag, count]) => ({ tag, count }));
         // Basic suggestion heuristic: tags seen in category names but not used
         const practiced = new Set(top.map((t) => t.tag));
-        const seedSuggestions = ["system-design", "communication", "algorithms", "leadership", "teamwork", "security", "cloud", "devops"];
-        const missingSuggestions = seedSuggestions.filter((s) => !practiced.has(s));
+        const seedSuggestions = [
+          "system-design",
+          "communication",
+          "algorithms",
+          "leadership",
+          "teamwork",
+          "security",
+          "cloud",
+          "devops",
+        ];
+        const missingSuggestions = seedSuggestions.filter(
+          (s) => !practiced.has(s)
+        );
         return { top, missingSuggestions };
       })(),
       consistencyScore: (() => {

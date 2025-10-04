@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 const Sparkline = ({ points = [] }) => {
   if (!points || points.length < 2) return null;
@@ -53,7 +53,9 @@ const StatsCard = ({
   change,
   trend = "neutral",
   sparkline,
+  compact = false,
 }) => {
+  const reduceMotion = useReducedMotion();
   const getTrendColor = () => {
     switch (trend) {
       case "up":
@@ -67,37 +69,72 @@ const StatsCard = ({
 
   return (
     <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ type: "spring", stiffness: 260, damping: 18 }}
-      className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-5 hover:shadow-glow hover:bg-surface-800/70 transition-all duration-200 group"
+      whileHover={{ y: -3 }}
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      className="relative overflow-hidden group rounded-xl p-[1px] bg-gradient-to-br from-primary-500/30 via-fuchsia-500/20 to-transparent dark:from-primary-500/30 dark:via-fuchsia-500/15 shadow-surface-lg hover:shadow-primary-500/20 transition-shadow duration-300"
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[13px] font-medium text-surface-400 group-hover:text-surface-300 transition-colors tracking-wide uppercase">
-            {title}
-          </p>
-          <p className="mt-1.5 text-3xl font-extrabold text-white group-hover:text-primary-300 transition-colors">
-            {value}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {sparkline && <Sparkline points={sparkline} />}
-          <div
-            className="text-3xl filter group-hover:brightness-110 transition-all duration-200"
-            aria-hidden
-          >
-            {icon}
+      <div
+        className={`rounded-[11px] h-full w-full bg-white/60 dark:bg-surface-800/60 backdrop-blur-md border border-surface-300/60 dark:border-surface-700/70 ${
+          compact ? "p-3" : "p-5"
+        } hover:dark:bg-surface-800/80 hover:bg-white/70 transition-colors duration-200`}
+      >
+        <div
+          className={`flex ${
+            compact
+              ? "items-center justify-between gap-2"
+              : "items-start justify-between"
+          }`}
+        >
+          <div className={compact ? "flex items-center gap-2" : ""}>
+            <p
+              className={`uppercase tracking-wide ${
+                compact ? "text-[10px]" : "text-[13px]"
+              } font-medium text-surface-500 dark:text-surface-400 group-hover:dark:text-surface-300 group-hover:text-surface-600 transition-colors`}
+            >
+              {title}
+            </p>
+            {compact && sparkline && <Sparkline points={sparkline} />}
+            {!compact && (
+              <p className="mt-1.5 text-3xl font-extrabold text-surface-900 dark:text-white group-hover:dark:text-primary-300 group-hover:text-primary-600 transition-colors">
+                {value}
+              </p>
+            )}
+          </div>
+          <div className={`flex items-center ${compact ? "gap-1" : "gap-3"}`}>
+            {!compact && sparkline && <Sparkline points={sparkline} />}
+            <motion.div
+              whileHover={reduceMotion ? undefined : { scale: 1.12 }}
+              transition={{ type: "spring", stiffness: 260, damping: 18 }}
+              className={`${
+                compact ? "text-xl" : "text-3xl"
+              } filter group-hover:brightness-110 transition-all duration-200`}
+              aria-hidden
+            >
+              {icon}
+            </motion.div>
           </div>
         </div>
-      </div>
-
-      {change && (
-        <div className="mt-3">
-          <p className={`text-sm ${getTrendColor()} transition-colors`}>
+        {compact && (
+          <p className="text-xl font-bold text-surface-900 dark:text-white group-hover:dark:text-primary-300 group-hover:text-primary-600 transition-colors mt-1">
+            {value}
+          </p>
+        )}
+        {change && !compact && (
+          <div className="mt-3">
+            <p className={`text-sm ${getTrendColor()} transition-colors`}>
+              {change}
+            </p>
+          </div>
+        )}
+        {change && compact && (
+          <p
+            className={`text-[11px] mt-1 ${getTrendColor()} transition-colors`}
+          >
             {change}
           </p>
-        </div>
-      )}
+        )}
+        <div className="pointer-events-none absolute -bottom-10 -right-10 w-40 h-40 bg-primary-500/10 dark:bg-primary-500/10 blur-2xl rounded-full opacity-0 group-hover:opacity-70 transition-opacity duration-500" />
+      </div>
     </motion.div>
   );
 };
