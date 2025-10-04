@@ -275,11 +275,7 @@ function App() {
               </GlobalErrorBoundary>
             </Router>
             <Toaster position="top-right" />
-            {process.env.NODE_ENV === "development" && (
-              <div className="fixed bottom-2 right-2 z-[999] text-[10px] px-2 py-1 rounded bg-black/60 text-white font-mono">
-                auth:gate {String(SIGN_OUT_ON_START)}
-              </div>
-            )}
+            {/* Removed auth gate debug badge */}
             <ChatbotWrapper />
           </OneTimeSignOutGate>
         </AuthProvider>
