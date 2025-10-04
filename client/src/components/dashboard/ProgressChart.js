@@ -1,16 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  ComposedChart,
-  Line,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const ProgressChart = ({ analytics, metrics }) => {
   const [range, setRange] = useState(() => {
@@ -18,6 +8,14 @@ const ProgressChart = ({ analytics, metrics }) => {
       return localStorage.getItem("mm.dashboard.progress.range") || "6w";
     } catch {
       return "6w";
+    }
+  });
+
+  const [showVelocity, setShowVelocity] = useState(() => {
+    try {
+      return localStorage.getItem("mm.dashboard.progress.showVelocity") !== "0";
+    } catch {
+      return true;
     }
   });
 
@@ -85,11 +83,26 @@ const ProgressChart = ({ analytics, metrics }) => {
     <div className="space-y-6">
       {/* Progress Chart */}
       <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-[11px] uppercase tracking-wide text-surface-400">
-            Progress
-          </p>
-          <div className="flex items-center gap-2">
+        <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
+          <p className="text-[11px] uppercase tracking-wide text-surface-400">Progress</p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-3 text-[11px]">
+              <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-indigo-400/70 border border-indigo-400"></span><span className="text-surface-400">Interviews</span></div>
+              <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-500"></span><span className="text-surface-400">Avg Score</span></div>
+              <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm border border-green-400"></span><span className="text-surface-400">Benchmark</span></div>
+            </div>
+            <button
+              className="text-[11px] px-2 py-1 rounded-md border border-surface-700 hover:bg-surface-700/60 text-surface-300"
+              onClick={() => {
+                setShowVelocity((v) => {
+                  const next = !v;
+                  try { localStorage.setItem("mm.dashboard.progress.showVelocity", next ? "1" : "0"); } catch {}
+                  return next;
+                });
+              }}
+            >
+              {showVelocity ? "Hide Velocity" : "Show Velocity"}
+            </button>
             <div className="text-[11px] text-surface-400">Range</div>
             <div className="inline-flex rounded-md border border-surface-700 overflow-hidden">
               <button
@@ -150,6 +163,7 @@ const ProgressChart = ({ analytics, metrics }) => {
                     return [value, "Interviews"];
                   return [value, key];
                 }}
+                labelFormatter={(label) => `Week ${label} (Benchmark: 70%)`}
                 contentStyle={{
                   backgroundColor: "#1e293b",
                   border: "1px solid #475569",
@@ -157,20 +171,16 @@ const ProgressChart = ({ analytics, metrics }) => {
                   color: "#f8fafc",
                 }}
               />
-              <Legend
-                wrapperStyle={{ fontSize: 12 }}
-                formatter={(v) => (
-                  <span className="text-surface-300">{v}</span>
-                )}
-              />
-              <Bar
-                yAxisId="right"
-                dataKey="interviews"
-                barSize={18}
-                fill="#6366F1"
-                radius={[4, 4, 0, 0]}
-                opacity={0.6}
-              />
+              {showVelocity && (
+                <Bar
+                  yAxisId="right"
+                  dataKey="interviews"
+                  barSize={18}
+                  fill="#6366F1"
+                  radius={[4, 4, 0, 0]}
+                  opacity={0.6}
+                />
+              )}
               <Line
                 yAxisId="left"
                 type="monotone"

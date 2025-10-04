@@ -1341,6 +1341,30 @@ async function getDashboardMetrics(req, res) {
       followUps: { total: followUpsTotal, reviewed: followUpsReviewed },
       skillDimensions,
       lastPracticeAt,
+      // Streak strip (last 21 days including today)
+      streakDays: (() => {
+        const days = [];
+        const today = new Date();
+        // Collect set of active y-m-d for completed interviews
+        const activeSet = new Set(
+          interviews
+            .filter((iv) => iv.status === "completed")
+            .map((iv) => {
+              const d = new Date(iv.createdAt);
+              return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
+            })
+        );
+        for (let i = 20; i >= 0; i--) {
+          const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+            days.push({
+              date: d.toISOString().split("T")[0],
+              active: activeSet.has(
+                `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`
+              ),
+            });
+        }
+        return days;
+      })(),
     };
     return ok(res, payload);
   } catch (error) {

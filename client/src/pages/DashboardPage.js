@@ -25,6 +25,7 @@ import { formatRelativeCountdown, isWithinNextMs } from "../utils/datetime";
 const CategoryCoverage = lazy(() => import("../components/dashboard/CategoryCoverage"));
 const FollowUpsUsage = lazy(() => import("../components/dashboard/FollowUpsUsage"));
 const ActivityIndicator = lazy(() => import("../components/dashboard/ActivityIndicator"));
+const StreakWidget = lazy(() => import("../components/dashboard/StreakStrip"));
 
 const DashboardPage = () => {
   const { user, isLoaded } = useUser();
@@ -46,6 +47,14 @@ const DashboardPage = () => {
     useState(false);
   const [sectionErrors, setSectionErrors] = useState([]);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      const raw = localStorage.getItem("mm.dashboard.collapsed");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
   const [density, setDensity] = useState(() => {
     try {
       return localStorage.getItem("mm.dashboard.density") || "comfortable";
@@ -238,6 +247,16 @@ const DashboardPage = () => {
     return () =>
       savePrefDebounceRef.current && clearTimeout(savePrefDebounceRef.current);
   }, [thisWeekOnly]);
+
+  // Persist collapsed widgets
+  useEffect(() => {
+    try {
+      localStorage.setItem("mm.dashboard.collapsed", JSON.stringify(collapsed));
+    } catch {}
+  }, [collapsed]);
+
+  const toggleCollapse = (key) =>
+    setCollapsed((c) => ({ ...c, [key]: !c[key] }));
 
   // Command palette keyboard shortcut
   useEffect(() => {
@@ -655,17 +674,77 @@ const DashboardPage = () => {
             {/* New Metrics Widgets */}
             <Suspense fallback={<CardSkeleton lines={3} />}>
               {!loading && metrics && (
-                <ActivityIndicator lastPracticeAt={metrics.lastPracticeAt} />
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">Activity</h4>
+                    <button
+                      className="text-[10px] text-surface-500 hover:text-surface-300"
+                      onClick={() => toggleCollapse("activity")}
+                    >
+                      {collapsed.activity ? "Expand" : "Collapse"}
+                    </button>
+                  </div>
+                  {!collapsed.activity && (
+                    <ActivityIndicator lastPracticeAt={metrics.lastPracticeAt} />
+                  )}
+                </div>
               )}
             </Suspense>
             <Suspense fallback={<CardSkeleton lines={4} />}>
               {!loading && metrics && metrics.categoryCoverage && metrics.categoryCoverage.length > 0 && (
-                <CategoryCoverage coverage={metrics.categoryCoverage} />
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">Coverage</h4>
+                    <button
+                      className="text-[10px] text-surface-500 hover:text-surface-300"
+                      onClick={() => toggleCollapse("coverage")}
+                    >
+                      {collapsed.coverage ? "Expand" : "Collapse"}
+                    </button>
+                  </div>
+                  {!collapsed.coverage && (
+                    <CategoryCoverage coverage={metrics.categoryCoverage} />
+                  )}
+                </div>
               )}
             </Suspense>
             <Suspense fallback={<CardSkeleton lines={3} />}>
               {!loading && metrics && (
-                <FollowUpsUsage followUps={metrics.followUps} />
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">Follow-ups</h4>
+                    <button
+                      className="text-[10px] text-surface-500 hover:text-surface-300"
+                      onClick={() => toggleCollapse("followups")}
+                    >
+                      {collapsed.followups ? "Expand" : "Collapse"}
+                    </button>
+                  </div>
+                  {!collapsed.followups && (
+                    <FollowUpsUsage followUps={metrics.followUps} />
+                  )}
+                </div>
+              )}
+            </Suspense>
+            <Suspense fallback={<CardSkeleton lines={3} />}>
+              {!loading && metrics?.streakDays && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-medium text-surface-400 uppercase tracking-wide">Streak</h4>
+                    <button
+                      className="text-[10px] text-surface-500 hover:text-surface-300"
+                      onClick={() => toggleCollapse("streak")}
+                    >
+                      {collapsed.streak ? "Expand" : "Collapse"}
+                    </button>
+                  </div>
+                  {!collapsed.streak && (
+                    <React.Suspense fallback={<CardSkeleton lines={2} />}>
+                      {/* Lazy import inline to avoid top-level bundle impact */}
+                      <StreakWidget days={metrics.streakDays} />
+                    </React.Suspense>
+                  )}
+                </div>
               )}
             </Suspense>
           </div>
