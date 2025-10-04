@@ -21,26 +21,10 @@ const QuestionBankPage = () => {
   const [sortMode, setSortMode] = useState("original"); // original|difficulty|category
   const [searchQuery, setSearchQuery] = useState(""); // debounced value
   const [rawSearch, setRawSearch] = useState(""); // immediate input
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [tagMode, setTagMode] = useState("single"); // single | multi
   const [multiTags, setMultiTags] = useState([]); // array of selected tags in multi mode
   const [tagLogic, setTagLogic] = useState("OR"); // OR | AND
-  const [highlightStyle, setHighlightStyle] = useState("fill"); // fill | border
-  const [exportColumns, setExportColumns] = useState([
-    "id",
-    "text",
-    "category",
-    "difficulty",
-    "tags",
-  ]);
-  const allExportableColumns = [
-    { key: "id", label: "ID" },
-    { key: "text", label: "Text" },
-    { key: "category", label: "Category" },
-    { key: "difficulty", label: "Difficulty" },
-    { key: "tags", label: "Tags" },
-    { key: "source", label: "Source" },
-  ];
+  // Removed favorites-only, highlight style, export column customization
   const [showSmallFavModal, setShowSmallFavModal] = useState(false);
   const [pendingFavSubset, setPendingFavSubset] = useState(null);
   // Deprecated: role & experience selectors removed from UI; using defaults for interview config
@@ -130,8 +114,7 @@ const QuestionBankPage = () => {
           setSearchQuery(storedSearch);
           setRawSearch(storedSearch);
         }
-        const storedShowFavs = localStorage.getItem("qb_showFavoritesOnly");
-        if (storedShowFavs === "1") setShowFavoritesOnly(true);
+  // favorites-only removed
         const storedTagMode = localStorage.getItem("qb_tagMode");
         if (storedTagMode === "multi") setTagMode("multi");
         const storedMultiTags = localStorage.getItem("qb_multiTags");
@@ -143,27 +126,7 @@ const QuestionBankPage = () => {
         }
         const storedTagLogic = localStorage.getItem("qb_tagLogic");
         if (storedTagLogic === "AND") setTagLogic("AND");
-        const storedHighlightStyle = localStorage.getItem("qb_highlightStyle");
-        if (storedHighlightStyle === "border") setHighlightStyle("border");
-        const storedExportCols = localStorage.getItem("qb_exportColumns");
-        if (storedExportCols) {
-          try {
-            const parsed = JSON.parse(storedExportCols);
-            if (Array.isArray(parsed) && parsed.length) {
-              const valid = parsed.filter((c) =>
-                [
-                  "id",
-                  "text",
-                  "category",
-                  "difficulty",
-                  "tags",
-                  "source",
-                ].includes(c)
-              );
-              if (valid.length) setExportColumns(valid);
-            }
-          } catch (_) {}
-        }
+        // highlight style & export columns customization removed
         // Clean up deprecated keys if they exist
         try {
           localStorage.removeItem("qb_jobRole");
@@ -181,15 +144,11 @@ const QuestionBankPage = () => {
       localStorage.setItem("qb_favorites", JSON.stringify(favorites));
       localStorage.setItem("qb_appendMode", appendMode ? "1" : "0");
       localStorage.setItem("qb_searchQuery", rawSearch);
-      localStorage.setItem(
-        "qb_showFavoritesOnly",
-        showFavoritesOnly ? "1" : "0"
-      );
+      // favorites-only persistence removed
       localStorage.setItem("qb_tagMode", tagMode);
       localStorage.setItem("qb_multiTags", JSON.stringify(multiTags));
       localStorage.setItem("qb_tagLogic", tagLogic);
-      localStorage.setItem("qb_highlightStyle", highlightStyle);
-      localStorage.setItem("qb_exportColumns", JSON.stringify(exportColumns));
+      // highlight style & export columns persistence removed
     } catch (_) {}
   }, [
     tagFilter,
@@ -197,12 +156,9 @@ const QuestionBankPage = () => {
     favorites,
     appendMode,
     rawSearch,
-    showFavoritesOnly,
     tagMode,
     multiTags,
     tagLogic,
-    highlightStyle,
-    exportColumns,
   ]);
 
   // Debounce raw search into searchQuery
@@ -250,13 +206,7 @@ const QuestionBankPage = () => {
         (q.text || q.questionText || "").toLowerCase().includes(qLower)
       );
     }
-    if (showFavoritesOnly) {
-      list = list.filter((q) =>
-        favorites.includes(
-          (q.text || q.questionText || "").trim().toLowerCase()
-        )
-      );
-    }
+    // favorites-only filtering removed
     if (sortMode === "difficulty") {
       const order = {
         beginner: 0,
@@ -278,8 +228,6 @@ const QuestionBankPage = () => {
     tagFilter,
     sortMode,
     searchQuery,
-    showFavoritesOnly,
-    favorites,
     tagMode,
     multiTags,
     tagLogic,
@@ -314,7 +262,8 @@ const QuestionBankPage = () => {
         source: q.source || "",
       };
       const obj = {};
-      exportColumns.forEach((col) => {
+      const fixedCols = ["id","text","category","difficulty","tags","source"];
+      fixedCols.forEach((col) => {
         if (base[col] !== undefined) obj[col] = base[col];
       });
       return obj;
@@ -325,7 +274,7 @@ const QuestionBankPage = () => {
       });
     } else {
       // CSV
-      const headers = exportColumns;
+  const headers = ["id","text","category","difficulty","tags","source"];
       const rows = projected.map((row) =>
         headers
           .map((h) => String(row[h] || "").replace(/"/g, '""'))
@@ -541,15 +490,7 @@ const QuestionBankPage = () => {
                     )}
                   </h2>
                   {searchQuery && (
-                    <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">
-                      Filtered by search: "{searchQuery}"
-                      {showFavoritesOnly ? ", favorites only" : ""}
-                    </p>
-                  )}
-                  {!searchQuery && showFavoritesOnly && (
-                    <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">
-                      Showing favorites only
-                    </p>
+                    <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">Filtered by search: "{searchQuery}"</p>
                   )}
                 </div>
                 {lastGenerationInfo && (
@@ -861,37 +802,7 @@ const QuestionBankPage = () => {
                     style={{ minWidth: "170px" }}
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-surface-600 dark:text-surface-300">
-                    Export Columns:
-                  </label>
-                  <div className="flex flex-wrap gap-1 max-w-xs">
-                    {allExportableColumns.map((col) => {
-                      const active = exportColumns.includes(col.key);
-                      return (
-                        <button
-                          key={col.key}
-                          type="button"
-                          onClick={() =>
-                            setExportColumns((prev) =>
-                              prev.includes(col.key)
-                                ? prev.filter((k) => k !== col.key)
-                                : [...prev, col.key]
-                            )
-                          }
-                          className={`px-2 py-1 rounded text-xs border transition ${
-                            active
-                              ? "bg-primary-600 text-white border-primary-600"
-                              : "bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-600"
-                          }`}
-                          aria-pressed={active}
-                        >
-                          {col.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Export Columns UI removed */}
                 {tagMode === "multi" && multiTags.length > 0 && (
                   <div className="mb-4 flex flex-wrap gap-2 items-center text-xs">
                     <span className="text-surface-500 dark:text-surface-400">
@@ -924,36 +835,7 @@ const QuestionBankPage = () => {
                     </button>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <input
-                    id="show-favorites-only"
-                    type="checkbox"
-                    className="h-4 w-4"
-                    checked={showFavoritesOnly}
-                    onChange={(e) => setShowFavoritesOnly(e.target.checked)}
-                    aria-label="Show favorites only"
-                  />
-                  <label
-                    htmlFor="show-favorites-only"
-                    className="text-sm text-surface-600 dark:text-surface-300"
-                  >
-                    Favorites Only
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-surface-600 dark:text-surface-300">
-                    Highlight Style:
-                  </label>
-                  <StyledSelect
-                    value={highlightStyle}
-                    onChange={(e) => setHighlightStyle(e.target.value)}
-                    size="sm"
-                    ariaLabel="Highlight style"
-                  >
-                    <option value="fill">Fill Pulse</option>
-                    <option value="border">Border Only</option>
-                  </StyledSelect>
-                </div>
+                {/* Favorites Only & Highlight Style controls removed */}
               </div>
               {filteredSortedQuestions.length === 0 && (
                 <div className="p-6 border border-dashed rounded-lg text-center text-sm text-surface-600 dark:text-surface-400 bg-surface-100/60 dark:bg-surface-800/40">
@@ -964,7 +846,7 @@ const QuestionBankPage = () => {
                     onClick={() => {
                       setTagFilter("all");
                       setSearchQuery("");
-                      setShowFavoritesOnly(false);
+                      // favorites-only removed
                     }}
                     className="text-xs px-3 py-1 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition"
                   >
@@ -981,13 +863,7 @@ const QuestionBankPage = () => {
                   return (
                     <div
                       key={q.id || normKey || i}
-                      className={`${
-                        isHighlighted
-                          ? highlightStyle === "fill"
-                            ? "relative ring-2 ring-green-400/60 rounded-lg bg-green-50 dark:bg-green-900/20 motion-safe:animate-pulse"
-                            : "relative border-l-4 border-green-400 pl-2 rounded"
-                          : ""
-                      }`}
+                      className={`${isHighlighted ? "relative border-l-4 border-green-400 pl-2 rounded" : ""}`}
                     >
                       {q.category && (
                         <div className="mb-2 flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400">
