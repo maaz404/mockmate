@@ -718,6 +718,53 @@ const DashboardPage = () => {
                 )}
               </Suspense>
             )}
+            {mode === "full" && metrics?.tagCoverage && (
+              <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-surface-400">Tags</p>
+                    <h3 className="text-sm font-semibold text-white">Tag Coverage</h3>
+                  </div>
+                  {metrics.tagCoverage.missingSuggestions?.length > 0 && (
+                    <span className="text-[10px] text-surface-500">
+                      +{metrics.tagCoverage.missingSuggestions.length} suggestions
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {metrics.tagCoverage.top.map((t) => (
+                    <span key={t.tag} className="px-2 py-0.5 rounded-full bg-surface-700 text-[11px] text-surface-300 border border-surface-600">
+                      {t.tag}
+                      <span className="ml-1 text-surface-500">{t.count}</span>
+                    </span>
+                  ))}
+                </div>
+                {metrics.tagCoverage.missingSuggestions?.length > 0 && (
+                  <div className="text-[11px] text-surface-400">
+                    Try: {metrics.tagCoverage.missingSuggestions.slice(0,4).join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+            {mode === "full" && metrics?.consistencyScore != null && (
+              <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-5">
+                <p className="text-[11px] uppercase tracking-wide text-surface-400 mb-1">Consistency</p>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white">Practice Consistency</h3>
+                  <span className="text-primary-300 text-sm font-medium">{metrics.consistencyScore}%</span>
+                </div>
+                <div className="mt-3 h-2 rounded bg-surface-700 overflow-hidden">
+                  <div className="h-full bg-primary-500" style={{ width: `${metrics.consistencyScore}%` }} />
+                </div>
+                <p className="mt-2 text-[11px] text-surface-400">
+                  {metrics.consistencyScore < 40
+                    ? 'Build a daily micro-practice habit.'
+                    : metrics.consistencyScore < 70
+                    ? 'Solid cadence—push for more active days.'
+                    : 'Great consistency—maintain momentum!'}
+                </p>
+              </div>
+            )}
             {/* New Metrics Widgets */}
             {mode === "full" && <Suspense fallback={<CardSkeleton lines={3} />}>
               {!loading && metrics && (

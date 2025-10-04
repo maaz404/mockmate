@@ -1388,6 +1388,40 @@ async function getDashboardMetrics(req, res) {
         }
         return days;
       })(),
+      // Tag coverage (phase 2) – reusing categories as proxy tags for now.
+      tagCoverage: (() => {
+        const practicedTags = new Set(categoryCoverage.map((c) => c.category));
+        const recommended = [
+          "System Design",
+          "Behavioral",
+          "Data Structures",
+          "Algorithms",
+          "Communication",
+          "Leadership",
+        ];
+        const missingSuggestions = recommended.filter((r) => !practicedTags.has(r));
+        return {
+          top: categoryCoverage.slice(0, 8).map((c) => ({ tag: c.category, count: c.count })),
+          missingSuggestions,
+        };
+      })(),
+      consistencyScore: (() => {
+        // Compute after streakDays generation by re-deriving quickly
+        try {
+          const activeSet = new Set(
+            interviews
+              .filter((iv) => iv.status === "completed")
+              .map((iv) => {
+                const d = new Date(iv.createdAt);
+                return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
+              })
+          );
+          const activeDays = activeSet.size;
+          return Math.min(100, Math.round((activeDays / 21) * 100));
+        } catch {
+          return null;
+        }
+      })(),
     };
     return ok(res, payload);
   } catch (error) {
