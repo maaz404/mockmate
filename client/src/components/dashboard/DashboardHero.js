@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { formatRelativeCountdown } from "../../utils/datetime";
+import React from "react";
+import { motion, useReducedMotion } from "framer-motion";
 
 // DashboardHero: Welcoming header with profile completeness + quick actions
 const DashboardHero = ({
@@ -8,36 +7,18 @@ const DashboardHero = ({
   profileCompleteness = 0,
   streak = 0,
   onboardingCompleted = false,
-  nextSession = null,
-  consistency = null,
-  openGoals = 0,
   onStart,
   onCreate,
-  initialCompact,
 }) => {
   const reduce = useReducedMotion();
   const completeness = Math.max(0, Math.min(100, profileCompleteness));
-  const [compact, setCompact] = useState(() => {
-    if (typeof initialCompact === "boolean") return initialCompact;
-    try {
-      return localStorage.getItem("mm.dashboard.heroCompact") === "1";
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem("mm.dashboard.heroCompact", compact ? "1" : "0");
-    } catch {}
-  }, [compact]);
+  // Compact/metrics removed per request
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: "easeOut" }}
-      className={`relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/80 dark:bg-gradient-to-br dark:from-surface-800/90 dark:via-surface-800/70 dark:to-surface-900/80 backdrop-blur-md px-6 md:px-10 ${
-        compact ? "py-5" : "py-10"
-      } shadow-surface-md dark:shadow-surface-lg transition-colors`}
+  className={`relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/80 dark:bg-gradient-to-br dark:from-surface-800/90 dark:via-surface-800/70 dark:to-surface-900/80 backdrop-blur-md px-6 md:px-10 py-10 shadow-surface-md dark:shadow-surface-lg transition-colors`}
     >
       <div className="pointer-events-none absolute -top-24 -left-14 w-80 h-80 rounded-full bg-primary-500/10 dark:bg-primary-600/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-14 w-80 h-80 rounded-full bg-emerald-400/10 dark:bg-fuchsia-600/10 blur-3xl" />
@@ -87,54 +68,7 @@ const DashboardHero = ({
             </div>
           )}
           {/* KPI Ribbon inline (footer area on large screens) */}
-          <div
-            className={`mt-6 flex flex-wrap items-center gap-3 ${
-              compact ? "text-[10px]" : "text-[11px]"
-            }`}
-          >
-            <KpiPill
-              label="Next"
-              value={nextSession ? formatRelativeCountdown(nextSession) : "—"}
-              tone={nextSession ? "info" : "neutral"}
-              tooltip={
-                nextSession
-                  ? `Starts ${formatRelativeCountdown(nextSession)}`
-                  : "No upcoming session"
-              }
-            />
-            <KpiPill
-              label="Consistency"
-              value={consistency != null ? `${consistency}%` : "—"}
-              tone={
-                consistency >= 70
-                  ? "success"
-                  : consistency >= 40
-                  ? "info"
-                  : "warn"
-              }
-              tooltip={
-                consistency != null
-                  ? "Practice consistency over selected horizon"
-                  : "No data yet"
-              }
-            />
-            <KpiPill
-              label="Goals Left"
-              value={openGoals}
-              tone={openGoals === 0 ? "success" : "info"}
-              tooltip={
-                openGoals === 0
-                  ? "All goals completed"
-                  : `${openGoals} goals remaining`
-              }
-            />
-            <button
-              onClick={() => setCompact((c) => !c)}
-              className="ml-2 px-2 py-1 rounded-md border border-surface-300 dark:border-surface-600 bg-surface-100 dark:bg-surface-700/50 text-surface-600 dark:text-surface-300 text-[10px] hover:bg-surface-200 dark:hover:bg-surface-700"
-            >
-              {compact ? "Expand Hero" : "Compact Hero"}
-            </button>
-          </div>
+          {/* KPI pills removed per request */}
         </div>
         <div className="flex flex-col items-stretch gap-3 md:items-end md:min-w-[260px]">
           <div className="flex items-center gap-2 self-end bg-surface-100 dark:bg-surface-700/60 border border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 rounded-full px-3 py-1 text-[11px]">
@@ -163,41 +97,6 @@ const DashboardHero = ({
         </div>
       </div>
     </motion.div>
-  );
-};
-
-const KpiPill = ({ label, value, tone = "neutral", tooltip }) => {
-  const toneClasses = {
-    neutral:
-      "bg-surface-100 dark:bg-surface-700/60 text-surface-600 dark:text-surface-300 border-surface-300 dark:border-surface-600",
-    success:
-      "bg-emerald-50 dark:bg-emerald-600/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40",
-    warn: "bg-amber-50 dark:bg-amber-600/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/40",
-    info: "bg-primary-50 dark:bg-primary-600/20 text-primary-700 dark:text-primary-300 border-primary-300 dark:border-primary-500/40",
-  }[tone];
-  return (
-    <div className="relative group">
-      <div
-        className={`text-[11px] px-3 py-1 rounded-full border flex items-center gap-1 ${toneClasses}`}
-      >
-        {label}: <span className="font-medium">{value}</span>
-      </div>
-      <AnimatePresence>
-        {!tooltip ? null : (
-          <motion.div
-            role="tooltip"
-            initial={{ opacity: 0, y: 4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -2, scale: 0.98 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 whitespace-nowrap rounded-md bg-surface-900/95 text-surface-50 text-[10px] px-2 py-1 shadow-lg border border-surface-700 dark:bg-surface-800/90 dark:text-surface-100 backdrop-blur-sm opacity-0 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100"
-            style={{ willChange: "opacity, transform" }}
-          >
-            {tooltip}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
   );
 };
 
