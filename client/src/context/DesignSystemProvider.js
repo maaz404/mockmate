@@ -7,12 +7,19 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 const DesignSystemContext = createContext(null);
 
 export const DesignSystemProvider = ({ children }) => {
-  const [density, setDensity] = useState(() => localStorage.getItem("ds_density") || "comfortable");
-  const [reducedMotion, setReducedMotion] = useState(() => localStorage.getItem("ds_motion") === "reduced");
+  const [density, setDensity] = useState(
+    () => localStorage.getItem("ds_density") || "comfortable"
+  );
+  const [reducedMotion, setReducedMotion] = useState(
+    () => localStorage.getItem("ds_motion") === "reduced"
+  );
 
   useEffect(() => {
     localStorage.setItem("ds_density", density);
-    document.documentElement.classList.toggle("density-compact", density === "compact");
+    document.documentElement.classList.toggle(
+      "density-compact",
+      density === "compact"
+    );
   }, [density]);
 
   useEffect(() => {
@@ -24,18 +31,22 @@ export const DesignSystemProvider = ({ children }) => {
     density,
     reducedMotion,
     setDensity,
-    toggleDensity: () => setDensity((d) => (d === "compact" ? "comfortable" : "compact")),
+    toggleDensity: () =>
+      setDensity((d) => (d === "compact" ? "comfortable" : "compact")),
     toggleMotion: () => setReducedMotion((m) => !m),
   };
 
   return (
-    <DesignSystemContext.Provider value={value}>{children}</DesignSystemContext.Provider>
+    <DesignSystemContext.Provider value={value}>
+      {children}
+    </DesignSystemContext.Provider>
   );
 };
 
 export function useDesignSystem() {
   const ctx = useContext(DesignSystemContext);
-  if (!ctx) throw new Error("useDesignSystem must be used within DesignSystemProvider");
+  if (!ctx)
+    throw new Error("useDesignSystem must be used within DesignSystemProvider");
   return ctx;
 }
 

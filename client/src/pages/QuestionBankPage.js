@@ -150,10 +150,19 @@ const QuestionBankPage = () => {
           try {
             const parsed = JSON.parse(storedExportCols);
             if (Array.isArray(parsed) && parsed.length) {
-              const valid = parsed.filter((c) => ["id","text","category","difficulty","tags","source"].includes(c));
+              const valid = parsed.filter((c) =>
+                [
+                  "id",
+                  "text",
+                  "category",
+                  "difficulty",
+                  "tags",
+                  "source",
+                ].includes(c)
+              );
               if (valid.length) setExportColumns(valid);
             }
-          } catch(_) {}
+          } catch (_) {}
         }
         // Clean up deprecated keys if they exist
         try {
@@ -171,15 +180,30 @@ const QuestionBankPage = () => {
       localStorage.setItem("qb_sortMode", sortMode);
       localStorage.setItem("qb_favorites", JSON.stringify(favorites));
       localStorage.setItem("qb_appendMode", appendMode ? "1" : "0");
-  localStorage.setItem("qb_searchQuery", rawSearch);
-      localStorage.setItem("qb_showFavoritesOnly", showFavoritesOnly ? "1" : "0");
+      localStorage.setItem("qb_searchQuery", rawSearch);
+      localStorage.setItem(
+        "qb_showFavoritesOnly",
+        showFavoritesOnly ? "1" : "0"
+      );
       localStorage.setItem("qb_tagMode", tagMode);
       localStorage.setItem("qb_multiTags", JSON.stringify(multiTags));
       localStorage.setItem("qb_tagLogic", tagLogic);
       localStorage.setItem("qb_highlightStyle", highlightStyle);
       localStorage.setItem("qb_exportColumns", JSON.stringify(exportColumns));
     } catch (_) {}
-  }, [tagFilter, sortMode, favorites, appendMode, rawSearch, showFavoritesOnly, tagMode, multiTags, tagLogic, highlightStyle, exportColumns]);
+  }, [
+    tagFilter,
+    sortMode,
+    favorites,
+    appendMode,
+    rawSearch,
+    showFavoritesOnly,
+    tagMode,
+    multiTags,
+    tagLogic,
+    highlightStyle,
+    exportColumns,
+  ]);
 
   // Debounce raw search into searchQuery
   React.useEffect(() => {
@@ -249,7 +273,17 @@ const QuestionBankPage = () => {
       list.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
     }
     return list;
-  }, [generatedQuestions, tagFilter, sortMode, searchQuery, showFavoritesOnly, favorites, tagMode, multiTags, tagLogic]);
+  }, [
+    generatedQuestions,
+    tagFilter,
+    sortMode,
+    searchQuery,
+    showFavoritesOnly,
+    favorites,
+    tagMode,
+    multiTags,
+    tagLogic,
+  ]);
 
   // Derived relative time for last generation
   const lastGeneratedLabel = React.useMemo(() => {
@@ -286,7 +320,9 @@ const QuestionBankPage = () => {
       return obj;
     });
     if (format === "json") {
-      blob = new Blob([JSON.stringify(projected, null, 2)], { type: "application/json" });
+      blob = new Blob([JSON.stringify(projected, null, 2)], {
+        type: "application/json",
+      });
     } else {
       // CSV
       const headers = exportColumns;
@@ -492,141 +528,554 @@ const QuestionBankPage = () => {
 
         {/* Generated Questions Persisted Section */}
         {generatedQuestions.length > 0 && (
-                  <>
-                  <div ref={resultsRef} className="mt-12">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-surface-900 dark:text-surface-50 flex items-center gap-3">
-                  Generated Questions ({filteredSortedQuestions.length})
-                  {lastGenerationInfo && (
-                    <span className="text-xs text-surface-500 dark:text-surface-400 font-normal">
-                      {lastGeneratedLabel && `Last: ${lastGeneratedLabel}`}
-                    </span>
+          <>
+            <div ref={resultsRef} className="mt-12">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-semibold text-surface-900 dark:text-surface-50 flex items-center gap-3">
+                    Generated Questions ({filteredSortedQuestions.length})
+                    {lastGenerationInfo && (
+                      <span className="text-xs text-surface-500 dark:text-surface-400 font-normal">
+                        {lastGeneratedLabel && `Last: ${lastGeneratedLabel}`}
+                      </span>
+                    )}
+                  </h2>
+                  {searchQuery && (
+                    <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">
+                      Filtered by search: "{searchQuery}"
+                      {showFavoritesOnly ? ", favorites only" : ""}
+                    </p>
                   )}
-                </h2>
-                {searchQuery && (
-                  <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">
-                    Filtered by search: "{searchQuery}"{showFavoritesOnly ? ", favorites only" : ""}
-                  </p>
+                  {!searchQuery && showFavoritesOnly && (
+                    <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">
+                      Showing favorites only
+                    </p>
+                  )}
+                </div>
+                {lastGenerationInfo && (
+                  <div className="flex items-center gap-2 ml-4">
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full border tracking-wide ${
+                        lastGenerationInfo.append
+                          ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300"
+                          : "bg-surface-100 border-surface-300 text-surface-600 dark:bg-surface-700/50 dark:border-surface-600 dark:text-surface-300"
+                      }`}
+                    >
+                      {lastGenerationInfo.append
+                        ? `Appended +${lastGenerationInfo.count}`
+                        : `Replaced (${lastGenerationInfo.count})`}
+                    </span>
+                  </div>
                 )}
-                {!searchQuery && showFavoritesOnly && (
-                  <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">
-                    Showing favorites only
-                  </p>
-                )}
-              </div>
-              {lastGenerationInfo && (
-                <div className="flex items-center gap-2 ml-4">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full border tracking-wide ${
-                      lastGenerationInfo.append
-                        ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300"
-                        : "bg-surface-100 border-surface-300 text-surface-600 dark:bg-surface-700/50 dark:border-surface-600 dark:text-surface-300"
-                    }`}
+                <div className="flex gap-2">
+                  {/* Export / Batch Ops Dropdown Cluster */}
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => {
+                        try {
+                          const subset = filteredSortedQuestions.map((q) => ({
+                            ...q,
+                          }));
+                          navigator.clipboard.writeText(
+                            JSON.stringify(subset, null, 2)
+                          );
+                          toast.success(
+                            `Copied ${subset.length} filtered questions`
+                          );
+                        } catch (e) {
+                          toast.error("Copy failed");
+                        }
+                      }}
+                      className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                    >
+                      Copy Filtered
+                    </button>
+                    <button
+                      onClick={() =>
+                        exportSubset(
+                          filteredSortedQuestions,
+                          "json",
+                          "filtered-questions"
+                        )
+                      }
+                      className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                    >
+                      Download Filtered JSON
+                    </button>
+                    <button
+                      onClick={() =>
+                        exportSubset(
+                          filteredSortedQuestions,
+                          "csv",
+                          "filtered-questions"
+                        )
+                      }
+                      className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                    >
+                      Download Filtered CSV
+                    </button>
+                    {favorites.length > 0 && (
+                      <button
+                        onClick={() => {
+                          // Select all favorites currently visible (ensures they exist in filtered list)
+                          const visibleFavs = filteredSortedQuestions.filter(
+                            (q) =>
+                              favorites.includes(
+                                (q.text || q.questionText || "")
+                                  .trim()
+                                  .toLowerCase()
+                              )
+                          );
+                          if (!visibleFavs.length) {
+                            toast("No visible favorites");
+                            return;
+                          }
+                          try {
+                            navigator.clipboard.writeText(
+                              JSON.stringify(visibleFavs, null, 2)
+                            );
+                            toast.success(
+                              `Copied ${visibleFavs.length} visible favorites`
+                            );
+                          } catch (e) {
+                            toast.error("Copy failed");
+                          }
+                        }}
+                        className="text-sm px-3 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                      >
+                        Copy Visible Favorites
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowGenerator(true)}
+                    className="text-sm px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition"
+                    aria-label={
+                      showGenerator
+                        ? "Update question generation configuration"
+                        : "Regenerate questions"
+                    }
                   >
-                    {lastGenerationInfo.append
-                      ? `Appended +${lastGenerationInfo.count}`
-                      : `Replaced (${lastGenerationInfo.count})`}
-                  </span>
+                    {showGenerator ? "Update Config" : "Regenerate"}
+                  </button>
+                  <button
+                    onClick={handleStartInterview}
+                    className="text-sm px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition"
+                    aria-label="Start interview with generated questions"
+                  >
+                    Start Interview
+                  </button>
+                  <button
+                    onClick={() => {
+                      setGeneratedQuestions([]);
+                      try {
+                        localStorage.removeItem("hybridGeneratedQuestions");
+                      } catch (_) {}
+                      toast("Cleared generated questions");
+                    }}
+                    className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                    aria-label="Clear generated questions"
+                  >
+                    Clear
+                  </button>
+                  {favorites.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const favQuestions = filteredSortedQuestions.filter(
+                            (q) => {
+                              const key = (q.text || q.questionText || "")
+                                .trim()
+                                .toLowerCase();
+                              return favorites.includes(key);
+                            }
+                          );
+                          await navigator.clipboard.writeText(
+                            JSON.stringify(favQuestions, null, 2)
+                          );
+                          toast.success(
+                            `Copied ${favQuestions.length} favorites`
+                          );
+                        } catch (e) {
+                          toast.error("Failed to copy favorites");
+                        }
+                      }}
+                      className="text-sm px-3 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600 transition"
+                      aria-label="Copy favorite questions to clipboard"
+                    >
+                      Copy Favorites
+                    </button>
+                  )}
+                </div>
+              </div>
+              {/* Difficulty distribution bar */}
+              {filteredSortedQuestions.length > 0 && (
+                <div className="mb-6">
+                  {(() => {
+                    const counts = {
+                      beginner: 0,
+                      intermediate: 0,
+                      advanced: 0,
+                    };
+                    filteredSortedQuestions.forEach((q) => {
+                      const d =
+                        q.difficulty === "easy"
+                          ? "beginner"
+                          : q.difficulty === "medium"
+                          ? "intermediate"
+                          : q.difficulty;
+                      if (counts[d] !== undefined) counts[d] += 1;
+                    });
+                    const total = filteredSortedQuestions.length || 1;
+                    const pct = (n) => Math.round((n / total) * 100);
+                    return (
+                      <div>
+                        <div className="flex w-full h-4 rounded overflow-hidden border border-surface-200 dark:border-surface-600">
+                          <div
+                            className="bg-green-400/70"
+                            style={{ width: `${pct(counts.beginner)}%` }}
+                            title={`Beginner ${counts.beginner}`}
+                          ></div>
+                          <div
+                            className="bg-yellow-400/70"
+                            style={{ width: `${pct(counts.intermediate)}%` }}
+                            title={`Intermediate ${counts.intermediate}`}
+                          ></div>
+                          <div
+                            className="bg-red-400/70"
+                            style={{ width: `${pct(counts.advanced)}%` }}
+                            title={`Advanced ${counts.advanced}`}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between text-xs mt-1 text-surface-500 dark:text-surface-400">
+                          <span>Beginner {counts.beginner}</span>
+                          <span>Intermediate {counts.intermediate}</span>
+                          <span>Advanced {counts.advanced}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
-              <div className="flex gap-2">
-                {/* Export / Batch Ops Dropdown Cluster */}
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => {
-                      try {
-                        const subset = filteredSortedQuestions.map((q) => ({ ...q }));
-                        navigator.clipboard.writeText(
-                          JSON.stringify(subset, null, 2)
+              {/* Filters */}
+              <div className="flex flex-wrap gap-4 mb-6 items-center">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-surface-600 dark:text-surface-300">
+                    Tag:
+                  </label>
+                  {tagMode === "single" && (
+                    <StyledSelect
+                      value={tagFilter}
+                      onChange={(e) => setTagFilter(e.target.value)}
+                      size="sm"
+                      ariaLabel="Tag filter"
+                    >
+                      <option value="all">All</option>
+                      {uniqueTags.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </StyledSelect>
+                  )}
+                  {tagMode === "multi" && (
+                    <div className="flex flex-wrap gap-1 max-w-xs">
+                      {uniqueTags.map((t) => {
+                        const active = multiTags.includes(t);
+                        return (
+                          <TagPill
+                            key={t}
+                            label={t}
+                            active={active}
+                            onClick={() =>
+                              setMultiTags((prev) =>
+                                prev.includes(t)
+                                  ? prev.filter((x) => x !== t)
+                                  : [...prev, t]
+                              )
+                            }
+                          />
                         );
-                        toast.success(`Copied ${subset.length} filtered questions`);
-                      } catch (e) {
-                        toast.error("Copy failed");
-                      }
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-surface-600 dark:text-surface-300">
+                    Tag Mode:
+                  </label>
+                  <StyledSelect
+                    value={tagMode}
+                    onChange={(e) => {
+                      const mode = e.target.value;
+                      setTagMode(mode);
+                      if (mode === "single") setMultiTags([]);
                     }}
-                    className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                    size="sm"
+                    ariaLabel="Tag mode"
                   >
-                    Copy Filtered
-                  </button>
+                    <option value="single">Single</option>
+                    <option value="multi">Multi</option>
+                  </StyledSelect>
+                  {tagMode === "multi" && (
+                    <StyledSelect
+                      value={tagLogic}
+                      onChange={(e) => setTagLogic(e.target.value)}
+                      size="sm"
+                      ariaLabel="Tag logical mode"
+                    >
+                      <option value="OR">OR</option>
+                      <option value="AND">AND</option>
+                    </StyledSelect>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-surface-600 dark:text-surface-300">
+                    Sort:
+                  </label>
+                  <StyledSelect
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value)}
+                    size="sm"
+                    ariaLabel="Sort mode"
+                  >
+                    <option value="original">Original Order</option>
+                    <option value="difficulty">Difficulty</option>
+                    <option value="category">Category</option>
+                  </StyledSelect>
+                </div>
+                <div className="text-xs text-surface-500 dark:text-surface-400">
+                  {tagFilter !== "all" && `Filtered to tag: ${tagFilter}`}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-surface-600 dark:text-surface-300">
+                    Search:
+                  </label>
+                  <input
+                    type="text"
+                    value={rawSearch}
+                    onChange={(e) => setRawSearch(e.target.value)}
+                    placeholder="Search text..."
+                    aria-label="Search questions"
+                    className="text-sm px-3 py-2 rounded-md border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-800 focus:ring-2 focus:ring-primary-500 outline-none"
+                    style={{ minWidth: "170px" }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-surface-600 dark:text-surface-300">
+                    Export Columns:
+                  </label>
+                  <div className="flex flex-wrap gap-1 max-w-xs">
+                    {allExportableColumns.map((col) => {
+                      const active = exportColumns.includes(col.key);
+                      return (
+                        <button
+                          key={col.key}
+                          type="button"
+                          onClick={() =>
+                            setExportColumns((prev) =>
+                              prev.includes(col.key)
+                                ? prev.filter((k) => k !== col.key)
+                                : [...prev, col.key]
+                            )
+                          }
+                          className={`px-2 py-1 rounded text-xs border transition ${
+                            active
+                              ? "bg-primary-600 text-white border-primary-600"
+                              : "bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-600"
+                          }`}
+                          aria-pressed={active}
+                        >
+                          {col.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {tagMode === "multi" && multiTags.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-2 items-center text-xs">
+                    <span className="text-surface-500 dark:text-surface-400">
+                      Active Tags ({tagLogic}):
+                    </span>
+                    {multiTags.map((t) => {
+                      const count = filteredSortedQuestions.filter((q) =>
+                        (q.tags || []).includes(t)
+                      ).length;
+                      return (
+                        <TagPill
+                          key={t}
+                          label={t}
+                          active
+                          count={count}
+                          onClick={() =>
+                            setMultiTags((prev) => prev.filter((x) => x !== t))
+                          }
+                          onRemove={() =>
+                            setMultiTags((prev) => prev.filter((x) => x !== t))
+                          }
+                        />
+                      );
+                    })}
+                    <button
+                      onClick={() => setMultiTags([])}
+                      className="px-2 py-1 text-xs rounded-md bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <input
+                    id="show-favorites-only"
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={showFavoritesOnly}
+                    onChange={(e) => setShowFavoritesOnly(e.target.checked)}
+                    aria-label="Show favorites only"
+                  />
+                  <label
+                    htmlFor="show-favorites-only"
+                    className="text-sm text-surface-600 dark:text-surface-300"
+                  >
+                    Favorites Only
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-surface-600 dark:text-surface-300">
+                    Highlight Style:
+                  </label>
+                  <StyledSelect
+                    value={highlightStyle}
+                    onChange={(e) => setHighlightStyle(e.target.value)}
+                    size="sm"
+                    ariaLabel="Highlight style"
+                  >
+                    <option value="fill">Fill Pulse</option>
+                    <option value="border">Border Only</option>
+                  </StyledSelect>
+                </div>
+              </div>
+              {filteredSortedQuestions.length === 0 && (
+                <div className="p-6 border border-dashed rounded-lg text-center text-sm text-surface-600 dark:text-surface-400 bg-surface-100/60 dark:bg-surface-800/40">
+                  <p className="mb-2 font-medium">
+                    No questions match your current filters.
+                  </p>
                   <button
-                    onClick={() => exportSubset(filteredSortedQuestions, "json", "filtered-questions")}
-                    className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                    onClick={() => {
+                      setTagFilter("all");
+                      setSearchQuery("");
+                      setShowFavoritesOnly(false);
+                    }}
+                    className="text-xs px-3 py-1 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition"
                   >
-                    Download Filtered JSON
+                    Reset Filters
                   </button>
+                </div>
+              )}
+              <div className="space-y-4">
+                {filteredSortedQuestions.map((q, i) => {
+                  const normKey = (q.text || q.questionText || "")
+                    .trim()
+                    .toLowerCase();
+                  const isHighlighted = highlightKeys.includes(normKey);
+                  return (
+                    <div
+                      key={q.id || normKey || i}
+                      className={`${
+                        isHighlighted
+                          ? highlightStyle === "fill"
+                            ? "relative ring-2 ring-green-400/60 rounded-lg bg-green-50 dark:bg-green-900/20 motion-safe:animate-pulse"
+                            : "relative border-l-4 border-green-400 pl-2 rounded"
+                          : ""
+                      }`}
+                    >
+                      {q.category && (
+                        <div className="mb-2 flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-100 dark:bg-surface-700 border border-surface-200 dark:border-surface-600">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-3 h-3"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path d="M12 6l7 6-7 6-7-6 7-6z" />
+                            </svg>
+                            {q.category.charAt(0).toUpperCase() +
+                              q.category.slice(1)}
+                          </span>
+                        </div>
+                      )}
+                      <QuestionCard
+                        question={q}
+                        index={i}
+                        total={filteredSortedQuestions.length}
+                        showTags={true}
+                        isFavorite={favorites.includes(normKey)}
+                        onToggleFavorite={(question) => {
+                          const key = (
+                            question.text ||
+                            question.questionText ||
+                            ""
+                          )
+                            .trim()
+                            .toLowerCase();
+                          setFavorites((prev) =>
+                            prev.includes(key)
+                              ? prev.filter((k) => k !== key)
+                              : [...prev, key]
+                          );
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              {/* aria-live region for screen readers announcing generation events */}
+              <span className="sr-only" aria-live="polite">
+                {lastGenerationInfo &&
+                  (lastGenerationInfo.append
+                    ? `Appended ${lastGenerationInfo.count} questions`
+                    : `Generated ${lastGenerationInfo.count} questions`)}
+              </span>
+            </div>
+            <Modal
+              isOpen={showSmallFavModal}
+              onClose={() => {
+                setShowSmallFavModal(false);
+                setPendingFavSubset(null);
+              }}
+              title="Small Favorites Set"
+              size="sm"
+              footer={
+                <>
                   <button
-                    onClick={() => exportSubset(filteredSortedQuestions, "csv", "filtered-questions")}
-                    className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                    onClick={() => {
+                      setShowSmallFavModal(false);
+                      setPendingFavSubset(null);
+                    }}
+                    className="px-3 py-2 text-sm rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600"
                   >
-                    Download Filtered CSV
+                    Cancel
                   </button>
                   <button
                     onClick={() => {
-                      try {
-                        const subset = favorites
-                          .map((fav) => filteredSortedQuestions.find((q) => (q.text || q.questionText || "").trim().toLowerCase() === fav))
-                          .filter(Boolean);
-                        if (!subset.length) {
-                          toast("No favorites in current filter");
-                          return;
-                        }
-                        navigator.clipboard.writeText(
-                          JSON.stringify(subset, null, 2)
-                        );
-                        toast.success(`Copied ${subset.length} favorite questions`);
-                      } catch (e) {
-                        toast.error("Copy failed");
-                      }
-                    }}
-                    className="text-sm px-3 py-2 rounded-md bg-yellow-600 text-white hover:bg-yellow-700 transition"
-                  >
-                    Copy Favorites (Filtered)
-                  </button>
-                  <button
-                    onClick={() => {
-                      const subset = favorites
-                        .map((fav) => filteredSortedQuestions.find((q) => (q.text || q.questionText || "").trim().toLowerCase() === fav))
-                        .filter(Boolean);
-                      exportSubset(subset, "json", "favorite-questions");
-                    }}
-                    className="text-sm px-3 py-2 rounded-md bg-yellow-600/90 text-white hover:bg-yellow-700 transition"
-                  >
-                    Favorites JSON
-                  </button>
-                  <button
-                    onClick={() => {
-                      const subset = favorites
-                        .map((fav) => filteredSortedQuestions.find((q) => (q.text || q.questionText || "").trim().toLowerCase() === fav))
-                        .filter(Boolean);
-                      exportSubset(subset, "csv", "favorite-questions");
-                    }}
-                    className="text-sm px-3 py-2 rounded-md bg-yellow-600/90 text-white hover:bg-yellow-700 transition"
-                  >
-                    Favorites CSV
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Start interview with favorites subset
-                      const subset = favorites
-                        .map((fav) => filteredSortedQuestions.find((q) => (q.text || q.questionText || "").trim().toLowerCase() === fav))
-                        .filter(Boolean);
-                      if (!subset.length) {
-                        toast.error("No favorite questions available");
-                        return;
-                      }
-                      if (subset.length < 3) {
-                        setPendingFavSubset(subset);
-                        setShowSmallFavModal(true);
-                        return;
-                      }
-                      // Minimal stub: reuse handleStartInterview pattern but override generatedQuestions temporarily
+                      const subset = pendingFavSubset || [];
+                      setShowSmallFavModal(false);
+                      setPendingFavSubset(null);
+                      if (!subset.length) return;
                       const first = subset[0];
-                      // Ensure reproducible ID list
-                      const questionIds = subset.map((q, i) => q.id || q._id || `hash_${(q.text||"" ).length}_${i}`);
+                      const questionIds = subset.map(
+                        (q, i) =>
+                          q.id || q._id || `hash_${(q.text || "").length}_${i}`
+                      );
                       const config = {
                         jobRole: selectedJobRole,
-                        experienceLevel: selectedExperience || first.experienceLevel || "intermediate",
+                        experienceLevel:
+                          selectedExperience ||
+                          first.experienceLevel ||
+                          "intermediate",
                         interviewType: "mixed",
                         difficulty: first.difficulty || "intermediate",
                         duration: Math.min(60, Math.max(15, subset.length * 5)),
@@ -636,456 +1085,45 @@ const QuestionBankPage = () => {
                       };
                       (async () => {
                         try {
-                          const { data: envelope } = await api.post("/interviews", { config, questions: subset, questionIds });
-                          if (!envelope?.success) throw new Error(envelope?.message || "Create failed");
-                          const interviewId = envelope.data._id || envelope.data.id;
-                          const { data: startEnv } = await api.put(`/interviews/${interviewId}/start`);
-                          if (!startEnv?.success) throw new Error(startEnv?.message || "Start failed");
+                          const { data: envelope } = await api.post(
+                            "/interviews",
+                            { config, questions: subset, questionIds }
+                          );
+                          if (!envelope?.success)
+                            throw new Error(
+                              envelope?.message || "Create failed"
+                            );
+                          const interviewId =
+                            envelope.data._id || envelope.data.id;
+                          const { data: startEnv } = await api.put(
+                            `/interviews/${interviewId}/start`
+                          );
+                          if (!startEnv?.success)
+                            throw new Error(
+                              startEnv?.message || "Start failed"
+                            );
                           toast.success("Interview (favorites subset) started");
                           navigate(`/interview/${interviewId}`);
                         } catch (err) {
-                          toast.error(err.message || "Failed to start interview");
+                          toast.error(
+                            err.message || "Failed to start interview"
+                          );
                         }
                       })();
                     }}
-                    className="text-sm px-3 py-2 rounded-md bg-pink-600 text-white hover:bg-pink-700 transition"
+                    className="px-3 py-2 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
                   >
-                    Start Favorites Only
+                    Start
                   </button>
-                  {favorites.length > 0 && (
-                    <button
-                      onClick={() => {
-                        // Select all favorites currently visible (ensures they exist in filtered list)
-                        const visibleFavs = filteredSortedQuestions.filter((q) =>
-                          favorites.includes((q.text || q.questionText || "").trim().toLowerCase())
-                        );
-                        if (!visibleFavs.length) {
-                          toast("No visible favorites");
-                          return;
-                        }
-                        try {
-                          navigator.clipboard.writeText(
-                            JSON.stringify(visibleFavs, null, 2)
-                          );
-                          toast.success(`Copied ${visibleFavs.length} visible favorites`);
-                        } catch (e) {
-                          toast.error("Copy failed");
-                        }
-                      }}
-                      className="text-sm px-3 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
-                    >
-                      Copy Visible Favorites
-                    </button>
-                  )}
-                </div>
-                <button
-                  onClick={() => setShowGenerator(true)}
-                  className="text-sm px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition"
-                  aria-label={showGenerator ? "Update question generation configuration" : "Regenerate questions"}
-                >
-                  {showGenerator ? "Update Config" : "Regenerate"}
-                </button>
-                <button
-                  onClick={handleStartInterview}
-                  className="text-sm px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition"
-                  aria-label="Start interview with generated questions"
-                >
-                  Start Interview
-                </button>
-                <button
-                  onClick={() => {
-                    setGeneratedQuestions([]);
-                    try {
-                      localStorage.removeItem("hybridGeneratedQuestions");
-                    } catch (_) {}
-                    toast("Cleared generated questions");
-                  }}
-                  className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
-                  aria-label="Clear generated questions"
-                >
-                  Clear
-                </button>
-                {favorites.length > 0 && (
-                  <button
-                    onClick={async () => {
-                      try {
-                        const favQuestions = filteredSortedQuestions.filter(
-                          (q) => {
-                            const key = (q.text || q.questionText || "")
-                              .trim()
-                              .toLowerCase();
-                            return favorites.includes(key);
-                          }
-                        );
-                        await navigator.clipboard.writeText(
-                          JSON.stringify(favQuestions, null, 2)
-                        );
-                        toast.success(
-                          `Copied ${favQuestions.length} favorites`
-                        );
-                      } catch (e) {
-                        toast.error("Failed to copy favorites");
-                      }
-                    }}
-                    className="text-sm px-3 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600 transition"
-                    aria-label="Copy favorite questions to clipboard"
-                  >
-                    Copy Favorites
-                  </button>
-                )}
-              </div>
-            </div>
-            {/* Difficulty distribution bar */}
-            {filteredSortedQuestions.length > 0 && (
-              <div className="mb-6">
-                {(() => {
-                  const counts = { beginner: 0, intermediate: 0, advanced: 0 };
-                  filteredSortedQuestions.forEach((q) => {
-                    const d =
-                      q.difficulty === "easy"
-                        ? "beginner"
-                        : q.difficulty === "medium"
-                        ? "intermediate"
-                        : q.difficulty;
-                    if (counts[d] !== undefined) counts[d] += 1;
-                  });
-                  const total = filteredSortedQuestions.length || 1;
-                  const pct = (n) => Math.round((n / total) * 100);
-                  return (
-                    <div>
-                      <div className="flex w-full h-4 rounded overflow-hidden border border-surface-200 dark:border-surface-600">
-                        <div
-                          className="bg-green-400/70"
-                          style={{ width: `${pct(counts.beginner)}%` }}
-                          title={`Beginner ${counts.beginner}`}
-                        ></div>
-                        <div
-                          className="bg-yellow-400/70"
-                          style={{ width: `${pct(counts.intermediate)}%` }}
-                          title={`Intermediate ${counts.intermediate}`}
-                        ></div>
-                        <div
-                          className="bg-red-400/70"
-                          style={{ width: `${pct(counts.advanced)}%` }}
-                          title={`Advanced ${counts.advanced}`}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between text-xs mt-1 text-surface-500 dark:text-surface-400">
-                        <span>Beginner {counts.beginner}</span>
-                        <span>Intermediate {counts.intermediate}</span>
-                        <span>Advanced {counts.advanced}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-            {/* Filters */}
-            <div className="flex flex-wrap gap-4 mb-6 items-center">
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-surface-600 dark:text-surface-300">
-                  Tag:
-                </label>
-                {tagMode === "single" && (
-                  <StyledSelect
-                    value={tagFilter}
-                    onChange={(e) => setTagFilter(e.target.value)}
-                    size="sm"
-                    ariaLabel="Tag filter"
-                  >
-                    <option value="all">All</option>
-                    {uniqueTags.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </StyledSelect>
-                )}
-                {tagMode === "multi" && (
-                  <div className="flex flex-wrap gap-1 max-w-xs">
-                    {uniqueTags.map((t) => {
-                      const active = multiTags.includes(t);
-                      return (
-                        <TagPill
-                          key={t}
-                          label={t}
-                          active={active}
-                          onClick={() => setMultiTags((prev) => prev.includes(t) ? prev.filter(x=>x!==t) : [...prev, t])}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-surface-600 dark:text-surface-300">Tag Mode:</label>
-                <StyledSelect
-                  value={tagMode}
-                  onChange={(e) => {
-                    const mode = e.target.value;
-                    setTagMode(mode);
-                    if (mode === "single") setMultiTags([]);
-                  }}
-                  size="sm"
-                  ariaLabel="Tag mode"
-                >
-                  <option value="single">Single</option>
-                  <option value="multi">Multi</option>
-                </StyledSelect>
-                {tagMode === "multi" && (
-                  <StyledSelect
-                    value={tagLogic}
-                    onChange={(e) => setTagLogic(e.target.value)}
-                    size="sm"
-                    ariaLabel="Tag logical mode"
-                  >
-                    <option value="OR">OR</option>
-                    <option value="AND">AND</option>
-                  </StyledSelect>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-surface-600 dark:text-surface-300">
-                  Sort:
-                </label>
-                <StyledSelect
-                  value={sortMode}
-                  onChange={(e) => setSortMode(e.target.value)}
-                  size="sm"
-                  ariaLabel="Sort mode"
-                >
-                  <option value="original">Original Order</option>
-                  <option value="difficulty">Difficulty</option>
-                  <option value="category">Category</option>
-                </StyledSelect>
-              </div>
-              <div className="text-xs text-surface-500 dark:text-surface-400">
-                {tagFilter !== "all" && `Filtered to tag: ${tagFilter}`}
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-surface-600 dark:text-surface-300">
-                  Search:
-                </label>
-                <input
-                  type="text"
-                  value={rawSearch}
-                  onChange={(e) => setRawSearch(e.target.value)}
-                  placeholder="Search text..."
-                  aria-label="Search questions"
-                  className="text-sm px-3 py-2 rounded-md border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-800 focus:ring-2 focus:ring-primary-500 outline-none"
-                  style={{ minWidth: "170px" }}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-surface-600 dark:text-surface-300">Export Columns:</label>
-                <div className="flex flex-wrap gap-1 max-w-xs">
-                  {allExportableColumns.map((col) => {
-                    const active = exportColumns.includes(col.key);
-                    return (
-                      <button
-                        key={col.key}
-                        type="button"
-                        onClick={() =>
-                          setExportColumns((prev) =>
-                            prev.includes(col.key)
-                              ? prev.filter((k) => k !== col.key)
-                              : [...prev, col.key]
-                          )
-                        }
-                        className={`px-2 py-1 rounded text-xs border transition ${
-                          active
-                            ? "bg-primary-600 text-white border-primary-600"
-                            : "bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-600"
-                        }`}
-                        aria-pressed={active}
-                      >
-                        {col.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            {tagMode === "multi" && multiTags.length > 0 && (
-              <div className="mb-4 flex flex-wrap gap-2 items-center text-xs">
-                <span className="text-surface-500 dark:text-surface-400">Active Tags ({tagLogic}):</span>
-                {multiTags.map((t) => {
-                  const count = filteredSortedQuestions.filter((q) => (q.tags || []).includes(t)).length;
-                  return (
-                    <TagPill
-                      key={t}
-                      label={t}
-                      active
-                      count={count}
-                      onClick={() => setMultiTags((prev)=> prev.filter(x=>x!==t))}
-                      onRemove={() => setMultiTags((prev)=> prev.filter(x=>x!==t))}
-                    />
-                  );
-                })}
-                <button
-                  onClick={() => setMultiTags([])}
-                  className="px-2 py-1 text-xs rounded-md bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
-                >
-                  Clear All
-                </button>
-              </div>
-            )}
-              <div className="flex items-center gap-2">
-                <input
-                  id="show-favorites-only"
-                  type="checkbox"
-                  className="h-4 w-4"
-                  checked={showFavoritesOnly}
-                  onChange={(e) => setShowFavoritesOnly(e.target.checked)}
-                  aria-label="Show favorites only"
-                />
-                <label
-                  htmlFor="show-favorites-only"
-                  className="text-sm text-surface-600 dark:text-surface-300"
-                >
-                  Favorites Only
-                </label>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-surface-600 dark:text-surface-300">Highlight Style:</label>
-                <StyledSelect
-                  value={highlightStyle}
-                  onChange={(e) => setHighlightStyle(e.target.value)}
-                  size="sm"
-                  ariaLabel="Highlight style"
-                >
-                  <option value="fill">Fill Pulse</option>
-                  <option value="border">Border Only</option>
-                </StyledSelect>
-              </div>
-            </div>
-            {filteredSortedQuestions.length === 0 && (
-              <div className="p-6 border border-dashed rounded-lg text-center text-sm text-surface-600 dark:text-surface-400 bg-surface-100/60 dark:bg-surface-800/40">
-                <p className="mb-2 font-medium">No questions match your current filters.</p>
-                <button
-                  onClick={() => {
-                    setTagFilter("all");
-                    setSearchQuery("");
-                    setShowFavoritesOnly(false);
-                  }}
-                  className="text-xs px-3 py-1 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition"
-                >
-                  Reset Filters
-                </button>
-              </div>
-            )}
-            <div className="space-y-4">
-              {filteredSortedQuestions.map((q, i) => {
-                const normKey = (q.text || q.questionText || "")
-                  .trim()
-                  .toLowerCase();
-                const isHighlighted = highlightKeys.includes(normKey);
-                return (
-                  <div
-                    key={q.id || normKey || i}
-                    className={`${
-                      isHighlighted
-                        ? highlightStyle === "fill"
-                          ? "relative ring-2 ring-green-400/60 rounded-lg bg-green-50 dark:bg-green-900/20 motion-safe:animate-pulse"
-                          : "relative border-l-4 border-green-400 pl-2 rounded"
-                        : ""
-                    }`}
-                  >
-                    {q.category && (
-                      <div className="mb-2 flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-100 dark:bg-surface-700 border border-surface-200 dark:border-surface-600">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-3 h-3"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path d="M12 6l7 6-7 6-7-6 7-6z" />
-                          </svg>
-                          {q.category.charAt(0).toUpperCase() + q.category.slice(1)}
-                        </span>
-                      </div>
-                    )}
-                    <QuestionCard
-                      question={q}
-                      index={i}
-                      total={filteredSortedQuestions.length}
-                      showTags={true}
-                      isFavorite={favorites.includes(normKey)}
-                      onToggleFavorite={(question) => {
-                        const key = (question.text || question.questionText || "")
-                          .trim()
-                          .toLowerCase();
-                        setFavorites((prev) =>
-                          prev.includes(key)
-                            ? prev.filter((k) => k !== key)
-                            : [...prev, key]
-                        );
-                      }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            {/* aria-live region for screen readers announcing generation events */}
-            <span className="sr-only" aria-live="polite">
-              {lastGenerationInfo &&
-                (lastGenerationInfo.append
-                  ? `Appended ${lastGenerationInfo.count} questions`
-                  : `Generated ${lastGenerationInfo.count} questions`)}
-            </span>
-          </div>
-          <Modal
-            isOpen={showSmallFavModal}
-            onClose={() => { setShowSmallFavModal(false); setPendingFavSubset(null); }}
-            title="Small Favorites Set"
-            size="sm"
-            footer={<>
-              <button
-                onClick={() => { setShowSmallFavModal(false); setPendingFavSubset(null); }}
-                className="px-3 py-2 text-sm rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600"
-              >Cancel</button>
-              <button
-                onClick={() => {
-                  const subset = pendingFavSubset || [];
-                  setShowSmallFavModal(false);
-                  setPendingFavSubset(null);
-                  if (!subset.length) return;
-                  const first = subset[0];
-                  const questionIds = subset.map((q, i) => q.id || q._id || `hash_${(q.text||"" ).length}_${i}`);
-                  const config = {
-                    jobRole: selectedJobRole,
-                    experienceLevel: selectedExperience || first.experienceLevel || "intermediate",
-                    interviewType: "mixed",
-                    difficulty: first.difficulty || "intermediate",
-                    duration: Math.min(60, Math.max(15, subset.length * 5)),
-                    questionCount: subset.length,
-                    adaptiveDifficulty: { enabled: false },
-                    questionIds,
-                  };
-                  (async () => {
-                    try {
-                      const { data: envelope } = await api.post("/interviews", { config, questions: subset, questionIds });
-                      if (!envelope?.success) throw new Error(envelope?.message || "Create failed");
-                      const interviewId = envelope.data._id || envelope.data.id;
-                      const { data: startEnv } = await api.put(`/interviews/${interviewId}/start`);
-                      if (!startEnv?.success) throw new Error(startEnv?.message || "Start failed");
-                      toast.success("Interview (favorites subset) started");
-                      navigate(`/interview/${interviewId}`);
-                    } catch (err) {
-                      toast.error(err.message || "Failed to start interview");
-                    }
-                  })();
-                }}
-                className="px-3 py-2 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
-              >Start</button>
-            </>}
-          >
-            <p className="text-sm text-surface-600 dark:text-surface-300">
-              Only {pendingFavSubset?.length || 0} favorite question{(pendingFavSubset?.length||0)===1?"":"s"}. Start interview anyway?
-            </p>
-          </Modal>
+                </>
+              }
+            >
+              <p className="text-sm text-surface-600 dark:text-surface-300">
+                Only {pendingFavSubset?.length || 0} favorite question
+                {(pendingFavSubset?.length || 0) === 1 ? "" : "s"}. Start
+                interview anyway?
+              </p>
+            </Modal>
           </>
         )}
       </div>

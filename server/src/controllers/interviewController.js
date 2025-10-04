@@ -69,25 +69,28 @@ const createInterview = async (req, res) => {
       // If explicit IDs provided, fetch those. Allow a parallel raw questions array with matching length for fallback text.
       const found = await Question.find({ _id: { $in: explicitQuestionIds } });
       const foundMap = new Map(found.map((q) => [q._id.toString(), q]));
-      questions = explicitQuestionIds.map((id, idx) => {
-        const doc = foundMap.get(String(id));
-        if (doc) return doc;
-        // Fallback: construct ephemeral from provided raw questions (if any)
-        const raw = explicitQuestions[idx];
-        return raw
-          ? {
-              _id: new mongoose.Types.ObjectId(),
-              text: raw.text || raw.questionText || `Question ${idx + 1}`,
-              category: raw.category || raw.type || "general",
-              difficulty: raw.difficulty || config.difficulty || "intermediate",
-              estimatedTime:
-                raw.estimatedTime ||
-                (raw.timeEstimate ? raw.timeEstimate * C.SEC_PER_MIN : 120),
-              tags: raw.tags || [],
-              source: raw.source || "provided",
-            }
-          : null;
-      }).filter(Boolean);
+      questions = explicitQuestionIds
+        .map((id, idx) => {
+          const doc = foundMap.get(String(id));
+          if (doc) return doc;
+          // Fallback: construct ephemeral from provided raw questions (if any)
+          const raw = explicitQuestions[idx];
+          return raw
+            ? {
+                _id: new mongoose.Types.ObjectId(),
+                text: raw.text || raw.questionText || `Question ${idx + 1}`,
+                category: raw.category || raw.type || "general",
+                difficulty:
+                  raw.difficulty || config.difficulty || "intermediate",
+                estimatedTime:
+                  raw.estimatedTime ||
+                  (raw.timeEstimate ? raw.timeEstimate * C.SEC_PER_MIN : 120),
+                tags: raw.tags || [],
+                source: raw.source || "provided",
+              }
+            : null;
+        })
+        .filter(Boolean);
       if (questions.length === 0) {
         return fail(
           res,

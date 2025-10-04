@@ -2,7 +2,15 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuthContext } from "../context/AuthContext";
 import UserProfileCard from "../components/profile/UserProfileCard";
 import OnboardingModal from "../components/onboarding/OnboardingModal";
-import { Settings, Bell, Shield, Eye, Trash2, Download, Monitor } from "lucide-react";
+import {
+  Settings,
+  Bell,
+  Shield,
+  Eye,
+  Trash2,
+  Download,
+  Monitor,
+} from "lucide-react";
 import { useDesignSystem } from "../context/DesignSystemProvider";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -77,7 +85,8 @@ const SettingsPage = () => {
     }
   };
 
-  const { density, reducedMotion, toggleDensity, toggleMotion } = useDesignSystem();
+  const { density, reducedMotion, toggleDensity, toggleMotion } =
+    useDesignSystem();
 
   const tabs = [
     { id: "profile", label: "Profile", icon: Settings },
@@ -660,28 +669,40 @@ const SettingsPage = () => {
                   <div className="space-y-8">
                     <div className="flex items-start justify-between gap-6">
                       <div>
-                        <h4 className="font-medium text-surface-900 dark:text-surface-50">Density</h4>
-                        <p className="text-sm text-surface-600 dark:text-surface-400">Toggle between comfortable and compact spacing.</p>
+                        <h4 className="font-medium text-surface-900 dark:text-surface-50">
+                          Density
+                        </h4>
+                        <p className="text-sm text-surface-600 dark:text-surface-400">
+                          Toggle between comfortable and compact spacing.
+                        </p>
                       </div>
                       <button
                         onClick={toggleDensity}
                         className="px-4 py-2 rounded-md text-sm font-medium bg-surface-200 dark:bg-surface-700 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
-                        aria-pressed={density === 'compact'}
+                        aria-pressed={density === "compact"}
                       >
-                        {density === 'compact' ? 'Compact (Click to Relax)' : 'Comfortable (Click to Compact)'}
+                        {density === "compact"
+                          ? "Compact (Click to Relax)"
+                          : "Comfortable (Click to Compact)"}
                       </button>
                     </div>
                     <div className="flex items-start justify-between gap-6">
                       <div>
-                        <h4 className="font-medium text-surface-900 dark:text-surface-50">Reduced Motion</h4>
-                        <p className="text-sm text-surface-600 dark:text-surface-400">Minimize animations for accessibility or preference.</p>
+                        <h4 className="font-medium text-surface-900 dark:text-surface-50">
+                          Reduced Motion
+                        </h4>
+                        <p className="text-sm text-surface-600 dark:text-surface-400">
+                          Minimize animations for accessibility or preference.
+                        </p>
                       </div>
                       <button
                         onClick={toggleMotion}
                         className="px-4 py-2 rounded-md text-sm font-medium bg-surface-200 dark:bg-surface-700 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
                         aria-pressed={reducedMotion}
                       >
-                        {reducedMotion ? 'Reduced Motion: On' : 'Reduced Motion: Off'}
+                        {reducedMotion
+                          ? "Reduced Motion: On"
+                          : "Reduced Motion: Off"}
                       </button>
                     </div>
                     <div className="pt-4 border-t border-surface-200 dark:border-surface-700 text-xs text-surface-500 dark:text-surface-400">

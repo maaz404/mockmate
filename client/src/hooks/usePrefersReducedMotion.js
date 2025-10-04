@@ -8,9 +8,13 @@ export function usePrefersReducedMotion() {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     const handler = () => setReduced(mq.matches);
     handler();
-    mq.addEventListener ? mq.addEventListener("change", handler) : mq.addListener(handler);
+    mq.addEventListener
+      ? mq.addEventListener("change", handler)
+      : mq.addListener(handler);
     return () => {
-      mq.removeEventListener ? mq.removeEventListener("change", handler) : mq.removeListener(handler);
+      mq.removeEventListener
+        ? mq.removeEventListener("change", handler)
+        : mq.removeListener(handler);
     };
   }, []);
   return reduced;

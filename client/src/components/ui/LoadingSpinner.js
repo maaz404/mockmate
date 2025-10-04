@@ -24,7 +24,9 @@ const LoadingSpinner = ({
 
   const spinner = (
     <div
-      className={`${sizeClasses[size] || sizeClasses.medium} border-4 border-primary-500/20 border-t-primary-500 rounded-full ${pulse}`}
+      className={`${
+        sizeClasses[size] || sizeClasses.medium
+      } border-4 border-primary-500/20 border-t-primary-500 rounded-full ${pulse}`}
       role="status"
       aria-live="polite"
       aria-label={message}
@@ -58,7 +60,9 @@ const LoadingSpinner = ({
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 dark:bg-surface-900/70 backdrop-blur-sm z-50">
         {spinner}
-        <p className="mt-3 text-sm font-medium text-surface-600 dark:text-surface-300">{message}</p>
+        <p className="mt-3 text-sm font-medium text-surface-600 dark:text-surface-300">
+          {message}
+        </p>
         {progressBar}
       </div>
     );
