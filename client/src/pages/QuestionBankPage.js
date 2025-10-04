@@ -530,8 +530,7 @@ const QuestionBankPage = () => {
                   <div className="flex gap-2 flex-wrap items-center">
                     <Button
                       size="sm"
-                      variant="subtle"
-                      accent
+                      variant="outline"
                       onClick={() => {
                         try {
                           const subset = filteredSortedQuestions.map((q) => ({
@@ -579,7 +578,7 @@ const QuestionBankPage = () => {
                     {favorites.length > 0 && (
                       <Button
                         size="sm"
-                        variant="soft"
+                        variant="outline"
                         onClick={() => {
                           // Select all favorites currently visible (ensures they exist in filtered list)
                           const visibleFavs = filteredSortedQuestions.filter(
@@ -613,7 +612,6 @@ const QuestionBankPage = () => {
                   <Button
                     size="sm"
                     variant="primary"
-                    pulse={!showGenerator}
                     onClick={() => setShowGenerator(true)}
                     aria-label={showGenerator ? "Update question generation configuration" : "Regenerate questions"}
                   >
@@ -621,7 +619,7 @@ const QuestionBankPage = () => {
                   </Button>
                   <Button
                     size="sm"
-                    variant="gradientGlass"
+                    variant="primary"
                     onClick={handleStartInterview}
                     aria-label="Start interview with generated questions"
                   >
@@ -629,7 +627,7 @@ const QuestionBankPage = () => {
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="subtle"
                     onClick={() => {
                       setGeneratedQuestions([]);
                       try { localStorage.removeItem("hybridGeneratedQuestions"); } catch (_) {}
@@ -642,7 +640,7 @@ const QuestionBankPage = () => {
                   {favorites.length > 0 && (
                     <Button
                       size="sm"
-                      variant="neon"
+                      variant="outline"
                       onClick={async () => {
                         try {
                           const favQuestions = filteredSortedQuestions.filter((q) => {
