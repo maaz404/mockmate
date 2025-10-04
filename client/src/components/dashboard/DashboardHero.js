@@ -32,16 +32,14 @@ const DashboardHero = ({
   }, [compact]);
   return (
     <motion.div
-      layout
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: "easeOut" }}
-      className={`relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/80 dark:bg-gradient-to-br dark:from-surface-800/90 dark:via-surface-800/70 dark:to-surface-900/80 backdrop-blur-md px-6 md:px-10 shadow-surface-md dark:shadow-surface-lg transition-colors`}
+      className={`relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/80 dark:bg-gradient-to-br dark:from-surface-800/90 dark:via-surface-800/70 dark:to-surface-900/80 backdrop-blur-md px-6 md:px-10 ${compact ? 'py-5' : 'py-10'} shadow-surface-md dark:shadow-surface-lg transition-colors`}
     >
-      <motion.div layout className={`absolute inset-0`} aria-hidden />
       <div className="pointer-events-none absolute -top-24 -left-14 w-80 h-80 rounded-full bg-primary-500/10 dark:bg-primary-600/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-14 w-80 h-80 rounded-full bg-emerald-400/10 dark:bg-fuchsia-600/10 blur-3xl" />
-      <motion.div layout className={`relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6 ${compact ? 'space-y-2 md:space-y-0' : ''}`}>      
+      <div className={`relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6`}>      
         <div className="max-w-xl">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-surface-900 dark:text-white">
             Welcome back{user?.firstName ? "," : ""}{" "}
@@ -85,8 +83,7 @@ const DashboardHero = ({
             </div>
           )}
           {/* KPI Ribbon inline (footer area on large screens) */}
-          <motion.div
-            layout
+          <div
             className={`mt-6 flex flex-wrap items-center gap-3 ${compact ? "text-[10px]" : "text-[11px]"}`}
           >
             <KpiPill
@@ -119,7 +116,7 @@ const DashboardHero = ({
             >
               {compact ? "Expand Hero" : "Compact Hero"}
             </button>
-          </motion.div>
+          </div>
         </div>
         <div className="flex flex-col items-stretch gap-3 md:items-end md:min-w-[260px]">
           <div className="flex items-center gap-2 self-end bg-surface-100 dark:bg-surface-700/60 border border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 rounded-full px-3 py-1 text-[11px]">
@@ -146,7 +143,7 @@ const DashboardHero = ({
             Create interview
           </button>
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 };
