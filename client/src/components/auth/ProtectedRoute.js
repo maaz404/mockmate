@@ -13,12 +13,20 @@ const ProtectedRoute = ({ children }) => {
 
   // Show loading while authentication state is being determined
   if (!isLoaded) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-surface-900">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   // Redirect to sign-in if not authenticated
   if (!isSignedIn) {
-    return <RedirectToSignIn signInUrl="/login" />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-surface-900">
+        <RedirectToSignIn signInUrl="/login" />
+      </div>
+    );
   }
 
   // Render protected content if authenticated

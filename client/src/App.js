@@ -32,6 +32,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ChatbotWidget from "./components/ui/ChatbotWidget";
+import GlobalErrorBoundary from "./components/ui/GlobalErrorBoundary";
 import { useAuth } from "@clerk/clerk-react";
 
 import VideoRecordingDemo from "./components/VideoRecordingDemo";
@@ -123,12 +124,13 @@ function App() {
         <AuthProvider>
           <OneTimeSignOutGate>
             <Router>
-              <Routes>
-                {/* Standalone Video Demo Route (no layout wrapper) */}
-                <Route path="/video-demo" element={<VideoRecordingDemo />} />
-              </Routes>
-              <Layout>
+              <GlobalErrorBoundary>
                 <Routes>
+                  {/* Standalone Video Demo Route (no layout wrapper) */}
+                  <Route path="/video-demo" element={<VideoRecordingDemo />} />
+                </Routes>
+                <Layout>
+                  <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<HomePage />} />
                   <Route path="/login" element={<LoginPage />} />
@@ -268,8 +270,9 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
-                </Routes>
-              </Layout>
+                  </Routes>
+                </Layout>
+              </GlobalErrorBoundary>
             </Router>
             <Toaster position="top-right" />
             {process.env.NODE_ENV === "development" && (
