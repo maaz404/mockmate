@@ -209,14 +209,14 @@ const ProgressChart = ({ analytics, metrics }) => {
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={progressData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-              <XAxis dataKey="name" stroke="#94a3b8" />
-              <YAxis yAxisId="left" domain={[0, 100]} stroke="#94a3b8" />
+              <CartesianGrid strokeDasharray="3 3" stroke={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#475569' : '#cbd5e1'} />
+              <XAxis dataKey="name" stroke={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'} />
+              <YAxis yAxisId="left" domain={[0, 100]} stroke={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'} />
               <YAxis
                 yAxisId="right"
                 orientation="right"
                 allowDecimals={false}
-                stroke="#94a3b8"
+                stroke={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b'}
               />
               <Tooltip
                 formatter={(value, key, p) => {
@@ -231,12 +231,19 @@ const ProgressChart = ({ analytics, metrics }) => {
                 labelFormatter={(label) =>
                   `Week ${label} (Benchmark: ${benchmark}%)`
                 }
-                contentStyle={{
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #475569",
-                  borderRadius: "8px",
-                  color: "#f8fafc",
+                contentStyle={() => {
+                  const dark = typeof window !== 'undefined' && document.documentElement.classList.contains('dark');
+                  return {
+                    background: dark ? '#1e293b' : 'rgba(255,255,255,0.95)',
+                    border: `1px solid ${dark ? '#475569' : '#e2e8f0'}`,
+                    borderRadius: '8px',
+                    color: dark ? '#f8fafc' : '#1e293b',
+                    boxShadow: dark
+                      ? '0 4px 14px -2px rgba(0,0,0,0.5)'
+                      : '0 4px 12px -2px rgba(0,0,0,0.08), 0 8px 24px -6px rgba(0,0,0,0.08)'
+                  };
                 }}
+                wrapperStyle={{ outline: 'none' }}
               />
               {showVelocity && (
                 <Bar

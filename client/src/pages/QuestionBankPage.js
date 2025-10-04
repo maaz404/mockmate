@@ -544,7 +544,7 @@ const QuestionBankPage = () => {
           {questionCategories.map((category) => (
             <div
               key={category.name}
-              className="bg-white dark:bg-surface-800 rounded-xl shadow-sm border border-surface-200 dark:border-surface-700 p-6 hover:shadow-md transition-shadow cursor-pointer"
+              className="surface-elevated-soft dark:bg-surface-800/40 p-6 hover:shadow-md transition-shadow cursor-pointer"
             >
               <div
                 className={`w-12 h-12 rounded-lg ${category.color} flex items-center justify-center mb-4`}
@@ -570,7 +570,7 @@ const QuestionBankPage = () => {
         </div>
 
         <div className="mt-12">
-          <div className="rounded-xl p-8 border transition-colors duration-200 bg-gradient-to-r from-primary-50 via-white to-secondary-50 dark:from-surface-800 dark:via-surface-800 dark:to-surface-700 border-surface-200 dark:border-surface-700">
+          <div className="surface-elevated dark:bg-surface-800/60 p-8">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-surface-900 dark:text-surface-50 mb-2">

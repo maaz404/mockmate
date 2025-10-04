@@ -39,9 +39,9 @@ const InterviewHistoryPage = () => {
           </p>
         </div>
 
-        <div className="card p-0 overflow-hidden">
-          <div className="px-6 py-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Your Interviews</h3>
+  <div className="surface-elevated p-0 overflow-hidden dark:bg-surface-800/50">
+          <div className="px-6 py-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between bg-white/40 dark:bg-transparent backdrop-blur-sm">
+            <h3 className="text-base font-semibold text-surface-700 dark:text-surface-200 tracking-wide">Your Interviews</h3>
             <button onClick={fetchInterviews} className="btn-ghost">
               Refresh
             </button>
