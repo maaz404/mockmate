@@ -24,7 +24,7 @@ const RecentInterviews = ({ interviews, onViewAll, onOpen, onResults }) => {
   };
 
   return (
-    <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700">
+    <div className="surface-elevated dark:bg-surface-800/50">
       <div className="p-6 border-b border-surface-700">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium text-white">Recent Interviews</h3>

@@ -35,7 +35,7 @@ const QuickActions = ({ onStartInterview, userProfile, onQuickSchedule }) => {
   const isProfileComplete = userProfile?.profileCompleteness >= 70;
 
   return (
-    <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700">
+  <div className="surface-elevated dark:bg-surface-800/50">
       <div className="p-6 border-b border-surface-700">
         <h3 className="text-lg font-medium text-white">Quick Start</h3>
         <p className="text-sm text-surface-400 mt-1">

@@ -106,7 +106,7 @@ const ProgressChart = ({ analytics, metrics }) => {
   return (
     <div className="space-y-6">
       {/* Progress Chart */}
-      <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-6">
+  <div className="surface-elevated dark:bg-surface-800/50 p-6">
         <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
           <p className="text-[11px] uppercase tracking-wide text-surface-400">
             Progress
@@ -288,7 +288,7 @@ const ProgressChart = ({ analytics, metrics }) => {
       </div>
 
       {/* Strong Areas */}
-      <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-6">
+  <div className="surface-elevated dark:bg-surface-800/50 p-6">
         <div className="mb-4">
           <p className="text-[11px] uppercase tracking-wide text-surface-400">
             Insights
@@ -306,7 +306,7 @@ const ProgressChart = ({ analytics, metrics }) => {
       </div>
 
       {/* Areas for Improvement */}
-      <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-6">
+  <div className="surface-elevated dark:bg-surface-800/50 p-6">
         <div className="mb-4">
           <p className="text-[11px] uppercase tracking-wide text-surface-400">
             Recommendations

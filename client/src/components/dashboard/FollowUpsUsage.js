@@ -5,7 +5,7 @@ const FollowUpsUsage = ({ followUps }) => {
   const reviewed = followUps?.reviewed || 0;
   const pct = total === 0 ? 0 : Math.round((reviewed / total) * 100);
   return (
-    <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-6">
+  <div className="surface-elevated dark:bg-surface-800/50 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-[11px] uppercase tracking-wide text-surface-400">

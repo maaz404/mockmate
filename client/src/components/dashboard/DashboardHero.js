@@ -35,11 +35,15 @@ const DashboardHero = ({
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: "easeOut" }}
-      className={`relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/80 dark:bg-gradient-to-br dark:from-surface-800/90 dark:via-surface-800/70 dark:to-surface-900/80 backdrop-blur-md px-6 md:px-10 ${compact ? 'py-5' : 'py-10'} shadow-surface-md dark:shadow-surface-lg transition-colors`}
+      className={`relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/80 dark:bg-gradient-to-br dark:from-surface-800/90 dark:via-surface-800/70 dark:to-surface-900/80 backdrop-blur-md px-6 md:px-10 ${
+        compact ? "py-5" : "py-10"
+      } shadow-surface-md dark:shadow-surface-lg transition-colors`}
     >
       <div className="pointer-events-none absolute -top-24 -left-14 w-80 h-80 rounded-full bg-primary-500/10 dark:bg-primary-600/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-14 w-80 h-80 rounded-full bg-emerald-400/10 dark:bg-fuchsia-600/10 blur-3xl" />
-      <div className={`relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6`}>      
+      <div
+        className={`relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6`}
+      >
         <div className="max-w-xl">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-surface-900 dark:text-white">
             Welcome back{user?.firstName ? "," : ""}{" "}
@@ -84,13 +88,19 @@ const DashboardHero = ({
           )}
           {/* KPI Ribbon inline (footer area on large screens) */}
           <div
-            className={`mt-6 flex flex-wrap items-center gap-3 ${compact ? "text-[10px]" : "text-[11px]"}`}
+            className={`mt-6 flex flex-wrap items-center gap-3 ${
+              compact ? "text-[10px]" : "text-[11px]"
+            }`}
           >
             <KpiPill
               label="Next"
               value={nextSession ? formatRelativeCountdown(nextSession) : "—"}
               tone={nextSession ? "info" : "neutral"}
-              tooltip={nextSession ? `Starts ${formatRelativeCountdown(nextSession)}` : 'No upcoming session'}
+              tooltip={
+                nextSession
+                  ? `Starts ${formatRelativeCountdown(nextSession)}`
+                  : "No upcoming session"
+              }
             />
             <KpiPill
               label="Consistency"
@@ -102,13 +112,21 @@ const DashboardHero = ({
                   ? "info"
                   : "warn"
               }
-              tooltip={consistency != null ? 'Practice consistency over selected horizon' : 'No data yet'}
+              tooltip={
+                consistency != null
+                  ? "Practice consistency over selected horizon"
+                  : "No data yet"
+              }
             />
             <KpiPill
               label="Goals Left"
               value={openGoals}
               tone={openGoals === 0 ? "success" : "info"}
-              tooltip={openGoals === 0 ? 'All goals completed' : `${openGoals} goals remaining`}
+              tooltip={
+                openGoals === 0
+                  ? "All goals completed"
+                  : `${openGoals} goals remaining`
+              }
             />
             <button
               onClick={() => setCompact((c) => !c)}
@@ -171,10 +189,12 @@ const KpiPill = ({ label, value, tone = "neutral", tooltip }) => {
             initial={{ opacity: 0, y: 4, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -2, scale: 0.98 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
             className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 whitespace-nowrap rounded-md bg-surface-900/95 text-surface-50 text-[10px] px-2 py-1 shadow-lg border border-surface-700 dark:bg-surface-800/90 dark:text-surface-100 backdrop-blur-sm opacity-0 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100"
-            style={{ willChange: 'opacity, transform' }}
-          >{tooltip}</motion.div>
+            style={{ willChange: "opacity, transform" }}
+          >
+            {tooltip}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 
 const ActivityIndicator = ({ lastPracticeAt }) => {
   return (
-    <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-5 flex items-center gap-4">
+  <div className="surface-elevated dark:bg-surface-800/50 p-5 flex items-center gap-4">
       <div className="w-10 h-10 rounded-lg bg-primary-500/20 flex items-center justify-center text-primary-300">
         <span className="text-xl">⚡</span>
       </div>
