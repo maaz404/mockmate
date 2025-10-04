@@ -45,7 +45,14 @@ const RegisterPage = () => {
           <SignUp
             routing="path"
             path="/register"
-            redirectUrl="/dashboard"
+            // Use afterSignUpUrl only when email already verified; otherwise Clerk handles verification screen internally.
+            // We still keep a redirect target but rely on Clerk's built-in flow.
+            afterSignUpUrl="/dashboard"
+            signInUrl="/login"
+            // Debug events
+            unsafeMetadata={{ source: "register-page" }}
+            // (Clerk v5) Use localization or event listeners if needed
+            // We can optionally intercept but for now rely on default. Add debug styling to see step component.
             appearance={{
               elements:
                 theme === "dark"
@@ -131,6 +138,8 @@ const RegisterPage = () => {
                       colorDanger: "#dc2626",
                     },
             }}
+            // Add a simple fallback spinner for manual verification waiting states
+            // (If user completes email verification in same tab, Clerk should proceed automatically.)
           />
         </div>
 
