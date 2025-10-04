@@ -23,7 +23,6 @@ import KpiRibbon from "../components/dashboard/KpiRibbon";
 import AnalyticsTabs from "../components/dashboard/AnalyticsTabs";
 import QuickActionDock from "../components/dashboard/QuickActionDock";
 import ProgressChart from "../components/dashboard/ProgressChart";
-import DashboardHeader from "../components/dashboard/DashboardHeader";
 import GoalsPanel from "../components/dashboard/GoalsPanel";
 import TipsPanel from "../components/dashboard/TipsPanel";
 import UpcomingCard from "../components/dashboard/UpcomingCard";
@@ -689,7 +688,9 @@ const DashboardPage = () => {
         <div className="space-y-6 mb-8">
           <DashboardHero
             user={user}
-            profileCompleteness={userProfile?.analytics?.profileCompleteness || 0}
+            profileCompleteness={userProfile?.analytics?.profileCompleteness || userProfile?.profileCompleteness || 0}
+            streak={userProfile?.streak?.current || analytics?.analytics?.streak?.current || 0}
+            onboardingCompleted={!!userProfile?.onboardingCompleted}
             onStart={startQuickInterview}
             onCreate={() => navigate('/interview/new')}
           />
@@ -697,11 +698,6 @@ const DashboardPage = () => {
             nextSession={scheduled?.[0]?.scheduledAt}
             consistency={metrics?.consistencyScore}
             openGoals={(goals||[]).filter(g=>!g.done).length}
-          />
-          <DashboardHeader
-            user={user}
-            userProfile={userProfile}
-            onStartInterview={startQuickInterview}
           />
           <div className="mt-2 flex flex-wrap items-center gap-4 text-[11px]">
             <div className="inline-flex items-center gap-2">

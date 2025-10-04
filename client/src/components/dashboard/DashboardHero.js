@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 
 // DashboardHero: Welcoming header with profile completeness + quick actions
-const DashboardHero = ({ user, profileCompleteness = 0, onStart, onCreate }) => {
+const DashboardHero = ({ user, profileCompleteness = 0, streak = 0, onboardingCompleted=false, onStart, onCreate }) => {
   const reduce = useReducedMotion();
   const completeness = Math.max(0, Math.min(100, profileCompleteness));
   const short = completeness >= 60;
@@ -20,13 +20,13 @@ const DashboardHero = ({ user, profileCompleteness = 0, onStart, onCreate }) => 
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
             Welcome back{user?.firstName ? ',' : ''} {user?.firstName || user?.username || 'there'}
           </h1>
-          {completeness < 100 && (
-            <p className="mt-2 text-sm text-surface-300">
-              {completeness < 40
+          <p className="mt-2 text-sm text-surface-300">
+            {onboardingCompleted
+              ? 'Ready for your next interview practice session?'
+              : completeness < 40
                 ? "Let's get your profile set up to unlock personalized recommendations."
                 : 'Great progress—finish setting up to further refine coaching insights.'}
-            </p>
-          )}
+          </p>
           {completeness < 100 && (
             <div className="mt-4">
               <div className="flex items-center justify-between text-[11px] text-surface-400 mb-1">
@@ -46,6 +46,10 @@ const DashboardHero = ({ user, profileCompleteness = 0, onStart, onCreate }) => 
           )}
         </div>
         <div className="flex flex-col items-stretch gap-3 md:items-end md:min-w-[260px]">
+          <div className="flex items-center gap-2 self-end bg-surface-700/60 border border-surface-600 text-surface-300 rounded-full px-3 py-1 text-[11px]">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+            Streak: <strong className="ml-1 text-white">{streak}</strong> days
+          </div>
           <button onClick={() => onStart?.('mixed')} className="px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500">Start practice</button>
           <button onClick={() => onCreate?.()} className="px-5 py-3 rounded-xl border border-emerald-500/60 text-emerald-300 text-sm font-medium hover:bg-emerald-600/10 focus:outline-none focus:ring-2 focus:ring-emerald-500">Create interview</button>
         </div>
