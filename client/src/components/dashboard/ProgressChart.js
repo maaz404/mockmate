@@ -18,6 +18,9 @@ const ProgressChart = ({ analytics, metrics }) => {
       return true;
     }
   });
+  const [benchmark, setBenchmark] = useState(() => {
+    try { return parseInt(localStorage.getItem("mm.dashboard.progress.benchmark"), 10) || 70; } catch { return 70; }
+  });
 
   const progressData = useMemo(() => {
     // Prefer real metrics if available
@@ -86,6 +89,22 @@ const ProgressChart = ({ analytics, metrics }) => {
         <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
           <p className="text-[11px] uppercase tracking-wide text-surface-400">Progress</p>
           <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-1 text-[11px]">
+              <label htmlFor="benchmark-input" className="text-surface-400">Benchmark</label>
+              <input
+                id="benchmark-input"
+                type="number"
+                min={10}
+                max={100}
+                value={benchmark}
+                onChange={(e) => {
+                  const val = Math.max(10, Math.min(100, parseInt(e.target.value || '0', 10)));
+                  setBenchmark(val);
+                  try { localStorage.setItem("mm.dashboard.progress.benchmark", String(val)); } catch {}
+                }}
+                className="w-14 bg-surface-900 border border-surface-700 rounded px-1 py-0.5 text-[11px] text-surface-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              />
+            </div>
             <div className="flex items-center gap-3 text-[11px]">
               <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-indigo-400/70 border border-indigo-400"></span><span className="text-surface-400">Interviews</span></div>
               <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-500"></span><span className="text-surface-400">Avg Score</span></div>
@@ -163,7 +182,7 @@ const ProgressChart = ({ analytics, metrics }) => {
                     return [value, "Interviews"];
                   return [value, key];
                 }}
-                labelFormatter={(label) => `Week ${label} (Benchmark: 70%)`}
+                labelFormatter={(label) => `Week ${label} (Benchmark: ${benchmark}%)`}
                 contentStyle={{
                   backgroundColor: "#1e293b",
                   border: "1px solid #475569",
@@ -198,6 +217,22 @@ const ProgressChart = ({ analytics, metrics }) => {
                 stroke="#10B981"
                 strokeDasharray="6 4"
                 dot={false}
+                isAnimationActive={false}
+                strokeWidth={2}
+                activeDot={false}
+                legendType="none"
+                {...{}}
+              />
+              {/* Dynamic benchmark overlay using custom line */}
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey={() => benchmark}
+                name="Benchmark"
+                stroke="#10B981"
+                strokeDasharray="2 4"
+                dot={false}
+                isAnimationActive={false}
               />
             </ComposedChart>
           </ResponsiveContainer>

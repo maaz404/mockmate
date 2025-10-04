@@ -11,7 +11,7 @@ import {
 
 const SkillRadar = ({ skills }) => {
   if (!skills || !skills.length) return null;
-  const data = skills.map((s) => ({ subject: s.dimension, score: s.score || 0 }));
+  const data = skills.map((s) => ({ subject: s.dimension, score: s.score || 0, prev: s.prevScore ?? null }));
   return (
     <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl border border-surface-700 p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -27,7 +27,7 @@ const SkillRadar = ({ skills }) => {
             <PolarAngleAxis dataKey="subject" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 11 }} />
             <PolarRadiusAxis stroke="#475569" angle={30} domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 10 }} />
             <Tooltip
-              formatter={(value) => [`${value}%`, 'Score']}
+              formatter={(value, name) => [ `${value}%`, name === 'score' ? 'Current' : 'Previous' ]}
               contentStyle={{
                 backgroundColor: '#1e293b',
                 border: '1px solid #475569',
@@ -35,7 +35,10 @@ const SkillRadar = ({ skills }) => {
                 color: '#f8fafc'
               }}
             />
-            <Radar name="Score" dataKey="score" stroke="#6366F1" fill="#6366F1" fillOpacity={0.45} />
+            {data.some(d => d.prev != null) && (
+              <Radar name="Prev" dataKey="prev" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.25} />
+            )}
+            <Radar name="Current" dataKey="score" stroke="#6366F1" fill="#6366F1" fillOpacity={0.45} />
           </RadarChart>
         </ResponsiveContainer>
       </div>

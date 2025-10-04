@@ -1313,27 +1313,50 @@ async function getDashboardMetrics(req, res) {
     for (const dim of Object.keys(dimensionBuckets)) {
       dimScores[dim] = { scoreSum: 0, scoreCount: 0 };
     }
-    for (const iv of interviews) {
-      if (iv.status !== "completed" || iv.results?.overallScore == null) continue;
-      const score = iv.results.overallScore;
-      const cats = new Set((iv.questions || []).map((q) => q.category || ""));
-      for (const dim of Object.keys(dimensionBuckets)) {
-        const patterns = dimensionBuckets[dim];
-        // If any category matches pattern, include score
-        if ([...cats].some((c) => patterns.some((re) => re.test(c)))) {
-          dimScores[dim].scoreSum += score;
-          dimScores[dim].scoreCount += 1;
+    // Prepare for previous vs current split: sort completed interviews chronologically
+    const completedChrono = interviews
+      .filter((iv) => iv.status === "completed" && iv.results?.overallScore != null)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const mid = Math.floor(completedChrono.length / 2) || 0;
+    const older = completedChrono.slice(0, mid);
+    const newer = completedChrono.slice(mid);
+
+    // Helper accumulate for period
+    const accumulateDimensions = (collection, target) => {
+      for (const iv of collection) {
+        const score = iv.results.overallScore;
+        const cats = new Set((iv.questions || []).map((q) => q.category || ""));
+        for (const dim of Object.keys(dimensionBuckets)) {
+          const patterns = dimensionBuckets[dim];
+            if ([...cats].some((c) => patterns.some((re) => re.test(c)))) {
+              target[dim].scoreSum += score;
+              target[dim].scoreCount += 1;
+            }
         }
       }
+    };
+    // Reinitialize for prev & current separation
+    const dimPrev = {};
+    const dimCurr = {};
+    for (const dim of Object.keys(dimensionBuckets)) {
+      dimPrev[dim] = { scoreSum: 0, scoreCount: 0 };
+      dimCurr[dim] = { scoreSum: 0, scoreCount: 0 };
     }
-    const skillDimensions = Object.keys(dimScores)
-      .map((dim) => ({
-        dimension: dim,
-        score: dimScores[dim].scoreCount
-          ? Math.round(dimScores[dim].scoreSum / dimScores[dim].scoreCount)
-          : null,
-      }))
-      .filter((d) => d.score !== null);
+    accumulateDimensions(older, dimPrev);
+    accumulateDimensions(newer, dimCurr);
+
+    const skillDimensions = Object.keys(dimensionBuckets)
+      .map((dim) => {
+        const currentScore = dimCurr[dim].scoreCount
+          ? Math.round(dimCurr[dim].scoreSum / dimCurr[dim].scoreCount)
+          : null;
+        const prevScore = dimPrev[dim].scoreCount
+          ? Math.round(dimPrev[dim].scoreSum / dimPrev[dim].scoreCount)
+          : null;
+        if (currentScore == null && prevScore == null) return null;
+        return { dimension: dim, score: currentScore, prevScore };
+      })
+      .filter(Boolean);
 
     const payload = {
       weekly,

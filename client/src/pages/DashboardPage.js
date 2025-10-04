@@ -59,6 +59,7 @@ const DashboardPage = () => {
   const [mode, setMode] = useState(() => {
     try { return localStorage.getItem("mm.dashboard.mode") || "full"; } catch { return "full"; }
   });
+  const [modeAnnounce, setModeAnnounce] = useState("");
   const [density, setDensity] = useState(() => {
     try {
       return localStorage.getItem("mm.dashboard.density") || "comfortable";
@@ -260,6 +261,7 @@ const DashboardPage = () => {
   }, [collapsed]);
   useEffect(() => {
     try { localStorage.setItem("mm.dashboard.mode", mode); } catch {}
+    setModeAnnounce(`Dashboard mode set to ${mode === 'full' ? 'Full (all analytics visible)' : 'Essential (advanced analytics hidden)'}`);
   }, [mode]);
 
   const toggleCollapse = (key) =>
@@ -527,7 +529,20 @@ const DashboardPage = () => {
             {mode === "essential" && (
               <span className="text-surface-500">Advanced analytics hidden (switch to Full to view)</span>
             )}
+            {mode === "full" && (
+              (() => {
+                const anyCollapsed = Object.values(collapsed).some(Boolean);
+                if (!anyCollapsed) return null;
+                return (
+                  <button
+                    className="text-[11px] px-2 py-1 rounded-md border border-surface-700 hover:bg-surface-700/60 text-surface-300"
+                    onClick={() => setCollapsed({})}
+                  >Show All</button>
+                );
+              })()
+            )}
           </div>
+          <div aria-live="polite" className="sr-only">{modeAnnounce}</div>
         </div>
 
         {/* Section errors banner (non-blocking) */}
