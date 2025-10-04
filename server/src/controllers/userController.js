@@ -1204,11 +1204,31 @@ module.exports.updateDashboardPreferences = updateDashboardPreferences;
 // ================= Dashboard Metrics (Phase 1) =================
 // GET /api/users/dashboard/metrics
 // Provides richer time-series + coverage metrics used for enhanced dashboard widgets.
+// Simple in-memory cache (process scoped)
+const dashboardMetricsCache = {
+  store: new Map(), // key -> { data, expires }
+  get(key) {
+    const entry = this.store.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expires) {
+      this.store.delete(key);
+      return null;
+    }
+    return entry.data;
+  },
+  set(key, data, ttlMs = 60 * 1000) { // 1 minute TTL default
+    this.store.set(key, { data, expires: Date.now() + ttlMs });
+  },
+};
+
 async function getDashboardMetrics(req, res) {
   try {
     const { userId } = req.auth;
-    // Horizon: last 8 ISO weeks (including current)
-    const weeksBack = Math.min(12, parseInt(req.query.weeks || "8", 10) || 8); // cap at 12 for now
+    // Horizon: default last 8 ISO weeks (including current)
+    const weeksBack = Math.min(24, Math.max(1, parseInt(req.query.weeks || req.query.horizon || "8", 10) || 8)); // cap at 24 weeks now
+    const cacheKey = `${userId}:${weeksBack}`;
+    const cached = dashboardMetricsCache.get(cacheKey);
+    if (!req.query.force && cached) return ok(res, cached);
     const now = new Date();
     const horizonStart = new Date(now.getTime() - weeksBack * 7 * 24 * 60 * 60 * 1000);
 
@@ -1219,7 +1239,7 @@ async function getDashboardMetrics(req, res) {
       createdAt: { $gte: horizonStart },
     })
       .select(
-        "_id createdAt status results.overallScore questions.category questions.followUpsReviewed questions.followUps questions text"
+        "_id createdAt status results.overallScore questions.category questions.followUpsReviewed questions.followUps questions.tags questions.questionText"
       )
       .lean()
       .exec();
@@ -1390,20 +1410,28 @@ async function getDashboardMetrics(req, res) {
       })(),
       // Tag coverage (phase 2) – reusing categories as proxy tags for now.
       tagCoverage: (() => {
-        const practicedTags = new Set(categoryCoverage.map((c) => c.category));
-        const recommended = [
-          "System Design",
-          "Behavioral",
-          "Data Structures",
-          "Algorithms",
-          "Communication",
-          "Leadership",
-        ];
-        const missingSuggestions = recommended.filter((r) => !practicedTags.has(r));
-        return {
-          top: categoryCoverage.slice(0, 8).map((c) => ({ tag: c.category, count: c.count })),
-          missingSuggestions,
-        };
+        // Aggregate tags from embedded questions (if available) across completed interviews
+        const tagCounts = new Map();
+        for (const iv of interviews) {
+          if (iv.status !== "completed") continue;
+          for (const q of iv.questions || []) {
+            if (Array.isArray(q.tags)) {
+              for (const t of q.tags) {
+                if (!t) continue;
+                tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
+              }
+            }
+          }
+        }
+        const top = [...tagCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 16)
+          .map(([tag, count]) => ({ tag, count }));
+        // Basic suggestion heuristic: tags seen in category names but not used
+        const practiced = new Set(top.map((t) => t.tag));
+        const seedSuggestions = ["system-design", "communication", "algorithms", "leadership", "teamwork", "security", "cloud", "devops"];
+        const missingSuggestions = seedSuggestions.filter((s) => !practiced.has(s));
+        return { top, missingSuggestions };
       })(),
       consistencyScore: (() => {
         // Compute after streakDays generation by re-deriving quickly
@@ -1423,6 +1451,37 @@ async function getDashboardMetrics(req, res) {
         }
       })(),
     };
+    // Cache & optionally export
+    dashboardMetricsCache.set(cacheKey, payload);
+    if (String(req.query.format).toLowerCase() === "csv") {
+      // Flatten weekly + category + tags into CSV
+      const lines = [];
+      lines.push("section,key,value");
+      payload.weekly.weeks.forEach((wk, i) => {
+        lines.push(`weekly_interviews,${wk},${payload.weekly.interviews[i]}`);
+        const score = payload.weekly.avgScore[i];
+        if (score != null) lines.push(`weekly_avgScore,${wk},${score}`);
+      });
+      payload.categoryCoverage.forEach((c) => {
+        lines.push(`category_count,${c.category},${c.count}`);
+        if (c.avgScore != null)
+          lines.push(`category_avgScore,${c.category},${c.avgScore}`);
+      });
+      payload.tagCoverage.top.forEach((t) => {
+        lines.push(`tag_count,${t.tag},${t.count}`);
+      });
+      lines.push(`followUps,total,${payload.followUps.total}`);
+      lines.push(`followUps,reviewed,${payload.followUps.reviewed}`);
+      if (payload.consistencyScore != null)
+        lines.push(`consistency,score,${payload.consistencyScore}`);
+      const csv = lines.join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=dashboard-metrics-${Date.now()}.csv`
+      );
+      return res.status(200).send(csv);
+    }
     return ok(res, payload);
   } catch (error) {
     console.error("Dashboard metrics error:", error);
