@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const ProgressChart = ({ analytics }) => {
+const ProgressChart = ({ analytics, metrics }) => {
   const [range, setRange] = useState(() => {
     try {
       return localStorage.getItem("mm.dashboard.progress.range") || "6w";
@@ -19,7 +19,21 @@ const ProgressChart = ({ analytics }) => {
     }
   });
 
-  const mockProgressData = useMemo(() => {
+  const progressData = useMemo(() => {
+    // Prefer real metrics if available
+    if (metrics?.weekly?.weeks?.length) {
+      const { weeks, avgScore } = metrics.weekly;
+      // weeks already chronological (oldest -> newest)
+      const sliceLen = range === "12w" ? 12 : 6;
+      const tailWeeks = weeks.slice(-sliceLen);
+      const tailScores = avgScore.slice(-sliceLen);
+      return tailWeeks.map((wk, i) => ({
+        name: wk.split("-")[1], // show Wxx part
+        score: tailScores[i] == null ? 0 : tailScores[i],
+        hasData: tailScores[i] != null,
+      }));
+    }
+    // Fallback to synthetic if metrics missing
     const base = [45, 52, 58, 65, 72, analytics?.analytics?.averageScore || 75];
     const labels =
       range === "12w"
@@ -39,11 +53,8 @@ const ProgressChart = ({ analytics }) => {
           ]
         : ["W1", "W2", "W3", "W4", "W5", "W6"];
     const values = range === "12w" ? [...base, 68, 74, 76, 79, 81, 83] : base;
-    return labels.map((name, i) => ({
-      name,
-      score: values[i] ?? values[values.length - 1],
-    }));
-  }, [analytics, range]);
+    return labels.map((name, i) => ({ name, score: values[i], hasData: true }));
+  }, [analytics, metrics, range]);
 
   const improvementAreas = analytics?.analytics?.improvementAreas || [
     "Technical Communication",
@@ -114,12 +125,15 @@ const ProgressChart = ({ analytics }) => {
         </div>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mockProgressData}>
+            <LineChart data={progressData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis dataKey="name" stroke="#94a3b8" />
               <YAxis domain={[0, 100]} stroke="#94a3b8" />
               <Tooltip
-                formatter={(value) => [`${value}%`, "Score"]}
+                formatter={(value, _n, p) => [
+                  `${value}%${p?.payload?.hasData ? "" : " (no data)"}`,
+                  "Score",
+                ]}
                 contentStyle={{
                   backgroundColor: "#1e293b",
                   border: "1px solid #475569",

@@ -22,6 +22,7 @@ const {
   getDashboardSummary,
   getDashboardPreferences,
   updateDashboardPreferences,
+  getDashboardMetrics,
 } = require("../controllers/userController");
 
 // Multer storage for resume uploads
@@ -148,6 +149,14 @@ router.put(
   requireAuth,
   ensureUserProfile,
   updateDashboardPreferences
+);
+
+// Enhanced metrics (Phase 1)
+router.get(
+  "/dashboard/metrics",
+  requireAuth,
+  ensureUserProfile,
+  getDashboardMetrics
 );
 
 module.exports = router;

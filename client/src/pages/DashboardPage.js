@@ -29,6 +29,7 @@ const DashboardPage = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [recentInterviews, setRecentInterviews] = useState([]);
+  const [metrics, setMetrics] = useState(null); // enhanced time-series & coverage
   const [scheduled, setScheduled] = useState([]);
   const [schedPage, setSchedPage] = useState(1);
   const [schedPagination, setSchedPagination] = useState(null);
@@ -150,6 +151,14 @@ const DashboardPage = () => {
       setSectionErrors(
         Array.isArray(data.sectionsWithErrors) ? data.sectionsWithErrors : []
       );
+
+      // Fire metrics in parallel (non-blocking). If it fails, we keep fallback (mock progress)
+      try {
+        const metricsRes = await apiService.get("/users/dashboard/metrics");
+        setMetrics(metricsRes.data || null);
+      } catch (e) {
+        setMetrics(null);
+      }
     } catch (error) {
       // fallback: attempt old individual routes minimally
       try {
@@ -626,7 +635,7 @@ const DashboardPage = () => {
             {loading ? (
               <CardSkeleton lines={4} />
             ) : (
-              <ProgressChart analytics={analytics} />
+              <ProgressChart analytics={analytics} metrics={metrics} />
             )}
             {loading ? (
               <CardSkeleton lines={4} />

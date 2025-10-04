@@ -99,6 +99,27 @@ const createInterview = async (req, res) => {
           "None of the provided questionIds resolved to questions"
         );
       }
+    } else if (explicitQuestions.length > 0) {
+      // Accept provided raw questions directly (ephemeral) even without IDs for reproducible session
+      questions = explicitQuestions.map((raw, idx) => ({
+        _id: new mongoose.Types.ObjectId(),
+        text: raw.text || raw.questionText || `Question ${idx + 1}`,
+        category: raw.category || raw.type || "general",
+        difficulty: raw.difficulty || config.difficulty || "intermediate",
+        estimatedTime:
+          raw.estimatedTime ||
+          (raw.timeEstimate ? raw.timeEstimate * C.SEC_PER_MIN : 120),
+        tags: raw.tags || [],
+        source: raw.source || "provided",
+      }));
+      if (questions.length === 0) {
+        return fail(
+          res,
+          400,
+          "NO_QUESTIONS",
+          "Provided questions array was empty"
+        );
+      }
     } else {
       questions = await getQuestionsForInterview(config, userProfile);
       if (questions.length === 0) {

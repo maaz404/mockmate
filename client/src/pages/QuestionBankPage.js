@@ -25,12 +25,102 @@ const QuestionBankPage = () => {
   const [tagMode, setTagMode] = useState("single"); // single | multi
   const [multiTags, setMultiTags] = useState([]); // array of selected tags in multi mode
   const [tagLogic, setTagLogic] = useState("OR"); // OR | AND
+  const [startingInterview, setStartingInterview] = useState(false);
   // Removed favorites-only, highlight style, export column customization
   const [showSmallFavModal, setShowSmallFavModal] = useState(false);
   const [pendingFavSubset, setPendingFavSubset] = useState(null);
   // Deprecated: role & experience selectors removed from UI; using defaults for interview config
   const selectedJobRole = "software-engineer";
   const selectedExperience = "intermediate";
+
+  // Lightweight inline dropdown for grouping secondary copy/export actions
+  const ActionMenu = ({ label, children }) => {
+    const [open, setOpen] = React.useState(false);
+    const btnRef = React.useRef(null);
+    const panelRef = React.useRef(null);
+    React.useEffect(() => {
+      if (!open) return;
+      const onKey = (e) => {
+        if (e.key === "Escape") setOpen(false);
+      };
+      const onClick = (e) => {
+        if (
+          panelRef.current &&
+          !panelRef.current.contains(e.target) &&
+          !btnRef.current.contains(e.target)
+        ) {
+          setOpen(false);
+        }
+      };
+      window.addEventListener("keydown", onKey);
+      window.addEventListener("mousedown", onClick);
+      return () => {
+        window.removeEventListener("keydown", onKey);
+        window.removeEventListener("mousedown", onClick);
+      };
+    }, [open]);
+    React.useEffect(() => {
+      if (open && panelRef.current) {
+        const first = panelRef.current.querySelector('[role="menuitem"]');
+        first && first.focus();
+      }
+    }, [open]);
+    return (
+      <div className="relative">
+        <Button
+          ref={btnRef}
+          size="sm"
+          variant="outline"
+          onClick={() => setOpen((o) => !o)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls="qb-actions-menu"
+        >
+          {label}
+          <svg
+            className={`w-3 h-3 ml-1 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+            viewBox="0 0 12 12"
+            fill="none"
+          >
+            <path
+              d="M3 4l3 4 3-4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </Button>
+        {open && (
+          <div
+            id="qb-actions-menu"
+            ref={panelRef}
+            role="menu"
+            className="absolute z-20 mt-1 w-52 rounded-md border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 shadow-lg py-1 text-sm focus:outline-none"
+          >
+            {React.Children.toArray(children).map((child) => {
+              if (!React.isValidElement(child)) return null;
+              return React.cloneElement(child, {
+                role: "menuitem",
+                tabIndex: 0,
+                className: `w-full text-left px-3 py-2 hover:bg-surface-100 dark:hover:bg-surface-600/60 focus:bg-surface-100 dark:focus:bg-surface-600/60 cursor-pointer outline-none ${
+                  child.props.className || ""
+                }`,
+                onKeyDown: (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    child.props.onClick && child.props.onClick(e);
+                  }
+                },
+              });
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const handleQuestionsGenerated = (questions, meta) => {
     if (Array.isArray(questions)) {
@@ -235,21 +325,15 @@ const QuestionBankPage = () => {
   ]);
 
   // Derived relative time for last generation
-  const lastGeneratedLabel = React.useMemo(() => {
-    if (!lastGenerationInfo?.timestamp) return null;
-    const diff = Date.now() - lastGenerationInfo.timestamp;
-    const sec = Math.floor(diff / 1000);
-    if (sec < 60) return `${sec}s ago`;
-    const min = Math.floor(sec / 60);
-    if (min < 60) return `${min}m ago`;
-    const hrs = Math.floor(min / 60);
-    return `${hrs}h ago`;
-  }, [lastGenerationInfo]);
 
-  // Utility: export subset to file (JSON or CSV)
-  function exportSubset(subset, format, filenameBase) {
-    if (!subset || subset.length === 0) {
-      toast.error("No data to export");
+  function exportSubset(subset, format = "json", filenameBase = "questions") {
+    try {
+      if (!subset || subset.length === 0) {
+        toast.error("No data to export");
+        return;
+      }
+    } catch (_) {
+      toast.error("Export failed");
       return;
     }
     let blob;
@@ -281,7 +365,6 @@ const QuestionBankPage = () => {
         type: "application/json",
       });
     } else {
-      // CSV
       const headers = [
         "id",
         "text",
@@ -311,12 +394,13 @@ const QuestionBankPage = () => {
   }
 
   async function handleStartInterview() {
+    if (startingInterview) return;
     if (generatedQuestions.length === 0) {
       toast.error("Generate questions first");
       return;
     }
+    setStartingInterview(true);
     try {
-      // Use first question metadata to build config heuristically
       const first = generatedQuestions[0];
       const config = {
         jobRole: selectedJobRole,
@@ -324,27 +408,43 @@ const QuestionBankPage = () => {
           selectedExperience || first.experienceLevel || "intermediate",
         interviewType: "mixed",
         difficulty: first.difficulty || "intermediate",
-        duration: Math.min(60, Math.max(15, generatedQuestions.length * 5)), // minutes heuristic
+        duration: Math.min(60, Math.max(15, generatedQuestions.length * 5)),
         questionCount: generatedQuestions.length,
         adaptiveDifficulty: { enabled: false },
       };
-      // Create interview
-      const { data: envelope } = await api.post("/interviews", { config });
-      if (!envelope?.success)
+      toast.loading("Creating interview...", { id: "start-int" });
+      const payloadQuestions = generatedQuestions.map((q, i) => ({
+        text: q.text || q.questionText || `Question ${i + 1}`,
+        category: q.category || q.type || "general",
+        difficulty: q.difficulty || config.difficulty,
+        tags: q.tags || [],
+        source: q.source || "generated",
+        estimatedTime: q.estimatedTime || 120,
+      }));
+      const { data: envelope } = await api.post("/interviews", {
+        config,
+        questions: payloadQuestions,
+      });
+      if (!envelope?.success) {
         throw new Error(envelope?.message || "Create failed");
+      }
       const interviewId = envelope.data._id || envelope.data.id;
-
-      // Immediately start interview (PUT /:id/start)
+      toast.loading("Starting interview...", { id: "start-int" });
       const { data: startEnv } = await api.put(
         `/interviews/${interviewId}/start`
       );
-      if (!startEnv?.success)
+      if (!startEnv?.success) {
         throw new Error(startEnv?.message || "Start failed");
-
-      toast.success("Interview created and started");
+      }
+      toast.success("Interview created and started", { id: "start-int" });
       navigate(`/interview/${interviewId}`);
     } catch (err) {
-      toast.error(err.message || "Failed to start interview");
+      const detail = err.code ? `${err.message} (${err.code})` : err.message;
+      toast.error(detail || "Failed to start interview", {
+        id: "start-int",
+      });
+    } finally {
+      setStartingInterview(false);
     }
   }
 
@@ -413,6 +513,19 @@ const QuestionBankPage = () => {
       ),
     },
   ];
+
+  // Human-friendly label for last generation time (relative minutes)
+  const lastGeneratedLabel = React.useMemo(() => {
+    if (!lastGenerationInfo?.timestamp) return null;
+    const diffMs = Date.now() - lastGenerationInfo.timestamp;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return "just now";
+    if (mins === 1) return "1 min ago";
+    if (mins < 60) return `${mins} mins ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours === 1) return "1 hr ago";
+    return `${hours} hrs ago`;
+  }, [lastGenerationInfo]);
 
   return (
     <div className="p-6 bg-surface-50 dark:bg-surface-900 min-h-screen transition-colors duration-200">
@@ -525,139 +638,118 @@ const QuestionBankPage = () => {
                     </span>
                   </div>
                 )}
-                <div className="flex gap-2">
-                  {/* Export / Batch Ops Dropdown Cluster */}
-                  <div className="flex gap-2 flex-wrap items-center">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        try {
-                          const subset = filteredSortedQuestions.map((q) => ({
-                            ...q,
-                          }));
-                          navigator.clipboard.writeText(
-                            JSON.stringify(subset, null, 2)
-                          );
-                          toast.success(
-                            `Copied ${subset.length} filtered questions`
-                          );
-                        } catch (e) {
-                          toast.error("Copy failed");
-                        }
-                      }}
-                    >
-                      Copy Filtered
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        exportSubset(
-                          filteredSortedQuestions,
-                          "json",
-                          "filtered-questions"
-                        )
-                      }
-                    >
-                      Download Filtered JSON
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        exportSubset(
-                          filteredSortedQuestions,
-                          "csv",
-                          "filtered-questions"
-                        )
-                      }
-                    >
-                      Download Filtered CSV
-                    </Button>
-                    {favorites.length > 0 && (
-                      <Button
-                        size="sm"
-                        variant="outline"
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <ActionMenu label="Copy / Export">
+                      <div
                         onClick={() => {
-                          // Select all favorites currently visible (ensures they exist in filtered list)
-                          const visibleFavs = filteredSortedQuestions.filter(
-                            (q) =>
-                              favorites.includes(
-                                (q.text || q.questionText || "")
-                                  .trim()
-                                  .toLowerCase()
-                              )
-                          );
-                          if (!visibleFavs.length) {
-                            toast("No visible favorites");
-                            return;
-                          }
                           try {
+                            const subset = filteredSortedQuestions.map((q) => ({
+                              ...q,
+                            }));
                             navigator.clipboard.writeText(
-                              JSON.stringify(visibleFavs, null, 2)
+                              JSON.stringify(subset, null, 2)
                             );
                             toast.success(
-                              `Copied ${visibleFavs.length} visible favorites`
+                              `Copied ${subset.length} filtered questions`
                             );
                           } catch (e) {
                             toast.error("Copy failed");
                           }
                         }}
                       >
-                        Copy Visible Favorites
-                      </Button>
-                    )}
+                        Copy Filtered
+                      </div>
+                      <div
+                        onClick={() =>
+                          exportSubset(
+                            filteredSortedQuestions,
+                            "json",
+                            "filtered-questions"
+                          )
+                        }
+                      >
+                        Export JSON
+                      </div>
+                      <div
+                        onClick={() =>
+                          exportSubset(
+                            filteredSortedQuestions,
+                            "csv",
+                            "filtered-questions"
+                          )
+                        }
+                      >
+                        Export CSV
+                      </div>
+                      {favorites.length > 0 && (
+                        <div
+                          onClick={async () => {
+                            try {
+                              const favQuestions =
+                                filteredSortedQuestions.filter((q) => {
+                                  const key = (q.text || q.questionText || "")
+                                    .trim()
+                                    .toLowerCase();
+                                  return favorites.includes(key);
+                                });
+                              await navigator.clipboard.writeText(
+                                JSON.stringify(favQuestions, null, 2)
+                              );
+                              toast.success(
+                                `Copied ${favQuestions.length} favorites`
+                              );
+                            } catch (e) {
+                              toast.error("Failed to copy favorites");
+                            }
+                          }}
+                        >
+                          Copy Favorites
+                        </div>
+                      )}
+                    </ActionMenu>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={() => setShowGenerator(true)}
-                    aria-label={showGenerator ? "Update question generation configuration" : "Regenerate questions"}
-                  >
-                    {showGenerator ? "Update Config" : "Regenerate"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={handleStartInterview}
-                    aria-label="Start interview with generated questions"
-                  >
-                    Start Interview
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="subtle"
-                    onClick={() => {
-                      setGeneratedQuestions([]);
-                      try { localStorage.removeItem("hybridGeneratedQuestions"); } catch (_) {}
-                      toast("Cleared generated questions");
-                    }}
-                    aria-label="Clear generated questions"
-                  >
-                    Clear
-                  </Button>
-                  {favorites.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={async () => {
-                        try {
-                          const favQuestions = filteredSortedQuestions.filter((q) => {
-                            const key = (q.text || q.questionText || "").trim().toLowerCase();
-                            return favorites.includes(key);
-                          });
-                          await navigator.clipboard.writeText(JSON.stringify(favQuestions, null, 2));
-                          toast.success(`Copied ${favQuestions.length} favorites`);
-                        } catch (e) {
-                          toast.error("Failed to copy favorites");
-                        }
-                      }}
-                      aria-label="Copy favorite questions to clipboard"
+                      variant="primary"
+                      onClick={() => setShowGenerator(true)}
+                      aria-label={
+                        showGenerator
+                          ? "Update question generation configuration"
+                          : "Regenerate questions"
+                      }
                     >
-                      Copy Favorites
+                      {showGenerator ? "Update Config" : "Regenerate"}
                     </Button>
-                  )}
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={handleStartInterview}
+                      loading={startingInterview}
+                      disabled={
+                        startingInterview || generatedQuestions.length === 0
+                      }
+                      aria-label="Start interview with generated questions"
+                    >
+                      {startingInterview ? "Starting..." : "Start Interview"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="subtle"
+                      onClick={() => {
+                        setGeneratedQuestions([]);
+                        try {
+                          localStorage.removeItem("hybridGeneratedQuestions");
+                        } catch (_) {}
+                        toast("Cleared generated questions");
+                      }}
+                      aria-label="Clear generated questions"
+                      title="Clear generated questions"
+                    >
+                      Clear
+                    </Button>
+                  </div>
                 </div>
               </div>
               {/* Difficulty distribution bar */}
@@ -789,6 +881,7 @@ const QuestionBankPage = () => {
                     value={sortMode}
                     onChange={(e) => setSortMode(e.target.value)}
                     size="sm"
+                    fancy
                     ariaLabel="Sort mode"
                   >
                     <option value="original">Original Order</option>

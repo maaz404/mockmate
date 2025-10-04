@@ -1200,3 +1200,153 @@ async function getDashboardSummary(req, res) {
 module.exports.getDashboardSummary = getDashboardSummary;
 module.exports.getDashboardPreferences = getDashboardPreferences;
 module.exports.updateDashboardPreferences = updateDashboardPreferences;
+
+// ================= Dashboard Metrics (Phase 1) =================
+// GET /api/users/dashboard/metrics
+// Provides richer time-series + coverage metrics used for enhanced dashboard widgets.
+async function getDashboardMetrics(req, res) {
+  try {
+    const { userId } = req.auth;
+    // Horizon: last 8 ISO weeks (including current)
+    const weeksBack = Math.min(12, parseInt(req.query.weeks || "8", 10) || 8); // cap at 12 for now
+    const now = new Date();
+    const horizonStart = new Date(now.getTime() - weeksBack * 7 * 24 * 60 * 60 * 1000);
+
+    // Fetch completed interviews within horizon (plus a small buffer week for accurate weekly bucket edge)
+    const interviews = await Interview.find({
+      userId,
+      status: { $in: ["completed", "in-progress"] },
+      createdAt: { $gte: horizonStart },
+    })
+      .select(
+        "_id createdAt status results.overallScore questions.category questions.followUpsReviewed questions.followUps questions text"
+      )
+      .lean()
+      .exec();
+
+    // Helper: ISO week key (YYYY-Www)
+    const isoWeekKey = (d) => {
+      const date = new Date(d);
+      // ISO week algorithm
+      const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = tmp.getUTCDay() || 7;
+      tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil(((tmp - yearStart) / 86400000 + 1) / 7);
+      return `${tmp.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+    };
+
+    // Build chronological list of week keys (oldest -> newest)
+    const weekKeys = [];
+    for (let i = weeksBack - 1; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+      weekKeys.push(isoWeekKey(d));
+    }
+
+    const weeklyMap = Object.fromEntries(
+      weekKeys.map((wk) => [wk, { interviews: 0, scores: [] }])
+    );
+
+    let lastPracticeAt = null;
+    const categoryAgg = {}; // { category: { count, scoreSum, scoreCount } }
+    let followUpsTotal = 0;
+    let followUpsReviewed = 0;
+
+    // Iterate interviews
+    for (const iv of interviews) {
+      const wk = isoWeekKey(iv.createdAt);
+      if (weeklyMap[wk]) {
+        weeklyMap[wk].interviews += 1;
+        if (iv.results?.overallScore != null) {
+          weeklyMap[wk].scores.push(iv.results.overallScore);
+        }
+      }
+      if (iv.status === "completed") {
+        if (!lastPracticeAt || new Date(iv.createdAt) > new Date(lastPracticeAt)) {
+          lastPracticeAt = iv.createdAt;
+        }
+        // Category coverage from questions
+        (iv.questions || []).forEach((q) => {
+          const cat = q.category || "Uncategorized";
+            if (!categoryAgg[cat]) categoryAgg[cat] = { count: 0, scoreSum: 0, scoreCount: 0 };
+            categoryAgg[cat].count += 1;
+            if (iv.results?.overallScore != null) {
+              categoryAgg[cat].scoreSum += iv.results.overallScore;
+              categoryAgg[cat].scoreCount += 1;
+            }
+            // Follow-ups
+            if (q.followUps) {
+              followUpsTotal += Array.isArray(q.followUps) ? q.followUps.length : 1;
+            }
+            if (q.followUpsReviewed) followUpsReviewed += 1; // flag means user reviewed set
+        });
+      }
+    }
+
+    const weekly = {
+      weeks: weekKeys,
+      interviews: weekKeys.map((wk) => weeklyMap[wk].interviews),
+      avgScore: weekKeys.map((wk) => {
+        const arr = weeklyMap[wk].scores;
+        if (!arr.length) return null; // null => no data that week
+        return Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+      }),
+    };
+
+    const categoryCoverage = Object.entries(categoryAgg)
+      .map(([category, v]) => ({
+        category,
+        count: v.count,
+        avgScore: v.scoreCount ? Math.round(v.scoreSum / v.scoreCount) : null,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12); // limit for now
+
+    // Placeholder skill dimension mapping: group categories heuristically
+    const dimensionBuckets = {
+      Technical: [/system/i, /data/i, /algorithm/i, /code/i],
+      Communication: [/behavior/i, /communication/i, /team/i],
+      Systems: [/design/i, /architecture/i, /scalability/i],
+      Behavioral: [/behavior/i, /culture/i, /soft/i],
+    };
+    const dimScores = {};
+    for (const dim of Object.keys(dimensionBuckets)) {
+      dimScores[dim] = { scoreSum: 0, scoreCount: 0 };
+    }
+    for (const iv of interviews) {
+      if (iv.status !== "completed" || iv.results?.overallScore == null) continue;
+      const score = iv.results.overallScore;
+      const cats = new Set((iv.questions || []).map((q) => q.category || ""));
+      for (const dim of Object.keys(dimensionBuckets)) {
+        const patterns = dimensionBuckets[dim];
+        // If any category matches pattern, include score
+        if ([...cats].some((c) => patterns.some((re) => re.test(c)))) {
+          dimScores[dim].scoreSum += score;
+          dimScores[dim].scoreCount += 1;
+        }
+      }
+    }
+    const skillDimensions = Object.keys(dimScores)
+      .map((dim) => ({
+        dimension: dim,
+        score: dimScores[dim].scoreCount
+          ? Math.round(dimScores[dim].scoreSum / dimScores[dim].scoreCount)
+          : null,
+      }))
+      .filter((d) => d.score !== null);
+
+    const payload = {
+      weekly,
+      categoryCoverage,
+      followUps: { total: followUpsTotal, reviewed: followUpsReviewed },
+      skillDimensions,
+      lastPracticeAt,
+    };
+    return ok(res, payload);
+  } catch (error) {
+    console.error("Dashboard metrics error:", error);
+    return fail(res, 500, "DASHBOARD_METRICS_FAILED", "Failed to load metrics");
+  }
+}
+
+module.exports.getDashboardMetrics = getDashboardMetrics;
