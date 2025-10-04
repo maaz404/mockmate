@@ -401,6 +401,13 @@ const interviewSchema = new mongoose.Schema(
   }
 );
 
+// Performance-oriented indexes for dashboard metrics & filtering
+// Compound index to accelerate horizon + status queries
+interviewSchema.index({ userId: 1, createdAt: -1, status: 1 });
+// Category / tag coverage lookups (sparse usage but helpful for aggregation)
+interviewSchema.index({ userId: 1, "questions.category": 1 });
+interviewSchema.index({ userId: 1, "questions.tags": 1 });
+
 // Indexes for performance
 interviewSchema.index({ userId: 1, createdAt: -1 });
 interviewSchema.index({ status: 1 });

@@ -613,13 +613,21 @@ async function getDashboardPreferences(req, res) {
 async function updateDashboardPreferences(req, res) {
   try {
     const { userId } = req.auth;
-    const { density, upcomingView, thisWeekOnly } = req.body || {};
+    const { density, upcomingView, thisWeekOnly, metricsHorizon, benchmark } = req.body || {};
     const update = {};
     if (density) update["preferences.dashboard.density"] = density;
     if (upcomingView)
       update["preferences.dashboard.upcomingView"] = upcomingView;
     if (typeof thisWeekOnly === "boolean")
       update["preferences.dashboard.thisWeekOnly"] = thisWeekOnly;
+    if (metricsHorizon && Number.isFinite(Number(metricsHorizon))) {
+      const h = Math.max(1, Math.min(24, parseInt(metricsHorizon, 10)));
+      update["preferences.dashboard.metricsHorizon"] = h;
+    }
+    if (benchmark && Number.isFinite(Number(benchmark))) {
+      const b = Math.max(10, Math.min(100, parseInt(benchmark, 10)));
+      update["preferences.dashboard.benchmark"] = b;
+    }
 
     const profile = await UserProfile.findOneAndUpdate(
       { clerkUserId: userId },
