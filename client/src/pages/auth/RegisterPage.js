@@ -175,7 +175,10 @@ const RegisterPage = () => {
                 navigate("/dashboard", { replace: true });
               } catch (e) {
                 // eslint-disable-next-line no-console
-                console.warn("[RegisterPage] navigation to /dashboard failed", e);
+                console.warn(
+                  "[RegisterPage] navigation to /dashboard failed",
+                  e
+                );
               }
             }}
             signUpStart={(ctx) => {

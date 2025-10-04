@@ -18,7 +18,7 @@ const DashboardHero = ({
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: "easeOut" }}
-  className={`relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/80 dark:bg-gradient-to-br dark:from-surface-800/90 dark:via-surface-800/70 dark:to-surface-900/80 backdrop-blur-md px-6 md:px-10 py-10 shadow-surface-md dark:shadow-surface-lg transition-colors`}
+      className={`relative overflow-hidden rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/80 dark:bg-gradient-to-br dark:from-surface-800/90 dark:via-surface-800/70 dark:to-surface-900/80 backdrop-blur-md px-6 md:px-10 py-10 shadow-surface-md dark:shadow-surface-lg transition-colors`}
     >
       <div className="pointer-events-none absolute -top-24 -left-14 w-80 h-80 rounded-full bg-primary-500/10 dark:bg-primary-600/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-14 w-80 h-80 rounded-full bg-emerald-400/10 dark:bg-fuchsia-600/10 blur-3xl" />

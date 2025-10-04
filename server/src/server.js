@@ -38,6 +38,46 @@ const notFound = require("./middleware/notFound");
 
 // Create Express app
 const app = express();
+// Early middleware: request id before anything else that may log
+const requestId = require("./middleware/requestId");
+app.use(requestId);
+// Response time + structured log middleware (lightweight)
+app.use((req, res, next) => {
+  const start = process.hrtime.bigint();
+  res.on("finish", () => {
+    try {
+      const end = process.hrtime.bigint();
+      // eslint-disable-next-line no-magic-numbers
+      const ms = Number(end - start) / 1e6;
+      // Skip noisy health & metrics high-frequency endpoints logging at info
+      const skip =
+        /\/api\/(health|bootstrap)/.test(req.path) && res.statusCode < 400;
+      if (!skip) {
+        // eslint-disable-next-line no-console
+        console.log(
+          JSON.stringify({
+            ts: new Date().toISOString(),
+            level:
+              res.statusCode >= 500
+                ? "error"
+                : res.statusCode >= 400
+                ? "warn"
+                : "info",
+            requestId: req.requestId,
+            method: req.method,
+            path: req.path,
+            status: res.statusCode,
+            // eslint-disable-next-line no-magic-numbers
+            durationMs: ms.toFixed(2),
+          })
+        );
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  });
+  next();
+});
 
 // Set trust proxy for proper IP detection
 app.set("trust proxy", 1);
@@ -86,12 +126,14 @@ app.use(
 // Compression
 app.use(compression());
 
-// Logging
-if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-} else {
-  app.use(morgan("combined"));
-}
+// Logging (attach request id token to morgan output)
+const morganFormat =
+  process.env.NODE_ENV === "development" ? "dev" : "combined";
+app.use(
+  morgan(morganFormat, {
+    stream: { write: (str) => process.stdout.write(str) },
+  })
+);
 
 // Body parser middleware
 app.use(express.json({ limit: "10mb" }));
@@ -141,6 +183,64 @@ if (useClerkGlobally) {
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+// Lightweight bootstrap route (auth + profile + analytics) placed near user routes for discoverability
+app.get("/api/bootstrap", async (req, res) => {
+  // In dev mock mode allow unauth to still get a stub
+  try {
+    const authCtx = req.auth || {};
+    const userId = authCtx.userId || authCtx.id;
+    const usingMock =
+      process.env.NODE_ENV !== "production" &&
+      process.env.MOCK_AUTH_FALLBACK === "true";
+    const { ok, fail } = require("./utils/responder");
+    if (!userId && !usingMock) {
+      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
+    }
+    const UserProfile = require("./models/UserProfile");
+    let profile = null;
+    if (userId) {
+      try {
+        profile = await UserProfile.findOne({ clerkUserId: userId }).lean();
+      } catch (dbErr) {
+        // Non-fatal for bootstrap; continue with stubbed analytics
+        if (process.env.NODE_ENV === "development") {
+          req.log &&
+            req.log("warn", "Bootstrap DB fetch failed", {
+              detail: dbErr.message,
+            });
+        }
+      }
+    }
+    if (!profile && usingMock) {
+      profile = {
+        clerkUserId: "test-user-123",
+        email: "test-user-123@dev.local",
+        firstName: "Test",
+        lastName: "User",
+        onboardingCompleted: false,
+        analytics: { averageScore: 0 },
+      };
+    }
+    const payload = {
+      auth: userId ? { userId } : null,
+      profile,
+      analytics: profile ? profile.analytics || {} : {},
+      requestId: req.requestId,
+      timestamp: new Date().toISOString(),
+      dbConnected: require("./config/database").isDbConnected(),
+    };
+    return ok(res, payload);
+  } catch (e) {
+    const { fail } = require("./utils/responder");
+    return fail(
+      res,
+      500,
+      "BOOTSTRAP_FAILED",
+      "Failed to load bootstrap data",
+      process.env.NODE_ENV === "development" ? { detail: e.message } : undefined
+    );
+  }
+});
 app.use("/api/interviews", interviewRoutes);
 app.use("/api/interviews", interviewMediaRoutes);
 app.use("/api/questions", questionRoutes);

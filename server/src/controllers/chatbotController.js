@@ -2,6 +2,7 @@
 const grokChatbotService = require("../services/grokChatbotService");
 const UserProfile = require("../models/UserProfile");
 const Logger = require("../utils/logger");
+const { ok, fail } = require("../utils/responder");
 
 /**
  * Health check for chatbot service
@@ -19,21 +20,26 @@ exports.health = async (req, res) => {
         validation = { valid: false, reason: "Validation failed" };
       }
     }
-
-    res.json({
-      status: "ok",
+    return ok(res, {
       chatbot: {
-        provider: "Grok (xAI)",
+        provider: "grok",
         available: isConfigured,
         model: process.env.GROK_MODEL || "grok-beta",
         validation,
       },
+      requestId: req.requestId,
     });
   } catch (error) {
     Logger.error("Chatbot health check error:", error);
-    res.status(500).json({
-      error: "Failed to check chatbot status",
-    });
+    return fail(
+      res,
+      500,
+      "CHATBOT_HEALTH_FAILED",
+      "Failed to check chatbot status",
+      process.env.NODE_ENV === "development"
+        ? { detail: error.message }
+        : undefined
+    );
   }
 };
 
@@ -49,16 +55,22 @@ exports.chat = async (req, res) => {
 
     // Validation
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({
-        error: "Messages array is required and cannot be empty",
-      });
+      return fail(
+        res,
+        400,
+        "CHAT_MISSING_MESSAGES",
+        "Messages array is required and cannot be empty"
+      );
     }
 
     // Check if Grok is configured
     if (!grokChatbotService.isConfigured()) {
-      return res.status(503).json({
-        error: "Chatbot is not configured. Please contact support.",
-      });
+      return fail(
+        res,
+        503,
+        "CHATBOT_UNCONFIGURED",
+        "Chatbot is not configured. Please contact support."
+      );
     }
 
     // Get user profile for better context
@@ -80,54 +92,89 @@ exports.chat = async (req, res) => {
     );
 
     // Get response from Grok
-    const response = await grokChatbotService.chat(messages, enhancedContext);
-
-    res.json({
-      message: response.message,
-      timestamp: new Date().toISOString(),
-      provider: "grok",
-      model: response.model,
-    });
+    try {
+      const response = await grokChatbotService.chat(messages, enhancedContext);
+      return ok(res, {
+        message: response.message,
+        provider: "grok",
+        model: response.model,
+        timestamp: new Date().toISOString(),
+        requestId: req.requestId,
+      });
+    } catch (primaryErr) {
+      Logger.warn(
+        "Primary Grok chat failed, attempting OpenAI fallback:",
+        primaryErr.message
+      );
+      try {
+        const fb = await grokChatbotService.openAIFallback(
+          messages,
+          enhancedContext
+        );
+        return ok(res, {
+          message: fb.message,
+          provider: fb.provider,
+          model: fb.model,
+          timestamp: new Date().toISOString(),
+          fallback: true,
+          requestId: req.requestId,
+        });
+      } catch (fbErr) {
+        Logger.warn(
+          "OpenAI fallback also failed, reverting to dev fallback response:",
+          fbErr.message
+        );
+        throw primaryErr; // triggers lower dev fallback section
+      }
+    }
   } catch (error) {
     Logger.error("Chat controller error:", error);
 
     // In development, provide a graceful fallback response instead of erroring
     if (process.env.NODE_ENV !== "production") {
-      return res.json({
+      return ok(res, {
         message:
           "I'm having trouble connecting to Grok right now. Here are some quick tips while I reconnect:\n\n" +
           "- Be concise and structure answers with a brief intro, 2-3 points, and a closing.\n" +
           "- For behavioral questions, use STAR (Situation, Task, Action, Result).\n" +
           "- For coding, clarify constraints, outline approach, then code and test.\n\n" +
           "You can also ask me: ‘Explain this page’, ‘Common mistakes to avoid’, or ‘How to improve for my next interview’.",
-        timestamp: new Date().toISOString(),
-        provider: "fallback",
+        provider: "dev-fallback",
         model: "mock",
+        timestamp: new Date().toISOString(),
+        requestId: req.requestId,
       });
     }
 
     // Send user-friendly error messages
     if (error.message.includes("not configured")) {
-      return res.status(503).json({
-        error:
-          "Chatbot service is currently unavailable. Please try again later.",
-      });
+      return fail(
+        res,
+        503,
+        "CHATBOT_UNAVAILABLE",
+        "Chatbot service is currently unavailable. Please try again later."
+      );
     }
 
     if (error.message.includes("Rate limit")) {
-      return res.status(429).json({
-        error: "Too many requests. Please wait a moment and try again.",
-      });
+      return fail(
+        res,
+        429,
+        "CHATBOT_RATE_LIMIT",
+        "Too many requests. Please wait a moment and try again."
+      );
     }
 
     if (
       error.message.includes("Invalid") &&
       error.message.includes("API key")
     ) {
-      return res.status(500).json({
-        error: "Chatbot service configuration error. Please contact support.",
-        code: "GROK_INVALID_API_KEY",
-      });
+      return fail(
+        res,
+        500,
+        "GROK_INVALID_API_KEY",
+        "Chatbot service configuration error. Please contact support."
+      );
     }
 
     if (
@@ -135,17 +182,22 @@ exports.chat = async (req, res) => {
       error.message.includes("access denied")
     ) {
       // 402 - Payment Required-like signal
-      return res.status(402).json({
-        error:
-          "Grok API is unavailable due to insufficient credits or access. Please add credits on xAI console.",
-        code: "GROK_NO_CREDITS",
-      });
+      return fail(
+        res,
+        402,
+        "GROK_NO_CREDITS",
+        "Grok API is unavailable due to insufficient credits or access. Please add credits on xAI console."
+      );
     }
-
-    res.status(500).json({
-      error: "Failed to process your message. Please try again.",
-      code: "GROK_CHAT_ERROR",
-    });
+    return fail(
+      res,
+      500,
+      "GROK_CHAT_ERROR",
+      "Failed to process your message. Please try again.",
+      process.env.NODE_ENV === "development"
+        ? { detail: error.message }
+        : undefined
+    );
   }
 };
 
@@ -184,12 +236,21 @@ exports.getChatSuggestions = async (req, res) => {
     }
 
     // Limit to 5 suggestions
-    res.json({ suggestions: suggestions.slice(0, 5) });
+    return ok(res, {
+      suggestions: suggestions.slice(0, 5),
+      requestId: req.requestId,
+    });
   } catch (error) {
     Logger.error("Get chat suggestions error:", error);
-    res.status(500).json({
-      error: "Failed to fetch suggestions",
-    });
+    return fail(
+      res,
+      500,
+      "CHATBOT_SUGGESTIONS_FAILED",
+      "Failed to fetch suggestions",
+      process.env.NODE_ENV === "development"
+        ? { detail: error.message }
+        : undefined
+    );
   }
 };
 
@@ -207,7 +268,8 @@ exports.stream = async (req, res) => {
 
   const send = (event, data) => {
     res.write(`event: ${event}\n`);
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    const enriched = { ...data, requestId: req.requestId };
+    res.write(`data: ${JSON.stringify(enriched)}\n\n`);
   };
 
   try {
@@ -217,6 +279,7 @@ exports.stream = async (req, res) => {
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       send("error", {
         error: "Messages array is required and cannot be empty",
+        code: "CHAT_MISSING_MESSAGES",
       });
       return res.end();
     }
@@ -234,35 +297,85 @@ exports.stream = async (req, res) => {
       context
     );
 
-    // Try Grok streaming
+    // Try Grok streaming first
     if (grokChatbotService.isConfigured()) {
       try {
         const stream = await grokChatbotService.streamChat(
           messages,
           enhancedContext
         );
-        // Pipe Grok's byte stream; translate to SSE lines
+        let buffer = "";
         stream.on("data", (chunk) => {
-          const text = chunk.toString();
-          // xAI streams JSON lines/partial; send raw and let client assemble
-          send("chunk", { text });
+          const piece = chunk.toString();
+          buffer += piece;
+          // Grok may emit JSON lines delimited by newlines
+          const parts = buffer.split(/\n/);
+          buffer = parts.pop();
+          for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed) continue;
+            // Attempt to parse JSON structure {choices:[{delta:{content:..}}]}
+            try {
+              const maybe = JSON.parse(trimmed);
+              const text =
+                maybe.choices?.[0]?.delta?.content || maybe.text || "";
+              if (text) send("chunk", { text, source: "grok" });
+            } catch {
+              // fallback: treat raw text
+              send("chunk", { text: trimmed, source: "grok-raw" });
+            }
+          }
         });
         stream.on("end", () => {
-          send("done", { timestamp: new Date().toISOString() });
+          if (buffer.trim())
+            send("chunk", { text: buffer.trim(), source: "grok-tail" });
+          send("done", {
+            timestamp: new Date().toISOString(),
+            provider: "grok",
+          });
           res.end();
         });
         stream.on("error", (err) => {
-          send("error", { error: err.message });
+          send("error", { error: err.message, code: "CHAT_STREAM_ERROR" });
           res.end();
         });
-        return;
+        return; // streaming path succeeded
       } catch (err) {
-        // fall through to dev fallback streamer
-        send("notice", { note: "Falling back to dev streamer" });
+        // Attempt non-streaming fallback before dev static
+        try {
+          const result = await grokChatbotService.chat(
+            messages,
+            enhancedContext
+          );
+          send("chunk", { text: result.message, source: "grok-fallback" });
+          send("done", {
+            timestamp: new Date().toISOString(),
+            provider: "grok",
+            fallback: true,
+          });
+          return res.end();
+        } catch (inner) {
+          // Attempt OpenAI fallback before dev static
+          try {
+            const alt = await grokChatbotService.openAIFallback(
+              messages,
+              enhancedContext
+            );
+            send("chunk", { text: alt.message, source: "openai-fallback" });
+            send("done", {
+              timestamp: new Date().toISOString(),
+              provider: alt.provider,
+              fallback: true,
+            });
+            return res.end();
+          } catch (altErr) {
+            send("notice", { note: "Using development fallback response" });
+          }
+        }
       }
     }
 
-    // Dev fallback streaming
+    // Development static streamer fallback
     const fallback = grokChatbotService.getDevFallbackStreamer(
       "Here is a helpful response while the live AI reconnects. Use STAR for behavioral answers; for coding, clarify constraints, outline, implement, and test."
     );
@@ -270,14 +383,21 @@ exports.stream = async (req, res) => {
     const interval = setInterval(() => {
       if (step.done) {
         clearInterval(interval);
-        send("done", { timestamp: new Date().toISOString() });
+        send("done", {
+          timestamp: new Date().toISOString(),
+          source: "dev-fallback",
+          provider: "dev-fallback",
+        });
         return res.end();
       }
-      send("chunk", { text: step.value });
+      send("chunk", { text: step.value, source: "dev-fallback" });
       step = fallback.next();
     }, 30);
   } catch (error) {
-    send("error", { error: "Failed to start stream" });
+    send("error", {
+      error: "Failed to start stream",
+      code: "CHAT_STREAM_START_FAILED",
+    });
     res.end();
   }
 };

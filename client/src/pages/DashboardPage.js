@@ -595,14 +595,45 @@ const DashboardPage = () => {
       const response = await apiService.post("/interviews", {
         config: interviewConfig,
       });
-
-      if (response.success) {
-        navigate(`/interview/${response.data._id}`);
-      } else {
-        alert("Failed to create interview. Please try again.");
+      if (response?.success && response?.data?._id) {
+        const id = response.data._id;
+        // Attempt auto-start (transition scheduled -> in-progress)
+        try {
+          const startResp = await apiService.put(`/interviews/${id}/start`);
+          if (!startResp?.success) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              "[Dashboard] auto-start interview not successful",
+              startResp
+            );
+          }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn("[Dashboard] auto-start interview error", e);
+        }
+        navigate(`/interview/${id}`);
+        return;
       }
+      const msg = response?.message || "Failed to create interview";
+      toast.error(msg);
+      // eslint-disable-next-line no-console
+      console.error(
+        "[Dashboard] create interview unexpected response",
+        response
+      );
     } catch (error) {
-      alert("Failed to create interview. Please try again.");
+      // eslint-disable-next-line no-console
+      console.error("[Dashboard] create interview error", error);
+      const detail =
+        error?.message || error?.code || "Failed to create interview";
+      const readable = /NO_QUESTIONS/.test(error?.code || detail)
+        ? "Could not generate questions for this configuration. Try adjusting role, type, or difficulty."
+        : detail;
+      toast.error(
+        readable.includes("Failed to create interview")
+          ? readable
+          : `Create interview failed: ${readable}`
+      );
     }
   };
 

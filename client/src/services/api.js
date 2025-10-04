@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getLastRequestId } from "./axiosRequestId"; // for enriched error context
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -62,6 +63,11 @@ api.interceptors.response.use(
       code: response?.data?.error || null,
       message: response?.data?.message || error.message || "Request failed",
       meta: response?.data?.meta,
+      requestId:
+        response?.data?.requestId ||
+        response?.headers?.["x-request-id"] ||
+        getLastRequestId() ||
+        null,
       raw: error,
     };
     return Promise.reject(normalized);

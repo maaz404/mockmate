@@ -18,30 +18,70 @@ const {
 const dbReady = require("../middleware/dbReady");
 const inMem = require("../services/inMemoryInterviewService");
 
+// Basic ok/fail helpers (local copy to avoid import cycles)
+function ok(res, data = {}, meta = {}) {
+  return res
+    .status(200)
+    .json({ success: true, data, requestId: res.locals.requestId, ...meta });
+}
+function fail(res, code, message, status = 400, extra = {}) {
+  return res
+    .status(status)
+    .json({
+      success: false,
+      code,
+      message,
+      requestId: res.locals.requestId,
+      ...extra,
+    });
+}
+
+// Wrap to normalize existing controllers that may directly res.json today
+function wrap(handler, { transform } = {}) {
+  return async (req, res, next) => {
+    try {
+      const result = await handler(req, res, next);
+      if (res.headersSent) return; // controller already responded
+      const payload = transform ? transform(result, req, res) : result;
+      ok(res, payload || {});
+    } catch (err) {
+      if (res.headersSent) return;
+      const code = err.code || "INTERVIEW_LIFECYCLE_ERROR";
+      fail(
+        res,
+        code,
+        err.message || "Interview lifecycle operation failed",
+        err.status || 500
+      );
+    }
+  };
+}
+
 // @desc    Create interview session
 // @route   POST /api/interviews
 // @access  Private
-router.post("/", requireAuth, ensureUserProfile, dbReady, (req, res) =>
-  req.useInMemory ? inMem.createInterview(req, res) : createInterview(req, res)
-);
+router.post("/", requireAuth, ensureUserProfile, dbReady, (req, res) => {
+  if (req.useInMemory) return wrap(inMem.createInterview)(req, res);
+  return wrap(createInterview)(req, res);
+});
 
 // @desc    Get user interviews
 // @route   GET /api/interviews
 // @access  Private
-router.get("/", requireAuth, ensureUserProfile, dbReady, (req, res) =>
-  req.useInMemory
-    ? inMem.getUserInterviews(req, res)
-    : getUserInterviews(req, res)
-);
+router.get("/", requireAuth, ensureUserProfile, dbReady, (req, res) => {
+  return req.useInMemory
+    ? wrap(inMem.getUserInterviews)(req, res)
+    : wrap(getUserInterviews)(req, res);
+});
 
 // @desc    Get specific interview
 // @route   GET /api/interviews/:id
 // @access  Private
-router.get("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) =>
-  req.useInMemory
-    ? inMem.getInterviewDetails(req, res)
-    : getInterviewDetails(req, res)
-);
+router.get("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) => {
+  return req.useInMemory
+    ? wrap(inMem.getInterviewDetails)(req, res)
+    : wrap(getInterviewDetails)(req, res);
+});
 
 // @desc    Generate questions for interview
 // @route   POST /api/interviews/:id/questions
@@ -52,14 +92,18 @@ router.post(
   ensureUserProfile,
   dbReady,
   (req, res) =>
-    req.useInMemory ? inMem.startInterview(req, res) : startInterview(req, res)
+    req.useInMemory
+      ? wrap(inMem.startInterview)(req, res)
+      : wrap(startInterview)(req, res)
 ); // This will generate questions
 
 // @desc    Start interview session
 // @route   PUT /api/interviews/:id/start
 // @access  Private
 router.put("/:id/start", requireAuth, ensureUserProfile, dbReady, (req, res) =>
-  req.useInMemory ? inMem.startInterview(req, res) : startInterview(req, res)
+  req.useInMemory
+    ? wrap(inMem.startInterview)(req, res)
+    : wrap(startInterview)(req, res)
 );
 
 // @desc    Submit answer to question
@@ -71,7 +115,9 @@ router.post(
   ensureUserProfile,
   dbReady,
   (req, res) =>
-    req.useInMemory ? inMem.submitAnswer(req, res) : submitAnswer(req, res)
+    req.useInMemory
+      ? wrap(inMem.submitAnswer)(req, res)
+      : wrap(submitAnswer)(req, res)
 );
 
 // @desc    Generate follow-up question
@@ -84,8 +130,8 @@ router.post(
   dbReady,
   (req, res) =>
     req.useInMemory
-      ? inMem.generateFollowUp(req, res)
-      : generateFollowUp(req, res)
+      ? wrap(inMem.generateFollowUp)(req, res)
+      : wrap(generateFollowUp)(req, res)
 );
 
 // @desc    Get next adaptive question
@@ -98,8 +144,8 @@ router.post(
   dbReady,
   (req, res) =>
     req.useInMemory
-      ? inMem.getAdaptiveQuestion(req, res)
-      : getAdaptiveQuestion(req, res)
+      ? wrap(inMem.getAdaptiveQuestion)(req, res)
+      : wrap(getAdaptiveQuestion)(req, res)
 );
 
 // @desc    Complete interview with final submission
@@ -112,8 +158,8 @@ router.post(
   dbReady,
   (req, res) =>
     req.useInMemory
-      ? inMem.completeInterview(req, res)
-      : completeInterview(req, res)
+      ? wrap(inMem.completeInterview)(req, res)
+      : wrap(completeInterview)(req, res)
 );
 
 // @desc    Get interview results (formatted)
@@ -127,8 +173,8 @@ router.get(
   (req, res) => {
     req.params.interviewId = req.params.id;
     return req.useInMemory
-      ? inMem.getInterviewResults(req, res)
-      : getInterviewResults(req, res);
+      ? wrap(inMem.getInterviewResults)(req, res)
+      : wrap(getInterviewResults)(req, res);
   }
 );
 
@@ -143,8 +189,8 @@ router.post(
   (req, res) => {
     req.params.interviewId = req.params.id;
     return req.useInMemory
-      ? inMem.markFollowUpsReviewed(req, res)
-      : markFollowUpsReviewed(req, res);
+      ? wrap(inMem.markFollowUpsReviewed)(req, res)
+      : wrap(markFollowUpsReviewed)(req, res);
   }
 );
 
@@ -153,12 +199,16 @@ const C = require("../utils/constants");
 // @desc    Delete interview (with Cloudinary cleanup)
 // @route   DELETE /api/interviews/:id
 // @access  Private
-router.delete("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) =>
-  req.useInMemory
-    ? res
-        .status(C.HTTP_STATUS_NOT_IMPLEMENTED)
-        .json({ success: false, message: "Not supported in memory mode" })
-    : deleteInterview(req, res)
-);
+router.delete("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) => {
+  if (req.useInMemory) {
+    return fail(
+      res,
+      "NOT_IMPLEMENTED_IN_MEMORY",
+      "Not supported in memory mode",
+      C.HTTP_STATUS_NOT_IMPLEMENTED
+    );
+  }
+  return wrap(deleteInterview)(req, res);
+});
 
 module.exports = router;

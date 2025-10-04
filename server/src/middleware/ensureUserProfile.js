@@ -13,15 +13,32 @@ module.exports = async function ensureUserProfile(req, res, next) {
 
     let profile = await UserProfile.findOne({ clerkUserId: userId });
 
+    // Derive safe email + names. In dev MOCK_AUTH_FALLBACK we may not have headers.
+    const headerEmail = req.headers["x-user-email"]; // may be undefined
+    const safeEmail =
+      headerEmail && /@/.test(headerEmail)
+        ? headerEmail
+        : `${userId}@dev.local`; // deterministic placeholder – satisfies unique required constraint
+    const firstName =
+      req.headers["x-user-firstname"] || profile?.firstName || "";
+    const lastName = req.headers["x-user-lastname"] || profile?.lastName || "";
+
     if (!profile) {
-      // If email / names available via Clerk (mirrored in headers if needed) use them
       profile = await UserProfile.create({
         clerkUserId: userId,
-        email: req.headers["x-user-email"] || "",
-        firstName: req.headers["x-user-firstname"] || "",
-        lastName: req.headers["x-user-lastname"] || "",
+        email: safeEmail,
+        firstName,
+        lastName,
         onboardingCompleted: false,
       });
+    } else if (!profile.email || profile.email.endsWith("@dev.local")) {
+      // Backfill email if we now have a real one
+      if (headerEmail && /@/.test(headerEmail)) {
+        profile.email = headerEmail;
+        if (firstName && !profile.firstName) profile.firstName = firstName;
+        if (lastName && !profile.lastName) profile.lastName = lastName;
+        await profile.save();
+      }
     }
 
     req.userProfile = profile;

@@ -20,11 +20,26 @@ if (process.env.DB_DEBUG_LOGS === "true") {
  * Connect to MongoDB database (Atlas or self-hosted via MONGODB_URI)
  */
 const connectDB = async () => {
-  const uri = process.env.MONGODB_URI;
+  let uri = process.env.MONGODB_URI;
   if (!uri) {
-    Logger.error("Missing MONGODB_URI in environment.");
-    if (process.env.NODE_ENV === "production") process.exit(1);
-    return;
+    if (process.env.NODE_ENV === "test") {
+      // Lazy load to avoid dev dependency cost otherwise
+      try {
+        // eslint-disable-next-line global-require
+        const { MongoMemoryServer } = require("mongodb-memory-server");
+        const mem = await MongoMemoryServer.create();
+        uri = mem.getUri();
+        process.env.MONGODB_URI = uri; // propagate for any downstream usage
+        Logger.warn("Using in-memory MongoDB instance for tests.");
+      } catch (e) {
+        Logger.error("Failed to start in-memory MongoDB:", e?.message || e);
+        return; // tests relying on DB will fail fast
+      }
+    } else {
+      Logger.error("Missing MONGODB_URI in environment.");
+      if (process.env.NODE_ENV === "production") process.exit(1);
+      return;
+    }
   }
 
   const doConnect = async () => {

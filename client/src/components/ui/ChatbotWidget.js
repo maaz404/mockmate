@@ -40,6 +40,10 @@ const ChatbotWidget = () => {
   const autoRetriedRef = useRef(false);
   const { getToken, userId } = useAuth();
 
+  // Canonical helpful guidance message (requested implementation)
+  const HELPFUL_GUIDANCE =
+    "Here is a helpful response while the live AI reconnects. Use STAR for behavioral answers; for coding, clarify constraints, outline, implement, and test.";
+
   // Load history
   useEffect(() => {
     try {
@@ -77,6 +81,23 @@ const ChatbotWidget = () => {
   // Focus input when open
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
+  }, [isOpen]);
+
+  // Inject initial assistant guidance message when chat first opened and empty
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      const ts = new Date().toISOString();
+      setMessages([
+        {
+          role: "assistant",
+          content: HELPFUL_GUIDANCE,
+          timestamp: ts,
+          isStreaming: false,
+          isInitial: true,
+        },
+      ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Suggestions
@@ -175,6 +196,9 @@ const ChatbotWidget = () => {
     const decoder = new TextDecoder();
     let buffer = "";
     let finished = false;
+    let currentRequestId = null;
+    let currentProvider = null;
+    let currentFallback = false;
 
     while (reader && !finished) {
       const { value, done } = await reader.read();
@@ -195,28 +219,67 @@ const ChatbotWidget = () => {
             const data = JSON.parse(dataPayload || "{}");
             const text = data.text || "";
             if (!text) continue;
+            if (data.requestId) currentRequestId = data.requestId;
+            if (data.provider) currentProvider = data.provider;
+            if (data.fallback) currentFallback = true;
+            // Strip any leading data artifacts
+            const clean = text.replace(/^data:/, "").replace(/^[\s]+/, "");
+            const snapshotProvider = currentProvider;
+            const snapshotRequestId = currentRequestId;
+            const snapshotFallback = currentFallback;
             setMessages((prev) => {
               const u = [...prev];
               const i = u.length - 1;
               if (!u[i]) return prev;
-              u[i] = { ...u[i], content: (u[i].content || "") + text };
+              u[i] = {
+                ...u[i],
+                content: (u[i].content || "") + clean,
+                provider:
+                  data.provider ||
+                  data.source ||
+                  snapshotProvider ||
+                  u[i].provider,
+                requestId: snapshotRequestId || u[i].requestId,
+                fallback: snapshotFallback || u[i].fallback,
+              };
               return u;
             });
           } catch {}
         } else if (eventName === "done") {
+          const snapshotProvider = currentProvider;
+          const snapshotRequestId = currentRequestId;
+          const snapshotFallback = currentFallback;
           setMessages((prev) => {
             const u = [...prev];
             const i = u.length - 1;
-            if (u[i]) u[i] = { ...u[i], isStreaming: false };
+            if (u[i])
+              u[i] = {
+                ...u[i],
+                isStreaming: false,
+                provider: snapshotProvider || u[i].provider,
+                requestId: snapshotRequestId || u[i].requestId,
+                fallback: snapshotFallback || u[i].fallback,
+              };
             return u;
           });
           finished = true;
           break;
         } else if (eventName === "error") {
+          const snapshotProvider = currentProvider;
+          const snapshotRequestId = currentRequestId;
+          const snapshotFallback = currentFallback;
           setMessages((prev) => {
             const u = [...prev];
             const i = u.length - 1;
-            if (u[i]) u[i] = { ...u[i], isStreaming: false };
+            if (u[i])
+              u[i] = {
+                ...u[i],
+                isStreaming: false,
+                provider: snapshotProvider || u[i].provider,
+                requestId: snapshotRequestId || u[i].requestId,
+                fallback: snapshotFallback || u[i].fallback,
+                isError: true,
+              };
             return u;
           });
           finished = true;
@@ -290,6 +353,9 @@ const ChatbotWidget = () => {
           role: "assistant",
           content: resp?.data?.message || "",
           timestamp: new Date().toISOString(),
+          provider: resp?.data?.provider,
+          fallback: resp?.data?.fallback || false,
+          requestId: resp?.data?.requestId,
         };
         setMessages((prev) => [...prev, assistant]);
       } catch (fallbackErr) {
@@ -375,6 +441,11 @@ const ChatbotWidget = () => {
   };
   const isDisabled = !chatbotAvailable;
 
+  const lastProvider = [...messages]
+    .reverse()
+    .find(
+      (m) => m.role === "assistant" && !m.isInitial && m.provider
+    )?.provider;
   return (
     <div className={`fixed bottom-6 right-6 z-[9999] ${isDocked ? "" : ""}`}>
       {/* Floating Button */}
@@ -437,7 +508,21 @@ const ChatbotWidget = () => {
                       Beta
                     </span>
                   </div>
-                  <p className="text-[11px] text-teal-50">Powered by Grok</p>
+                  <p className="text-[11px] text-teal-50 flex items-center gap-1">
+                    {lastProvider === "openai-fallback" && (
+                      <span className="text-[10px] px-1 rounded bg-white/20">
+                        OpenAI
+                      </span>
+                    )}
+                    {(!lastProvider || lastProvider?.startsWith("grok")) && (
+                      <span>Powered by Grok</span>
+                    )}
+                    {process.env.REACT_APP_CHATBOT_APP_ONLY === "true" && (
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-white/20">
+                        App-only
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -584,6 +669,36 @@ const ChatbotWidget = () => {
                     <div className="text-sm whitespace-pre-wrap leading-relaxed">
                       {message.content}
                     </div>
+                    {message.role === "assistant" &&
+                      (message.provider ||
+                        message.requestId ||
+                        message.fallback) && (
+                        <div className="mt-2 flex flex-wrap gap-1 items-center">
+                          {message.provider && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-700/60 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-600">
+                              {message.provider
+                                .replace(/^(grok)(.*)/, "$1")
+                                .toUpperCase()}
+                            </span>
+                          )}
+                          {message.fallback && (
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-200 border border-amber-200/60 dark:border-amber-700/60">
+                              fallback
+                            </span>
+                          )}
+                          {message.requestId && (
+                            <button
+                              onClick={() =>
+                                navigator.clipboard.writeText(message.requestId)
+                              }
+                              className="text-[9px] px-1 py-0.5 rounded bg-surface-100 dark:bg-surface-700/60 text-surface-500 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200 border border-surface-200 dark:border-surface-600"
+                              title="Copy reference id"
+                            >
+                              ref:{message.requestId.slice(0, 6)}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     {message.role !== "user" && !message.isError && (
                       <button
                         className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
