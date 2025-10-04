@@ -663,6 +663,16 @@ const DashboardPage = () => {
       ]
     : [];
 
+  if (process.env.NODE_ENV === "development") {
+    // eslint-disable-next-line no-console
+    console.debug("[DashboardPage] state", {
+      isLoaded,
+      hasUser: !!user,
+      loading,
+      analyticsLoaded: !!analytics,
+      recentInterviews: recentInterviews.length,
+    });
+  }
   return (
     <div className="relative min-h-screen bg-surface-50 dark:bg-gradient-to-br dark:from-surface-900 dark:via-surface-900 dark:to-surface-950 py-8 transition-colors duration-200">
       {/* Decorative grid overlay */}
