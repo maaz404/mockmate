@@ -31,6 +31,8 @@ const Layout = ({ children }) => {
   // Routes that should use sidebar layout (all pages except legacy demo pages)
   const useSidebarLayout = !legacyNavbarOnlyRoutes.includes(location.pathname);
 
+  const isAuthPath = (p) => p.startsWith("/login") || p.startsWith("/register");
+
   if (useSidebarLayout) {
     return (
       <div className="flex min-h-screen bg-white dark:bg-surface-900 transition-colors duration-200">
@@ -45,9 +47,7 @@ const Layout = ({ children }) => {
           } transition-all duration-300`}
         >
           {/* Show navbar on public pages within sidebar layout */}
-          {(location.pathname === "/" ||
-            location.pathname === "/login" ||
-            location.pathname === "/register") && (
+          {(location.pathname === "/" || isAuthPath(location.pathname)) && (
             <div className="lg:hidden">
               <Navbar />
             </div>
@@ -61,9 +61,9 @@ const Layout = ({ children }) => {
             </div>
           </main>
           {/* Show footer on public pages within sidebar layout */}
-          {(location.pathname === "/" ||
-            location.pathname === "/login" ||
-            location.pathname === "/register") && <Footer />}
+          {(location.pathname === "/" || isAuthPath(location.pathname)) && (
+            <Footer />
+          )}
         </div>
 
         {/* Onboarding Modal */}

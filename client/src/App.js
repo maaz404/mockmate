@@ -132,8 +132,9 @@ function App() {
                   <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
+                  {/* Auth routes need wildcard to allow Clerk's internal multi-step subpaths (e.g. /register/verify-email-address) */}
+                  <Route path="/login/*" element={<LoginPage />} />
+                  <Route path="/register/*" element={<RegisterPage />} />
                   <Route path="/demo" element={<HybridQuestionDemo />} />
                   <Route
                     path="/coding-demo"
