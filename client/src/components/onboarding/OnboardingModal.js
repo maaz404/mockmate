@@ -22,6 +22,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import StyledSelect from "../ui/StyledSelect";
 
 const OnboardingModal = ({
   isOpen,
@@ -792,9 +793,13 @@ const OnboardingModal = ({
 
     setLoading(true);
     try {
-      const response = await api.post("/users/onboarding/complete", formData);
+      // Axios returns a response object { data, status, ... }. We need the data envelope.
+      const { data: envelope } = await api.post(
+        "/users/onboarding/complete",
+        formData
+      );
 
-      if (response.data && response.data.success) {
+      if (envelope && envelope.success) {
         await refreshProfile();
         // Allow parent to perform additional actions (e.g., refresh, navigate)
         if (typeof onComplete === "function") {
@@ -809,30 +814,21 @@ const OnboardingModal = ({
           onClose && onClose();
         }, 3000);
       } else {
-        throw new Error(response.data?.message || "Failed to complete setup");
+        throw new Error(
+          (envelope && envelope.message) || "Failed to complete setup"
+        );
       }
-    } catch (error) {
-      let errorMessage = "Failed to complete setup. Please try again.";
-
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.details) {
-        // Handle validation errors
-        const details = error.response.data.details;
-        if (typeof details === "object") {
-          const detailMessages = Object.values(details).filter(Boolean);
-          if (detailMessages.length > 0) {
-            errorMessage = detailMessages.join(", ");
-          }
-        }
-      } else if (error.response?.status === 401) {
+    } catch (err) {
+      let errorMessage =
+        err.message || "Failed to complete setup. Please try again.";
+      if (err.meta?.details && typeof err.meta.details === "object") {
+        const vals = Object.values(err.meta.details).filter(Boolean);
+        if (vals.length) errorMessage = vals.join(", ");
+      }
+      if (err.status === 401)
         errorMessage = "Authentication failed. Please log in again.";
-      } else if (error.response?.status === 500) {
+      if (err.status === 500)
         errorMessage = "Server error. Please try again later.";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -1059,22 +1055,25 @@ const OnboardingModal = ({
                           {skill.category}
                         </span>
                       </div>
-                      <select
-                        value={skill.confidence}
-                        onChange={(e) =>
-                          handleSkillConfidenceChange(
-                            skill.name,
-                            e.target.value
-                          )
-                        }
-                        className="text-sm border border-surface-300 dark:border-surface-600 rounded px-2 py-1 bg-white dark:bg-surface-700 text-surface-900 dark:text-white"
-                      >
-                        <option value={1}>Beginner</option>
-                        <option value={2}>Basic</option>
-                        <option value={3}>Intermediate</option>
-                        <option value={4}>Advanced</option>
-                        <option value={5}>Expert</option>
-                      </select>
+                      <div className="w-36">
+                        <StyledSelect
+                          value={skill.confidence}
+                          onChange={(e) =>
+                            handleSkillConfidenceChange(
+                              skill.name,
+                              e.target.value
+                            )
+                          }
+                          size="sm"
+                          ariaLabel="Skill confidence"
+                        >
+                          <option value={1}>Beginner</option>
+                          <option value={2}>Basic</option>
+                          <option value={3}>Intermediate</option>
+                          <option value={4}>Advanced</option>
+                          <option value={5}>Expert</option>
+                        </StyledSelect>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1206,18 +1205,19 @@ const OnboardingModal = ({
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
               Difficulty Level
             </label>
-            <select
+            <StyledSelect
               value={formData.preferences.difficulty}
               onChange={(e) =>
                 handleInputChange("preferences", "difficulty", e.target.value)
               }
-              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              ariaLabel="Difficulty level"
+              size="sm"
             >
               <option value="beginner">Beginner</option>
               <option value="intermediate">Intermediate</option>
               <option value="advanced">Advanced</option>
               <option value="expert">Expert</option>
-            </select>
+            </StyledSelect>
           </div>
         </div>
       </div>
@@ -1287,14 +1287,15 @@ const OnboardingModal = ({
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
               Preferred Language
             </label>
-            <select
+            <StyledSelect
               value={formData.preferences.preferredLanguages?.[0] || "English"}
               onChange={(e) =>
                 handleInputChange("preferences", "preferredLanguages", [
                   e.target.value,
                 ])
               }
-              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              ariaLabel="Preferred language"
+              size="sm"
             >
               {["English", "Spanish", "French", "German", "Hindi", "Urdu"].map(
                 (lang) => (
@@ -1303,7 +1304,7 @@ const OnboardingModal = ({
                   </option>
                 )
               )}
-            </select>
+            </StyledSelect>
           </div>
         </div>
 

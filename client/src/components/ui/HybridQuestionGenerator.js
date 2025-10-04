@@ -1,8 +1,15 @@
 import React, { useState } from "react";
+import StyledSelect from "./StyledSelect";
 import QuestionCard from "../ui/QuestionCard";
-import { apiService } from "../../services/api";
+import api from "../../services/api";
+import toast from "react-hot-toast";
 
-const HybridQuestionGenerator = ({ onQuestionsGenerated }) => {
+const HybridQuestionGenerator = ({
+  onQuestionsGenerated,
+  showResults = true,
+  appendMode,
+  onAppendModeChange,
+}) => {
   const [config, setConfig] = useState({
     jobRole: "software-engineer",
     experienceLevel: "intermediate",
@@ -40,23 +47,37 @@ const HybridQuestionGenerator = ({ onQuestionsGenerated }) => {
   const handleGenerateQuestions = async () => {
     setLoading(true);
     try {
-      const response = await apiService.post("/questions/generate", { config });
+      // Use axios instance directly so we can unwrap envelope consistently
+      const { data: envelope } = await api.post("/questions/generate", {
+        config,
+      });
 
-      if (response.success) {
-        setQuestions(response.data.questions);
-        setMetadata(response.data.metadata);
+      if (envelope && envelope.success) {
+        const newQuestions = envelope.data.questions;
+        const newMetadata = envelope.data.metadata;
+        setQuestions(newQuestions);
+        setMetadata(newMetadata);
         setShowQuestions(true);
-
+        toast.success(`Generated ${newQuestions.length} questions`);
         if (onQuestionsGenerated) {
-          onQuestionsGenerated(response.data.questions);
+          // pass through metadata plus the config used for generation so parent can leverage it
+          onQuestionsGenerated(newQuestions, {
+            ...(newMetadata || {}),
+            configUsed: { ...config },
+          });
         }
       } else {
-        // console.error("Failed to generate questions:", response.message);
-        alert("Failed to generate questions. Please try again.");
+        toast.error(
+          (envelope && envelope.message) ||
+            "Failed to generate questions. Please try again."
+        );
       }
     } catch (error) {
-      // console.error("Error generating questions:", error);
-      alert("An error occurred while generating questions. Please try again.");
+      const msg =
+        error.message ||
+        error?.raw?.response?.data?.message ||
+        "An error occurred while generating questions. Please try again.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -81,23 +102,39 @@ const HybridQuestionGenerator = ({ onQuestionsGenerated }) => {
           template-based and AI-generated questions.
         </p>
 
+        {typeof appendMode === "boolean" &&
+          typeof onAppendModeChange === "function" && (
+            <div className="mb-4 flex items-center gap-2 text-sm">
+              <input
+                id="append-mode"
+                type="checkbox"
+                className="h-4 w-4"
+                checked={appendMode}
+                onChange={(e) => onAppendModeChange(e.target.checked)}
+              />
+              <label htmlFor="append-mode" className="text-surface-600">
+                Append to existing set instead of replacing
+              </label>
+            </div>
+          )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Job Role */}
           <div>
             <label className="block text-sm font-medium text-surface-700 mb-2">
               Job Role
             </label>
-            <select
+            <StyledSelect
               value={config.jobRole}
               onChange={(e) => handleConfigChange("jobRole", e.target.value)}
-              className="w-full px-3 py-2 border border-surface-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              size="sm"
+              ariaLabel="Job role"
             >
               {jobRoles.map((role) => (
-                <option key={role.value} value={role.value}>
+                <option key={role.value} value={role.value} title={role.label}>
                   {role.label}
                 </option>
               ))}
-            </select>
+            </StyledSelect>
           </div>
 
           {/* Experience Level */}
@@ -105,19 +142,24 @@ const HybridQuestionGenerator = ({ onQuestionsGenerated }) => {
             <label className="block text-sm font-medium text-surface-700 mb-2">
               Experience Level
             </label>
-            <select
+            <StyledSelect
               value={config.experienceLevel}
               onChange={(e) =>
                 handleConfigChange("experienceLevel", e.target.value)
               }
-              className="w-full px-3 py-2 border border-surface-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              size="sm"
+              ariaLabel="Experience level"
             >
               {experienceLevels.map((level) => (
-                <option key={level.value} value={level.value}>
+                <option
+                  key={level.value}
+                  value={level.value}
+                  title={level.label}
+                >
                   {level.label}
                 </option>
               ))}
-            </select>
+            </StyledSelect>
           </div>
 
           {/* Interview Type */}
@@ -125,19 +167,20 @@ const HybridQuestionGenerator = ({ onQuestionsGenerated }) => {
             <label className="block text-sm font-medium text-surface-700 mb-2">
               Interview Type
             </label>
-            <select
+            <StyledSelect
               value={config.interviewType}
               onChange={(e) =>
                 handleConfigChange("interviewType", e.target.value)
               }
-              className="w-full px-3 py-2 border border-surface-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              size="sm"
+              ariaLabel="Interview type"
             >
               {interviewTypes.map((type) => (
-                <option key={type.value} value={type.value}>
+                <option key={type.value} value={type.value} title={type.label}>
                   {type.label}
                 </option>
               ))}
-            </select>
+            </StyledSelect>
           </div>
 
           {/* Question Count */}
@@ -211,8 +254,8 @@ const HybridQuestionGenerator = ({ onQuestionsGenerated }) => {
         </div>
       </div>
 
-      {/* Generated Questions Section */}
-      {showQuestions && questions.length > 0 && (
+      {/* Generated Questions Section (optional for parent-controlled rendering) */}
+      {showResults && showQuestions && questions.length > 0 && (
         <div className="space-y-6">
           {/* Metadata Section */}
           {metadata && (

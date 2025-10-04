@@ -16,6 +16,41 @@
 
 /* Custom base styles */
 @layer base {
+  :root {
+    /* Color system (semantic) - static hex values derived from Tailwind palette */
+    --color-bg-app: #ffffff; /* white */
+    --color-bg-app-dark: #000000; /* black */
+    --color-surface-50: #f8fafc; /* slate-50 */
+    --color-surface-900: #0f172a; /* slate-900 */
+    --color-accent-primary: #6366f1; /* indigo-500 */
+    --color-accent-primary-hover: #4f46e5; /* indigo-600 */
+    --color-accent-danger: #dc2626; /* red-600 */
+    --color-accent-success: #10b981; /* emerald-500 */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --easing-standard: cubic-bezier(.2,.8,.2,1);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px -2px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 28px -6px rgba(0,0,0,0.18), 0 4px 10px -2px rgba(0,0,0,0.08);
+    --shadow-glow: 0 0 0 3px rgba(99,102,241,0.35);
+    --transition-fast: 120ms var(--easing-standard);
+    --transition-base: 200ms var(--easing-standard);
+    --transition-slow: 360ms var(--easing-standard);
+    --density-scale: 0; /* 0 = comfortable, 1 = compact */
+    --space-unit: 4px; /* multiplied by density */
+  }
+
+  .density-compact {
+    --density-scale: 1;
+  }
+
+  .motion-reduced * {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
   * {
     @apply transition-colors duration-200;
   }
@@ -62,6 +97,9 @@
       scroll-behavior: auto !important;
     }
   }
+  /* Ripple animation */
+  @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+  .animate-ripple { animation: ripple 600ms ease-out; }
   
   /* Custom scrollbar */
   ::-webkit-scrollbar {
@@ -149,6 +187,8 @@
     @apply block w-full px-4 py-3 bg-surface-50 dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-xl shadow-sm text-surface-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
   }
 
+  /* (Removed select-sm helper; using inline utility classes instead for reliability) */
+
   .form-label {
     @apply block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2;
   }
@@ -174,7 +214,11 @@
   }
   
   .card {
-    @apply bg-surface-50 dark:bg-surface-800 rounded-2xl shadow-surface-md dark:shadow-surface-lg border border-surface-200 dark:border-surface-700 p-6 transition-all duration-300 hover:shadow-surface-lg focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-surface-900;
+    @apply bg-surface-50 dark:bg-surface-800 rounded-2xl border border-surface-200 dark:border-surface-700 p-6 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-surface-900;
+    box-shadow: var(--shadow-md);
+  }
+  .card:hover {
+    box-shadow: var(--shadow-lg);
   }
 
   .card-dark {
@@ -437,5 +481,14 @@
 .dark .hover-scrollbar:hover::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, rgba(148,163,184,0.75), rgba(71,85,105,0.9)); /* slate-400 -> slate-600 */
   border-color: rgba(2,6,23,0.4); /* slate-950-ish edge */
+}
+
+/* Permanently hidden scrollbar (still scrollable via wheel/trackpad/keyboard) */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Safari & Chrome */
 }
 

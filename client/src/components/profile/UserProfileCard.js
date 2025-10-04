@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import StyledSelect from "../ui/StyledSelect";
 import { useAuthContext } from "../../context/AuthContext";
 import { Briefcase, Award, Camera, Edit3, Save, X } from "lucide-react";
 import { apiService } from "../../services/api";
@@ -263,7 +264,7 @@ const UserProfileCard = () => {
               Experience
             </label>
             {isEditing ? (
-              <select
+              <StyledSelect
                 value={editForm.professionalInfo.experience}
                 onChange={(e) =>
                   handleInputChange(
@@ -271,7 +272,8 @@ const UserProfileCard = () => {
                     e.target.value
                   )
                 }
-                className="w-full px-3 py-2 border border-surface-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                size="sm"
+                ariaLabel="Experience level"
               >
                 <option value="entry">Entry (0-2y)</option>
                 <option value="junior">Junior (2-4y)</option>
@@ -279,7 +281,7 @@ const UserProfileCard = () => {
                 <option value="senior">Senior (7+y)</option>
                 <option value="lead">Lead</option>
                 <option value="executive">Executive</option>
-              </select>
+              </StyledSelect>
             ) : (
               <p className="text-surface-900">
                 {userProfile.professionalInfo?.experience || "Not specified"}

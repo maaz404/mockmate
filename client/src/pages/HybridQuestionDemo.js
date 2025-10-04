@@ -146,7 +146,7 @@ const HybridQuestionDemo = () => {
         </div>
 
         {/* Generation Summary */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-surface-800 dark:to-surface-700 rounded-lg p-6 mb-6">
+        <div className="rounded-lg p-6 mb-6 border bg-gradient-to-r from-blue-50 via-white to-purple-50 dark:from-surface-800 dark:via-surface-800 dark:to-surface-700 border-surface-200 dark:border-surface-700 transition-colors">
           <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
             Generation Summary
           </h3>
@@ -186,7 +186,7 @@ const HybridQuestionDemo = () => {
                 {mockMetadata.tagCoverage.map((tag, index) => (
                   <span
                     key={index}
-                    className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full"
+                    className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 border border-blue-200/60 dark:border-blue-700/50"
                   >
                     {tag}
                   </span>

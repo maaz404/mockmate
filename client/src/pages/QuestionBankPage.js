@@ -1,14 +1,339 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import HybridQuestionGenerator from "../components/ui/HybridQuestionGenerator";
+import StyledSelect from "../components/ui/StyledSelect";
+import QuestionCard from "../components/ui/QuestionCard";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
 
 const QuestionBankPage = () => {
   const [showGenerator, setShowGenerator] = useState(false);
+  const [generatedQuestions, setGeneratedQuestions] = useState([]);
+  const [appendMode, setAppendMode] = useState(false);
+  const [favorites, setFavorites] = useState([]); // store normalized text keys
+  const [lastGenerationInfo, setLastGenerationInfo] = useState(null); // {append:boolean,count:number,timestamp:number}
+  const [highlightKeys, setHighlightKeys] = useState([]); // array of normalized text keys for temporary highlight
+  const resultsRef = useRef(null);
+  const navigate = useNavigate();
+  const [tagFilter, setTagFilter] = useState("all");
+  const [sortMode, setSortMode] = useState("original"); // original|difficulty|category
+  const [searchQuery, setSearchQuery] = useState(""); // debounced value
+  const [rawSearch, setRawSearch] = useState(""); // immediate input
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [tagMode, setTagMode] = useState("single"); // single | multi
+  const [multiTags, setMultiTags] = useState([]); // array of selected tags in multi mode
+  const [tagLogic, setTagLogic] = useState("OR"); // OR | AND
+  const [highlightStyle, setHighlightStyle] = useState("fill"); // fill | border
+  const [exportColumns, setExportColumns] = useState([
+    "id",
+    "text",
+    "category",
+    "difficulty",
+    "tags",
+  ]);
+  const allExportableColumns = [
+    { key: "id", label: "ID" },
+    { key: "text", label: "Text" },
+    { key: "category", label: "Category" },
+    { key: "difficulty", label: "Difficulty" },
+    { key: "tags", label: "Tags" },
+    { key: "source", label: "Source" },
+  ];
+  const [showSmallFavModal, setShowSmallFavModal] = useState(false);
+  const [pendingFavSubset, setPendingFavSubset] = useState(null);
+  // Deprecated: role & experience selectors removed from UI; using defaults for interview config
+  const selectedJobRole = "software-engineer";
+  const selectedExperience = "intermediate";
 
-  const handleQuestionsGenerated = (_questions) => {
-    // Handle the generated questions
-    // console.log('Generated questions:', questions); // eslint-disable-line no-console
-    setShowGenerator(false);
+  const handleQuestionsGenerated = (questions, meta) => {
+    if (Array.isArray(questions)) {
+      setGeneratedQuestions((prev) => {
+        const base = appendMode ? [...prev, ...questions] : [...questions];
+        return dedupeQuestions(base);
+      });
+      // Track generation info
+      setLastGenerationInfo({
+        append: appendMode,
+        count: questions.length,
+        timestamp: Date.now(),
+      });
+      // Highlight newly appended questions only
+      if (appendMode) {
+        const newKeys = questions
+          .map((q) => (q.text || q.questionText || "").trim().toLowerCase())
+          .filter(Boolean);
+        setHighlightKeys(newKeys);
+        // Clear highlight after 4s
+        setTimeout(() => setHighlightKeys([]), 4000);
+      } else {
+        setHighlightKeys([]);
+      }
+      // Persist temporarily (so user can navigate back without losing set)
+      try {
+        const toStore = dedupeQuestions(
+          appendMode ? [...generatedQuestions, ...questions] : questions
+        );
+        localStorage.setItem(
+          "hybridGeneratedQuestions",
+          JSON.stringify(toStore)
+        );
+      } catch (_) {}
+      // Scroll to results after render
+      setTimeout(() => {
+        if (resultsRef.current) {
+          resultsRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 50); // eslint-disable-line no-magic-numbers
+      const baseMsg = `${appendMode ? "Appended" : "Generated"} ${
+        questions.length
+      } questions`;
+      const fullMsg = meta?.totalQuestions
+        ? `${baseMsg} (set size ${meta.totalQuestions})`
+        : baseMsg;
+      toast.success(fullMsg);
+    }
   };
+
+  // Rehydrate previously generated questions (optional UX nicety)
+  React.useEffect(() => {
+    if (generatedQuestions.length === 0) {
+      try {
+        const cached = localStorage.getItem("hybridGeneratedQuestions");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length) {
+            setGeneratedQuestions(parsed);
+          }
+        }
+        const storedAppend = localStorage.getItem("qb_appendMode");
+        if (storedAppend === "1" || storedAppend === "true") {
+          setAppendMode(true);
+        }
+        const storedFilter = localStorage.getItem("qb_tagFilter");
+        if (storedFilter) setTagFilter(storedFilter);
+        const storedSort = localStorage.getItem("qb_sortMode");
+        if (storedSort) setSortMode(storedSort);
+        const storedFavs = localStorage.getItem("qb_favorites");
+        if (storedFavs) {
+          try {
+            const favParsed = JSON.parse(storedFavs);
+            if (Array.isArray(favParsed)) setFavorites(favParsed);
+          } catch (_) {}
+        }
+        const storedSearch = localStorage.getItem("qb_searchQuery");
+        if (storedSearch) {
+          setSearchQuery(storedSearch);
+          setRawSearch(storedSearch);
+        }
+        const storedShowFavs = localStorage.getItem("qb_showFavoritesOnly");
+        if (storedShowFavs === "1") setShowFavoritesOnly(true);
+        const storedTagMode = localStorage.getItem("qb_tagMode");
+        if (storedTagMode === "multi") setTagMode("multi");
+        const storedMultiTags = localStorage.getItem("qb_multiTags");
+        if (storedMultiTags) {
+          try {
+            const parsed = JSON.parse(storedMultiTags);
+            if (Array.isArray(parsed)) setMultiTags(parsed);
+          } catch (_) {}
+        }
+        const storedTagLogic = localStorage.getItem("qb_tagLogic");
+        if (storedTagLogic === "AND") setTagLogic("AND");
+        const storedHighlightStyle = localStorage.getItem("qb_highlightStyle");
+        if (storedHighlightStyle === "border") setHighlightStyle("border");
+        // Clean up deprecated keys if they exist
+        try {
+          localStorage.removeItem("qb_jobRole");
+          localStorage.removeItem("qb_experience");
+        } catch (_) {}
+      } catch (_) {}
+    }
+  }, [generatedQuestions.length]);
+
+  // Persist filters & sort & role/experience when changed
+  React.useEffect(() => {
+    try {
+      localStorage.setItem("qb_tagFilter", tagFilter);
+      localStorage.setItem("qb_sortMode", sortMode);
+      localStorage.setItem("qb_favorites", JSON.stringify(favorites));
+      localStorage.setItem("qb_appendMode", appendMode ? "1" : "0");
+  localStorage.setItem("qb_searchQuery", rawSearch);
+      localStorage.setItem("qb_showFavoritesOnly", showFavoritesOnly ? "1" : "0");
+      localStorage.setItem("qb_tagMode", tagMode);
+      localStorage.setItem("qb_multiTags", JSON.stringify(multiTags));
+      localStorage.setItem("qb_tagLogic", tagLogic);
+      localStorage.setItem("qb_highlightStyle", highlightStyle);
+    } catch (_) {}
+  }, [tagFilter, sortMode, favorites, appendMode, rawSearch, showFavoritesOnly, tagMode, multiTags, tagLogic, highlightStyle]);
+
+  // Debounce raw search into searchQuery
+  React.useEffect(() => {
+    const handle = setTimeout(() => setSearchQuery(rawSearch), 300);
+    return () => clearTimeout(handle);
+  }, [rawSearch]);
+
+  // Utility: deduplicate by normalized text hash
+  function dedupeQuestions(list) {
+    const seen = new Set();
+    return list.filter((q) => {
+      const text = (q.text || q.questionText || "").trim().toLowerCase();
+      if (!text) return false;
+      if (seen.has(text)) return false;
+      seen.add(text);
+      return true;
+    });
+  }
+
+  const uniqueTags = React.useMemo(() => {
+    const tagSet = new Set();
+    generatedQuestions.forEach((q) =>
+      (q.tags || []).forEach((t) => tagSet.add(t))
+    );
+    return Array.from(tagSet).sort();
+  }, [generatedQuestions]);
+
+  const filteredSortedQuestions = React.useMemo(() => {
+    let list = [...generatedQuestions];
+    // Tag filtering
+    if (tagMode === "single" && tagFilter !== "all") {
+      list = list.filter((q) => (q.tags || []).includes(tagFilter));
+    } else if (tagMode === "multi" && multiTags.length > 0) {
+      list = list.filter((q) => {
+        const tags = q.tags || [];
+        if (tagLogic === "OR") return multiTags.some((t) => tags.includes(t));
+        // AND logic
+        return multiTags.every((t) => tags.includes(t));
+      });
+    }
+    if (searchQuery.trim()) {
+      const qLower = searchQuery.trim().toLowerCase();
+      list = list.filter((q) =>
+        (q.text || q.questionText || "").toLowerCase().includes(qLower)
+      );
+    }
+    if (showFavoritesOnly) {
+      list = list.filter((q) =>
+        favorites.includes(
+          (q.text || q.questionText || "").trim().toLowerCase()
+        )
+      );
+    }
+    if (sortMode === "difficulty") {
+      const order = {
+        beginner: 0,
+        easy: 0,
+        intermediate: 1,
+        medium: 1,
+        advanced: 2,
+        hard: 2,
+      };
+      list.sort(
+        (a, b) => (order[a.difficulty] || 99) - (order[b.difficulty] || 99)
+      );
+    } else if (sortMode === "category") {
+      list.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
+    }
+    return list;
+  }, [generatedQuestions, tagFilter, sortMode, searchQuery, showFavoritesOnly, favorites, tagMode, multiTags, tagLogic]);
+
+  // Derived relative time for last generation
+  const lastGeneratedLabel = React.useMemo(() => {
+    if (!lastGenerationInfo?.timestamp) return null;
+    const diff = Date.now() - lastGenerationInfo.timestamp;
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return `${sec}s ago`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}m ago`;
+    const hrs = Math.floor(min / 60);
+    return `${hrs}h ago`;
+  }, [lastGenerationInfo]);
+
+  // Utility: export subset to file (JSON or CSV)
+  function exportSubset(subset, format, filenameBase) {
+    if (!subset || subset.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+    let blob;
+    const projected = subset.map((q, i) => {
+      const base = {
+        id: q.id || q._id || `q_${i}`,
+        text: q.text || q.questionText || "",
+        category: q.category || "",
+        difficulty: q.difficulty || "",
+        tags: (q.tags || []).join("|"),
+        source: q.source || "",
+      };
+      const obj = {};
+      exportColumns.forEach((col) => {
+        if (base[col] !== undefined) obj[col] = base[col];
+      });
+      return obj;
+    });
+    if (format === "json") {
+      blob = new Blob([JSON.stringify(projected, null, 2)], { type: "application/json" });
+    } else {
+      // CSV
+      const headers = exportColumns;
+      const rows = projected.map((row) =>
+        headers
+          .map((h) => String(row[h] || "").replace(/"/g, '""'))
+          .map((cell) => `"${cell}"`)
+          .join(",")
+      );
+      const csv = [headers.join(","), ...rows].join("\n");
+      blob = new Blob([csv], { type: "text/csv" });
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filenameBase}.${format === "json" ? "json" : "csv"}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Downloaded ${subset.length} ${format.toUpperCase()} items`);
+  }
+
+  async function handleStartInterview() {
+    if (generatedQuestions.length === 0) {
+      toast.error("Generate questions first");
+      return;
+    }
+    try {
+      // Use first question metadata to build config heuristically
+      const first = generatedQuestions[0];
+      const config = {
+        jobRole: selectedJobRole,
+        experienceLevel:
+          selectedExperience || first.experienceLevel || "intermediate",
+        interviewType: "mixed",
+        difficulty: first.difficulty || "intermediate",
+        duration: Math.min(60, Math.max(15, generatedQuestions.length * 5)), // minutes heuristic
+        questionCount: generatedQuestions.length,
+        adaptiveDifficulty: { enabled: false },
+      };
+      // Create interview
+      const { data: envelope } = await api.post("/interviews", { config });
+      if (!envelope?.success)
+        throw new Error(envelope?.message || "Create failed");
+      const interviewId = envelope.data._id || envelope.data.id;
+
+      // Immediately start interview (PUT /:id/start)
+      const { data: startEnv } = await api.put(
+        `/interviews/${interviewId}/start`
+      );
+      if (!startEnv?.success)
+        throw new Error(startEnv?.message || "Start failed");
+
+      toast.success("Interview created and started");
+      navigate(`/interview/${interviewId}`);
+    } catch (err) {
+      toast.error(err.message || "Failed to start interview");
+    }
+  }
 
   const questionCategories = [
     {
@@ -119,7 +444,7 @@ const QuestionBankPage = () => {
         </div>
 
         <div className="mt-12">
-          <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-950 dark:to-secondary-950 rounded-xl p-8 border border-primary-100/60 dark:border-primary-900/30 transition-colors duration-200">
+          <div className="rounded-xl p-8 border transition-colors duration-200 bg-gradient-to-r from-primary-50 via-white to-secondary-50 dark:from-surface-800 dark:via-surface-800 dark:to-surface-700 border-surface-200 dark:border-surface-700">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-surface-900 dark:text-surface-50 mb-2">
@@ -145,8 +470,633 @@ const QuestionBankPage = () => {
           <div className="mt-8">
             <HybridQuestionGenerator
               onQuestionsGenerated={handleQuestionsGenerated}
+              showResults={false}
+              appendMode={appendMode}
+              onAppendModeChange={setAppendMode}
             />
           </div>
+        )}
+
+        {/* Generated Questions Persisted Section */}
+        {generatedQuestions.length > 0 && (
+                  <>
+                  <div ref={resultsRef} className="mt-12">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-surface-900 dark:text-surface-50 flex items-center gap-3">
+                  Generated Questions ({filteredSortedQuestions.length})
+                  {lastGenerationInfo && (
+                    <span className="text-xs text-surface-500 dark:text-surface-400 font-normal">
+                      {lastGeneratedLabel && `Last: ${lastGeneratedLabel}`}
+                    </span>
+                  )}
+                </h2>
+                {searchQuery && (
+                  <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">
+                    Filtered by search: "{searchQuery}"{showFavoritesOnly ? ", favorites only" : ""}
+                  </p>
+                )}
+                {!searchQuery && showFavoritesOnly && (
+                  <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">
+                    Showing favorites only
+                  </p>
+                )}
+              </div>
+              {lastGenerationInfo && (
+                <div className="flex items-center gap-2 ml-4">
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full border tracking-wide ${
+                      lastGenerationInfo.append
+                        ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300"
+                        : "bg-surface-100 border-surface-300 text-surface-600 dark:bg-surface-700/50 dark:border-surface-600 dark:text-surface-300"
+                    }`}
+                  >
+                    {lastGenerationInfo.append
+                      ? `Appended +${lastGenerationInfo.count}`
+                      : `Replaced (${lastGenerationInfo.count})`}
+                  </span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                {/* Export / Batch Ops Dropdown Cluster */}
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      try {
+                        const subset = filteredSortedQuestions.map((q) => ({ ...q }));
+                        navigator.clipboard.writeText(
+                          JSON.stringify(subset, null, 2)
+                        );
+                        toast.success(`Copied ${subset.length} filtered questions`);
+                      } catch (e) {
+                        toast.error("Copy failed");
+                      }
+                    }}
+                    className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                  >
+                    Copy Filtered
+                  </button>
+                  <button
+                    onClick={() => exportSubset(filteredSortedQuestions, "json", "filtered-questions")}
+                    className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                  >
+                    Download Filtered JSON
+                  </button>
+                  <button
+                    onClick={() => exportSubset(filteredSortedQuestions, "csv", "filtered-questions")}
+                    className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                  >
+                    Download Filtered CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      try {
+                        const subset = favorites
+                          .map((fav) => filteredSortedQuestions.find((q) => (q.text || q.questionText || "").trim().toLowerCase() === fav))
+                          .filter(Boolean);
+                        if (!subset.length) {
+                          toast("No favorites in current filter");
+                          return;
+                        }
+                        navigator.clipboard.writeText(
+                          JSON.stringify(subset, null, 2)
+                        );
+                        toast.success(`Copied ${subset.length} favorite questions`);
+                      } catch (e) {
+                        toast.error("Copy failed");
+                      }
+                    }}
+                    className="text-sm px-3 py-2 rounded-md bg-yellow-600 text-white hover:bg-yellow-700 transition"
+                  >
+                    Copy Favorites (Filtered)
+                  </button>
+                  <button
+                    onClick={() => {
+                      const subset = favorites
+                        .map((fav) => filteredSortedQuestions.find((q) => (q.text || q.questionText || "").trim().toLowerCase() === fav))
+                        .filter(Boolean);
+                      exportSubset(subset, "json", "favorite-questions");
+                    }}
+                    className="text-sm px-3 py-2 rounded-md bg-yellow-600/90 text-white hover:bg-yellow-700 transition"
+                  >
+                    Favorites JSON
+                  </button>
+                  <button
+                    onClick={() => {
+                      const subset = favorites
+                        .map((fav) => filteredSortedQuestions.find((q) => (q.text || q.questionText || "").trim().toLowerCase() === fav))
+                        .filter(Boolean);
+                      exportSubset(subset, "csv", "favorite-questions");
+                    }}
+                    className="text-sm px-3 py-2 rounded-md bg-yellow-600/90 text-white hover:bg-yellow-700 transition"
+                  >
+                    Favorites CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Start interview with favorites subset
+                      const subset = favorites
+                        .map((fav) => filteredSortedQuestions.find((q) => (q.text || q.questionText || "").trim().toLowerCase() === fav))
+                        .filter(Boolean);
+                      if (!subset.length) {
+                        toast.error("No favorite questions available");
+                        return;
+                      }
+                      if (subset.length < 3) {
+                        setPendingFavSubset(subset);
+                        setShowSmallFavModal(true);
+                        return;
+                      }
+                      // Minimal stub: reuse handleStartInterview pattern but override generatedQuestions temporarily
+                      const first = subset[0];
+                      // Ensure reproducible ID list
+                      const questionIds = subset.map((q, i) => q.id || q._id || `hash_${(q.text||"" ).length}_${i}`);
+                      const config = {
+                        jobRole: selectedJobRole,
+                        experienceLevel: selectedExperience || first.experienceLevel || "intermediate",
+                        interviewType: "mixed",
+                        difficulty: first.difficulty || "intermediate",
+                        duration: Math.min(60, Math.max(15, subset.length * 5)),
+                        questionCount: subset.length,
+                        adaptiveDifficulty: { enabled: false },
+                        questionIds,
+                      };
+                      (async () => {
+                        try {
+                          const { data: envelope } = await api.post("/interviews", { config, questions: subset, questionIds });
+                          if (!envelope?.success) throw new Error(envelope?.message || "Create failed");
+                          const interviewId = envelope.data._id || envelope.data.id;
+                          const { data: startEnv } = await api.put(`/interviews/${interviewId}/start`);
+                          if (!startEnv?.success) throw new Error(startEnv?.message || "Start failed");
+                          toast.success("Interview (favorites subset) started");
+                          navigate(`/interview/${interviewId}`);
+                        } catch (err) {
+                          toast.error(err.message || "Failed to start interview");
+                        }
+                      })();
+                    }}
+                    className="text-sm px-3 py-2 rounded-md bg-pink-600 text-white hover:bg-pink-700 transition"
+                  >
+                    Start Favorites Only
+                  </button>
+                  {favorites.length > 0 && (
+                    <button
+                      onClick={() => {
+                        // Select all favorites currently visible (ensures they exist in filtered list)
+                        const visibleFavs = filteredSortedQuestions.filter((q) =>
+                          favorites.includes((q.text || q.questionText || "").trim().toLowerCase())
+                        );
+                        if (!visibleFavs.length) {
+                          toast("No visible favorites");
+                          return;
+                        }
+                        try {
+                          navigator.clipboard.writeText(
+                            JSON.stringify(visibleFavs, null, 2)
+                          );
+                          toast.success(`Copied ${visibleFavs.length} visible favorites`);
+                        } catch (e) {
+                          toast.error("Copy failed");
+                        }
+                      }}
+                      className="text-sm px-3 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                    >
+                      Copy Visible Favorites
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowGenerator(true)}
+                  className="text-sm px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition"
+                  aria-label={showGenerator ? "Update question generation configuration" : "Regenerate questions"}
+                >
+                  {showGenerator ? "Update Config" : "Regenerate"}
+                </button>
+                <button
+                  onClick={handleStartInterview}
+                  className="text-sm px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition"
+                  aria-label="Start interview with generated questions"
+                >
+                  Start Interview
+                </button>
+                <button
+                  onClick={() => {
+                    setGeneratedQuestions([]);
+                    try {
+                      localStorage.removeItem("hybridGeneratedQuestions");
+                    } catch (_) {}
+                    toast("Cleared generated questions");
+                  }}
+                  className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                  aria-label="Clear generated questions"
+                >
+                  Clear
+                </button>
+                {favorites.length > 0 && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const favQuestions = filteredSortedQuestions.filter(
+                          (q) => {
+                            const key = (q.text || q.questionText || "")
+                              .trim()
+                              .toLowerCase();
+                            return favorites.includes(key);
+                          }
+                        );
+                        await navigator.clipboard.writeText(
+                          JSON.stringify(favQuestions, null, 2)
+                        );
+                        toast.success(
+                          `Copied ${favQuestions.length} favorites`
+                        );
+                      } catch (e) {
+                        toast.error("Failed to copy favorites");
+                      }
+                    }}
+                    className="text-sm px-3 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600 transition"
+                    aria-label="Copy favorite questions to clipboard"
+                  >
+                    Copy Favorites
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* Difficulty distribution bar */}
+            {filteredSortedQuestions.length > 0 && (
+              <div className="mb-6">
+                {(() => {
+                  const counts = { beginner: 0, intermediate: 0, advanced: 0 };
+                  filteredSortedQuestions.forEach((q) => {
+                    const d =
+                      q.difficulty === "easy"
+                        ? "beginner"
+                        : q.difficulty === "medium"
+                        ? "intermediate"
+                        : q.difficulty;
+                    if (counts[d] !== undefined) counts[d] += 1;
+                  });
+                  const total = filteredSortedQuestions.length || 1;
+                  const pct = (n) => Math.round((n / total) * 100);
+                  return (
+                    <div>
+                      <div className="flex w-full h-4 rounded overflow-hidden border border-surface-200 dark:border-surface-600">
+                        <div
+                          className="bg-green-400/70"
+                          style={{ width: `${pct(counts.beginner)}%` }}
+                          title={`Beginner ${counts.beginner}`}
+                        ></div>
+                        <div
+                          className="bg-yellow-400/70"
+                          style={{ width: `${pct(counts.intermediate)}%` }}
+                          title={`Intermediate ${counts.intermediate}`}
+                        ></div>
+                        <div
+                          className="bg-red-400/70"
+                          style={{ width: `${pct(counts.advanced)}%` }}
+                          title={`Advanced ${counts.advanced}`}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-xs mt-1 text-surface-500 dark:text-surface-400">
+                        <span>Beginner {counts.beginner}</span>
+                        <span>Intermediate {counts.intermediate}</span>
+                        <span>Advanced {counts.advanced}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 mb-6 items-center">
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-surface-600 dark:text-surface-300">
+                  Tag:
+                </label>
+                {tagMode === "single" && (
+                  <StyledSelect
+                    value={tagFilter}
+                    onChange={(e) => setTagFilter(e.target.value)}
+                    size="sm"
+                    ariaLabel="Tag filter"
+                  >
+                    <option value="all">All</option>
+                    {uniqueTags.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </StyledSelect>
+                )}
+                {tagMode === "multi" && (
+                  <div className="flex flex-wrap gap-1 max-w-xs">
+                    {uniqueTags.map((t) => {
+                      const active = multiTags.includes(t);
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() =>
+                            setMultiTags((prev) =>
+                              prev.includes(t)
+                                ? prev.filter((x) => x !== t)
+                                : [...prev, t]
+                            )
+                          }
+                          className={`px-2 py-1 rounded-full text-xs border transition ${
+                            active
+                              ? "bg-primary-600 text-white border-primary-600"
+                              : "bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-600"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-surface-600 dark:text-surface-300">Tag Mode:</label>
+                <StyledSelect
+                  value={tagMode}
+                  onChange={(e) => {
+                    const mode = e.target.value;
+                    setTagMode(mode);
+                    if (mode === "single") setMultiTags([]);
+                  }}
+                  size="sm"
+                  ariaLabel="Tag mode"
+                >
+                  <option value="single">Single</option>
+                  <option value="multi">Multi</option>
+                </StyledSelect>
+                {tagMode === "multi" && (
+                  <StyledSelect
+                    value={tagLogic}
+                    onChange={(e) => setTagLogic(e.target.value)}
+                    size="sm"
+                    ariaLabel="Tag logical mode"
+                  >
+                    <option value="OR">OR</option>
+                    <option value="AND">AND</option>
+                  </StyledSelect>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-surface-600 dark:text-surface-300">
+                  Sort:
+                </label>
+                <StyledSelect
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value)}
+                  size="sm"
+                  ariaLabel="Sort mode"
+                >
+                  <option value="original">Original Order</option>
+                  <option value="difficulty">Difficulty</option>
+                  <option value="category">Category</option>
+                </StyledSelect>
+              </div>
+              <div className="text-xs text-surface-500 dark:text-surface-400">
+                {tagFilter !== "all" && `Filtered to tag: ${tagFilter}`}
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-surface-600 dark:text-surface-300">
+                  Search:
+                </label>
+                <input
+                  type="text"
+                  value={rawSearch}
+                  onChange={(e) => setRawSearch(e.target.value)}
+                  placeholder="Search text..."
+                  aria-label="Search questions"
+                  className="text-sm px-3 py-2 rounded-md border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-800 focus:ring-2 focus:ring-primary-500 outline-none"
+                  style={{ minWidth: "170px" }}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-surface-600 dark:text-surface-300">Export Columns:</label>
+                <div className="flex flex-wrap gap-1 max-w-xs">
+                  {allExportableColumns.map((col) => {
+                    const active = exportColumns.includes(col.key);
+                    return (
+                      <button
+                        key={col.key}
+                        type="button"
+                        onClick={() =>
+                          setExportColumns((prev) =>
+                            prev.includes(col.key)
+                              ? prev.filter((k) => k !== col.key)
+                              : [...prev, col.key]
+                          )
+                        }
+                        className={`px-2 py-1 rounded text-xs border transition ${
+                          active
+                            ? "bg-primary-600 text-white border-primary-600"
+                            : "bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-600"
+                        }`}
+                        aria-pressed={active}
+                      >
+                        {col.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            {tagMode === "multi" && multiTags.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2 items-center text-xs">
+                <span className="text-surface-500 dark:text-surface-400">Active Tags ({tagLogic}):</span>
+                {multiTags.map((t) => {
+                  const count = filteredSortedQuestions.filter((q) => (q.tags || []).includes(t)).length;
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => setMultiTags((prev) => prev.filter((x) => x !== t))}
+                      className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-700 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition"
+                      aria-label={`Remove tag ${t}`}
+                    >
+                      <span>{t}</span>
+                      <span className="text-[10px] font-semibold bg-primary-600 text-white px-1.5 py-0.5 rounded-full">{count}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none" className="w-3 h-3">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setMultiTags([])}
+                  className="px-2 py-1 text-xs rounded-md bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
+              <div className="flex items-center gap-2">
+                <input
+                  id="show-favorites-only"
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={showFavoritesOnly}
+                  onChange={(e) => setShowFavoritesOnly(e.target.checked)}
+                  aria-label="Show favorites only"
+                />
+                <label
+                  htmlFor="show-favorites-only"
+                  className="text-sm text-surface-600 dark:text-surface-300"
+                >
+                  Favorites Only
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-surface-600 dark:text-surface-300">Highlight Style:</label>
+                <StyledSelect
+                  value={highlightStyle}
+                  onChange={(e) => setHighlightStyle(e.target.value)}
+                  size="sm"
+                  ariaLabel="Highlight style"
+                >
+                  <option value="fill">Fill Pulse</option>
+                  <option value="border">Border Only</option>
+                </StyledSelect>
+              </div>
+            </div>
+            {filteredSortedQuestions.length === 0 && (
+              <div className="p-6 border border-dashed rounded-lg text-center text-sm text-surface-600 dark:text-surface-400 bg-surface-100/60 dark:bg-surface-800/40">
+                <p className="mb-2 font-medium">No questions match your current filters.</p>
+                <button
+                  onClick={() => {
+                    setTagFilter("all");
+                    setSearchQuery("");
+                    setShowFavoritesOnly(false);
+                  }}
+                  className="text-xs px-3 py-1 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )}
+            <div className="space-y-4">
+              {filteredSortedQuestions.map((q, i) => {
+                const normKey = (q.text || q.questionText || "")
+                  .trim()
+                  .toLowerCase();
+                const isHighlighted = highlightKeys.includes(normKey);
+                return (
+                  <div
+                    key={q.id || normKey || i}
+                    className={`${
+                      isHighlighted
+                        ? highlightStyle === "fill"
+                          ? "relative ring-2 ring-green-400/60 rounded-lg bg-green-50 dark:bg-green-900/20 motion-safe:animate-pulse"
+                          : "relative border-l-4 border-green-400 pl-2 rounded"
+                        : ""
+                    }`}
+                  >
+                    {q.category && (
+                      <div className="mb-2 flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-100 dark:bg-surface-700 border border-surface-200 dark:border-surface-600">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-3 h-3"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path d="M12 6l7 6-7 6-7-6 7-6z" />
+                          </svg>
+                          {q.category.charAt(0).toUpperCase() + q.category.slice(1)}
+                        </span>
+                      </div>
+                    )}
+                    <QuestionCard
+                      question={q}
+                      index={i}
+                      total={filteredSortedQuestions.length}
+                      showTags={true}
+                      isFavorite={favorites.includes(normKey)}
+                      onToggleFavorite={(question) => {
+                        const key = (question.text || question.questionText || "")
+                          .trim()
+                          .toLowerCase();
+                        setFavorites((prev) =>
+                          prev.includes(key)
+                            ? prev.filter((k) => k !== key)
+                            : [...prev, key]
+                        );
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            {/* aria-live region for screen readers announcing generation events */}
+            <span className="sr-only" aria-live="polite">
+              {lastGenerationInfo &&
+                (lastGenerationInfo.append
+                  ? `Appended ${lastGenerationInfo.count} questions`
+                  : `Generated ${lastGenerationInfo.count} questions`)}
+            </span>
+          </div>
+          {showSmallFavModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div className="bg-white dark:bg-surface-800 rounded-xl shadow-lg p-6 w-full max-w-sm border border-surface-200 dark:border-surface-600">
+                <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">Small Favorites Set</h3>
+                <p className="text-sm text-surface-600 dark:text-surface-300 mb-4">
+                  Only {pendingFavSubset?.length || 0} favorite question{(pendingFavSubset?.length||0)===1?"":"s"}. Start interview anyway?
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setShowSmallFavModal(false);
+                      setPendingFavSubset(null);
+                    }}
+                    className="px-3 py-2 text-sm rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const subset = pendingFavSubset || [];
+                      setShowSmallFavModal(false);
+                      setPendingFavSubset(null);
+                      if (!subset.length) return;
+                      const first = subset[0];
+                      const questionIds = subset.map((q, i) => q.id || q._id || `hash_${(q.text||"" ).length}_${i}`);
+                      const config = {
+                        jobRole: selectedJobRole,
+                        experienceLevel: selectedExperience || first.experienceLevel || "intermediate",
+                        interviewType: "mixed",
+                        difficulty: first.difficulty || "intermediate",
+                        duration: Math.min(60, Math.max(15, subset.length * 5)),
+                        questionCount: subset.length,
+                        adaptiveDifficulty: { enabled: false },
+                        questionIds,
+                      };
+                      (async () => {
+                        try {
+                          const { data: envelope } = await api.post("/interviews", { config, questions: subset, questionIds });
+                          if (!envelope?.success) throw new Error(envelope?.message || "Create failed");
+                          const interviewId = envelope.data._id || envelope.data.id;
+                          const { data: startEnv } = await api.put(`/interviews/${interviewId}/start`);
+                          if (!startEnv?.success) throw new Error(startEnv?.message || "Start failed");
+                          toast.success("Interview (favorites subset) started");
+                          navigate(`/interview/${interviewId}`);
+                        } catch (err) {
+                          toast.error(err.message || "Failed to start interview");
+                        }
+                      })();
+                    }}
+                    className="px-3 py-2 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
+                  >
+                    Start
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

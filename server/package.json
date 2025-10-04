@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest",
+    "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "seed": "node src/scripts/seedQuestions.js",
     "seed:dev": "node src/scripts/seedDevAtlas.js",
@@ -49,5 +49,11 @@
     "api"
   ],
   "author": "Maaz Sheikh",
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
+    "testMatch": ["**/src/__tests__/**/*.test.js"],
+    "verbose": false
+  },
   "license": "MIT"
 }

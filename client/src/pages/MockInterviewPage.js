@@ -1,6 +1,49 @@
-import React from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiService } from "../services/api";
+import toast from "react-hot-toast";
 
 const MockInterviewPage = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleQuickStart = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      // Minimal quick practice config (lightweight, fast start)
+      const response = await apiService.post("/interviews", {
+        config: {
+          jobRole: "General Practice",
+          experienceLevel: "mid", // mapped value used server-side
+          interviewType: "mixed",
+          skills: [],
+          duration: 15, // minutes
+          difficulty: "intermediate",
+          focusAreas: [],
+          adaptiveDifficulty: { enabled: true },
+          questionCount: 5,
+        },
+      });
+
+      if (response?.success && response?.data?._id) {
+        toast.success("Practice session created");
+        navigate(`/interview/${response.data._id}`);
+      } else {
+        throw new Error(
+          response?.message || "Failed to start practice session"
+        );
+      }
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.error ||
+          err?.message ||
+          "Could not start practice session"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200 p-6">
       <div className="max-w-4xl mx-auto">
@@ -36,8 +79,12 @@ const MockInterviewPage = () => {
             Practice with random questions and get instant AI feedback to
             improve your interview skills.
           </p>
-          <button className="btn-primary text-lg px-8 py-3">
-            Start Practice
+          <button
+            onClick={handleQuickStart}
+            disabled={loading}
+            className="btn-primary text-lg px-8 py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? "Starting..." : "Start Practice"}
           </button>
         </div>
       </div>

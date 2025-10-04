@@ -1,125 +1,124 @@
 /* eslint-disable consistent-return, no-magic-numbers */
 const Interview = require("../models/Interview");
 const Question = require("../models/Question");
-const UserProfile = require("../models/UserProfile");
 const mongoose = require("mongoose");
-const { clerkClient } = require("@clerk/clerk-sdk-node");
 const aiQuestionService = require("../services/aiQuestionService");
 const hybridQuestionService = require("../services/hybridQuestionService");
 const { updateAnalytics } = require("./userController");
 const { destroyByPrefix } = require("./uploadController");
 const C = require("../utils/constants");
 const Logger = require("../utils/logger");
+const { ok, fail, created } = require("../utils/responder");
+const { consumeFreeInterview } = require("../utils/subscription");
 
 // Create new interview session
 const createInterview = async (req, res) => {
   try {
     const { userId } = req.auth;
     const config = req.body?.config || req.body;
+    const userProfile = req.userProfile;
 
-    // Ensure DB connectivity (helps when MONGODB_URI is missing)
     if (!mongoose.connection || mongoose.connection.readyState !== 1) {
-      return res.status(503).json({
-        success: false,
-        message:
-          "Database is not connected. Please set MONGODB_URI in server/.env and restart the server.",
-      });
+      return fail(
+        res,
+        503,
+        "DB_NOT_CONNECTED",
+        "Database is not connected. Configure MONGODB_URI and restart."
+      );
     }
 
-    // Validate configuration
     if (
       !config ||
       !config.jobRole ||
       !config.experienceLevel ||
       !config.interviewType
     ) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required interview configuration",
-      });
+      return fail(
+        res,
+        400,
+        "CONFIG_INVALID",
+        "Missing required interview configuration"
+      );
     }
 
-    // Get user profile (and auto-create if missing)
-    let userProfile = await UserProfile.findOne({ clerkUserId: userId });
     if (!userProfile) {
-      const usingMockAuth =
-        process.env.NODE_ENV !== "production" &&
-        process.env.MOCK_AUTH_FALLBACK === "true" &&
-        (!req.headers?.authorization || String(userId).startsWith("test-"));
-
-      try {
-        let clerkUser = null;
-        if (!usingMockAuth && process.env.CLERK_SECRET_KEY) {
-          clerkUser = await clerkClient.users.getUser(userId);
-        } else if (usingMockAuth) {
-          // Stub user in mock mode
-          clerkUser = {
-            emailAddresses: [
-              { emailAddress: `user-${userId || "test-user-123"}@example.com` },
-            ],
-            firstName: "Test",
-            lastName: "User",
-            profileImageUrl: null,
-          };
-        }
-
-        if (clerkUser) {
-          userProfile = new UserProfile({
-            clerkUserId: userId,
-            email: clerkUser.emailAddresses?.[0]?.emailAddress || "",
-            firstName: clerkUser.firstName || "",
-            lastName: clerkUser.lastName || "",
-            profileImage: clerkUser.profileImageUrl || "",
-          });
-          await userProfile.save();
-        }
-      } catch (e) {
-        Logger.error("Auto-create user profile failed:", e);
-      }
-
-      if (!userProfile) {
-        return res.status(404).json({
-          success: false,
-          message: "User profile not found",
-        });
-      }
+      return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
     }
 
-    // Check interview limits for free users
     if (
       userProfile.subscription.plan === "free" &&
       userProfile.subscription.interviewsRemaining <= 0
     ) {
-      return res.status(403).json({
-        success: false,
-        message: "Interview limit reached. Please upgrade to continue.",
-      });
+      return fail(
+        res,
+        403,
+        "INTERVIEW_LIMIT",
+        "Interview limit reached. Please upgrade to continue."
+      );
     }
 
-    // Get suitable questions
-    const questions = await getQuestionsForInterview(config, userProfile);
+    let questions;
+    const explicitQuestionIds = Array.isArray(req.body?.questionIds)
+      ? req.body.questionIds.filter(Boolean)
+      : [];
+    const explicitQuestions = Array.isArray(req.body?.questions)
+      ? req.body.questions
+      : [];
 
-    if (questions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No suitable questions found for this configuration",
-      });
+    if (explicitQuestionIds.length > 0) {
+      // If explicit IDs provided, fetch those. Allow a parallel raw questions array with matching length for fallback text.
+      const found = await Question.find({ _id: { $in: explicitQuestionIds } });
+      const foundMap = new Map(found.map((q) => [q._id.toString(), q]));
+      questions = explicitQuestionIds.map((id, idx) => {
+        const doc = foundMap.get(String(id));
+        if (doc) return doc;
+        // Fallback: construct ephemeral from provided raw questions (if any)
+        const raw = explicitQuestions[idx];
+        return raw
+          ? {
+              _id: new mongoose.Types.ObjectId(),
+              text: raw.text || raw.questionText || `Question ${idx + 1}`,
+              category: raw.category || raw.type || "general",
+              difficulty: raw.difficulty || config.difficulty || "intermediate",
+              estimatedTime:
+                raw.estimatedTime ||
+                (raw.timeEstimate ? raw.timeEstimate * C.SEC_PER_MIN : 120),
+              tags: raw.tags || [],
+              source: raw.source || "provided",
+            }
+          : null;
+      }).filter(Boolean);
+      if (questions.length === 0) {
+        return fail(
+          res,
+          400,
+          "NO_QUESTIONS",
+          "None of the provided questionIds resolved to questions"
+        );
+      }
+    } else {
+      questions = await getQuestionsForInterview(config, userProfile);
+      if (questions.length === 0) {
+        return fail(
+          res,
+          400,
+          "NO_QUESTIONS",
+          "No suitable questions found for this configuration"
+        );
+      }
     }
 
-    // Create interview
     const interview = new Interview({
       userId,
       userProfile: userProfile._id,
       config: {
         ...config,
-        // Keep target questionCount. If adaptive is enabled, don't cap by initial questions
         questionCount: config.adaptiveDifficulty?.enabled
           ? config.questionCount || C.DEFAULT_QUESTION_COUNT
           : Math.min(
               config.questionCount || C.DEFAULT_QUESTION_COUNT,
               questions.length
             ),
-        // Initialize adaptive difficulty if enabled
         adaptiveDifficulty: config.adaptiveDifficulty?.enabled
           ? {
               enabled: true,
@@ -127,11 +126,8 @@ const createInterview = async (req, res) => {
               currentDifficulty: config.difficulty,
               difficultyHistory: [],
             }
-          : {
-              enabled: false,
-            },
+          : { enabled: false },
       },
-      // If adaptive is enabled, start with just one seed question so subsequent ones can adapt
       questions: questions
         .slice(
           0,
@@ -145,26 +141,24 @@ const createInterview = async (req, res) => {
           category: q.category,
           difficulty: q.difficulty,
           timeAllocated: q.estimatedTime,
-          hasVideo: false, // Default to false, can be enabled based on question type
+          hasVideo: false,
         })),
       status: "scheduled",
     });
 
     await interview.save();
-
-    res.status(C.HTTP_STATUS_CREATED).json({
-      success: true,
-      message: "Interview created successfully",
-      data: interview,
-    });
+    return created(res, interview, "Interview created successfully");
   } catch (error) {
     Logger.error("Create interview error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create interview",
-      error:
-        process.env.NODE_ENV === "development" ? error?.message : undefined,
-    });
+    return fail(
+      res,
+      500,
+      "INTERVIEW_CREATE_FAILED",
+      "Failed to create interview",
+      process.env.NODE_ENV === "development"
+        ? { detail: error?.message }
+        : undefined
+    );
   }
 };
 
@@ -179,19 +173,9 @@ const startInterview = async (req, res) => {
       userId,
     });
 
-    if (!interview) {
-      return res.status(404).json({
-        success: false,
-        message: "Interview not found",
-      });
-    }
-
-    if (interview.status !== "scheduled") {
-      return res.status(400).json({
-        success: false,
-        message: "Interview cannot be started",
-      });
-    }
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+    if (interview.status !== "scheduled")
+      return fail(res, 400, "INVALID_STATE", "Interview cannot be started");
 
     // Update interview status and timing
     interview.status = "in-progress";
@@ -199,27 +183,13 @@ const startInterview = async (req, res) => {
 
     await interview.save();
 
-    // Update user's interview count (decrement remaining if free user)
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
-    if (userProfile.subscription.plan === "free") {
-      userProfile.subscription.interviewsRemaining = Math.max(
-        0,
-        userProfile.subscription.interviewsRemaining - 1
-      );
-      await userProfile.save();
-    }
+    // Decrement quota (idempotent utility)
+    await consumeFreeInterview(userId, interview._id.toString());
 
-    res.json({
-      success: true,
-      message: "Interview started successfully",
-      data: interview,
-    });
+    return ok(res, interview, "Interview started successfully");
   } catch (error) {
     Logger.error("Start interview error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to start interview",
-    });
+    return fail(res, 500, "START_FAILED", "Failed to start interview");
   }
 };
 
@@ -236,27 +206,13 @@ const submitAnswer = async (req, res) => {
       userId,
     });
 
-    if (!interview) {
-      return res.status(404).json({
-        success: false,
-        message: "Interview not found",
-      });
-    }
-
-    if (interview.status !== "in-progress") {
-      return res.status(400).json({
-        success: false,
-        message: "Interview is not in progress",
-      });
-    }
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+    if (interview.status !== "in-progress")
+      return fail(res, 400, "INVALID_STATE", "Interview is not in progress");
 
     const qIndex = parseInt(questionIndex);
-    if (qIndex >= interview.questions.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid question index",
-      });
-    }
+    if (qIndex >= interview.questions.length)
+      return fail(res, 400, "BAD_INDEX", "Invalid question index");
 
     // Update question response
     interview.questions[qIndex].response = {
@@ -399,17 +355,10 @@ const submitAnswer = async (req, res) => {
       };
     }
 
-    res.json({
-      success: true,
-      message: "Answer submitted successfully",
-      data: responseData,
-    });
+    return ok(res, responseData, "Answer submitted successfully");
   } catch (error) {
     Logger.error("Submit answer error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to submit answer",
-    });
+    return fail(res, 500, "ANSWER_SUBMIT_FAILED", "Failed to submit answer");
   }
 };
 
@@ -425,40 +374,32 @@ const generateFollowUp = async (req, res) => {
       userId,
     });
 
-    if (!interview) {
-      return res.status(404).json({
-        success: false,
-        message: "Interview not found",
-      });
-    }
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
     const qIndex = parseInt(questionIndex);
-    if (qIndex >= interview.questions.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid question index",
-      });
-    }
+    if (qIndex >= interview.questions.length)
+      return fail(res, 400, "BAD_INDEX", "Invalid question index");
 
     const question = interview.questions[qIndex];
-    if (!question.response || !question.response.text) {
-      return res.status(400).json({
-        success: false,
-        message: "No answer provided for this question",
-      });
-    }
+    if (!question.response || !question.response.text)
+      return fail(
+        res,
+        400,
+        "NO_ANSWER",
+        "No answer provided for this question"
+      );
 
     // Check if follow-up questions already exist
     if (question.followUpQuestions && question.followUpQuestions.length > 0) {
-      return res.json({
-        success: true,
-        message: "Follow-up questions retrieved",
-        data: {
+      return ok(
+        res,
+        {
           followUpQuestions: question.followUpQuestions,
           originalQuestion: question.questionText,
           originalAnswer: question.response.text,
         },
-      });
+        "Follow-up questions retrieved"
+      );
     }
 
     try {
@@ -475,34 +416,40 @@ const generateFollowUp = async (req, res) => {
         await interview.save();
       }
 
-      res.json({
-        success: true,
-        message: "Follow-up questions generated",
-        data: {
+      return ok(
+        res,
+        {
           followUpQuestions: followUpQuestions || [],
           originalQuestion: question.questionText,
           originalAnswer: question.response.text,
         },
-      });
+        "Follow-up questions generated"
+      );
     } catch (error) {
       Logger.warn("AI follow-up generation failed:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to generate follow-up questions",
-        fallback: [
-          {
-            text: "Can you elaborate more on your approach and explain any alternative solutions?",
-            type: "clarification",
-          },
-        ],
-      });
+      return fail(
+        res,
+        500,
+        "FOLLOWUP_GEN_FAILED",
+        "Failed to generate follow-up questions",
+        {
+          fallback: [
+            {
+              text: "Can you elaborate more on your approach and explain any alternative solutions?",
+              type: "clarification",
+            },
+          ],
+        }
+      );
     }
   } catch (error) {
     Logger.error("Generate follow-up error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to generate follow-up question",
-    });
+    return fail(
+      res,
+      500,
+      "FOLLOWUP_FAILED",
+      "Failed to generate follow-up question"
+    );
   }
 };
 
@@ -517,19 +464,9 @@ const completeInterview = async (req, res) => {
       userId,
     }).populate("userProfile");
 
-    if (!interview) {
-      return res.status(404).json({
-        success: false,
-        message: "Interview not found",
-      });
-    }
-
-    if (interview.status !== "in-progress") {
-      return res.status(400).json({
-        success: false,
-        message: "Interview is not in progress",
-      });
-    }
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+    if (interview.status !== "in-progress")
+      return fail(res, 400, "INVALID_STATE", "Interview is not in progress");
 
     // Update timing
     interview.timing.completedAt = new Date();
@@ -590,17 +527,10 @@ const completeInterview = async (req, res) => {
       lastInterviewDate: new Date(),
     });
 
-    res.json({
-      success: true,
-      message: "Interview completed successfully",
-      data: interview,
-    });
+    return ok(res, interview, "Interview completed successfully");
   } catch (error) {
     Logger.error("Complete interview error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to complete interview",
-    });
+    return fail(res, 500, "COMPLETE_FAILED", "Failed to complete interview");
   }
 };
 
@@ -622,23 +552,22 @@ const getUserInterviews = async (req, res) => {
 
     const totalCount = await Interview.countDocuments(query);
 
-    res.json({
-      success: true,
-      data: {
-        interviews,
-        pagination: {
-          current: page,
-          pages: Math.ceil(totalCount / limit),
-          total: totalCount,
-        },
+    return ok(res, {
+      interviews,
+      pagination: {
+        current: page,
+        pages: Math.ceil(totalCount / limit),
+        total: totalCount,
       },
     });
   } catch (error) {
     Logger.error("Get interviews error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch interviews",
-    });
+    return fail(
+      res,
+      500,
+      "INTERVIEWS_FETCH_FAILED",
+      "Failed to fetch interviews"
+    );
   }
 };
 
@@ -653,12 +582,7 @@ const getInterviewDetails = async (req, res) => {
       userId,
     });
 
-    if (!interview) {
-      return res.status(404).json({
-        success: false,
-        message: "Interview not found",
-      });
-    }
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
     // Provide a client-friendly shape while preserving original document
     const interviewObj = interview.toObject();
@@ -680,16 +604,15 @@ const getInterviewDetails = async (req, res) => {
       questions: clientQuestions,
     };
 
-    return res.json({
-      success: true,
-      data: responsePayload,
-    });
+    return ok(res, responsePayload);
   } catch (error) {
     Logger.error("Get interview details error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch interview details",
-    });
+    return fail(
+      res,
+      500,
+      "INTERVIEW_FETCH_FAILED",
+      "Failed to fetch interview details"
+    );
   }
 };
 
@@ -1303,11 +1226,7 @@ const getInterviewResults = async (req, res) => {
     const { interviewId } = req.params;
 
     const interview = await Interview.findOne({ _id: interviewId, userId });
-    if (!interview) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Interview not found" });
-    }
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
     // Ensure results are computed if missing
     if (!interview.results?.overallScore) {
@@ -1316,12 +1235,15 @@ const getInterviewResults = async (req, res) => {
     }
 
     const payload = composeResultsPayload(interview);
-    return res.json({ success: true, data: payload });
+    return ok(res, payload);
   } catch (error) {
     Logger.error("Get interview results error:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch interview results" });
+    return fail(
+      res,
+      500,
+      "RESULTS_FETCH_FAILED",
+      "Failed to fetch interview results"
+    );
   }
 };
 
@@ -1335,11 +1257,7 @@ const markFollowUpsReviewed = async (req, res) => {
     const { questionIndex } = req.params;
 
     const interview = await Interview.findOne({ _id: interviewId, userId });
-    if (!interview) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Interview not found" });
-    }
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
     const qIndex = parseInt(questionIndex);
     if (
@@ -1347,25 +1265,22 @@ const markFollowUpsReviewed = async (req, res) => {
       qIndex < 0 ||
       qIndex >= interview.questions.length
     ) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid question index" });
+      return fail(res, 400, "BAD_INDEX", "Invalid question index");
     }
 
     interview.questions[qIndex].followUpsReviewed = true;
     interview.questions[qIndex].followUpsReviewedAt = new Date();
     await interview.save();
 
-    return res.json({
-      success: true,
-      data: { questionIndex: qIndex, followUpsReviewed: true },
-    });
+    return ok(res, { questionIndex: qIndex, followUpsReviewed: true });
   } catch (error) {
     Logger.error("Mark follow-ups reviewed error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to update follow-ups reviewed status",
-    });
+    return fail(
+      res,
+      500,
+      "FOLLOWUPS_REVIEW_FAILED",
+      "Failed to update follow-ups reviewed status"
+    );
   }
 };
 
@@ -1377,11 +1292,7 @@ const deleteInterview = async (req, res) => {
     const { userId } = req.auth;
     const { id } = req.params;
     const doc = await Interview.findOne({ _id: id, userId }).lean();
-    if (!doc) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Interview not found" });
-    }
+    if (!doc) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
     const prefix = `mockmate/dev/users/${userId}/sessions/${id}`;
     // Clean up all resource types
@@ -1394,11 +1305,9 @@ const deleteInterview = async (req, res) => {
     }
 
     await Interview.deleteOne({ _id: id, userId });
-    return res.json({ success: true });
+    return ok(res, null, "Interview deleted");
   } catch (error) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to delete interview" });
+    return fail(res, 500, "DELETE_FAILED", "Failed to delete interview");
   }
 };
 

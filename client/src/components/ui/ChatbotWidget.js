@@ -389,7 +389,7 @@ const ChatbotWidget = () => {
           }
           className={`relative rounded-full p-4 shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
             isDisabled
-              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+              ? "bg-surface-300 text-surface-600 cursor-not-allowed"
               : "bg-gradient-to-br from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white hover:scale-110 focus:ring-teal-400"
           }`}
           aria-label="Open AI Assistant"
@@ -411,12 +411,12 @@ const ChatbotWidget = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 rounded-xl shadow-2xl w-[90vw] max-w-md h-[70vh] max-h-[36rem] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden"
+            className="bg-white/95 backdrop-blur-sm dark:bg-surface-800/95 rounded-xl shadow-2xl w-[90vw] max-w-md h-[70vh] max-h-[36rem] flex flex-col border border-surface-200 dark:border-surface-700 overflow-hidden"
             role="dialog"
             aria-label="AI Assistant"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-600 text-white p-4 flex items-center justify-between">
+            <div className="p-4 flex items-center justify-between bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-600 dark:from-teal-700 dark:via-cyan-700 dark:to-sky-700 text-white transition-colors">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
@@ -522,7 +522,7 @@ const ChatbotWidget = () => {
                         <button
                           key={i}
                           onClick={() => sendMessage(s)}
-                          className="text-left p-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-teal-500 dark:hover:border-teal-500 hover:shadow-md transition-all duration-200"
+                          className="text-left p-3 text-sm bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg hover:border-teal-500 dark:hover:border-teal-500 hover:shadow-md transition-all duration-200"
                         >
                           <div className="flex items-start gap-2">
                             {i % 4 === 0 && (
@@ -555,7 +555,7 @@ const ChatbotWidget = () => {
                       <button
                         key={i}
                         onClick={() => sendMessage(qa.label)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-teal-500 dark:hover:border-teal-500"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-full border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 hover:border-teal-500 dark:hover:border-teal-500"
                       >
                         <qa.icon className="w-3.5 h-3.5" />
                         {qa.label}
@@ -578,7 +578,7 @@ const ChatbotWidget = () => {
                         ? "bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow"
                         : message.isError
                         ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
-                        : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 shadow-sm"
+                        : "bg-white dark:bg-surface-800 text-surface-800 dark:text-surface-200 border border-surface-200 dark:border-surface-700 shadow-sm"
                     }`}
                   >
                     <div className="text-sm whitespace-pre-wrap leading-relaxed">
@@ -614,12 +614,12 @@ const ChatbotWidget = () => {
 
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <div className="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.2s]"></span>
-                        <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></span>
-                        <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                        <span className="w-1.5 h-1.5 bg-surface-400 dark:bg-surface-500 rounded-full animate-bounce [animation-delay:-0.2s]"></span>
+                        <span className="w-1.5 h-1.5 bg-surface-400 dark:bg-surface-500 rounded-full animate-bounce"></span>
+                        <span className="w-1.5 h-1.5 bg-surface-400 dark:bg-surface-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
                       </div>
                       <span className="text-sm">Thinking...</span>
                     </div>
@@ -647,7 +647,7 @@ const ChatbotWidget = () => {
             )}
 
             {/* Input */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className="p-4 border-t border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800">
               <div className="flex gap-2">
                 <input
                   ref={inputRef}
@@ -661,7 +661,7 @@ const ChatbotWidget = () => {
                     }
                   }}
                   placeholder="Ask me anything..."
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
+                  className="flex-1 px-4 py-2 border border-surface-300 dark:border-surface-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-100 placeholder-surface-500 dark:placeholder-surface-400 shadow-sm"
                   disabled={isLoading}
                 />
                 <button
@@ -681,7 +681,7 @@ const ChatbotWidget = () => {
       {/* Dock preview when closed and docked */}
       {!isOpen && isDocked && messages.length > 0 && (
         <div
-          className="absolute bottom-16 right-0 w-72 bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-3 cursor-pointer"
+          className="absolute bottom-16 right-0 w-72 bg-white/90 dark:bg-surface-800/90 backdrop-blur rounded-lg shadow-xl border border-surface-200 dark:border-surface-700 p-3 cursor-pointer"
           onClick={toggleWidget}
         >
           <div className="flex items-center justify-between mb-2">

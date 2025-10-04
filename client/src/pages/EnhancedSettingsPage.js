@@ -34,10 +34,10 @@ const SettingsPage = () => {
     setPreferences(updatedPreferences);
 
     try {
-      const response = await api.put("/users/profile", {
+      const envelope = await api.put("/users/profile", {
         preferences: updatedPreferences,
       });
-      if (response.data && response.data.success) {
+      if (envelope.success) {
         // Refresh the profile context to sync the updated data
         await refreshProfile();
         toast.success("Preferences updated successfully");

@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { Toaster } from "react-hot-toast";
+import useGlobalApiErrors from "./hooks/useGlobalApiErrors";
 import "./index.css";
 
 // Import components
@@ -65,6 +66,8 @@ function ChatbotWrapper() {
 function App() {
   // Use the environment key - no fallback to ensure proper configuration
   const clerkKey = clerkPubKey;
+  // Attach once at app root
+  useGlobalApiErrors();
 
   if (!clerkKey) {
     return (

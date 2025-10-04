@@ -87,20 +87,24 @@ const TechStackSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex flex-col items-center justify-center"
+                className="flex flex-col items-center justify-start w-full"
               >
-                <div className="group cursor-pointer">
-                  <div className="w-16 h-16 bg-white dark:bg-surface-800 rounded-xl shadow-surface border border-surface-200 dark:border-surface-700 flex items-center justify-center mb-3 group-hover:shadow-surface-md transition-all duration-200 group-hover:scale-105">
+                <div className="group cursor-pointer flex flex-col items-center text-center w-full">
+                  <div className="w-16 h-16 bg-white dark:bg-surface-800 rounded-xl shadow-surface border border-surface-200 dark:border-surface-700 flex items-center justify-center mb-2 group-hover:shadow-surface-md transition-all duration-200 group-hover:scale-105 mx-auto">
                     <tech.icon
                       size={28}
                       className={`${tech.color} group-hover:scale-110 transition-transform`}
+                      aria-label={tech.name}
+                      role="img"
                     />
                   </div>
-                  <div className="text-surface-800 dark:text-surface-200 text-sm font-semibold text-center mb-1">
-                    {tech.name}
-                  </div>
-                  <div className="text-surface-600 dark:text-surface-400 text-xs text-center">
-                    {tech.description}
+                  <div className="w-full flex flex-col items-center">
+                    <div className="text-surface-800 dark:text-surface-200 text-sm font-semibold leading-tight mb-1">
+                      {tech.name}
+                    </div>
+                    <div className="text-surface-600 dark:text-surface-400 text-xs leading-snug">
+                      {tech.description}
+                    </div>
                   </div>
                 </div>
               </motion.div>

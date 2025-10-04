@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import CodeEditor from "../components/ui/CodeEditor";
 import CodeExecutionResults from "../components/ui/CodeExecutionResults";
+import GradientHeader from "../components/ui/GradientHeader";
 
 const CodingChallengeDemo = () => {
   const [code, setCode] = useState(`// Two Sum Problem - LeetCode #1
@@ -90,13 +91,12 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
       <div className="max-w-6xl mx-auto px-4">
         <div className="card overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-primary-600 to-purple-600 text-white p-6">
-            <h1 className="text-3xl font-bold mb-2">Coding Challenge Demo</h1>
-            <p className="text-blue-100">
-              Experience the Monaco Editor integration with Judge0 API and AI
-              code review
-            </p>
-          </div>
+          <GradientHeader
+            gradient="primary"
+            size="md"
+            title="Coding Challenge Demo"
+            subtitle="Experience the Monaco Editor integration with Judge0 API and AI code review"
+          />
 
           {/* Challenge Description */}
           <div className="p-6 border-b border-surface-200 dark:border-surface-700">

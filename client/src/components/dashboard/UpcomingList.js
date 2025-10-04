@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDateLabel, formatRelativeCountdown } from "../../utils/datetime";
+// Import with alias + explicit assignment to ensure ESLint/ bundler sees definition
+import StyledSelectDefault from "../ui/StyledSelect";
+const StyledSelect = StyledSelectDefault; // defensive alias to satisfy lint
 
 export default function UpcomingList({
   sessions = [],
@@ -187,17 +190,20 @@ export default function UpcomingList({
           <label className="sr-only" htmlFor="upcoming-status-filter">
             Filter by status
           </label>
-          <select
-            id="upcoming-status-filter"
-            value={statusFilter}
-            onChange={(e) => onFilterChange?.(e.target.value)}
-            className="text-xs bg-surface-900 border border-surface-700 rounded px-2 py-1 text-surface-300"
-          >
-            <option value="scheduled">Scheduled</option>
-            <option value="completed">Completed</option>
-            <option value="canceled">Canceled</option>
-            <option value="all">All</option>
-          </select>
+          <div className="w-32">
+            <StyledSelect
+              id="upcoming-status-filter"
+              value={statusFilter}
+              onChange={(e) => onFilterChange?.(e.target.value)}
+              size="sm"
+              ariaLabel="Filter by status"
+            >
+              <option value="scheduled">Scheduled</option>
+              <option value="completed">Completed</option>
+              <option value="canceled">Canceled</option>
+              <option value="all">All</option>
+            </StyledSelect>
+          </div>
           <div className="text-xs text-surface-400">
             {pagination
               ? `Page ${pagination.current} of ${pagination.pages}`

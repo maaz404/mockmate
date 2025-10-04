@@ -289,7 +289,7 @@ const VideoRecorder = ({
             <button
               onClick={handleStartRecording}
               disabled={!hasCamera || !sessionStarted}
-              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed p-4 rounded-full transition-colors"
+              className="bg-red-600 hover:bg-red-700 disabled:bg-surface-600 disabled:cursor-not-allowed p-4 rounded-full transition-colors"
               title="Start recording"
             >
               <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -313,7 +313,7 @@ const VideoRecorder = ({
         {isRecording && (
           <button
             onClick={handleStopRecording}
-            className="bg-gray-600 hover:bg-gray-700 p-4 rounded-full transition-colors"
+            className="bg-surface-600 hover:bg-surface-700 p-4 rounded-full transition-colors"
             title="Stop recording"
           >
             <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -327,7 +327,7 @@ const VideoRecorder = ({
             <button
               onClick={handleUploadVideo}
               disabled={isUploading}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
+              className="bg-green-600 hover:bg-green-700 disabled:bg-surface-600 px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
             >
               {isUploading ? (
                 <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -344,7 +344,7 @@ const VideoRecorder = ({
             <button
               onClick={clearRecording}
               disabled={isUploading}
-              className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 px-4 py-3 rounded-lg transition-colors"
+              className="bg-surface-600 hover:bg-surface-700 disabled:bg-surface-800 px-4 py-3 rounded-lg transition-colors"
               title="Clear recording"
             >
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

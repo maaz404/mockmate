@@ -30,19 +30,15 @@ const SessionSummaryPage = () => {
   const fetchSessionSummary = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiService.get(
+      const envelope = await apiService.get(
         `/reports/${interviewId}/session-summary`
       );
-
-      if (response.data.success) {
-        setSummary(response.data.data.summary);
-        setHasProAccess(response.data.data.hasProAccess);
-      } else {
-        toast.error("Failed to load session summary");
-      }
-    } catch (error) {
-      // Remove console.error for production
-      toast.error("Failed to load session summary");
+      if (envelope.success) {
+        setSummary(envelope.data.summary);
+        setHasProAccess(envelope.data.hasProAccess);
+      } else toast.error(envelope.message || "Failed to load session summary");
+    } catch (err) {
+      toast.error(err.message || "Failed to load session summary");
     } finally {
       setLoading(false);
     }

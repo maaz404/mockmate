@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const requireAuth = require("../middleware/auth");
+const ensureUserProfile = require("../middleware/ensureUserProfile");
 const {
   getProfile,
   updateProfile,
@@ -23,14 +24,11 @@ const {
   updateDashboardPreferences,
 } = require("../controllers/userController");
 
-// Configure multer for file uploads
+// Multer storage for resume uploads
 /* eslint-disable no-magic-numbers */
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/resumes");
-  },
+  destination: (req, file, cb) => cb(null, "uploads/resumes"),
   filename: (req, file, cb) => {
-    // eslint-disable-next-line no-magic-numbers
     const uniqueSuffix = `${Date.now()}-${Math.round(
       Math.random() * 1000000000
     )}`;
@@ -42,106 +40,114 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: {
-    // eslint-disable-next-line no-magic-numbers
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
+  // eslint-disable-next-line no-magic-numbers
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
     if (
       file.mimetype === "application/pdf" ||
       file.mimetype.startsWith("image/")
-    ) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only PDF files and images are allowed"));
-    }
+    )
+      return cb(null, true);
+    return cb(new Error("Only PDF files and images are allowed"));
   },
 });
 
-// @desc    Get user profile
-// @route   GET /api/users/profile
-// @access  Private
-router.get("/profile", requireAuth, getProfile);
+// Profile (idempotent create via POST)
+router.get("/profile", requireAuth, ensureUserProfile, getProfile);
+router.post("/profile", requireAuth, ensureUserProfile, getProfile);
+router.put("/profile", requireAuth, ensureUserProfile, updateProfile);
 
-// @desc    Create user profile
-// @route   POST /api/users/profile
-// @access  Private
-router.post("/profile", requireAuth, getProfile); // Will create if doesn't exist
+// Analytics / stats
+router.get("/stats", requireAuth, ensureUserProfile, getAnalytics);
+router.get("/analytics", requireAuth, ensureUserProfile, getAnalytics);
 
-// @desc    Update user profile
-// @route   PUT /api/users/profile
-// @access  Private
-router.put("/profile", requireAuth, updateProfile);
+// Onboarding flows
+router.post(
+  "/onboarding/complete",
+  requireAuth,
+  ensureUserProfile,
+  completeOnboarding
+);
+router.post(
+  "/onboarding/save-progress",
+  requireAuth,
+  ensureUserProfile,
+  saveOnboardingProgress
+);
 
-// @desc    Get user statistics
-// @route   GET /api/users/stats
-// @access  Private
-router.get("/stats", requireAuth, getAnalytics);
+// Resume + profile media
+router.post(
+  "/resume",
+  requireAuth,
+  ensureUserProfile,
+  upload.single("resume"),
+  uploadResume
+);
+router.put("/profile/avatar", requireAuth, ensureUserProfile, updateAvatar);
+router.put(
+  "/profile/resume",
+  requireAuth,
+  ensureUserProfile,
+  updateResumeAsset
+);
 
-// @desc    Get user analytics (alias for stats)
-// @route   GET /api/users/analytics
-// @access  Private
-router.get("/analytics", requireAuth, getAnalytics);
-
-// @desc    Complete onboarding
-// @route   POST /api/users/onboarding/complete
-// @access  Private
-router.post("/onboarding/complete", requireAuth, completeOnboarding);
-
-// @desc    Save onboarding progress
-// @route   POST /api/users/onboarding/save-progress
-// @access  Private
-router.post("/onboarding/save-progress", requireAuth, saveOnboardingProgress);
-
-// @desc    Upload resume
-// @route   POST /api/users/resume
-// @access  Private
-router.post("/resume", requireAuth, upload.single("resume"), uploadResume);
-
-// Cloudinary-backed profile media attach endpoints
-router.put("/profile/avatar", requireAuth, updateAvatar);
-router.put("/profile/resume", requireAuth, updateResumeAsset);
-
-// Scheduled sessions
-// @desc Get upcoming scheduled sessions
-// @route GET /api/users/scheduled-sessions
-router.get("/scheduled-sessions", requireAuth, getScheduledSessions);
-// @desc Create scheduled session
-// @route POST /api/users/scheduled-sessions
-router.post("/scheduled-sessions", requireAuth, upsertScheduledSession);
-// @desc Update scheduled session
-// @route PUT /api/users/scheduled-sessions/:id
-router.put("/scheduled-sessions/:id", requireAuth, upsertScheduledSession);
-// @desc Delete scheduled session
-// @route DELETE /api/users/scheduled-sessions/:id
-router.delete("/scheduled-sessions/:id", requireAuth, deleteScheduledSession);
-// @desc Update status
+// Scheduled sessions CRUD
+router.get(
+  "/scheduled-sessions",
+  requireAuth,
+  ensureUserProfile,
+  getScheduledSessions
+);
+router.post(
+  "/scheduled-sessions",
+  requireAuth,
+  ensureUserProfile,
+  upsertScheduledSession
+);
+router.put(
+  "/scheduled-sessions/:id",
+  requireAuth,
+  ensureUserProfile,
+  upsertScheduledSession
+);
+router.delete(
+  "/scheduled-sessions/:id",
+  requireAuth,
+  ensureUserProfile,
+  deleteScheduledSession
+);
 router.patch(
   "/scheduled-sessions/:id/status",
   requireAuth,
+  ensureUserProfile,
   updateScheduledSessionStatus
 );
 
 // Goals
-// @desc Get goals
-// @route GET /api/users/goals
-router.get("/goals", requireAuth, getGoals);
-// @desc Update goals
-// @route PUT /api/users/goals
-router.put("/goals", requireAuth, updateGoals);
+router.get("/goals", requireAuth, ensureUserProfile, getGoals);
+router.put("/goals", requireAuth, ensureUserProfile, updateGoals);
 
 // Dynamic tips
-// @desc GET /api/users/tips
-router.get("/tips", requireAuth, getDynamicTips);
+router.get("/tips", requireAuth, ensureUserProfile, getDynamicTips);
 
-// Dashboard summary (aggregated)
-// @desc GET /api/users/dashboard/summary
-router.get("/dashboard/summary", requireAuth, getDashboardSummary);
-
-// Dashboard preferences
-// @desc GET /api/users/dashboard/preferences
-router.get("/dashboard/preferences", requireAuth, getDashboardPreferences);
-// @desc PUT /api/users/dashboard/preferences
-router.put("/dashboard/preferences", requireAuth, updateDashboardPreferences);
+// Dashboard aggregation + preferences
+router.get(
+  "/dashboard/summary",
+  requireAuth,
+  ensureUserProfile,
+  getDashboardSummary
+);
+router.get(
+  "/dashboard/preferences",
+  requireAuth,
+  ensureUserProfile,
+  getDashboardPreferences
+);
+router.put(
+  "/dashboard/preferences",
+  requireAuth,
+  ensureUserProfile,
+  updateDashboardPreferences
+);
 
 module.exports = router;

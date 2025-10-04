@@ -56,7 +56,7 @@ const SupportPage = () => {
         </div>
       </div>
 
-      <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-2xl p-8">
+      <div className="rounded-2xl p-8 border bg-gradient-to-r from-primary-50 via-white to-secondary-50 dark:from-surface-800 dark:via-surface-800 dark:to-surface-700 border-surface-200 dark:border-surface-700 transition-colors">
         <h3 className="font-heading text-xl font-semibold text-surface-900 dark:text-surface-50 mb-4">
           Feature Requests
         </h3>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import StyledSelect from "../components/ui/StyledSelect";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { apiService } from "../services/api";
@@ -237,19 +238,19 @@ const InterviewCreationPage = () => {
                 >
                   Experience Level
                 </label>
-                <select
+                <StyledSelect
                   id="experienceLevel"
                   name="experienceLevel"
                   value={formData.experienceLevel}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-surface-900 dark:text-surface-50 transition-all duration-200"
+                  ariaLabel="Experience level"
                 >
                   {experienceLevels.map((level) => (
                     <option key={level.value} value={level.value}>
                       {level.label}
                     </option>
                   ))}
-                </select>
+                </StyledSelect>
               </div>
             </div>
 
@@ -333,18 +334,18 @@ const InterviewCreationPage = () => {
                 >
                   Duration (minutes)
                 </label>
-                <select
+                <StyledSelect
                   id="duration"
                   name="duration"
                   value={formData.duration}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-white dark:bg-surface-700 text-surface-900 dark:text-surface-50 border border-surface-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                  ariaLabel="Duration"
                 >
                   <option value={15}>15 minutes (Quick practice)</option>
                   <option value={30}>30 minutes (Standard)</option>
                   <option value={45}>45 minutes (Comprehensive)</option>
                   <option value={60}>60 minutes (Full interview)</option>
-                </select>
+                </StyledSelect>
               </div>
 
               <div>
@@ -354,18 +355,18 @@ const InterviewCreationPage = () => {
                 >
                   Difficulty Level
                 </label>
-                <select
+                <StyledSelect
                   id="difficulty"
                   name="difficulty"
                   value={formData.difficulty}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-white dark:bg-surface-700 text-surface-900 dark:text-surface-50 border border-surface-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                  ariaLabel="Difficulty"
                 >
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
                   <option value="hard">Hard</option>
                   <option value="mixed">Mixed</option>
-                </select>
+                </StyledSelect>
               </div>
             </div>
 
