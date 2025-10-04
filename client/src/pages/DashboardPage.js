@@ -38,9 +38,15 @@ import {
 } from "../utils/dashboardCache";
 // Lazy-loaded metric widgets used in analytics tabs
 const SkillRadar = lazy(() => import("../components/dashboard/SkillRadar"));
-const ActivityIndicator = lazy(() => import("../components/dashboard/ActivityIndicator"));
-const CategoryCoverage = lazy(() => import("../components/dashboard/CategoryCoverage"));
-const FollowUpsUsage = lazy(() => import("../components/dashboard/FollowUpsUsage"));
+const ActivityIndicator = lazy(() =>
+  import("../components/dashboard/ActivityIndicator")
+);
+const CategoryCoverage = lazy(() =>
+  import("../components/dashboard/CategoryCoverage")
+);
+const FollowUpsUsage = lazy(() =>
+  import("../components/dashboard/FollowUpsUsage")
+);
 const StreakWidget = lazy(() => import("../components/dashboard/StreakStrip"));
 const NextBestActionCard = lazy(() =>
   import("../components/dashboard/NextBestActionCard")
@@ -687,14 +693,22 @@ const DashboardPage = () => {
         <div className="space-y-6 mb-8">
           <DashboardHero
             user={user}
-            profileCompleteness={userProfile?.analytics?.profileCompleteness || userProfile?.profileCompleteness || 0}
-            streak={userProfile?.streak?.current || analytics?.analytics?.streak?.current || 0}
+            profileCompleteness={
+              userProfile?.analytics?.profileCompleteness ||
+              userProfile?.profileCompleteness ||
+              0
+            }
+            streak={
+              userProfile?.streak?.current ||
+              analytics?.analytics?.streak?.current ||
+              0
+            }
             onboardingCompleted={!!userProfile?.onboardingCompleted}
             onStart={startQuickInterview}
-            onCreate={() => navigate('/interview/new')}
+            onCreate={() => navigate("/interview/new")}
             nextSession={scheduled?.[0]?.scheduledAt}
             consistency={metrics?.consistencyScore}
-            openGoals={(goals||[]).filter(g=>!g.done).length}
+            openGoals={(goals || []).filter((g) => !g.done).length}
           />
           <div className="mt-2 flex flex-wrap items-center gap-4 text-[11px]">
             <div className="inline-flex items-center gap-2">
@@ -765,7 +779,18 @@ const DashboardPage = () => {
               <h2 className="text-sm font-semibold text-surface-500 dark:text-surface-300 tracking-wide uppercase flex items-center gap-2">
                 Key Metrics
                 {metricsFetchedAt && (
-                  <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-colors ${Date.now()-metricsFetchedAt < 30000 ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40':'bg-surface-700/40 text-surface-400 border-surface-600'}`}>● <span>{Math.round((Date.now()-metricsFetchedAt)/1000)}s</span></span>
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                      Date.now() - metricsFetchedAt < 30000
+                        ? "bg-emerald-600/20 text-emerald-300 border-emerald-500/40"
+                        : "bg-surface-700/40 text-surface-400 border-surface-600"
+                    }`}
+                  >
+                    ●{" "}
+                    <span>
+                      {Math.round((Date.now() - metricsFetchedAt) / 1000)}s
+                    </span>
+                  </span>
                 )}
               </h2>
               <div className="flex items-center gap-2 text-[11px]">
@@ -1006,17 +1031,28 @@ const DashboardPage = () => {
               </div>
               <div className="flex flex-col gap-3">
                 <label className="flex flex-col gap-1">
-                  <span className="text-[11px] text-surface-400">Horizon (weeks)</span>
+                  <span className="text-[11px] text-surface-400">
+                    Horizon (weeks)
+                  </span>
                   <select
                     className="bg-surface-900 border border-surface-600 rounded-md px-2 py-1 text-sm text-surface-200 focus:outline-none focus:ring-2 focus:ring-primary-600"
                     value={metricsHorizon}
-                    onChange={(e) => setMetricsHorizon(parseInt(e.target.value, 10))}
+                    onChange={(e) =>
+                      setMetricsHorizon(parseInt(e.target.value, 10))
+                    }
                   >
-                    {[4,8,12,24].map(w => <option key={w} value={w}>{w} weeks</option>)}
+                    {[4, 8, 12, 24].map((w) => (
+                      <option key={w} value={w}>
+                        {w} weeks
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-[11px] text-surface-400 flex items-center justify-between">Benchmark <span className="text-surface-500">{benchmark}%</span></span>
+                  <span className="text-[11px] text-surface-400 flex items-center justify-between">
+                    Benchmark{" "}
+                    <span className="text-surface-500">{benchmark}%</span>
+                  </span>
                   <input
                     type="range"
                     min={40}
@@ -1031,7 +1067,10 @@ const DashboardPage = () => {
                   />
                 </label>
               </div>
-              <p className="text-[10px] text-surface-500 leading-snug">Horizon shapes trend & coverage analysis; benchmark influences readiness and warm-up recommendations.</p>
+              <p className="text-[10px] text-surface-500 leading-snug">
+                Horizon shapes trend & coverage analysis; benchmark influences
+                readiness and warm-up recommendations.
+              </p>
             </div>
             {loading || metricsLoading ? (
               <div className="relative rounded-xl border border-surface-700/70 bg-surface-800/40 backdrop-blur-sm p-6 overflow-hidden animate-pulse">
@@ -1042,7 +1081,10 @@ const DashboardPage = () => {
               </div>
             ) : (
               <motion.div
-                variants={{ hidden:{opacity:0, scale:.97}, show:{opacity:1, scale:1, transition:{duration:.4}} }}
+                variants={{
+                  hidden: { opacity: 0, scale: 0.97 },
+                  show: { opacity: 1, scale: 1, transition: { duration: 0.4 } },
+                }}
                 initial="hidden"
                 animate="show"
                 className="relative rounded-xl border border-surface-700/70 bg-surface-800/50 backdrop-blur-sm p-4 overflow-hidden"
@@ -1058,50 +1100,115 @@ const DashboardPage = () => {
               <GoalsPanel goals={goals} onToggle={toggleGoal} />
             )}
             {followupsReviewedRecently && (
-              <div className="text-xs text-green-400">Nice work reviewing follow-ups recently—keep it up!</div>
+              <div className="text-xs text-green-400">
+                Nice work reviewing follow-ups recently—keep it up!
+              </div>
             )}
             {loading ? <CardSkeleton lines={4} /> : <TipsPanel tips={tips} />}
             {mode === "full" && (
-              <Suspense fallback={<CardSkeleton lines={5} />}>                
+              <Suspense fallback={<CardSkeleton lines={5} />}>
                 <AnalyticsTabs
                   loading={loading || metricsLoading}
                   components={{
-                    radar: metrics?.skillDimensions?.length ? <SkillRadar skills={metrics.skillDimensions} /> : <div className="text-xs text-surface-500">No skill data yet.</div>,
+                    radar: metrics?.skillDimensions?.length ? (
+                      <SkillRadar skills={metrics.skillDimensions} />
+                    ) : (
+                      <div className="text-xs text-surface-500">
+                        No skill data yet.
+                      </div>
+                    ),
                     tags: metrics?.tagCoverage ? (
                       <div>
                         <div className="flex flex-wrap gap-2 mb-3">
-                          {metrics.tagCoverage.top.map(t => (
-                            <span key={t.tag} className="px-2 py-0.5 rounded-full bg-surface-700 text-[11px] text-surface-300 border border-surface-600">{t.tag}<span className="ml-1 text-surface-500">{t.count}</span></span>
+                          {metrics.tagCoverage.top.map((t) => (
+                            <span
+                              key={t.tag}
+                              className="px-2 py-0.5 rounded-full bg-surface-700 text-[11px] text-surface-300 border border-surface-600"
+                            >
+                              {t.tag}
+                              <span className="ml-1 text-surface-500">
+                                {t.count}
+                              </span>
+                            </span>
                           ))}
                         </div>
                         {metrics.tagCoverage.missingSuggestions?.length > 0 && (
-                          <div className="text-[11px] text-surface-400">Try: {metrics.tagCoverage.missingSuggestions.slice(0,4).join(', ')}</div>
+                          <div className="text-[11px] text-surface-400">
+                            Try:{" "}
+                            {metrics.tagCoverage.missingSuggestions
+                              .slice(0, 4)
+                              .join(", ")}
+                          </div>
                         )}
                       </div>
-                    ) : <div className="text-xs text-surface-500">No tag data yet.</div>,
-                    coverage: metrics?.categoryCoverage?.length ? <CategoryCoverage coverage={metrics.categoryCoverage} /> : <div className="text-xs text-surface-500">No coverage data yet.</div>,
-                    consistency: metrics?.consistencyScore != null ? (
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wide text-surface-400 mb-1">Practice Consistency</p>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-white">{metrics.consistencyScore}%</span>
-                          <span className="text-[10px] text-surface-500">Last {metricsHorizon}w</span>
-                        </div>
-                        <div className="mt-1 h-2 rounded bg-surface-700 overflow-hidden">
-                          <div className="h-full bg-primary-500" style={{ width: `${metrics.consistencyScore}%` }} />
-                        </div>
-                        <p className="mt-2 text-[11px] text-surface-400">
-                          {metrics.consistencyScore < 40
-                            ? 'Build a daily micro-practice habit.'
-                            : metrics.consistencyScore < 70
-                            ? 'Solid cadence—push for more active days.'
-                            : 'Great consistency—maintain momentum!'}
-                        </p>
+                    ) : (
+                      <div className="text-xs text-surface-500">
+                        No tag data yet.
                       </div>
-                    ) : <div className="text-xs text-surface-500">No consistency data yet.</div>,
-                    activity: metrics?.lastPracticeAt ? <ActivityIndicator lastPracticeAt={metrics.lastPracticeAt} /> : <div className="text-xs text-surface-500">No activity yet.</div>,
-                    followups: metrics?.followUps ? <FollowUpsUsage followUps={metrics.followUps} /> : <div className="text-xs text-surface-500">No follow-ups yet.</div>,
-                    streak: metrics?.streakDays ? <StreakWidget days={metrics.streakDays} /> : <div className="text-xs text-surface-500">No streak yet.</div>
+                    ),
+                    coverage: metrics?.categoryCoverage?.length ? (
+                      <CategoryCoverage coverage={metrics.categoryCoverage} />
+                    ) : (
+                      <div className="text-xs text-surface-500">
+                        No coverage data yet.
+                      </div>
+                    ),
+                    consistency:
+                      metrics?.consistencyScore != null ? (
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-surface-400 mb-1">
+                            Practice Consistency
+                          </p>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-white">
+                              {metrics.consistencyScore}%
+                            </span>
+                            <span className="text-[10px] text-surface-500">
+                              Last {metricsHorizon}w
+                            </span>
+                          </div>
+                          <div className="mt-1 h-2 rounded bg-surface-700 overflow-hidden">
+                            <div
+                              className="h-full bg-primary-500"
+                              style={{ width: `${metrics.consistencyScore}%` }}
+                            />
+                          </div>
+                          <p className="mt-2 text-[11px] text-surface-400">
+                            {metrics.consistencyScore < 40
+                              ? "Build a daily micro-practice habit."
+                              : metrics.consistencyScore < 70
+                              ? "Solid cadence—push for more active days."
+                              : "Great consistency—maintain momentum!"}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-surface-500">
+                          No consistency data yet.
+                        </div>
+                      ),
+                    activity: metrics?.lastPracticeAt ? (
+                      <ActivityIndicator
+                        lastPracticeAt={metrics.lastPracticeAt}
+                      />
+                    ) : (
+                      <div className="text-xs text-surface-500">
+                        No activity yet.
+                      </div>
+                    ),
+                    followups: metrics?.followUps ? (
+                      <FollowUpsUsage followUps={metrics.followUps} />
+                    ) : (
+                      <div className="text-xs text-surface-500">
+                        No follow-ups yet.
+                      </div>
+                    ),
+                    streak: metrics?.streakDays ? (
+                      <StreakWidget days={metrics.streakDays} />
+                    ) : (
+                      <div className="text-xs text-surface-500">
+                        No streak yet.
+                      </div>
+                    ),
                   }}
                 />
               </Suspense>
@@ -1178,22 +1285,40 @@ const DashboardPage = () => {
       />
       <QuickActionDock
         onStart={startQuickInterview}
-        onSchedule={() => { setEditSession(null); setShowScheduler(true); }}
+        onSchedule={() => {
+          setEditSession(null);
+          setShowScheduler(true);
+        }}
         onExport={() => {
           try {
-            const blob = new Blob([JSON.stringify({
-              generatedAt: new Date().toISOString(),
-              metrics,
-              recommendation,
-              horizon: metricsHorizon,
-              benchmark
-            }, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob); const a=document.createElement('a');
-            a.href=url; a.download='dashboard-insights.json'; a.click(); URL.revokeObjectURL(url);
-            toast.success('Insights exported');
-          } catch { toast.error('Export failed'); }
+            const blob = new Blob(
+              [
+                JSON.stringify(
+                  {
+                    generatedAt: new Date().toISOString(),
+                    metrics,
+                    recommendation,
+                    horizon: metricsHorizon,
+                    benchmark,
+                  },
+                  null,
+                  2
+                ),
+              ],
+              { type: "application/json" }
+            );
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "dashboard-insights.json";
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success("Insights exported");
+          } catch {
+            toast.error("Export failed");
+          }
         }}
-        onScrollTop={() => window.scrollTo({ top:0, behavior:'smooth' })}
+        onScrollTop={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       />
     </div>
   );

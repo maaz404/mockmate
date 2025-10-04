@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import React from "react";
+import { motion, useReducedMotion } from "framer-motion";
 
 const ActionBtn = ({ icon, label, onClick }) => (
   <button
@@ -11,16 +11,22 @@ const ActionBtn = ({ icon, label, onClick }) => (
   </button>
 );
 
-const QuickActionDock = ({ onStart, onSchedule, onExport, onScrollTop, visible=true }) => {
+const QuickActionDock = ({
+  onStart,
+  onSchedule,
+  onExport,
+  onScrollTop,
+  visible = true,
+}) => {
   const reduce = useReducedMotion();
   if (!visible) return null;
   return (
     <motion.div
-      initial={reduce? false : { opacity:0, y:10 }}
-      animate={{ opacity:1, y:0 }}
+      initial={reduce ? false : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       className="fixed bottom-5 right-5 z-40 flex gap-3 bg-surface-900/70 backdrop-blur-md px-4 py-3 rounded-2xl border border-surface-600 shadow-surface-lg"
     >
-      <ActionBtn icon="⚡" label="Start" onClick={() => onStart?.('mixed')} />
+      <ActionBtn icon="⚡" label="Start" onClick={() => onStart?.("mixed")} />
       <ActionBtn icon="📅" label="Schedule" onClick={onSchedule} />
       <ActionBtn icon="⬇️" label="Export" onClick={onExport} />
       <ActionBtn icon="↑" label="Top" onClick={onScrollTop} />
