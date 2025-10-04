@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  LineChart,
+  ComposedChart,
   Line,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
 
@@ -27,10 +29,12 @@ const ProgressChart = ({ analytics, metrics }) => {
       const sliceLen = range === "12w" ? 12 : 6;
       const tailWeeks = weeks.slice(-sliceLen);
       const tailScores = avgScore.slice(-sliceLen);
+      const tailInterviews = metrics.weekly.interviews.slice(-sliceLen);
       return tailWeeks.map((wk, i) => ({
         name: wk.split("-")[1], // show Wxx part
         score: tailScores[i] == null ? 0 : tailScores[i],
         hasData: tailScores[i] != null,
+        interviews: tailInterviews[i] ?? 0,
       }));
     }
     // Fallback to synthetic if metrics missing
@@ -53,7 +57,7 @@ const ProgressChart = ({ analytics, metrics }) => {
           ]
         : ["W1", "W2", "W3", "W4", "W5", "W6"];
     const values = range === "12w" ? [...base, 68, 74, 76, 79, 81, 83] : base;
-    return labels.map((name, i) => ({ name, score: values[i], hasData: true }));
+    return labels.map((name, i) => ({ name, score: values[i], hasData: true, interviews: Math.max(1, Math.round(Math.random()*2)) }));
   }, [analytics, metrics, range]);
 
   const improvementAreas = analytics?.analytics?.improvementAreas || [
@@ -123,17 +127,29 @@ const ProgressChart = ({ analytics, metrics }) => {
             </div>
           </div>
         </div>
-        <div className="h-48">
+        <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={progressData}>
+            <ComposedChart data={progressData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
               <XAxis dataKey="name" stroke="#94a3b8" />
-              <YAxis domain={[0, 100]} stroke="#94a3b8" />
+              <YAxis yAxisId="left" domain={[0, 100]} stroke="#94a3b8" />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                allowDecimals={false}
+                stroke="#94a3b8"
+              />
               <Tooltip
-                formatter={(value, _n, p) => [
-                  `${value}%${p?.payload?.hasData ? "" : " (no data)"}`,
-                  "Score",
-                ]}
+                formatter={(value, key, p) => {
+                  if (key === "score")
+                    return [
+                      `${value}%${p?.payload?.hasData ? "" : " (no data)"}`,
+                      "Avg Score",
+                    ];
+                  if (key === "interviews")
+                    return [value, "Interviews"];
+                  return [value, key];
+                }}
                 contentStyle={{
                   backgroundColor: "#1e293b",
                   border: "1px solid #475569",
@@ -141,22 +157,39 @@ const ProgressChart = ({ analytics, metrics }) => {
                   color: "#f8fafc",
                 }}
               />
+              <Legend
+                wrapperStyle={{ fontSize: 12 }}
+                formatter={(v) => (
+                  <span className="text-surface-300">{v}</span>
+                )}
+              />
+              <Bar
+                yAxisId="right"
+                dataKey="interviews"
+                barSize={18}
+                fill="#6366F1"
+                radius={[4, 4, 0, 0]}
+                opacity={0.6}
+              />
               <Line
+                yAxisId="left"
                 type="monotone"
                 dataKey="score"
+                name="Avg Score"
                 stroke="#3B82F6"
-                strokeWidth="3"
+                strokeWidth={3}
                 dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
               />
-              {/* Target benchmark line at 70% */}
               <Line
+                yAxisId="left"
                 type="monotone"
                 dataKey={() => 70}
+                name="Benchmark"
                 stroke="#10B981"
                 strokeDasharray="6 4"
                 dot={false}
               />
-            </LineChart>
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>

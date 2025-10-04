@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
@@ -21,6 +21,10 @@ import toast from "react-hot-toast";
 import { apiService } from "../services/api";
 import CommandPalette from "../components/ui/CommandPalette";
 import { formatRelativeCountdown, isWithinNextMs } from "../utils/datetime";
+// Lazy-loaded new metric widgets (Phase 1 extensions)
+const CategoryCoverage = lazy(() => import("../components/dashboard/CategoryCoverage"));
+const FollowUpsUsage = lazy(() => import("../components/dashboard/FollowUpsUsage"));
+const ActivityIndicator = lazy(() => import("../components/dashboard/ActivityIndicator"));
 
 const DashboardPage = () => {
   const { user, isLoaded } = useUser();
@@ -648,6 +652,22 @@ const DashboardPage = () => {
               </div>
             )}
             {loading ? <CardSkeleton lines={4} /> : <TipsPanel tips={tips} />}
+            {/* New Metrics Widgets */}
+            <Suspense fallback={<CardSkeleton lines={3} />}>
+              {!loading && metrics && (
+                <ActivityIndicator lastPracticeAt={metrics.lastPracticeAt} />
+              )}
+            </Suspense>
+            <Suspense fallback={<CardSkeleton lines={4} />}>
+              {!loading && metrics && metrics.categoryCoverage && metrics.categoryCoverage.length > 0 && (
+                <CategoryCoverage coverage={metrics.categoryCoverage} />
+              )}
+            </Suspense>
+            <Suspense fallback={<CardSkeleton lines={3} />}>
+              {!loading && metrics && (
+                <FollowUpsUsage followUps={metrics.followUps} />
+              )}
+            </Suspense>
           </div>
         </div>
 
