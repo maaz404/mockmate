@@ -18,7 +18,7 @@ const Button = forwardRef(
     {
       as: Comp = "button",
       children,
-      variant = "primary",
+  variant = "primary",
       size = "md",
       loading = false,
       disabled = false,
@@ -26,6 +26,8 @@ const Button = forwardRef(
       icon: Icon,
       iconPosition = "left",
       ripple = true,
+  pulse = false, // subtle breathing animation when true
+  accent = false, // left color accent bar
       type = "button",
       "aria-label": ariaLabel,
       ...props
@@ -49,6 +51,11 @@ const Button = forwardRef(
       subtle:
         "bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-700 focus:ring-surface-400",
       destructive: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+      soft: "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 border border-primary-200/60 dark:border-primary-800/50 focus:ring-primary-500",
+      glass: "backdrop-blur-md bg-white/10 dark:bg-surface-800/30 border border-white/20 dark:border-white/10 text-white hover:bg-white/20 dark:hover:bg-white/20 shadow-sm focus:ring-primary-400",
+      neon: "bg-surface-900 text-white relative shadow-[0_0_0_0_rgba(99,102,241,0.6)] hover:shadow-[0_0_0_4px_rgba(99,102,241,0.35)] border border-surface-700 focus:ring-primary-500",
+      toolbar: "bg-transparent text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100 hover:bg-surface-100 dark:hover:bg-surface-700/60 border border-transparent focus:ring-primary-500 rounded-lg px-3 py-2 text-sm",
+      gradientGlass: "relative overflow-hidden bg-gradient-to-r from-primary-500/80 via-indigo-500/70 to-purple-500/70 text-white shadow-lg hover:brightness-110 focus:ring-primary-500 backdrop-blur-sm",
     };
     const sizes = {
       xs: "px-2.5 py-1.5 text-xs",
@@ -56,6 +63,7 @@ const Button = forwardRef(
       md: "px-5 py-2.5 text-sm",
       lg: "px-6 py-3 text-base",
       xl: "px-8 py-4 text-lg",
+      icon: "p-2", // square icon button
     };
 
     function handleRipple(e) {
@@ -125,6 +133,9 @@ const Button = forwardRef(
           baseClasses,
           variants[variant] || variants.primary,
           sizes[size] || sizes.md,
+          variant === 'gradientGlass' && 'before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.4),transparent_60%)] before:pointer-events-none',
+          pulse && 'animate-pulse',
+          accent && 'pl-3 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary-500 before:rounded-l-xl',
           isDisabled && "cursor-not-allowed opacity-60",
           loading && "relative",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",

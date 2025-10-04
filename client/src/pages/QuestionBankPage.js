@@ -5,6 +5,7 @@ import QuestionCard from "../components/ui/QuestionCard";
 import toast from "react-hot-toast";
 import Modal from "../components/ui/Modal";
 import TagPill from "../components/ui/TagPill";
+import Button from "../components/ui/Button";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
@@ -114,7 +115,7 @@ const QuestionBankPage = () => {
           setSearchQuery(storedSearch);
           setRawSearch(storedSearch);
         }
-  // favorites-only removed
+        // favorites-only removed
         const storedTagMode = localStorage.getItem("qb_tagMode");
         if (storedTagMode === "multi") setTagMode("multi");
         const storedMultiTags = localStorage.getItem("qb_multiTags");
@@ -262,7 +263,14 @@ const QuestionBankPage = () => {
         source: q.source || "",
       };
       const obj = {};
-      const fixedCols = ["id","text","category","difficulty","tags","source"];
+      const fixedCols = [
+        "id",
+        "text",
+        "category",
+        "difficulty",
+        "tags",
+        "source",
+      ];
       fixedCols.forEach((col) => {
         if (base[col] !== undefined) obj[col] = base[col];
       });
@@ -274,7 +282,14 @@ const QuestionBankPage = () => {
       });
     } else {
       // CSV
-  const headers = ["id","text","category","difficulty","tags","source"];
+      const headers = [
+        "id",
+        "text",
+        "category",
+        "difficulty",
+        "tags",
+        "source",
+      ];
       const rows = projected.map((row) =>
         headers
           .map((h) => String(row[h] || "").replace(/"/g, '""'))
@@ -490,7 +505,9 @@ const QuestionBankPage = () => {
                     )}
                   </h2>
                   {searchQuery && (
-                    <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">Filtered by search: "{searchQuery}"</p>
+                    <p className="text-xs mt-1 text-surface-500 dark:text-surface-400">
+                      Filtered by search: "{searchQuery}"
+                    </p>
                   )}
                 </div>
                 {lastGenerationInfo && (
@@ -510,8 +527,11 @@ const QuestionBankPage = () => {
                 )}
                 <div className="flex gap-2">
                   {/* Export / Batch Ops Dropdown Cluster */}
-                  <div className="flex gap-2 flex-wrap">
-                    <button
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <Button
+                      size="sm"
+                      variant="subtle"
+                      accent
                       onClick={() => {
                         try {
                           const subset = filteredSortedQuestions.map((q) => ({
@@ -527,11 +547,12 @@ const QuestionBankPage = () => {
                           toast.error("Copy failed");
                         }
                       }}
-                      className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
                     >
                       Copy Filtered
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() =>
                         exportSubset(
                           filteredSortedQuestions,
@@ -539,11 +560,12 @@ const QuestionBankPage = () => {
                           "filtered-questions"
                         )
                       }
-                      className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
                     >
                       Download Filtered JSON
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() =>
                         exportSubset(
                           filteredSortedQuestions,
@@ -551,12 +573,13 @@ const QuestionBankPage = () => {
                           "filtered-questions"
                         )
                       }
-                      className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
                     >
                       Download Filtered CSV
-                    </button>
+                    </Button>
                     {favorites.length > 0 && (
-                      <button
+                      <Button
+                        size="sm"
+                        variant="soft"
                         onClick={() => {
                           // Select all favorites currently visible (ensures they exist in filtered list)
                           const visibleFavs = filteredSortedQuestions.filter(
@@ -582,70 +605,60 @@ const QuestionBankPage = () => {
                             toast.error("Copy failed");
                           }
                         }}
-                        className="text-sm px-3 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
                       >
                         Copy Visible Favorites
-                      </button>
+                      </Button>
                     )}
                   </div>
-                  <button
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    pulse={!showGenerator}
                     onClick={() => setShowGenerator(true)}
-                    className="text-sm px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700 transition"
-                    aria-label={
-                      showGenerator
-                        ? "Update question generation configuration"
-                        : "Regenerate questions"
-                    }
+                    aria-label={showGenerator ? "Update question generation configuration" : "Regenerate questions"}
                   >
                     {showGenerator ? "Update Config" : "Regenerate"}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="gradientGlass"
                     onClick={handleStartInterview}
-                    className="text-sm px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition"
                     aria-label="Start interview with generated questions"
                   >
                     Start Interview
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     onClick={() => {
                       setGeneratedQuestions([]);
-                      try {
-                        localStorage.removeItem("hybridGeneratedQuestions");
-                      } catch (_) {}
+                      try { localStorage.removeItem("hybridGeneratedQuestions"); } catch (_) {}
                       toast("Cleared generated questions");
                     }}
-                    className="text-sm px-3 py-2 rounded-md bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-200 hover:bg-surface-300 dark:hover:bg-surface-600 transition"
                     aria-label="Clear generated questions"
                   >
                     Clear
-                  </button>
+                  </Button>
                   {favorites.length > 0 && (
-                    <button
+                    <Button
+                      size="sm"
+                      variant="neon"
                       onClick={async () => {
                         try {
-                          const favQuestions = filteredSortedQuestions.filter(
-                            (q) => {
-                              const key = (q.text || q.questionText || "")
-                                .trim()
-                                .toLowerCase();
-                              return favorites.includes(key);
-                            }
-                          );
-                          await navigator.clipboard.writeText(
-                            JSON.stringify(favQuestions, null, 2)
-                          );
-                          toast.success(
-                            `Copied ${favQuestions.length} favorites`
-                          );
+                          const favQuestions = filteredSortedQuestions.filter((q) => {
+                            const key = (q.text || q.questionText || "").trim().toLowerCase();
+                            return favorites.includes(key);
+                          });
+                          await navigator.clipboard.writeText(JSON.stringify(favQuestions, null, 2));
+                          toast.success(`Copied ${favQuestions.length} favorites`);
                         } catch (e) {
                           toast.error("Failed to copy favorites");
                         }
                       }}
-                      className="text-sm px-3 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600 transition"
                       aria-label="Copy favorite questions to clipboard"
                     >
                       Copy Favorites
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -863,7 +876,11 @@ const QuestionBankPage = () => {
                   return (
                     <div
                       key={q.id || normKey || i}
-                      className={`${isHighlighted ? "relative border-l-4 border-green-400 pl-2 rounded" : ""}`}
+                      className={`${
+                        isHighlighted
+                          ? "relative border-l-4 border-green-400 pl-2 rounded"
+                          : ""
+                      }`}
                     >
                       {q.category && (
                         <div className="mb-2 flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400">
