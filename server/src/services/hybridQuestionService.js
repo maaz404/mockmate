@@ -31,13 +31,9 @@ class HybridQuestionService {
    * @returns {Promise<Array>} Array of questions
    */
   async generateHybridQuestions(config) {
-    const {
-      jobRole,
-      experienceLevel,
-      interviewType,
-      difficulty,
-      questionCount = 10,
-    } = config;
+    const { questionCount: requestedCount, category } = config; // optional category filter
+    // eslint-disable-next-line no-magic-numbers
+    const questionCount = requestedCount || 10;
 
     try {
       // Check cache first
@@ -45,23 +41,53 @@ class HybridQuestionService {
       if (cachedQuestions) {
         Logger.debug("Using cached questions for interview");
         await cachedQuestions.markUsed();
-        return cachedQuestions.questions;
+        // Ensure padding in case older cache stored fewer than requested
+        const padded = this.ensureQuestionCount(
+          [...cachedQuestions.questions],
+          questionCount,
+          config
+        );
+        if (padded.length !== cachedQuestions.questions.length) {
+          Logger.warn(
+            `Padded cached question set from ${cachedQuestions.questions.length} to ${padded.length}`
+          );
+        }
+        return padded;
       }
 
       // Generate new hybrid question set
-      const questions = await this.generateNewQuestionSet(config);
+      let questions = await this.generateNewQuestionSet(config);
+      // If explicit category requested, filter down before padding
+      if (category) {
+        const norm = String(category).toLowerCase();
+        questions = questions.filter((q) => {
+          const qc = (q.category || q.type || "").toLowerCase();
+          if (norm === "behavioral")
+            return qc === "behavioral" || qc.includes("behavior");
+          if (norm === "technical")
+            return qc === "technical" || qc.includes("tech");
+          if (norm === "system-design")
+            return qc.includes("system") || qc.includes("design");
+          return true;
+        });
+      }
+      questions = this.ensureQuestionCount(questions, questionCount, config);
 
       // Cache the generated questions
       await this.cacheQuestions(config, questions);
 
       Logger.success(
-        `Generated ${questions.length} hybrid questions for ${jobRole} - ${experienceLevel}`
+        // eslint-disable-next-line prefer-template
+        `Generated ${questions.length} hybrid questions${
+          category ? ` for category ${category}` : ""
+        }`
       );
       return questions;
     } catch (error) {
       Logger.error("Error generating hybrid questions:", error);
       // Fallback to AI service
-      return await aiQuestionService.generateQuestions(config);
+      const aiFallback = await aiQuestionService.generateQuestions(config);
+      return this.ensureQuestionCount(aiFallback, questionCount, config);
     }
   }
 
@@ -71,18 +97,14 @@ class HybridQuestionService {
    * @returns {Promise<Array>} Array of questions
    */
   async generateNewQuestionSet(config) {
-    const {
-      jobRole,
-      experienceLevel,
-      interviewType,
-      difficulty,
-      questionCount = 10,
-    } = config;
+    const { questionCount, category } = config;
 
     await this.loadTemplates();
 
     // Calculate question distribution (70% templates, 30% AI)
-    const templateCount = Math.ceil(questionCount * 0.7);
+    // Distribution constants
+    const TEMPLATE_RATIO = 0.7; // 70% templates
+    const templateCount = Math.ceil(questionCount * TEMPLATE_RATIO);
     const aiCount = questionCount - templateCount;
 
     let questions = [];
@@ -96,7 +118,11 @@ class HybridQuestionService {
 
     // 2. Generate AI questions for remaining slots (30%)
     if (aiCount > 0) {
-      const aiQuestions = await this.generateAIQuestions(config, aiCount);
+      const aiQuestions = await this.generateAIQuestions(
+        config,
+        aiCount,
+        category
+      );
       questions = questions.concat(aiQuestions);
     }
 
@@ -106,29 +132,138 @@ class HybridQuestionService {
     // 4. Shuffle questions for variety
     questions = this.shuffleArray(questions);
 
-    return questions.slice(0, questionCount);
+    const sliced = questions.slice(0, questionCount);
+    return this.ensureQuestionCount(sliced, questionCount, config);
+  }
+
+  /**
+   * Guarantee the returned array has exactly target questions by generating synthetic variants.
+   * This prevents UI mismatch when templates/AI/paraphrasing under-produce.
+   */
+  ensureQuestionCount(questions, targetCount, config) {
+    const result = [...questions];
+    // Timing constants
+    // eslint-disable-next-line no-magic-numbers
+    const SECONDS_PER_FIVE_MIN = 300;
+    const ESTIMATED_TIME_SEC = SECONDS_PER_FIVE_MIN;
+    const PARAPHRASE_ENABLED =
+      (process.env.VARIANT_PARAPHRASE_ENABLED || "").toLowerCase() === "true";
+
+    // Lightweight synonym pools (deterministic selection)
+    const SYNONYMS = {
+      describe: ["Explain", "Walk me through", "Outline", "Detail"],
+      challenge: ["problem", "issue", "obstacle", "difficulty"],
+      approach: ["method", "strategy", "solution path", "tactic"],
+      improve: ["optimize", "enhance", "refine", "strengthen"],
+      experience: ["background", "exposure", "history", "track record"],
+    };
+
+    function paraphrase(text, vIdx) {
+      if (!PARAPHRASE_ENABLED) return text;
+      let out = text;
+      const lower = out.toLowerCase();
+      const replaceKeys = [];
+      Object.keys(SYNONYMS).forEach((k) => {
+        if (lower.includes(k)) replaceKeys.push(k);
+      });
+      if (replaceKeys.length === 0) return out;
+      replaceKeys.forEach((key) => {
+        const pool = SYNONYMS[key];
+        const hash = [...key].reduce((a, c) => a + c.charCodeAt(0), 0);
+        const pick = pool[(hash + vIdx) % pool.length];
+        const regex = new RegExp(key, "ig");
+        out = out.replace(regex, (m) => {
+          const cap = m[0] === m[0].toUpperCase();
+          return cap
+            ? pick.charAt(0).toUpperCase() + pick.slice(1)
+            : pick.toLowerCase();
+        });
+      });
+      // eslint-disable-next-line no-magic-numbers
+      const EVEN_MODULUS = 2;
+      if (vIdx % EVEN_MODULUS === 0) {
+        const QUALIFIERS = [
+          " Give specifics.",
+          " Focus on trade-offs.",
+          " Highlight key decisions.",
+          " Include metrics if possible.",
+        ];
+        out = out.replace(/\.?$/, "") + QUALIFIERS[vIdx % QUALIFIERS.length];
+      }
+      return out;
+    }
+    if (result.length === 0) {
+      // Seed at least one generic question to duplicate from
+      result.push({
+        text: `Describe a challenge related to ${config.jobRole}.`,
+        category: config.jobRole || "general",
+        tags: ["General"],
+        difficulty: config.difficulty || "intermediate",
+        estimatedTime: ESTIMATED_TIME_SEC,
+        type: config.interviewType || "mixed",
+        source: "synthetic-seed",
+        // eslint-disable-next-line no-magic-numbers
+        id: `synthetic_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      });
+    }
+    const baseLen = result.length;
+    let variantIdx = 1;
+    while (result.length < targetCount) {
+      const base = result[result.length % baseLen];
+      result.push({
+        ...base,
+        text: (() => {
+          const core = base.text
+            .replace(/\(variant.*\)$/i, "")
+            .replace(
+              /\s+Give specifics\.|\s+Focus on trade-offs\.|\s+Highlight key decisions\.|\s+Include metrics if possible\.$/,
+              ""
+            )
+            .trim();
+          const paraphrased = paraphrase(core, variantIdx);
+          return `${paraphrased} (variant ${variantIdx})`;
+        })(),
+        source: `${base.source || "template"}-${
+          PARAPHRASE_ENABLED ? "paravariant" : "dup"
+        }`,
+        // eslint-disable-next-line no-magic-numbers
+        id: (() => {
+          // eslint-disable-next-line no-magic-numbers
+          const RADIX = 36;
+          // eslint-disable-next-line no-magic-numbers
+          const START = 2;
+          // eslint-disable-next-line no-magic-numbers
+          const END = 6;
+          return `dup_${Date.now()}_${result.length}_${Math.random()
+            .toString(RADIX)
+            .slice(START, END)}`;
+        })(),
+        generatedAt: new Date(),
+      });
+      variantIdx += 1;
+    }
+    // If somehow over (shouldn't happen) trim.
+    return result.slice(0, targetCount);
   }
 
   /**
    * Get template-based questions
-   * @param {Object} config - Interview configuration
-   * @param {Number} count - Number of questions needed
-   * @returns {Array} Template questions
-   */
-  async getTemplateQuestions(config, count) {
-    const { jobRole, experienceLevel, interviewType, difficulty } = config;
+      questionCount,
+    const { jobRole, interviewType, difficulty } = config;
 
     let templateQuestions = [];
     const roleTemplates =
       this.templates[jobRole] || this.templates["software-engineer"];
     // Use difficulty tier for selecting templates; default to 'intermediate'
-    const levelTemplates =
+    // eslint-disable-next-line no-magic-numbers
+    const TEMPLATE_RATIO = 0.7; // 70% templates
       roleTemplates[difficulty] || roleTemplates["intermediate"];
 
     // Get questions based on interview type
     if (interviewType === "mixed") {
       // Mix of technical and behavioral
-      const techCount = Math.ceil(count * 0.7);
+  const TECH_RATIO = 0.7; // 70% technical in mixed mode
+  const techCount = Math.ceil(count * TECH_RATIO);
       const behavioralCount = count - techCount;
 
       if (levelTemplates.technical) {
@@ -151,7 +286,8 @@ class HybridQuestionService {
     return templateQuestions.map((q) => ({
       ...q,
       source: "template",
-      id: `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+  // eslint-disable-next-line no-magic-numbers
+  id: `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     }));
   }
 
@@ -164,7 +300,8 @@ class HybridQuestionService {
   async generateAIQuestions(config, count) {
     try {
       // 50% completely new AI questions, 50% paraphrased templates
-      const newAICount = Math.ceil(count * 0.5);
+      const NEW_AI_RATIO = 0.5; // half new, half paraphrased
+      const newAICount = Math.ceil(count * NEW_AI_RATIO);
       const paraphrasedCount = count - newAICount;
 
       let aiQuestions = [];
@@ -181,11 +318,16 @@ class HybridQuestionService {
             text: q.text || q.question,
             category: q.category || config.jobRole,
             tags: this.inferTags(q.text || q.question, q.category),
-            difficulty: q.difficulty || config.difficulty,
-            estimatedTime: q.timeEstimate ? q.timeEstimate * 60 : 300,
+            // eslint-disable-next-line no-magic-numbers
+            estimatedTime: q.timeEstimate
+              ? // eslint-disable-next-line no-magic-numbers
+                q.timeEstimate * 60
+              : SECONDS_PER_FIVE_MIN,
             type: q.type || config.interviewType,
+            difficulty: q.difficulty || config.difficulty,
             source: "ai_generated",
             generatedAt: new Date(),
+            // eslint-disable-next-line no-magic-numbers
             id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           }))
         );
@@ -218,6 +360,7 @@ class HybridQuestionService {
     try {
       const templateQuestions = await this.getTemplateQuestions(
         config,
+        // eslint-disable-next-line no-magic-numbers
         count * 2
       ); // Get more templates to paraphrase from
       const questionsToParaphrase = this.selectRandomQuestions(
@@ -244,9 +387,18 @@ class HybridQuestionService {
               originalTemplateId: question.id,
               paraphrasedFrom: question.text,
               generatedAt: new Date(),
-              id: `paraphrased_${Date.now()}_${Math.random()
-                .toString(36)
-                .substr(2, 9)}`,
+              // eslint-disable-next-line no-magic-numbers
+              id: (() => {
+                // eslint-disable-next-line no-magic-numbers
+                const RADIX = 36;
+                // eslint-disable-next-line no-magic-numbers
+                const START = 2;
+                // eslint-disable-next-line no-magic-numbers
+                const LEN = 9;
+                return `paraphrased_${Date.now()}_${Math.random()
+                  .toString(RADIX)
+                  .substr(START, LEN)}`;
+              })(),
             });
           }
         } catch (error) {
@@ -315,7 +467,11 @@ Paraphrased Question:`;
         });
 
       const paraphrased = response.choices[0]?.message?.content?.trim();
-      return paraphrased && paraphrased.length > 10 ? paraphrased : null;
+      // eslint-disable-next-line no-magic-numbers
+      const MIN_PARAPHRASE_LENGTH = 10;
+      return paraphrased && paraphrased.length > MIN_PARAPHRASE_LENGTH
+        ? paraphrased
+        : null;
     } catch (error) {
       Logger.error("Error paraphrasing question:", error);
       return null;
@@ -532,6 +688,8 @@ Paraphrased Question:`;
         cacheKey,
         config,
         questions,
+        // Cache TTL constants
+        // eslint-disable-next-line no-magic-numbers
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       });
 

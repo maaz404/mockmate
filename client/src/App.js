@@ -18,6 +18,7 @@ import InterviewResultsPage from "./pages/InterviewResultsPage";
 import InterviewPage from "./pages/InterviewPage";
 import InterviewHistoryPage from "./pages/InterviewHistoryPage";
 import QuestionBankPage from "./pages/QuestionBankPage";
+import QuestionCategoryPage from "./pages/QuestionCategoryPage";
 import EnhancedSettingsPage from "./pages/EnhancedSettingsPage";
 import MockInterviewPage from "./pages/MockInterviewPage";
 import PracticePage from "./pages/PracticePage";
@@ -203,6 +204,14 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <QuestionBankPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/questions/:categorySlug"
+                      element={
+                        <ProtectedRoute>
+                          <QuestionCategoryPage />
                         </ProtectedRoute>
                       }
                     />

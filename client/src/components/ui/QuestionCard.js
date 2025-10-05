@@ -82,6 +82,38 @@ const QuestionCard = ({
             />
           </svg>
         );
+      case "remote":
+        return (
+          <svg
+            className="w-4 h-4 text-teal-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 7l9-4 9 4-9 4-9-4zm0 6l9 4 9-4m-9 4v6"
+            />
+          </svg>
+        );
+      case "synthetic-seed":
+        return (
+          <svg
+            className="w-4 h-4 text-amber-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 3v18m9-9H3"
+            />
+          </svg>
+        );
       default:
         return null;
     }
@@ -95,6 +127,18 @@ const QuestionCard = ({
         return "AI Generated";
       case "ai_paraphrased":
         return "AI Paraphrased";
+      case "synthetic-seed":
+        return "Seed";
+      case "template-paravariant":
+      case "template-dup":
+      case "synthetic-seed-paravariant":
+      case "synthetic-seed-dup":
+        return "Variant";
+      case "ai_generated-paravariant":
+      case "ai_generated-dup":
+        return "AI Variant";
+      case "remote":
+        return "Remote";
       default:
         return "Standard";
     }

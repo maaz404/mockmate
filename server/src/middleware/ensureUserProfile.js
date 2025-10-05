@@ -15,12 +15,10 @@ module.exports = async function ensureUserProfile(req, res, next) {
 
     // Derive safe email + names. In dev MOCK_AUTH_FALLBACK we may not have headers.
     const headerEmail = req.headers["x-user-email"]; // may be undefined
-    const safeEmail =
-      headerEmail && /@/.test(headerEmail)
-        ? headerEmail
-        : `${userId}@dev.local`; // deterministic placeholder – satisfies unique required constraint
-    const firstName =
-      req.headers["x-user-firstname"] || profile?.firstName || "";
+    const safeEmail = headerEmail && /@/.test(headerEmail)
+      ? headerEmail
+      : `${userId}@dev.local`; // deterministic placeholder – satisfies unique required constraint
+    const firstName = req.headers["x-user-firstname"] || profile?.firstName || "";
     const lastName = req.headers["x-user-lastname"] || profile?.lastName || "";
 
     if (!profile) {

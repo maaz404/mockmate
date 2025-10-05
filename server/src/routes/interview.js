@@ -20,20 +20,12 @@ const inMem = require("../services/inMemoryInterviewService");
 
 // Basic ok/fail helpers (local copy to avoid import cycles)
 function ok(res, data = {}, meta = {}) {
-  return res
-    .status(200)
-    .json({ success: true, data, requestId: res.locals.requestId, ...meta });
+  return res.status(200).json({ success: true, data, requestId: res.locals.requestId, ...meta });
 }
 function fail(res, code, message, status = 400, extra = {}) {
   return res
     .status(status)
-    .json({
-      success: false,
-      code,
-      message,
-      requestId: res.locals.requestId,
-      ...extra,
-    });
+    .json({ success: false, code, message, requestId: res.locals.requestId, ...extra });
 }
 
 // Wrap to normalize existing controllers that may directly res.json today

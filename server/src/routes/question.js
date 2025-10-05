@@ -73,6 +73,78 @@ router.post("/generate", requireAuth, ensureUserProfile, async (req, res) => {
   }
 });
 
+// @desc    Generate questions for a specific high-level category (behavioral|technical|system-design)
+// @route   POST /api/questions/generate/:category
+// @access  Private
+router.post(
+  "/generate/:category",
+  requireAuth,
+  ensureUserProfile,
+  async (req, res) => {
+    try {
+      const { config } = req.body || {};
+      const { category } = req.params;
+      if (!config) {
+        return fail(
+          res,
+          400,
+          "MISSING_CONFIG",
+          "Configuration payload required"
+        );
+      }
+      const { jobRole, experienceLevel, interviewType } = config;
+      if (!jobRole || !experienceLevel || !interviewType) {
+        return fail(
+          res,
+          400,
+          "INVALID_CONFIG",
+          "Missing required configuration parameters",
+          {
+            jobRole: !jobRole && "jobRole required",
+            experienceLevel: !experienceLevel && "experienceLevel required",
+            interviewType: !interviewType && "interviewType required",
+          }
+        );
+      }
+      const questionConfig = {
+        jobRole,
+        experienceLevel,
+        interviewType,
+        difficulty: config.difficulty || experienceLevel,
+        questionCount: config.questionCount || DEFAULT_QUESTION_COUNT,
+        category,
+      };
+      const questions = await hybridQuestionService.generateHybridQuestions(
+        questionConfig
+      );
+      return ok(res, {
+        questions,
+        config: questionConfig,
+        metadata: {
+          totalQuestions: questions.length,
+          category,
+          sourceBreakdown: questions.reduce((acc, q) => {
+            acc[q.source] = (acc[q.source] || 0) + 1;
+            return acc;
+          }, {}),
+          tagCoverage: [...new Set(questions.flatMap((q) => q.tags || []))],
+        },
+      });
+    } catch (error) {
+      Logger.error("Category generate questions error:", error);
+      return fail(
+        res,
+        500,
+        "QUESTION_GENERATION_FAILED",
+        "Failed to generate category questions",
+        process.env.NODE_ENV === "development"
+          ? { detail: error.message }
+          : undefined
+      );
+    }
+  }
+);
+
 // @desc    Get question templates for a role and difficulty
 // @route   GET /api/questions/templates
 // @access  Private

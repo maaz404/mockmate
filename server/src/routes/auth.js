@@ -18,45 +18,30 @@ router.get("/test", async (req, res) => {
     // Test Clerk SDK connection
     const testUser = await clerkClient.users.getUserList({ limit: 1 });
 
-    const { ok } = require("../utils/responder");
-    return ok(
-      res,
-      {
-        clerkConfigured: true,
-        userCount: testUser.length,
-        environment: process.env.NODE_ENV,
-        clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY
-          ? "Set"
-          : "Missing",
-        clerkSecretKey: process.env.CLERK_SECRET_KEY ? "Set" : "Missing",
-      },
-      "Clerk authentication is working"
-    );
+    const { ok } = require('../utils/responder');
+    return ok(res, {
+      clerkConfigured: true,
+      userCount: testUser.length,
+      environment: process.env.NODE_ENV,
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ? 'Set' : 'Missing',
+      clerkSecretKey: process.env.CLERK_SECRET_KEY ? 'Set' : 'Missing',
+    }, 'Clerk authentication is working');
   } catch (error) {
-    const { fail } = require("../utils/responder");
-    return fail(
-      res,
-      500,
-      "CLERK_TEST_FAILED",
-      "Clerk authentication not configured properly",
-      {
-        detail: error.message,
-        clerkConfigured: false,
-        environment: process.env.NODE_ENV,
-        clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY
-          ? "Set"
-          : "Missing",
-        clerkSecretKey: process.env.CLERK_SECRET_KEY ? "Set" : "Missing",
-        troubleshooting: {
-          step1: "Check if CLERK_SECRET_KEY is set in server/.env",
-          step2:
-            "Verify Clerk application exists at https://clerk.com/dashboard",
-          step3: "Ensure Google OAuth is enabled in Social Connections",
-          step4: "Add http://localhost:3000 to Authorized redirect URIs",
-          step5: "Restart both server and client applications",
-        },
-      }
-    );
+    const { fail } = require('../utils/responder');
+    return fail(res, 500, 'CLERK_TEST_FAILED', 'Clerk authentication not configured properly', {
+      detail: error.message,
+      clerkConfigured: false,
+      environment: process.env.NODE_ENV,
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ? 'Set' : 'Missing',
+      clerkSecretKey: process.env.CLERK_SECRET_KEY ? 'Set' : 'Missing',
+      troubleshooting: {
+        step1: 'Check if CLERK_SECRET_KEY is set in server/.env',
+        step2: 'Verify Clerk application exists at https://clerk.com/dashboard',
+        step3: 'Ensure Google OAuth is enabled in Social Connections',
+        step4: 'Add http://localhost:3000 to Authorized redirect URIs',
+        step5: 'Restart both server and client applications',
+      },
+    });
   }
 });
 router.post("/sync", requireAuth, async (req, res) => {
@@ -106,27 +91,15 @@ router.post("/sync", requireAuth, async (req, res) => {
       await userProfile.save();
     }
 
-    const { ok } = require("../utils/responder");
-    return ok(
-      res,
-      {
-        user: userProfile,
-        isNewUser: !userProfile.professionalInfo?.currentRole,
-      },
-      "User profile synced successfully"
-    );
+    const { ok } = require('../utils/responder');
+    return ok(res, {
+      user: userProfile,
+      isNewUser: !userProfile.professionalInfo?.currentRole,
+    }, 'User profile synced successfully');
   } catch (error) {
-    Logger.error("Auth sync error:", error);
-    const { fail } = require("../utils/responder");
-    return fail(
-      res,
-      500,
-      "SYNC_FAILED",
-      "Failed to sync user profile",
-      process.env.NODE_ENV === "development"
-        ? { detail: error.message }
-        : undefined
-    );
+    Logger.error('Auth sync error:', error);
+    const { fail } = require('../utils/responder');
+    return fail(res, 500, 'SYNC_FAILED', 'Failed to sync user profile', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
   }
 });
 
@@ -142,23 +115,15 @@ router.get("/whoami", requireAuth, async (req, res) => {
         clerkUser = null;
       }
     }
-    const { ok } = require("../utils/responder");
+    const { ok } = require('../utils/responder');
     return ok(res, {
       auth: req.auth,
-      emailVerified:
-        clerkUser?.primaryEmailAddress?.verification?.status === "verified",
-      emailStatus:
-        clerkUser?.primaryEmailAddress?.verification?.status || "unknown",
+      emailVerified: clerkUser?.primaryEmailAddress?.verification?.status === 'verified',
+      emailStatus: clerkUser?.primaryEmailAddress?.verification?.status || 'unknown',
     });
   } catch (e) {
-    const { fail } = require("../utils/responder");
-    return fail(
-      res,
-      500,
-      "WHOAMI_FAILED",
-      "Failed to resolve user identity",
-      process.env.NODE_ENV === "development" ? { detail: e.message } : undefined
-    );
+    const { fail } = require('../utils/responder');
+    return fail(res, 500, 'WHOAMI_FAILED', 'Failed to resolve user identity', process.env.NODE_ENV === 'development' ? { detail: e.message } : undefined);
   }
 });
 
@@ -185,7 +150,7 @@ router.get("/me", requireAuth, async (req, res) => {
     // Get fresh Clerk data
     const clerkUser = await clerkClient.users.getUser(userId);
 
-    const { ok } = require("../utils/responder");
+    const { ok } = require('../utils/responder');
     return ok(res, {
       profile: userProfile,
       clerk: {
@@ -199,17 +164,9 @@ router.get("/me", requireAuth, async (req, res) => {
       },
     });
   } catch (error) {
-    Logger.error("Get user error:", error);
-    const { fail } = require("../utils/responder");
-    return fail(
-      res,
-      500,
-      "USER_FETCH_FAILED",
-      "Failed to get user profile",
-      process.env.NODE_ENV === "development"
-        ? { detail: error.message }
-        : undefined
-    );
+    Logger.error('Get user error:', error);
+    const { fail } = require('../utils/responder');
+    return fail(res, 500, 'USER_FETCH_FAILED', 'Failed to get user profile', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
   }
 });
 
@@ -240,10 +197,8 @@ router.put(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        const { fail } = require("../utils/responder");
-        return fail(res, 400, "VALIDATION_FAILED", "Validation failed", {
-          details: errors.array(),
-        });
+        const { fail } = require('../utils/responder');
+        return fail(res, 400, 'VALIDATION_FAILED', 'Validation failed', { details: errors.array() });
       }
 
       const { userId } = req.auth;
@@ -259,23 +214,15 @@ router.put(
         { new: true, runValidators: true }
       );
 
-      const { ok, fail } = require("../utils/responder");
+      const { ok, fail } = require('../utils/responder');
       if (!userProfile) {
-        return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
+        return fail(res, 404, 'PROFILE_NOT_FOUND', 'User profile not found');
       }
-      return ok(res, userProfile, "Profile updated successfully");
+      return ok(res, userProfile, 'Profile updated successfully');
     } catch (error) {
-      Logger.error("Update profile error:", error);
-      const { fail } = require("../utils/responder");
-      return fail(
-        res,
-        500,
-        "PROFILE_UPDATE_FAILED",
-        "Failed to update profile",
-        process.env.NODE_ENV === "development"
-          ? { detail: error.message }
-          : undefined
-      );
+      Logger.error('Update profile error:', error);
+      const { fail } = require('../utils/responder');
+      return fail(res, 500, 'PROFILE_UPDATE_FAILED', 'Failed to update profile', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
     }
   }
 );
@@ -295,20 +242,12 @@ router.delete("/account", requireAuth, async (req, res) => {
     // Delete from Clerk (optional - you might want to keep this separate)
     // await clerkClient.users.deleteUser(userId);
 
-    const { ok } = require("../utils/responder");
-    return ok(res, null, "Account deleted successfully");
+    const { ok } = require('../utils/responder');
+    return ok(res, null, 'Account deleted successfully');
   } catch (error) {
-    Logger.error("Delete account error:", error);
-    const { fail } = require("../utils/responder");
-    return fail(
-      res,
-      500,
-      "ACCOUNT_DELETE_FAILED",
-      "Failed to delete account",
-      process.env.NODE_ENV === "development"
-        ? { detail: error.message }
-        : undefined
-    );
+    Logger.error('Delete account error:', error);
+    const { fail } = require('../utils/responder');
+    return fail(res, 500, 'ACCOUNT_DELETE_FAILED', 'Failed to delete account', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
   }
 });
 
@@ -322,9 +261,9 @@ router.post("/avatar", requireAuth, async (req, res) => {
     const { userId } = req.auth;
     const { imageUrl } = req.body;
 
-    const { ok, fail } = require("../utils/responder");
+    const { ok, fail } = require('../utils/responder');
     if (!imageUrl) {
-      return fail(res, 400, "MISSING_IMAGE_URL", "Image URL is required");
+      return fail(res, 400, 'MISSING_IMAGE_URL', 'Image URL is required');
     }
 
     // Update profile image in our database
@@ -335,21 +274,13 @@ router.post("/avatar", requireAuth, async (req, res) => {
     );
 
     if (!userProfile) {
-      return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
+      return fail(res, 404, 'PROFILE_NOT_FOUND', 'User profile not found');
     }
-    return ok(res, { profileImage: imageUrl }, "Avatar updated successfully");
+    return ok(res, { profileImage: imageUrl }, 'Avatar updated successfully');
   } catch (error) {
-    Logger.error("Update avatar error:", error);
-    const { fail } = require("../utils/responder");
-    return fail(
-      res,
-      500,
-      "AVATAR_UPDATE_FAILED",
-      "Failed to update avatar",
-      process.env.NODE_ENV === "development"
-        ? { detail: error.message }
-        : undefined
-    );
+    Logger.error('Update avatar error:', error);
+    const { fail } = require('../utils/responder');
+    return fail(res, 500, 'AVATAR_UPDATE_FAILED', 'Failed to update avatar', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
   }
 });
 
@@ -380,20 +311,12 @@ router.get("/stats", requireAuth, async (req, res) => {
       averageScore: userProfile.analytics?.averageScore || 0,
     };
 
-    const { ok } = require("../utils/responder");
+    const { ok } = require('../utils/responder');
     return ok(res, stats);
   } catch (error) {
-    Logger.error("Get stats error:", error);
-    const { fail } = require("../utils/responder");
-    return fail(
-      res,
-      500,
-      "STATS_FETCH_FAILED",
-      "Failed to get user statistics",
-      process.env.NODE_ENV === "development"
-        ? { detail: error.message }
-        : undefined
-    );
+    Logger.error('Get stats error:', error);
+    const { fail } = require('../utils/responder');
+    return fail(res, 500, 'STATS_FETCH_FAILED', 'Failed to get user statistics', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
   }
 });
 

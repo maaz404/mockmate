@@ -36,9 +36,7 @@ exports.health = async (req, res) => {
       500,
       "CHATBOT_HEALTH_FAILED",
       "Failed to check chatbot status",
-      process.env.NODE_ENV === "development"
-        ? { detail: error.message }
-        : undefined
+      process.env.NODE_ENV === "development" ? { detail: error.message } : undefined
     );
   }
 };
@@ -55,12 +53,7 @@ exports.chat = async (req, res) => {
 
     // Validation
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return fail(
-        res,
-        400,
-        "CHAT_MISSING_MESSAGES",
-        "Messages array is required and cannot be empty"
-      );
+      return fail(res, 400, "CHAT_MISSING_MESSAGES", "Messages array is required and cannot be empty");
     }
 
     // Check if Grok is configured
@@ -194,9 +187,7 @@ exports.chat = async (req, res) => {
       500,
       "GROK_CHAT_ERROR",
       "Failed to process your message. Please try again.",
-      process.env.NODE_ENV === "development"
-        ? { detail: error.message }
-        : undefined
+      process.env.NODE_ENV === "development" ? { detail: error.message } : undefined
     );
   }
 };
@@ -236,10 +227,7 @@ exports.getChatSuggestions = async (req, res) => {
     }
 
     // Limit to 5 suggestions
-    return ok(res, {
-      suggestions: suggestions.slice(0, 5),
-      requestId: req.requestId,
-    });
+    return ok(res, { suggestions: suggestions.slice(0, 5), requestId: req.requestId });
   } catch (error) {
     Logger.error("Get chat suggestions error:", error);
     return fail(
@@ -247,9 +235,7 @@ exports.getChatSuggestions = async (req, res) => {
       500,
       "CHATBOT_SUGGESTIONS_FAILED",
       "Failed to fetch suggestions",
-      process.env.NODE_ENV === "development"
-        ? { detail: error.message }
-        : undefined
+      process.env.NODE_ENV === "development" ? { detail: error.message } : undefined
     );
   }
 };
@@ -277,10 +263,7 @@ exports.stream = async (req, res) => {
     const userId = req.auth.userId || req.auth.id;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      send("error", {
-        error: "Messages array is required and cannot be empty",
-        code: "CHAT_MISSING_MESSAGES",
-      });
+      send("error", { error: "Messages array is required and cannot be empty", code: "CHAT_MISSING_MESSAGES" });
       return res.end();
     }
 
@@ -329,10 +312,7 @@ exports.stream = async (req, res) => {
         stream.on("end", () => {
           if (buffer.trim())
             send("chunk", { text: buffer.trim(), source: "grok-tail" });
-          send("done", {
-            timestamp: new Date().toISOString(),
-            provider: "grok",
-          });
+          send("done", { timestamp: new Date().toISOString(), provider: "grok" });
           res.end();
         });
         stream.on("error", (err) => {
@@ -348,11 +328,7 @@ exports.stream = async (req, res) => {
             enhancedContext
           );
           send("chunk", { text: result.message, source: "grok-fallback" });
-          send("done", {
-            timestamp: new Date().toISOString(),
-            provider: "grok",
-            fallback: true,
-          });
+          send("done", { timestamp: new Date().toISOString(), provider: "grok", fallback: true });
           return res.end();
         } catch (inner) {
           // Attempt OpenAI fallback before dev static
@@ -362,11 +338,7 @@ exports.stream = async (req, res) => {
               enhancedContext
             );
             send("chunk", { text: alt.message, source: "openai-fallback" });
-            send("done", {
-              timestamp: new Date().toISOString(),
-              provider: alt.provider,
-              fallback: true,
-            });
+            send("done", { timestamp: new Date().toISOString(), provider: alt.provider, fallback: true });
             return res.end();
           } catch (altErr) {
             send("notice", { note: "Using development fallback response" });
@@ -383,21 +355,14 @@ exports.stream = async (req, res) => {
     const interval = setInterval(() => {
       if (step.done) {
         clearInterval(interval);
-        send("done", {
-          timestamp: new Date().toISOString(),
-          source: "dev-fallback",
-          provider: "dev-fallback",
-        });
+        send("done", { timestamp: new Date().toISOString(), source: "dev-fallback", provider: "dev-fallback" });
         return res.end();
       }
       send("chunk", { text: step.value, source: "dev-fallback" });
       step = fallback.next();
     }, 30);
   } catch (error) {
-    send("error", {
-      error: "Failed to start stream",
-      code: "CHAT_STREAM_START_FAILED",
-    });
+    send("error", { error: "Failed to start stream", code: "CHAT_STREAM_START_FAILED" });
     res.end();
   }
 };

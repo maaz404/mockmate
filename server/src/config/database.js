@@ -26,7 +26,7 @@ const connectDB = async () => {
       // Lazy load to avoid dev dependency cost otherwise
       try {
         // eslint-disable-next-line global-require
-        const { MongoMemoryServer } = require("mongodb-memory-server");
+        const { MongoMemoryServer } = require('mongodb-memory-server');
         const mem = await MongoMemoryServer.create();
         uri = mem.getUri();
         process.env.MONGODB_URI = uri; // propagate for any downstream usage

@@ -6,7 +6,8 @@ import toast from "react-hot-toast";
 import Modal from "../components/ui/Modal";
 import TagPill from "../components/ui/TagPill";
 import Button from "../components/ui/Button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { CATEGORY_QUESTION_SETS } from "../data/questionBank";
 import api from "../services/api";
 
 const QuestionBankPage = () => {
@@ -20,6 +21,8 @@ const QuestionBankPage = () => {
   const navigate = useNavigate();
   const [tagFilter, setTagFilter] = useState("all");
   const [sortMode, setSortMode] = useState("original"); // original|difficulty|category
+  // Category browsing (Behavioral / Technical / System Design)
+  const [categoryFilter, setCategoryFilter] = useState("all"); // slug or 'all'
   const [searchQuery, setSearchQuery] = useState(""); // debounced value
   const [rawSearch, setRawSearch] = useState(""); // immediate input
   const [tagMode, setTagMode] = useState("single"); // single | multi
@@ -32,6 +35,21 @@ const QuestionBankPage = () => {
   // Deprecated: role & experience selectors removed from UI; using defaults for interview config
   const selectedJobRole = "software-engineer";
   const selectedExperience = "intermediate";
+
+  const location = useLocation();
+
+  // Helper to normalize category strings to slug form
+  const normalizeCategory = (val) =>
+    (val || "").trim().toLowerCase().replace(/\s+/g, "-");
+
+  // Read category from query string (enables navigation via /questions?category=behavioral)
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const cat = params.get("category");
+    if (cat) {
+      setCategoryFilter(normalizeCategory(cat));
+    }
+  }, [location.search]);
 
   // Lightweight inline dropdown for grouping secondary copy/export actions
   const ActionMenu = ({ label, children }) => {
@@ -235,6 +253,7 @@ const QuestionBankPage = () => {
       localStorage.setItem("qb_favorites", JSON.stringify(favorites));
       localStorage.setItem("qb_appendMode", appendMode ? "1" : "0");
       localStorage.setItem("qb_searchQuery", rawSearch);
+      localStorage.setItem("qb_categoryFilter", categoryFilter);
       // favorites-only persistence removed
       localStorage.setItem("qb_tagMode", tagMode);
       localStorage.setItem("qb_multiTags", JSON.stringify(multiTags));
@@ -247,6 +266,7 @@ const QuestionBankPage = () => {
     favorites,
     appendMode,
     rawSearch,
+    categoryFilter,
     tagMode,
     multiTags,
     tagLogic,
@@ -280,6 +300,13 @@ const QuestionBankPage = () => {
 
   const filteredSortedQuestions = React.useMemo(() => {
     let list = [...generatedQuestions];
+    // Category filtering (applies before tag/search filters)
+    if (categoryFilter !== "all") {
+      list = list.filter((q) => {
+        const cNorm = normalizeCategory(q.category || q.type || "");
+        return cNorm === categoryFilter;
+      });
+    }
     // Tag filtering
     if (tagMode === "single" && tagFilter !== "all") {
       list = list.filter((q) => (q.tags || []).includes(tagFilter));
@@ -319,6 +346,7 @@ const QuestionBankPage = () => {
     tagFilter,
     sortMode,
     searchQuery,
+    categoryFilter,
     tagMode,
     multiTags,
     tagLogic,
@@ -448,13 +476,9 @@ const QuestionBankPage = () => {
     }
   }
 
-  const questionCategories = [
-    {
-      name: "Behavioral Questions",
-      count: 45,
-      description: "Common behavioral interview questions",
-      color: "bg-primary-100 text-primary-600",
-      icon: (
+  const questionCategories = React.useMemo(() => {
+    const iconMap = {
+      behavioral: (
         <svg
           className="w-6 h-6"
           fill="none"
@@ -469,13 +493,7 @@ const QuestionBankPage = () => {
           />
         </svg>
       ),
-    },
-    {
-      name: "Technical Questions",
-      count: 78,
-      description: "Programming and technical questions",
-      color: "bg-green-100 text-green-600",
-      icon: (
+      technical: (
         <svg
           className="w-6 h-6"
           fill="none"
@@ -490,13 +508,7 @@ const QuestionBankPage = () => {
           />
         </svg>
       ),
-    },
-    {
-      name: "System Design",
-      count: 32,
-      description: "System design and architecture questions",
-      color: "bg-purple-100 text-purple-600",
-      icon: (
+      "system-design": (
         <svg
           className="w-6 h-6"
           fill="none"
@@ -511,8 +523,39 @@ const QuestionBankPage = () => {
           />
         </svg>
       ),
-    },
-  ];
+    };
+    const colorMap = {
+      behavioral: "bg-primary-100 text-primary-600",
+      technical: "bg-green-100 text-green-600",
+      "system-design": "bg-purple-100 text-purple-600",
+    };
+    const friendly = {
+      behavioral: "Behavioral Questions",
+      technical: "Technical Questions",
+      "system-design": "System Design",
+    };
+    return Object.entries(CATEGORY_QUESTION_SETS).map(([slug, list]) => {
+      // dynamic counts from currently generated set
+      const dynCount = generatedQuestions.filter(
+        (q) => normalizeCategory(q.category || q.type || "") === slug
+      ).length;
+      return {
+        slug,
+        name: friendly[slug] || slug,
+        description:
+          slug === "behavioral"
+            ? "Common behavioral interview questions"
+            : slug === "technical"
+            ? "Programming and technical questions"
+            : "System design and architecture questions",
+        color: colorMap[slug],
+        icon: iconMap[slug],
+        staticCount: list.length,
+        dynamicCount: dynCount,
+        totalCount: list.length + dynCount,
+      };
+    });
+  }, [generatedQuestions]);
 
   // Human-friendly label for last generation time (relative minutes)
   const lastGeneratedLabel = React.useMemo(() => {
@@ -538,35 +581,103 @@ const QuestionBankPage = () => {
             Browse and practice with our comprehensive collection of interview
             questions.
           </p>
+          {categoryFilter !== "all" && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              <span className="px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-700">
+                Browsing category: {categoryFilter.replace(/-/g, " ")}
+              </span>
+              <button
+                onClick={() => {
+                  setCategoryFilter("all");
+                  navigate("/questions", { replace: true });
+                }}
+                className="text-xs px-2 py-1 rounded-md bg-surface-200 dark:bg-surface-700 hover:bg-surface-300 dark:hover:bg-surface-600 text-surface-700 dark:text-surface-200"
+              >
+                Clear
+              </button>
+              {generatedQuestions.length === 0 && (
+                <span className="text-xs text-surface-500 dark:text-surface-400">
+                  Generate a set to view {categoryFilter.replace(/-/g, " ")}{" "}
+                  questions.
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {questionCategories.map((category) => (
-            <div
-              key={category.name}
-              className="surface-elevated-soft dark:bg-surface-800/40 p-6 hover:shadow-md transition-shadow cursor-pointer"
-            >
+          {questionCategories.map((category) => {
+            const active = categoryFilter === category.slug;
+            return (
               <div
-                className={`w-12 h-12 rounded-lg ${category.color} flex items-center justify-center mb-4`}
+                key={category.name}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setCategoryFilter(category.slug);
+                  // route-based page for full browsing
+                  navigate(`/questions/${category.slug}`);
+                  // If user hasn't generated yet, prompt them & open generator
+                  if (generatedQuestions.length === 0) {
+                    setShowGenerator(true);
+                    toast(
+                      "Select config then Generate to browse this category",
+                      {
+                        icon: "💡",
+                      }
+                    );
+                  } else {
+                    // Smooth scroll to results
+                    setTimeout(() => {
+                      if (resultsRef.current) {
+                        resultsRef.current.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                      }
+                    }, 30);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.currentTarget.click();
+                  }
+                }}
+                className={`surface-elevated-soft dark:bg-surface-800/40 p-6 hover:shadow-md transition-shadow cursor-pointer border ${
+                  active
+                    ? "border-primary-300 dark:border-primary-600"
+                    : "border-transparent"
+                }`}
               >
-                {category.icon}
+                <div
+                  className={`w-12 h-12 rounded-lg ${category.color} flex items-center justify-center mb-4`}
+                >
+                  {category.icon}
+                </div>
+                <h3 className="font-heading text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
+                  {category.name}
+                </h3>
+                <p className="text-surface-600 dark:text-surface-400 mb-4">
+                  {category.description}
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-surface-500 dark:text-surface-400">
+                    {category.totalCount} questions
+                  </span>
+                  <span
+                    className={`text-sm font-medium flex items-center gap-1 ${
+                      active
+                        ? "text-primary-700 dark:text-primary-300"
+                        : "text-primary-600 hover:text-primary-700"
+                    }`}
+                  >
+                    {active ? "Active" : "Browse →"}
+                  </span>
+                </div>
               </div>
-              <h3 className="font-heading text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
-                {category.name}
-              </h3>
-              <p className="text-surface-600 dark:text-surface-400 mb-4">
-                {category.description}
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-surface-500 dark:text-surface-400">
-                  {category.count} questions
-                </span>
-                <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                  Browse →
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-12">

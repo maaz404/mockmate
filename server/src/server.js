@@ -39,42 +39,32 @@ const notFound = require("./middleware/notFound");
 // Create Express app
 const app = express();
 // Early middleware: request id before anything else that may log
-const requestId = require("./middleware/requestId");
+const requestId = require('./middleware/requestId');
 app.use(requestId);
 // Response time + structured log middleware (lightweight)
 app.use((req, res, next) => {
   const start = process.hrtime.bigint();
-  res.on("finish", () => {
+  res.on('finish', () => {
     try {
       const end = process.hrtime.bigint();
       // eslint-disable-next-line no-magic-numbers
       const ms = Number(end - start) / 1e6;
       // Skip noisy health & metrics high-frequency endpoints logging at info
-      const skip =
-        /\/api\/(health|bootstrap)/.test(req.path) && res.statusCode < 400;
+      const skip = /\/api\/(health|bootstrap)/.test(req.path) && res.statusCode < 400;
       if (!skip) {
         // eslint-disable-next-line no-console
-        console.log(
-          JSON.stringify({
-            ts: new Date().toISOString(),
-            level:
-              res.statusCode >= 500
-                ? "error"
-                : res.statusCode >= 400
-                ? "warn"
-                : "info",
+        console.log(JSON.stringify({
+          ts: new Date().toISOString(),
+            level: res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
             requestId: req.requestId,
             method: req.method,
             path: req.path,
             status: res.statusCode,
             // eslint-disable-next-line no-magic-numbers
             durationMs: ms.toFixed(2),
-          })
-        );
+          }));
       }
-    } catch (_) {
-      /* ignore */
-    }
+    } catch (_) { /* ignore */ }
   });
   next();
 });
@@ -127,13 +117,10 @@ app.use(
 app.use(compression());
 
 // Logging (attach request id token to morgan output)
-const morganFormat =
-  process.env.NODE_ENV === "development" ? "dev" : "combined";
-app.use(
-  morgan(morganFormat, {
-    stream: { write: (str) => process.stdout.write(str) },
-  })
-);
+const morganFormat = process.env.NODE_ENV === 'development' ? 'dev' : 'combined';
+app.use(morgan(morganFormat, {
+  stream: { write: (str) => process.stdout.write(str) },
+}));
 
 // Body parser middleware
 app.use(express.json({ limit: "10mb" }));
@@ -184,39 +171,34 @@ if (useClerkGlobally) {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 // Lightweight bootstrap route (auth + profile + analytics) placed near user routes for discoverability
-app.get("/api/bootstrap", async (req, res) => {
+app.get('/api/bootstrap', async (req, res) => {
   // In dev mock mode allow unauth to still get a stub
   try {
     const authCtx = req.auth || {};
     const userId = authCtx.userId || authCtx.id;
-    const usingMock =
-      process.env.NODE_ENV !== "production" &&
-      process.env.MOCK_AUTH_FALLBACK === "true";
-    const { ok, fail } = require("./utils/responder");
+    const usingMock = process.env.NODE_ENV !== 'production' && process.env.MOCK_AUTH_FALLBACK === 'true';
+    const { ok, fail } = require('./utils/responder');
     if (!userId && !usingMock) {
-      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
+      return fail(res, 401, 'UNAUTHORIZED', 'Authentication required');
     }
-    const UserProfile = require("./models/UserProfile");
+    const UserProfile = require('./models/UserProfile');
     let profile = null;
     if (userId) {
       try {
         profile = await UserProfile.findOne({ clerkUserId: userId }).lean();
       } catch (dbErr) {
         // Non-fatal for bootstrap; continue with stubbed analytics
-        if (process.env.NODE_ENV === "development") {
-          req.log &&
-            req.log("warn", "Bootstrap DB fetch failed", {
-              detail: dbErr.message,
-            });
+        if (process.env.NODE_ENV === 'development') {
+          req.log && req.log('warn', 'Bootstrap DB fetch failed', { detail: dbErr.message });
         }
       }
     }
     if (!profile && usingMock) {
       profile = {
-        clerkUserId: "test-user-123",
-        email: "test-user-123@dev.local",
-        firstName: "Test",
-        lastName: "User",
+        clerkUserId: 'test-user-123',
+        email: 'test-user-123@dev.local',
+        firstName: 'Test',
+        lastName: 'User',
         onboardingCompleted: false,
         analytics: { averageScore: 0 },
       };
@@ -227,18 +209,12 @@ app.get("/api/bootstrap", async (req, res) => {
       analytics: profile ? profile.analytics || {} : {},
       requestId: req.requestId,
       timestamp: new Date().toISOString(),
-      dbConnected: require("./config/database").isDbConnected(),
+      dbConnected: require('./config/database').isDbConnected(),
     };
     return ok(res, payload);
   } catch (e) {
-    const { fail } = require("./utils/responder");
-    return fail(
-      res,
-      500,
-      "BOOTSTRAP_FAILED",
-      "Failed to load bootstrap data",
-      process.env.NODE_ENV === "development" ? { detail: e.message } : undefined
-    );
+    const { fail } = require('./utils/responder');
+    return fail(res, 500, 'BOOTSTRAP_FAILED', 'Failed to load bootstrap data', process.env.NODE_ENV === 'development' ? { detail: e.message } : undefined);
   }
 });
 app.use("/api/interviews", interviewRoutes);

@@ -22,7 +22,7 @@ const createInterview = async (req, res) => {
       config.duration = 30; // minutes default for tests
     }
     if (!config.difficulty) {
-      config.difficulty = "intermediate";
+      config.difficulty = 'intermediate';
     }
     const userProfile = req.userProfile;
 
@@ -35,12 +35,7 @@ const createInterview = async (req, res) => {
       );
     }
 
-    if (
-      !config ||
-      !config.jobRole ||
-      !config.experienceLevel ||
-      !config.interviewType
-    ) {
+    if (!config || !config.jobRole || !config.experienceLevel || !config.interviewType) {
       return fail(
         res,
         400,
@@ -167,10 +162,8 @@ const createInterview = async (req, res) => {
         questions.push({
           ...src,
           _id: new mongoose.Types.ObjectId(),
-          source: `${src.source || "fallback"}-dup`,
-          text: `${src.text} (variant ${Math.floor(
-            questions.length - base.length + 1
-          )})`,
+          source: `${src.source || 'fallback'}-dup`,
+          text: `${src.text} (variant ${Math.floor(questions.length - base.length + 1)})`,
         });
         dupIdx += 1;
       }
@@ -182,7 +175,7 @@ const createInterview = async (req, res) => {
       config: {
         ...config,
         questionCount: config.adaptiveDifficulty?.enabled
-          ? config.questionCount || C.DEFAULT_QUESTION_COUNT
+          ? (config.questionCount || C.DEFAULT_QUESTION_COUNT)
           : // Cap upper bound by questions length but enforce lower bound of schema min (5)
             Math.max(
               // eslint-disable-next-line no-magic-numbers
@@ -536,7 +529,7 @@ const completeInterview = async (req, res) => {
   try {
     const { userId } = req.auth;
     const interviewId = req.params.interviewId || req.params.id;
-    Logger.info("[completeInterview] invoked", { interviewId, userId });
+    Logger.info('[completeInterview] invoked', { interviewId, userId });
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -544,13 +537,11 @@ const completeInterview = async (req, res) => {
     }).populate("userProfile");
 
     if (!interview) {
-      Logger.warn("[completeInterview] interview not found", { interviewId });
+      Logger.warn('[completeInterview] interview not found', { interviewId });
       return fail(res, 404, "NOT_FOUND", "Interview not found");
     }
     if (interview.status !== "in-progress") {
-      Logger.warn("[completeInterview] invalid state", {
-        status: interview.status,
-      });
+      Logger.warn('[completeInterview] invalid state', { status: interview.status });
       return fail(res, 400, "INVALID_STATE", "Interview is not in progress");
     }
 
@@ -568,40 +559,22 @@ const completeInterview = async (req, res) => {
     );
 
     // Calculate overall results
-    if (typeof interview.calculateOverallScore === "function") {
-      try {
-        interview.calculateOverallScore();
-      } catch (e) {
-        Logger.warn("calculateOverallScore failed", e.message);
-      }
+    if (typeof interview.calculateOverallScore === 'function') {
+      try { interview.calculateOverallScore(); } catch (e) { Logger.warn('calculateOverallScore failed', e.message); }
     } else {
       // Fallback basic overall score (percentage of answered questions with any response)
-      const answered = (interview.questions || []).filter(
-        (q) => q.response && q.response.text
-      ).length;
+      const answered = (interview.questions||[]).filter(q=>q.response && q.response.text).length;
       // eslint-disable-next-line no-magic-numbers
-      const pct =
-        (answered / Math.max(1, (interview.questions || []).length)) * 100;
+      const pct = (answered / Math.max(1,(interview.questions||[]).length)) * 100;
       interview.results = interview.results || {};
       interview.results.overallScore = Math.round(pct);
     }
     if (interview.results) {
-      if (typeof interview.getPerformanceLevel === "function") {
-        try {
-          interview.results.performance = interview.getPerformanceLevel();
-        } catch (e) {
-          Logger.warn("getPerformanceLevel failed", e.message);
-        }
+      if (typeof interview.getPerformanceLevel === 'function') {
+        try { interview.results.performance = interview.getPerformanceLevel(); } catch (e) { Logger.warn('getPerformanceLevel failed', e.message); }
       } else if (!interview.results.performance) {
         const s = interview.results.overallScore || 0;
-        interview.results.performance =
-          s > 80
-            ? "excellent"
-            : s > 60
-            ? "good"
-            : s > 40
-            ? "average"
-            : "needs-improvement";
+        interview.results.performance = s > 80 ? 'excellent' : s > 60 ? 'good' : s > 40 ? 'average' : 'needs-improvement';
       }
     }
     interview.status = "completed";
@@ -638,13 +611,8 @@ const completeInterview = async (req, res) => {
     try {
       await interview.save();
     } catch (persistErr) {
-      Logger.error("[completeInterview] save failed", persistErr);
-      return fail(
-        res,
-        500,
-        "SAVE_FAILED",
-        "Failed to persist interview completion"
-      );
+      Logger.error('[completeInterview] save failed', persistErr);
+      return fail(res, 500, 'SAVE_FAILED', 'Failed to persist interview completion');
     }
 
     // Update user analytics
@@ -654,7 +622,7 @@ const completeInterview = async (req, res) => {
     const prevAvg = analytics.averageScore || 0;
     const newTotalInterviews = prevCount + 1;
     const newAverageScore = Math.round(
-      (prevAvg * prevCount + (interview.results.overallScore || 0)) /
+      ((prevAvg * prevCount) + (interview.results.overallScore || 0)) /
         (newTotalInterviews || 1)
     );
 
@@ -665,27 +633,13 @@ const completeInterview = async (req, res) => {
         lastInterviewDate: new Date(),
       });
     } catch (analyticsErr) {
-      Logger.warn(
-        "[completeInterview] analytics update failed (non-fatal)",
-        analyticsErr?.message
-      );
+      Logger.warn('[completeInterview] analytics update failed (non-fatal)', analyticsErr?.message);
     }
 
     return ok(res, interview, "Interview completed successfully");
   } catch (error) {
     Logger.error("Complete interview error:", error);
-    return fail(
-      res,
-      500,
-      "COMPLETE_FAILED",
-      "Failed to complete interview",
-      process.env.NODE_ENV !== "production"
-        ? {
-            detail: error.message,
-            stack: error.stack?.split("\n").slice(0, 5).join("\n"),
-          }
-        : undefined
-    );
+    return fail(res, 500, "COMPLETE_FAILED", "Failed to complete interview", process.env.NODE_ENV !== 'production' ? { detail: error.message, stack: error.stack?.split('\n').slice(0,5).join('\n') } : undefined);
   }
 };
 

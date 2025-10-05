@@ -64,10 +64,7 @@ api.interceptors.response.use(
       message: response?.data?.message || error.message || "Request failed",
       meta: response?.data?.meta,
       requestId:
-        response?.data?.requestId ||
-        response?.headers?.["x-request-id"] ||
-        getLastRequestId() ||
-        null,
+        response?.data?.requestId || response?.headers?.["x-request-id"] || getLastRequestId() || null,
       raw: error,
     };
     return Promise.reject(normalized);

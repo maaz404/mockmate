@@ -36,9 +36,9 @@ class AIQuestionService {
       interviewType,
       skills = [],
       focusAreas = [],
-      difficulty = "medium",
-      // eslint-disable-next-line no-magic-numbers
-      questionCount = 5,
+  difficulty = "medium",
+  // eslint-disable-next-line no-magic-numbers
+  questionCount = 5,
       userProfile,
     } = params;
 
@@ -46,9 +46,7 @@ class AIQuestionService {
       // Circuit breaker: short-circuit external calls if open
       const now = Date.now();
       if (this.open && now < this.nextAttemptAt) {
-        Logger.warn(
-          "AIQuestionService circuit open – using fallback questions"
-        );
+        Logger.warn("AIQuestionService circuit open – using fallback questions");
         return this.getFallbackQuestions(params);
       }
       if (this.open && now >= this.nextAttemptAt) {
@@ -58,15 +56,7 @@ class AIQuestionService {
       }
 
       // Cache key (exclude volatile userProfile object fields to keep key small)
-      const key = JSON.stringify({
-        jobRole,
-        experienceLevel,
-        interviewType,
-        skills,
-        focusAreas,
-        difficulty,
-        questionCount,
-      });
+      const key = JSON.stringify({ jobRole, experienceLevel, interviewType, skills, focusAreas, difficulty, questionCount });
       const cached = this.cache.get(key);
       if (cached && cached.expires > now) {
         Logger.debug("Serving questions from AI cache");
@@ -124,8 +114,8 @@ class AIQuestionService {
 
       Logger.success(`Generated ${questions.length} questions successfully`);
       // Store in cache (5 min TTL)
-      // eslint-disable-next-line no-magic-numbers
-      const FIVE_MIN_MS = 5 * 60 * 1000; // 5 minutes cache TTL
+  // eslint-disable-next-line no-magic-numbers
+  const FIVE_MIN_MS = 5 * 60 * 1000; // 5 minutes cache TTL
       this.cache.set(key, { questions, expires: now + FIVE_MIN_MS });
       // Reset failure state on success
       this.failCount = 0;
@@ -144,9 +134,7 @@ class AIQuestionService {
         const delay = Math.min(base * this.failCount, 5 * 60 * 1000); // cap 5m
         this.nextAttemptAt = Date.now() + delay;
         // eslint-disable-next-line no-magic-numbers
-        Logger.warn(
-          `AIQuestionService circuit opened for ${(delay / 1000).toFixed(0)}s`
-        );
+        Logger.warn(`AIQuestionService circuit opened for ${(delay/1000).toFixed(0)}s`);
       }
       Logger.debug("Falling back to curated questions");
       return this.getFallbackQuestions(params);
@@ -247,8 +235,8 @@ Requirements:
         }));
       }
     } catch (parseError) {
-      // eslint-disable-next-line no-console
-      console.error("Error parsing generated questions:", parseError);
+  // eslint-disable-next-line no-console
+  console.error("Error parsing generated questions:", parseError);
     }
 
     // Fallback to simple text parsing if JSON parsing fails
@@ -265,8 +253,8 @@ Requirements:
     lines.forEach((line, index) => {
       if (line.includes("?") || line.match(/^\d+\./)) {
         const questionText = line.replace(/^\d+\.\s*/, "").trim();
-        // eslint-disable-next-line no-magic-numbers
-        if (questionText.length > 10) {
+  // eslint-disable-next-line no-magic-numbers
+  if (questionText.length > 10) {
           questions.push({
             _id: `ai_text_${Date.now()}_${index}`,
             text: questionText,
@@ -297,8 +285,8 @@ Requirements:
    * Get fallback questions when AI service is unavailable
    */
   getFallbackQuestions(params) {
-    // eslint-disable-next-line no-magic-numbers
-    const { questionCount = 5, interviewType, difficulty, skills } = params;
+  // eslint-disable-next-line no-magic-numbers
+  const { questionCount = 5, interviewType, difficulty, skills } = params;
     const safeSkills = Array.isArray(skills) ? skills : [];
 
     // Filter fallback questions based on parameters
@@ -307,8 +295,8 @@ Requirements:
       const difficultyMatch =
         difficulty === "mixed" || q.difficulty === difficulty;
       const skillMatch =
-        safeSkills.length === 0 ||
-        safeSkills.some(
+  safeSkills.length === 0 ||
+  safeSkills.some(
           (skill) =>
             q.category.toLowerCase().includes(skill.toLowerCase()) ||
             q.text.toLowerCase().includes(skill.toLowerCase())
@@ -325,8 +313,8 @@ Requirements:
     }
 
     // Shuffle and return requested count
-    // eslint-disable-next-line no-magic-numbers
-    const shuffled = availableQuestions.sort(() => Math.random() - 0.5);
+  // eslint-disable-next-line no-magic-numbers
+  const shuffled = availableQuestions.sort(() => Math.random() - 0.5);
     return shuffled.slice(0, questionCount).map((q) => ({
       ...q,
       _id: `fallback_${Date.now()}_${Math.random()}`,
@@ -511,36 +499,36 @@ Provide exactly 2 specific, actionable improvement suggestions.`;
       question.category &&
       answer.toLowerCase().includes(question.category.toLowerCase());
 
-    // eslint-disable-next-line no-magic-numbers
-    const baseScore = Math.min(90, 40 + wordCount * 2 + (hasKeywords ? 20 : 0));
+  // eslint-disable-next-line no-magic-numbers
+  const baseScore = Math.min(90, 40 + wordCount * 2 + (hasKeywords ? 20 : 0));
 
     // Generate basic rubric scores based on answer analysis
     const rubricScores = {
       relevance: hasKeywords
-        ? // eslint-disable-next-line no-magic-numbers
-          Math.min(5, Math.floor(baseScore / 20) + 1)
-        : // eslint-disable-next-line no-magic-numbers
-          Math.max(1, Math.floor(baseScore / 25)),
+  // eslint-disable-next-line no-magic-numbers
+  ? Math.min(5, Math.floor(baseScore / 20) + 1)
+  // eslint-disable-next-line no-magic-numbers
+  : Math.max(1, Math.floor(baseScore / 25)),
       clarity:
-        // eslint-disable-next-line no-magic-numbers
-        wordCount > 20
-          ? // eslint-disable-next-line no-magic-numbers
-            Math.min(5, Math.floor(baseScore / 20))
-          : // eslint-disable-next-line no-magic-numbers
-            // eslint-disable-next-line no-magic-numbers
-            // eslint-disable-next-line no-magic-numbers
-            Math.max(1, Math.floor(baseScore / SCORE_SCALE_DIVISOR)),
+  // eslint-disable-next-line no-magic-numbers
+  wordCount > 20
+          // eslint-disable-next-line no-magic-numbers
+          ? Math.min(5, Math.floor(baseScore / 20))
+          // eslint-disable-next-line no-magic-numbers
+          // eslint-disable-next-line no-magic-numbers
+          // eslint-disable-next-line no-magic-numbers
+          : Math.max(1, Math.floor(baseScore / SCORE_SCALE_DIVISOR)),
       depth:
-        // eslint-disable-next-line no-magic-numbers
-        wordCount > 50
-          ? // eslint-disable-next-line no-magic-numbers
-            Math.min(5, Math.floor(baseScore / 18))
+  // eslint-disable-next-line no-magic-numbers
+  wordCount > 50
+          // eslint-disable-next-line no-magic-numbers
+          ? Math.min(5, Math.floor(baseScore / 18))
           : Math.max(1, Math.floor(baseScore / SCORE_SCALE_DIVISOR)),
       structure: /[.!?]/.test(answer)
-        ? // eslint-disable-next-line no-magic-numbers
-          Math.min(5, Math.floor(baseScore / 20))
-        : // eslint-disable-next-line no-magic-numbers
-          Math.max(1, Math.floor(baseScore / 35)),
+  // eslint-disable-next-line no-magic-numbers
+  ? Math.min(5, Math.floor(baseScore / 20))
+  // eslint-disable-next-line no-magic-numbers
+  : Math.max(1, Math.floor(baseScore / 35)),
     };
 
     // Generate basic model answer based on question type
@@ -551,19 +539,19 @@ Provide exactly 2 specific, actionable improvement suggestions.`;
       rubricScores,
       breakdown: {
         technical: baseScore,
-        // eslint-disable-next-line no-magic-numbers
-        communication: Math.min(100, baseScore + 5),
-        // eslint-disable-next-line no-magic-numbers
-        problemSolving: Math.max(30, baseScore - 10),
+  // eslint-disable-next-line no-magic-numbers
+  communication: Math.min(100, baseScore + 5),
+  // eslint-disable-next-line no-magic-numbers
+  problemSolving: Math.max(30, baseScore - 10),
       },
       strengths:
-        // eslint-disable-next-line no-magic-numbers
-        wordCount > 50
+  // eslint-disable-next-line no-magic-numbers
+  wordCount > 50
           ? ["Detailed response", "Good elaboration"]
           : ["Direct answer"],
       improvements:
-        // eslint-disable-next-line no-magic-numbers
-        wordCount < 30
+  // eslint-disable-next-line no-magic-numbers
+  wordCount < 30
           ? [
               "Provide more specific details and examples",
               "Structure your response with clear points",
@@ -573,8 +561,8 @@ Provide exactly 2 specific, actionable improvement suggestions.`;
               "Add concrete examples to strengthen your answer",
             ],
       feedback: `Your answer ${
-        // eslint-disable-next-line no-magic-numbers
-        wordCount > 50
+  // eslint-disable-next-line no-magic-numbers
+  wordCount > 50
           ? "shows good detail and understanding"
           : "could benefit from more elaboration and examples"
       }.`,
