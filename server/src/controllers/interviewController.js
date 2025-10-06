@@ -296,7 +296,7 @@ const submitAnswer = async (req, res) => {
     const { userId } = req.auth;
     const interviewId = req.params.interviewId || req.params.id;
     const { questionIndex } = req.params;
-    const { answer, timeSpent, notes } = req.body;
+  const { answer, timeSpent, notes, facialMetrics } = req.body;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -311,13 +311,24 @@ const submitAnswer = async (req, res) => {
     if (qIndex >= interview.questions.length)
       return fail(res, 400, "BAD_INDEX", "Invalid question index");
 
-    // Update question response
+    // Update question response & optional facial metrics snapshot for this question
     interview.questions[qIndex].response = {
       text: answer,
       notes: notes || "",
       submittedAt: new Date(),
     };
     interview.questions[qIndex].timeSpent = timeSpent || 0;
+    if (facialMetrics && typeof facialMetrics === "object") {
+      interview.questions[qIndex].facial = {
+        eyeContact: facialMetrics.eyeContact,
+        blinkRate: facialMetrics.blinkRate,
+        smilePercentage: facialMetrics.smilePercentage,
+        headSteadiness: facialMetrics.headSteadiness,
+        offScreenPercentage: facialMetrics.offScreenPercentage,
+        confidenceScore: facialMetrics.confidenceScore,
+        capturedAt: new Date(),
+      };
+    }
 
     // AI-powered scoring with enhanced feedback
     let evaluation;
@@ -1612,11 +1623,55 @@ async function exportInterviewMetrics(req, res) {
     const interviewId = req.params.interviewId || req.params.id;
     const interview = await Interview.findOne({_id: interviewId, userId});
     if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
-    const rows = [];
-    rows.push(["questionIndex","category","difficulty","score","timeSpent","eyeContact","blinkRate","smilePercentage","headSteadiness","offScreen","confidence"].join(","));
+    const format = (req.query.format || "csv").toLowerCase();
+    const headers = ["questionIndex","category","difficulty","score","timeSpent","eyeContact","blinkRate","smilePercentage","headSteadiness","offScreen","confidence"];
+    if (format === "pdf") {
+      const PDFDocument = require("pdfkit");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=interview_${interviewId}_metrics.pdf`
+      );
+      const doc = new PDFDocument({ margin: 40 });
+      doc.pipe(res);
+      doc.fontSize(16).text("Interview Metrics Report", { underline: true });
+      doc.moveDown();
+      doc.fontSize(10).text(`Interview ID: ${interviewId}`);
+      doc.text(`User ID: ${userId}`);
+      doc.text(`Questions: ${(interview.questions||[]).length}`);
+      doc.moveDown();
+      // Table header
+      doc.font("Helvetica-Bold");
+      doc.text(headers.join(" | "));
+      doc.font("Helvetica");
+      (interview.questions||[]).forEach((q, idx) => {
+        const fm = q.facial || {};
+        const row = [
+          idx,
+          q.category || "",
+            q.difficulty || "",
+            q.score?.overall ?? "",
+            q.timeSpent ?? "",
+            fm.eyeContact ?? "",
+            fm.blinkRate ?? "",
+            fm.smilePercentage ?? "",
+            fm.headSteadiness ?? "",
+            fm.offScreenPercentage ?? "",
+            fm.confidenceScore ?? "",
+        ].join(" | ");
+        doc.text(row);
+      });
+      doc.end();
+      res.on("close", () => {
+        /* stream closed */
+      });
+      return; // stream response completed
+    }
+    // default CSV
+    const rows = [headers.join(",")];
     (interview.questions||[]).forEach((q, idx) => {
       const fm = q.facial || {};
-      const line = [
+      rows.push([
         idx,
         JSON.stringify(q.category||""),
         q.difficulty||"",
@@ -1628,8 +1683,7 @@ async function exportInterviewMetrics(req, res) {
         fm.headSteadiness!=null?fm.headSteadiness:"",
         fm.offScreenPercentage!=null?fm.offScreenPercentage:"",
         fm.confidenceScore!=null?fm.confidenceScore:"",
-      ].join(",");
-      rows.push(line);
+      ].join(","));
     });
     const csv = rows.join("\n");
     res.setHeader("Content-Type", "text/csv");
