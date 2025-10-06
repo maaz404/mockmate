@@ -32,6 +32,8 @@ const InterviewExperiencePage = () => {
   const [codingSessionId, setCodingSessionId] = useState(null);
   const [currentChallenge, setCurrentChallenge] = useState(null);
   const [codingSubmitting, setCodingSubmitting] = useState(false);
+  const [codingCompleted, setCodingCompleted] = useState(false);
+  const [codingSummary, setCodingSummary] = useState(null);
 
   // Function to fetch interview data
   const fetchInterview = useCallback(async () => {
@@ -169,6 +171,56 @@ const InterviewExperiencePage = () => {
     }
   }, [isLoaded, user, interviewId, fetchInterview]);
 
+  // Rehydrate existing coding session if interview already has one
+  useEffect(() => {
+    const rehydrate = async () => {
+      if (!interview) return;
+      if (codingSessionId) return; // already set
+      const existing = interview.codingSession?.sessionId;
+      if (!existing) return;
+      try {
+        setCodingSessionId(existing);
+        // fetch status & current challenge
+        const status = await apiService.get(`/coding/session/${existing}/status`);
+        const challenge = await apiService.get(`/coding/session/${existing}/current`);
+        if (challenge.success) {
+          setCurrentChallenge(challenge.data);
+          // ensure question exists
+          if (!interview.questions.find(q => q.challengeId === challenge.data.id)) {
+            setInterview(prev => ({
+              ...prev,
+              questions: [
+                {
+                  _id: `coding-${challenge.data.id}`,
+                  questionText: challenge.data.title,
+                  text: challenge.data.title,
+                  category: "coding",
+                  type: "technical",
+                  difficulty: challenge.data.difficulty || "medium",
+                  challengeId: challenge.data.id,
+                  timeAllocated: (challenge.data.timeLimit || 30) * 60,
+                },
+                ...prev.questions,
+              ],
+            }));
+          }
+        }
+        if (status?.data?.status === 'completed') {
+          setCodingCompleted(true);
+          // fetch results summary
+          try {
+            const res = await apiService.get(`/coding/interview/${interview._id}/results`);
+            if (res.success) setCodingSummary(res.data.results || res.data);
+          } catch (_) { /* ignore */ }
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Failed to rehydrate coding session', e);
+      }
+    };
+    rehydrate();
+  }, [interview, codingSessionId]);
+
   // If interview config included coding, create a coding session when interview loads
   useEffect(() => {
     const maybeCreateCodingSession = async () => {
@@ -236,7 +288,11 @@ const InterviewExperiencePage = () => {
         if (nextResp.success) {
           if (nextResp.data.completed) {
             // Session done; don't inject further
-            // Optionally mark completion
+            setCodingCompleted(true);
+            try {
+              const res = await apiService.get(`/coding/interview/${interview._id}/results`);
+              if (res.success) setCodingSummary(res.data.results || res.data);
+            } catch (_) { /* ignore */ }
           } else if (nextResp.data.challenge) {
             setCurrentChallenge(nextResp.data.challenge);
             // Append new challenge question after current coding question(s)
@@ -271,6 +327,12 @@ const InterviewExperiencePage = () => {
     // Handle both event objects (from textarea) and direct values (from Monaco Editor)
     const newValue = typeof value === "string" ? value : value.target.value;
     setCurrentAnswer(newValue);
+    // persist draft if coding
+    if (codingSessionId && currentChallenge) {
+      try {
+        localStorage.setItem(`codingDraft:${codingSessionId}:${currentChallenge.id}`, newValue);
+      } catch (_) { /* ignore quota */ }
+    }
   };
 
   // Handle code execution for coding questions
@@ -387,6 +449,9 @@ const InterviewExperiencePage = () => {
   }
 
   const currentQuestion = interview.questions[currentQuestionIndex];
+  // Distinguish counts for coding vs non-coding
+  const codingQuestions = interview.questions.filter(q => q.category === 'coding');
+  const codingProgress = codingQuestions.length ? Math.min(codingQuestions.filter((_, idx) => idx <= codingQuestions.findIndex(q => q.challengeId === currentChallenge?.id)).length, codingQuestions.length) : 0;
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
@@ -408,7 +473,7 @@ const InterviewExperiencePage = () => {
               {/* Progress Bar */}
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-surface-600 dark:text-surface-400">
-                  Progress:
+                  Q Progress:
                 </span>
                 <div className="w-32 bg-surface-200 dark:bg-surface-700 rounded-full h-2">
                   <div
@@ -420,6 +485,17 @@ const InterviewExperiencePage = () => {
                   {getProgressPercentage()}%
                 </span>
               </div>
+              {codingSessionId && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-surface-600 dark:text-surface-400">Coding:</span>
+                  <div className="w-24 bg-surface-200 dark:bg-surface-700 rounded-full h-2">
+                    <div className="bg-emerald-500 h-2 rounded-full transition-all duration-300" style={{ width: `${codingQuestions.length ? (codingProgress / codingQuestions.length) * 100 : 0}%` }}></div>
+                  </div>
+                  <span className="text-sm font-medium text-surface-900 dark:text-surface-50">
+                    {codingProgress}/{codingQuestions.length || 0}
+                  </span>
+                </div>
+              )}
 
               {/* Timer */}
               <div
@@ -529,6 +605,9 @@ const InterviewExperiencePage = () => {
                     >
                       {codingSubmitting ? "Submitting..." : "Submit & Next Challenge"}
                     </button>
+                    {codingCompleted && codingSummary && (
+                      <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Session Complete • Score {codingSummary.finalScore || codingSummary.overallScore || 0}%</span>
+                    )}
                   </div>
                 )}
               </div>

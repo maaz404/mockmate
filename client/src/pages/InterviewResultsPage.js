@@ -11,6 +11,7 @@ const InterviewResultsPage = () => {
 
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [codingResults, setCodingResults] = useState(null);
 
   const fetchResults = useCallback(async () => {
     try {
@@ -37,6 +38,22 @@ const InterviewResultsPage = () => {
       fetchResults();
     }
   }, [isLoaded, user, interviewId, fetchResults]);
+
+  // Fetch coding results (best-effort) once interview core results loaded
+  useEffect(() => {
+    const fetchCoding = async () => {
+      if (!results) return;
+      try {
+        const resp = await apiService.get(`/coding/interview/${interviewId}/results`);
+        if (resp.success) {
+          setCodingResults(resp.data);
+        }
+      } catch (_) {
+        // ignore if not present
+      }
+    };
+    fetchCoding();
+  }, [results, interviewId]);
 
   const getScoreColor = (score) => {
     if (score >= 80) return "text-green-600";
@@ -110,6 +127,51 @@ const InterviewResultsPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Detailed Analysis */}
           <div className="lg:col-span-2 space-y-8">
+            {codingResults && codingResults.results && (
+              <div className="card p-6 border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20">
+                <h2 className="text-2xl font-bold text-emerald-800 dark:text-emerald-300 mb-4 flex items-center gap-2">
+                  <span>💻 Coding Challenge Summary</span>
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="p-3 rounded bg-white/70 dark:bg-surface-800/50 border border-emerald-200 dark:border-emerald-700">
+                    <div className="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Final Score</div>
+                    <div className="text-lg font-semibold">{codingResults.results.finalScore || codingResults.results.overallScore || 0}%</div>
+                  </div>
+                  <div className="p-3 rounded bg-white/70 dark:bg-surface-800/50 border border-emerald-200 dark:border-emerald-700">
+                    <div className="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Challenges</div>
+                    <div className="text-lg font-semibold">{codingResults.results.challengesCompleted}/{codingResults.results.totalChallenges}</div>
+                  </div>
+                  <div className="p-3 rounded bg-white/70 dark:bg-surface-800/50 border border-emerald-200 dark:border-emerald-700">
+                    <div className="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Avg Score</div>
+                    <div className="text-lg font-semibold">{codingResults.results.averageScore || 0}</div>
+                  </div>
+                  <div className="p-3 rounded bg-white/70 dark:bg-surface-800/50 border border-emerald-200 dark:border-emerald-700">
+                    <div className="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Time (s)</div>
+                    <div className="text-lg font-semibold">{Math.round((codingResults.results.totalTime || 0) / 1000)}</div>
+                  </div>
+                </div>
+                {codingResults.results.submissions?.length ? (
+                  <div className="mt-6 space-y-4">
+                    <h3 className="text-lg font-semibold text-emerald-700 dark:text-emerald-300">Challenge Details</h3>
+                    {codingResults.results.submissions.map((s, idx) => (
+                      <div key={s.challengeId + idx} className="p-4 rounded border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-medium text-surface-800 dark:text-surface-200">#{idx + 1} {s.challengeId}</span>
+                          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{s.score || 0}%</span>
+                        </div>
+                        {s.testResults && (
+                          <div className="flex flex-wrap gap-1 text-xs">
+                            {s.testResults.map(tr => (
+                              <span key={tr.testIndex} className={`px-2 py-0.5 rounded-full border ${tr.passed ? 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700' : 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700'}`}>T{tr.testIndex+1}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            )}
             {/* Performance Breakdown */}
             <div className="card p-6">
               <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-50 mb-6">
