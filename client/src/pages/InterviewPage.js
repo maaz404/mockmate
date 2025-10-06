@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import VideoRecorder from "../components/VideoRecorder";
+import VideoPlayback from "../components/VideoPlayback";
 import RecordingUploader from "../components/interview/RecordingUploader";
 import toast from "react-hot-toast";
 import { apiService } from "../services/api";
@@ -493,15 +494,26 @@ const InterviewPage = () => {
           {/* Video Section */}
           <div className="space-y-4">
             {settings.videoRecording ? (
-              <div className="card p-0 overflow-hidden">
-                <VideoRecorder
-                  interviewId={interview._id}
-                  currentQuestionIndex={currentQuestionIndex}
-                  onVideoUploaded={handleVideoUploaded}
-                  onRecordingChange={setIsRecording}
-                  onPermissionChange={setPermission}
-                  audioEnabled={settings.audioRecording}
-                />
+              <div className="space-y-4">
+                <div className="card p-0 overflow-hidden">
+                  <VideoRecorder
+                    interviewId={interview._id}
+                    currentQuestionIndex={currentQuestionIndex}
+                    onVideoUploaded={handleVideoUploaded}
+                    onRecordingChange={setIsRecording}
+                    onPermissionChange={setPermission}
+                    audioEnabled={settings.audioRecording}
+                  />
+                </div>
+                {/* Playback of saved answer for this question (if exists) */}
+                {interview?.questions?.[currentQuestionIndex]?.hasVideo && (
+                  <div className="card p-0 overflow-hidden">
+                    <VideoPlayback
+                      interviewId={interview._id}
+                      questionIndex={currentQuestionIndex}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="card aspect-video flex items-center justify-center">

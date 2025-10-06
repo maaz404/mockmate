@@ -38,7 +38,7 @@ async function run() {
           interviewTypes: ["technical", "behavioral"],
           difficulty: "intermediate",
         },
-        subscription: { plan: "premium", interviewsRemaining: 999 },
+        subscription: { plan: "premium", interviewsRemaining: null },
         onboardingCompleted: true,
       });
       // eslint-disable-next-line no-console

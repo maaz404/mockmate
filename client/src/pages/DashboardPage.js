@@ -592,7 +592,9 @@ const DashboardPage = () => {
         questionCount: 10,
       };
 
-      const response = await apiService.post("/interviews", { config: interviewConfig });
+      const response = await apiService.post("/interviews", {
+        config: interviewConfig,
+      });
       if (response?.success && response?.data?._id) {
         const id = response.data._id;
         // Attempt auto-start (transition scheduled -> in-progress)
@@ -600,7 +602,10 @@ const DashboardPage = () => {
           const startResp = await apiService.put(`/interviews/${id}/start`);
           if (!startResp?.success) {
             // eslint-disable-next-line no-console
-            console.warn("[Dashboard] auto-start interview not successful", startResp);
+            console.warn(
+              "[Dashboard] auto-start interview not successful",
+              startResp
+            );
           }
         } catch (e) {
           // eslint-disable-next-line no-console
@@ -612,11 +617,15 @@ const DashboardPage = () => {
       const msg = response?.message || "Failed to create interview";
       toast.error(msg);
       // eslint-disable-next-line no-console
-      console.error("[Dashboard] create interview unexpected response", response);
+      console.error(
+        "[Dashboard] create interview unexpected response",
+        response
+      );
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("[Dashboard] create interview error", error);
-      const detail = error?.message || error?.code || "Failed to create interview";
+      const detail =
+        error?.message || error?.code || "Failed to create interview";
       const readable = /NO_QUESTIONS/.test(error?.code || detail)
         ? "Could not generate questions for this configuration. Try adjusting role, type, or difficulty."
         : detail;
@@ -637,6 +646,13 @@ const DashboardPage = () => {
     .filter((i) => i.status === "completed" && i.results?.overallScore)
     .map((i) => i.results.overallScore)
     .slice(-8);
+
+  // Derive subscription info robustly (prefer analytics.subscription if present, else from profile)
+  const effectiveSubscription =
+    (analytics && analytics.subscription) || userProfile?.subscription || null;
+  const plan = effectiveSubscription?.plan || "free";
+  const remaining =
+    plan === "free" ? effectiveSubscription?.interviewsRemaining ?? 0 : null;
 
   const stats = analytics
     ? [
@@ -673,14 +689,10 @@ const DashboardPage = () => {
           change: `Best: ${analytics.analytics?.streak?.longest || 0} days`,
         },
         {
-          title: "Interviews Left",
-          value:
-            analytics.subscription?.plan === "free"
-              ? analytics.subscription?.interviewsRemaining || 0
-              : "Unlimited",
+          title: plan === "free" ? "Interviews Left" : "Plan",
+          value: plan === "free" ? remaining : "Unlimited",
           icon: "💎",
-          change:
-            analytics.subscription?.plan === "free" ? "Free plan" : "Premium",
+          change: plan === "free" ? "Free plan" : "Premium",
         },
       ]
     : [];

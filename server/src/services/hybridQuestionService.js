@@ -3,11 +3,40 @@ const path = require("path");
 const aiQuestionService = require("./aiQuestionService");
 const CachedQuestion = require("../models/CachedQuestion");
 const Logger = require("../utils/logger");
+const { mapDifficulty } = require("../utils/questionNormalization");
 
 class HybridQuestionService {
   constructor() {
     this.templates = null;
     this.templatesPath = path.join(__dirname, "../data/questionTemplates.json");
+  }
+
+  // Sanitize incoming config to conform to enums expected by CachedQuestion / Question schemas
+  sanitizeConfig(config) {
+    const allowedExperience = [
+      "entry",
+      "junior",
+      "mid",
+      "senior",
+      "lead",
+      "executive",
+    ];
+    const difficultyToExperienceMap = {
+      beginner: "entry",
+      intermediate: "mid",
+      advanced: "senior",
+    };
+    const sanitized = { ...config };
+    if (!allowedExperience.includes(sanitized.experienceLevel)) {
+      // Map common difficulty synonyms accidentally passed as experience level
+      const lower = String(sanitized.experienceLevel || "").toLowerCase();
+      sanitized.experienceLevel = difficultyToExperienceMap[lower] || "entry"; // default lowest tier
+    }
+    // Ensure difficulty is valid
+    sanitized.difficulty = mapDifficulty(
+      sanitized.difficulty || "intermediate"
+    );
+    return sanitized;
   }
 
   // Load question templates
@@ -31,13 +60,14 @@ class HybridQuestionService {
    * @returns {Promise<Array>} Array of questions
    */
   async generateHybridQuestions(config) {
-    const { questionCount: requestedCount, category } = config; // optional category filter
+    const safeConfig = this.sanitizeConfig(config);
+    const { questionCount: requestedCount, category } = safeConfig; // optional category filter
     // eslint-disable-next-line no-magic-numbers
     const questionCount = requestedCount || 10;
 
     try {
       // Check cache first
-      const cachedQuestions = await this.getCachedQuestions(config);
+      const cachedQuestions = await this.getCachedQuestions(safeConfig);
       if (cachedQuestions) {
         Logger.debug("Using cached questions for interview");
         await cachedQuestions.markUsed();
@@ -56,7 +86,7 @@ class HybridQuestionService {
       }
 
       // Generate new hybrid question set
-      let questions = await this.generateNewQuestionSet(config);
+      let questions = await this.generateNewQuestionSet(safeConfig);
       // If explicit category requested, filter down before padding
       if (category) {
         const norm = String(category).toLowerCase();
@@ -71,10 +101,14 @@ class HybridQuestionService {
           return true;
         });
       }
-      questions = this.ensureQuestionCount(questions, questionCount, config);
+      questions = this.ensureQuestionCount(
+        questions,
+        questionCount,
+        safeConfig
+      );
 
       // Cache the generated questions
-      await this.cacheQuestions(config, questions);
+      await this.cacheQuestions(safeConfig, questions);
 
       Logger.success(
         // eslint-disable-next-line prefer-template
@@ -86,8 +120,8 @@ class HybridQuestionService {
     } catch (error) {
       Logger.error("Error generating hybrid questions:", error);
       // Fallback to AI service
-      const aiFallback = await aiQuestionService.generateQuestions(config);
-      return this.ensureQuestionCount(aiFallback, questionCount, config);
+      const aiFallback = await aiQuestionService.generateQuestions(safeConfig);
+      return this.ensureQuestionCount(aiFallback, questionCount, safeConfig);
     }
   }
 
@@ -200,8 +234,13 @@ class HybridQuestionService {
         tags: ["General"],
         difficulty: config.difficulty || "intermediate",
         estimatedTime: ESTIMATED_TIME_SEC,
-        type: config.interviewType || "mixed",
-        source: "synthetic-seed",
+        type:
+          config.interviewType === "behavioral"
+            ? "behavioral"
+            : config.interviewType === "system-design"
+            ? "system-design"
+            : "technical",
+        source: "template", // treat synthetic seed as template for schema compliance
         // eslint-disable-next-line no-magic-numbers
         id: `synthetic_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       });
@@ -210,7 +249,7 @@ class HybridQuestionService {
     let variantIdx = 1;
     while (result.length < targetCount) {
       const base = result[result.length % baseLen];
-      result.push({
+      const duplicated = {
         ...base,
         text: (() => {
           const core = base.text
@@ -223,9 +262,12 @@ class HybridQuestionService {
           const paraphrased = paraphrase(core, variantIdx);
           return `${paraphrased} (variant ${variantIdx})`;
         })(),
-        source: `${base.source || "template"}-${
-          PARAPHRASE_ENABLED ? "paravariant" : "dup"
-        }`,
+        source:
+          base.source && base.source.startsWith("ai_")
+            ? base.source
+            : base.source === "ai_generated" || base.source === "ai_paraphrased"
+            ? base.source
+            : "template",
         // eslint-disable-next-line no-magic-numbers
         id: (() => {
           // eslint-disable-next-line no-magic-numbers
@@ -239,7 +281,15 @@ class HybridQuestionService {
             .slice(START, END)}`;
         })(),
         generatedAt: new Date(),
-      });
+      };
+      // Ensure valid type (no 'mixed')
+      if (duplicated.type === "mixed") {
+        duplicated.type =
+          duplicated.category && duplicated.category.includes("behavior")
+            ? "behavioral"
+            : "technical";
+      }
+      result.push(duplicated);
       variantIdx += 1;
     }
     // If somehow over (shouldn't happen) trim.
@@ -248,46 +298,60 @@ class HybridQuestionService {
 
   /**
    * Get template-based questions
-      questionCount,
+   * @param {Object} config
+   * @param {Number} count
+   * @returns {Promise<Array>}
+   */
+  async getTemplateQuestions(config, count) {
+    await this.loadTemplates();
     const { jobRole, interviewType, difficulty } = config;
+    const roleKey = (jobRole || "software-engineer").toLowerCase();
+    const roleTemplates =
+      this.templates?.[roleKey] || this.templates?.["software-engineer"] || {};
+    const levelTemplates =
+      roleTemplates?.[mapDifficulty(difficulty)] ||
+      roleTemplates?.["intermediate"] ||
+      {};
 
     let templateQuestions = [];
-    const roleTemplates =
-      this.templates[jobRole] || this.templates["software-engineer"];
-    // Use difficulty tier for selecting templates; default to 'intermediate'
-    // eslint-disable-next-line no-magic-numbers
-    const TEMPLATE_RATIO = 0.7; // 70% templates
-      roleTemplates[difficulty] || roleTemplates["intermediate"];
+    const safeCount = Math.max(0, count || 0);
+    if (safeCount === 0) return [];
 
-    // Get questions based on interview type
     if (interviewType === "mixed") {
-      // Mix of technical and behavioral
-  const TECH_RATIO = 0.7; // 70% technical in mixed mode
-  const techCount = Math.ceil(count * TECH_RATIO);
-      const behavioralCount = count - techCount;
-
-      if (levelTemplates.technical) {
-        templateQuestions = templateQuestions.concat(
-          this.selectRandomQuestions(levelTemplates.technical, techCount)
-        );
-      }
-      if (levelTemplates.behavioral) {
-        templateQuestions = templateQuestions.concat(
-          this.selectRandomQuestions(levelTemplates.behavioral, behavioralCount)
-        );
-      }
+      // 70% technical (or system-design counted as technical), 30% behavioral
+      const TECH_RATIO = 0.7;
+      const techBucket = [].concat(
+        levelTemplates.technical || [],
+        levelTemplates["system-design"] || []
+      );
+      const behavioralBucket = levelTemplates.behavioral || [];
+      const techCount = Math.min(
+        techBucket.length,
+        Math.ceil(safeCount * TECH_RATIO)
+      );
+      const behavioralCount = Math.max(0, safeCount - techCount);
+      templateQuestions = templateQuestions.concat(
+        this.selectRandomQuestions(techBucket, techCount),
+        this.selectRandomQuestions(behavioralBucket, behavioralCount)
+      );
     } else {
-      // Single type
-      const typeQuestions = levelTemplates[interviewType] || [];
-      templateQuestions = this.selectRandomQuestions(typeQuestions, count);
+      const typeKey =
+        interviewType === "system-design" ? "system-design" : interviewType;
+      const bucket = levelTemplates[typeKey] || [];
+      templateQuestions = this.selectRandomQuestions(bucket, safeCount);
     }
 
-    // Add metadata to template questions
+    const RADIX = 36; // eslint-disable-line no-magic-numbers
+    const START = 2; // eslint-disable-line no-magic-numbers
+    const LEN = 9; // eslint-disable-line no-magic-numbers
     return templateQuestions.map((q) => ({
       ...q,
+      difficulty: mapDifficulty(q.difficulty || difficulty),
       source: "template",
-  // eslint-disable-next-line no-magic-numbers
-  id: `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `template_${Date.now()}_${Math.random()
+        .toString(RADIX)
+        .substr(START, LEN)}`,
+      generatedAt: new Date(),
     }));
   }
 

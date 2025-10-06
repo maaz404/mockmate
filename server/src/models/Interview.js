@@ -1,27 +1,146 @@
+// Canonical, deduplicated Interview schema
 const mongoose = require("mongoose");
 const AssetSchema = require("./common/Asset");
 
-// Interview Session Schema
+// ---------------- Question Subdocument ----------------
+const questionSubSchema = new mongoose.Schema(
+  {
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Question",
+      required: true,
+    },
+    questionText: String,
+    category: String,
+    type: String,
+    difficulty: String,
+    timeAllocated: Number,
+    timeSpent: Number,
+    challengeId: String,
+    response: {
+      text: String,
+      notes: String,
+      audioUrl: String,
+      submittedAt: Date,
+    },
+    followUpsReviewed: { type: Boolean, default: false },
+    followUpsReviewedAt: Date,
+    video: {
+      filename: String,
+      path: String,
+      duration: Number,
+      uploadedAt: Date,
+      size: Number,
+      transcript: {
+        text: String,
+        generatedAt: Date,
+        status: {
+          type: String,
+          enum: ["pending", "completed", "failed"],
+          default: "pending",
+        },
+        language: String,
+        segments: [
+          new mongoose.Schema(
+            {
+              id: Number,
+              start: Number,
+              end: Number,
+              text: String,
+              confidence: Number,
+            },
+            { _id: false }
+          ),
+        ],
+        error: String,
+      },
+    },
+    score: {
+      overall: { type: Number, min: 0, max: 100 },
+      rubricScores: {
+        relevance: { type: Number, min: 1, max: 5 },
+        clarity: { type: Number, min: 1, max: 5 },
+        depth: { type: Number, min: 1, max: 5 },
+        structure: { type: Number, min: 1, max: 5 },
+      },
+      breakdown: {
+        relevance: Number,
+        clarity: Number,
+        completeness: Number,
+        technical: Number,
+      },
+    },
+    feedback: {
+      strengths: [String],
+      improvements: [String],
+      suggestions: String,
+      modelAnswer: String,
+    },
+    followUpQuestions: [
+      {
+        text: String,
+        type: {
+          type: String,
+          enum: ["clarification", "example", "technical", "challenge"],
+          default: "clarification",
+        },
+        generatedAt: { type: Date, default: Date.now },
+      },
+    ],
+    // Optional per-question facial metrics snapshot ( captured at answer submit or client request )
+    facial: {
+      eyeContact: Number,
+      blinkRate: Number,
+      smilePercentage: Number,
+      headSteadiness: Number,
+      offScreenPercentage: Number,
+      confidenceScore: Number,
+      capturedAt: Date,
+    },
+  },
+  { _id: false, strict: false }
+);
+
+// --------------- Resilience Parser -----------------
+function parseSerializedQuestions(raw) {
+  if (typeof raw !== "string" || !raw.includes("questionText:")) return null;
+  try {
+    const body = raw.replace(/^[\s\[]+/, "").replace(/[\]]+\s*$/, "");
+    const parts = body.split(/}\s*,/);
+    const parsed = [];
+    for (const chunk of parts) {
+      const qt = (chunk.match(/questionText:\s*'([^']+)'/) || [])[1];
+      if (!qt) continue;
+      const cat = (chunk.match(/category:\s*'([^']+)'/) || [])[1];
+      const diff = (chunk.match(/difficulty:\s*'([^']+)'/) || [])[1];
+      const time = (chunk.match(/timeAllocated:\s*(\d+)/) || [])[1];
+      const reviewed = /followUpsReviewed:\s*true/.test(chunk);
+      parsed.push({
+        questionId: new mongoose.Types.ObjectId(),
+        questionText: qt,
+        category: cat,
+        difficulty: diff || "intermediate",
+        timeAllocated: time ? parseInt(time, 10) : undefined,
+        followUpsReviewed: reviewed,
+      });
+    }
+    return parsed.length ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------- Main Schema ----------------
 const interviewSchema = new mongoose.Schema(
   {
-    // User Information
-    userId: {
-      type: String,
-      required: true,
-      index: true,
-    },
+    userId: { type: String, required: true, index: true },
     userProfile: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "UserProfile",
       required: true,
     },
-
-    // Interview Configuration
     config: {
-      jobRole: {
-        type: String,
-        required: true,
-      },
+      jobRole: { type: String, required: true },
       industry: String,
       experienceLevel: {
         type: String,
@@ -44,26 +163,12 @@ const interviewSchema = new mongoose.Schema(
         enum: ["beginner", "intermediate", "advanced"],
         required: true,
       },
-      duration: {
-        type: Number, // in minutes
-        required: true,
-        min: 15,
-        max: 120,
-      },
-      questionCount: {
-        type: Number,
-        default: 10,
-        min: 5,
-        max: 50,
-      },
-      // Adaptive difficulty settings
+      duration: { type: Number, required: true, min: 15, max: 120 },
+      questionCount: { type: Number, default: 10, min: 5, max: 50 },
       adaptiveDifficulty: {
-        enabled: {
-          type: Boolean,
-          default: false,
-        },
-        initialDifficulty: String, // Store original difficulty
-        currentDifficulty: String, // Track current adaptive difficulty
+        enabled: { type: Boolean, default: false },
+        initialDifficulty: String,
+        currentDifficulty: String,
         difficultyHistory: [
           {
             questionIndex: Number,
@@ -74,20 +179,14 @@ const interviewSchema = new mongoose.Schema(
         ],
       },
     },
-
-    // Interview Status
     status: {
       type: String,
       enum: ["scheduled", "in-progress", "completed", "abandoned"],
       default: "scheduled",
     },
-
-    // Session Media (Cloudinary assets)
     recording: { type: AssetSchema },
     snapshots: { type: [AssetSchema], default: [] },
     transcript: { type: AssetSchema },
-
-    // Metrics for analytics linkage
     metrics: {
       totalQuestions: Number,
       avgScore: Number,
@@ -96,205 +195,51 @@ const interviewSchema = new mongoose.Schema(
       eyeContactScore: Number,
       fillerWordsPerMin: Number,
       wpm: Number,
+      // Extended facial / delivery metrics
+      blinkRate: Number,
+      smilePercentage: Number,
+      headSteadiness: Number,
+      offScreenPercentage: Number,
+      environmentQuality: Number,
+      confidenceScore: Number,
     },
-
-    // Questions and Responses
-    questions: [
-      {
-        questionId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Question",
-          required: true,
-        },
-        questionText: String, // cached for performance
-        category: String,
-        // Added optional type to support distinguishing technical/coding vs behavioral in UI
-        type: String,
-        difficulty: String,
-        timeAllocated: Number, // seconds
-        timeSpent: Number, // seconds
-        // When a question is a coding challenge injected from codingSession, store challengeId
-        challengeId: String,
-        response: {
-          text: String,
-          // User's own notes captured alongside the answer
-          notes: String,
-          audioUrl: String, // for future voice responses
-          submittedAt: Date,
-        },
-        // Whether the user reviewed AI follow-up questions for this prompt
-        followUpsReviewed: {
-          type: Boolean,
-          default: false,
-        },
-        followUpsReviewedAt: Date,
-        video: {
-          filename: String,
-          path: String,
-          duration: Number, // in seconds
-          uploadedAt: Date,
-          size: Number, // file size in bytes
-          transcript: {
-            text: String,
-            generatedAt: Date,
-            status: {
-              type: String,
-              enum: ["pending", "completed", "failed"],
-              default: "pending",
-            },
-          },
-          // Facial Expression Analysis Results
-          facialAnalysis: {
-            enabled: {
-              type: Boolean,
-              default: false,
-            },
-            metrics: {
-              eyeContact: {
-                type: Number,
-                min: 0,
-                max: 100,
-                default: 0,
-              },
-              blinkRate: {
-                type: Number,
-                min: 0,
-                default: 0,
-              },
-              headSteadiness: {
-                type: Number,
-                min: 0,
-                max: 100,
-                default: 0,
-              },
-              smilePercentage: {
-                type: Number,
-                min: 0,
-                max: 100,
-                default: 0,
-              },
-              offScreenPercentage: {
-                type: Number,
-                min: 0,
-                max: 100,
-                default: 0,
-              },
-              confidenceScore: {
-                type: Number,
-                min: 0,
-                max: 100,
-                default: 0,
-              },
-              environmentQuality: {
-                type: Number,
-                min: 0,
-                max: 100,
-                default: 0,
-              },
-            },
-            baseline: {
-              completed: {
-                type: Boolean,
-                default: false,
-              },
-              timestamp: Date,
-              duration: Number, // calibration duration in seconds
-            },
-            sessionSummary: {
-              duration: Number, // analysis duration in seconds
-              totalFrames: Number,
-              faceDetectedFrames: Number,
-              detectionRate: Number,
-              recommendations: [
-                {
-                  type: String,
-                  message: String,
-                  priority: {
-                    type: String,
-                    enum: ["low", "medium", "high"],
-                    default: "medium",
-                  },
-                },
-              ],
-            },
-            analysisTimestamp: Date,
-          },
-        },
-        score: {
-          overall: {
-            type: Number,
-            min: 0,
-            max: 100,
-          },
-          // 1-5 scale rubric scores as per requirements
-          rubricScores: {
-            relevance: {
-              type: Number,
-              min: 1,
-              max: 5,
-            },
-            clarity: {
-              type: Number,
-              min: 1,
-              max: 5,
-            },
-            depth: {
-              type: Number,
-              min: 1,
-              max: 5,
-            },
-            structure: {
-              type: Number,
-              min: 1,
-              max: 5,
-            },
-          },
-          breakdown: {
-            relevance: Number,
-            clarity: Number,
-            completeness: Number,
-            technical: Number, // for technical questions
-          },
-        },
-        feedback: {
-          strengths: [String],
-          improvements: [String],
-          suggestions: String,
-          // AI-generated model answer as per requirements
-          modelAnswer: String,
-        },
-        followUpQuestions: [
-          {
-            text: String,
-            type: {
-              type: String,
-              enum: ["clarification", "example", "technical", "challenge"],
-              default: "clarification",
-            },
-            generatedAt: {
-              type: Date,
-              default: Date.now,
-            },
-          },
-        ],
+    questions: {
+      type: [questionSubSchema],
+      set(val) {
+        if (
+          Array.isArray(val) &&
+          val.every((v) => v && typeof v === "object" && !Array.isArray(v))
+        )
+          return val;
+        if (
+          Array.isArray(val) &&
+          val.length === 1 &&
+          typeof val[0] === "string"
+        ) {
+          const parsed = parseSerializedQuestions(val[0]);
+          return parsed || val;
+        }
+        if (typeof val === "string") {
+          const parsed = parseSerializedQuestions(val);
+          if (parsed) return parsed;
+          try {
+            if (/^\s*\[/.test(val.trim())) {
+              const maybe = JSON.parse(val);
+              if (Array.isArray(maybe)) return maybe;
+            }
+          } catch {}
+        }
+        return val;
       },
-    ],
-
-    // Session Timing
+    },
     timing: {
       startedAt: Date,
       completedAt: Date,
-      totalDuration: Number, // actual time spent in minutes
-      averageQuestionTime: Number, // seconds per question
+      totalDuration: Number,
+      averageQuestionTime: Number,
     },
-
-    // Overall Results
     results: {
-      overallScore: {
-        type: Number,
-        min: 0,
-        max: 100,
-      },
+      overallScore: { type: Number, min: 0, max: 100 },
       breakdown: {
         technical: Number,
         communication: Number,
@@ -306,7 +251,7 @@ const interviewSchema = new mongoose.Schema(
         enum: ["excellent", "good", "average", "needs-improvement"],
         default: "average",
       },
-      rank: String, // percentile rank
+      rank: String,
       feedback: {
         summary: String,
         strengths: [String],
@@ -314,16 +259,11 @@ const interviewSchema = new mongoose.Schema(
         recommendations: [String],
       },
     },
-
-    // Video Session Data
     videoSession: {
-      isRecording: {
-        type: Boolean,
-        default: false,
-      },
+      isRecording: { type: Boolean, default: false },
       startedAt: Date,
       endedAt: Date,
-      totalDuration: Number, // in seconds
+      totalDuration: Number,
       recordings: [
         {
           questionIndex: Number,
@@ -331,7 +271,7 @@ const interviewSchema = new mongoose.Schema(
           originalName: String,
           path: String,
           size: Number,
-          duration: Number, // in seconds
+          duration: Number,
           uploadedAt: Date,
           mimeType: String,
         },
@@ -342,14 +282,9 @@ const interviewSchema = new mongoose.Schema(
           enum: ["low", "medium", "high"],
           default: "medium",
         },
-        audioEnabled: {
-          type: Boolean,
-          default: true,
-        },
+        audioEnabled: { type: Boolean, default: true },
       },
     },
-
-    // Coding Challenge Session Data
     codingSession: {
       sessionId: String,
       startedAt: Date,
@@ -379,11 +314,7 @@ const interviewSchema = new mongoose.Schema(
             language: String,
             score: Number,
             testResults: [
-              {
-                testIndex: Number,
-                passed: Boolean,
-                executionTime: Number,
-              },
+              { testIndex: Number, passed: Boolean, executionTime: Number },
             ],
             submittedAt: Date,
           },
@@ -391,56 +322,93 @@ const interviewSchema = new mongoose.Schema(
         performance: String,
       },
     },
-
-    // Metadata
     metadata: {
       browserInfo: String,
       deviceType: String,
-      sessionQuality: String, // stable, unstable
+      sessionQuality: String,
       notes: String,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Performance-oriented indexes for dashboard metrics & filtering
-// Compound index to accelerate horizon + status queries
+// ---------------- Hooks ----------------
+interviewSchema.pre("insertMany", function (next, docs) {
+  try {
+    if (Array.isArray(docs)) {
+      docs.forEach((d) => {
+        if (!d) return;
+        if (
+          Array.isArray(d.questions) &&
+          d.questions.length === 1 &&
+          typeof d.questions[0] === "string"
+        ) {
+          const parsed = parseSerializedQuestions(d.questions[0]);
+          if (parsed) d.questions = parsed;
+        } else if (typeof d.questions === "string") {
+          const parsed = parseSerializedQuestions(d.questions);
+          if (parsed) d.questions = parsed;
+        }
+      });
+    }
+  } catch {}
+  next();
+});
+
+interviewSchema.pre("validate", function (next) {
+  try {
+    if (Array.isArray(this.questions)) {
+      if (
+        this.questions.length === 1 &&
+        typeof this.questions[0] === "string"
+      ) {
+        const parsed = parseSerializedQuestions(this.questions[0]);
+        if (parsed) this.questions = parsed;
+      }
+      this.questions = this.questions.map((q) => {
+        if (!q) return q;
+        const obj = q.toObject ? q.toObject() : { ...q };
+        if (obj.category && typeof obj.category === "string") {
+          obj.category = obj.category
+            .trim()
+            .replace(/[_\s]+/g, "-")
+            .toLowerCase();
+        }
+        if (!obj.questionId) obj.questionId = new mongoose.Types.ObjectId();
+        if (!obj.questionText && obj.text) obj.questionText = obj.text;
+        return obj;
+      });
+    }
+  } catch {}
+  next();
+});
+
+// ---------------- Indexes ----------------
 interviewSchema.index({ userId: 1, createdAt: -1, status: 1 });
-// Category / tag coverage lookups (sparse usage but helpful for aggregation)
 interviewSchema.index({ userId: 1, "questions.category": 1 });
 interviewSchema.index({ userId: 1, "questions.tags": 1 });
-
-// Indexes for performance
 interviewSchema.index({ userId: 1, createdAt: -1 });
 interviewSchema.index({ status: 1 });
 interviewSchema.index({ "config.jobRole": 1 });
 interviewSchema.index({ "results.overallScore": -1 });
 
-// Calculate overall score from individual question scores
+// ---------------- Methods ----------------
 interviewSchema.methods.calculateOverallScore = function () {
   if (!this.questions || this.questions.length === 0) return 0;
-
-  const validScores = this.questions
-    .filter((q) => q.score && q.score.overall !== null)
+  const valid = this.questions
+    .filter((q) => q.score && q.score.overall != null)
     .map((q) => q.score.overall);
-
-  if (validScores.length === 0) return 0;
-
-  const totalScore = validScores.reduce((sum, score) => sum + score, 0);
-  this.results.overallScore = Math.round(totalScore / validScores.length);
-
+  if (!valid.length) return 0;
+  const total = valid.reduce((s, v) => s + v, 0);
+  this.results.overallScore = Math.round(total / valid.length);
   return this.results.overallScore;
 };
 
-// Determine performance level based on score
 interviewSchema.methods.getPerformanceLevel = function () {
   const score = this.results.overallScore || 0;
   const EXCELLENT_THRESHOLD = 85;
   const GOOD_THRESHOLD = 70;
   const AVERAGE_THRESHOLD = 50;
-
   if (score >= EXCELLENT_THRESHOLD) return "excellent";
   if (score >= GOOD_THRESHOLD) return "good";
   if (score >= AVERAGE_THRESHOLD) return "average";

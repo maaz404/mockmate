@@ -39,32 +39,42 @@ const notFound = require("./middleware/notFound");
 // Create Express app
 const app = express();
 // Early middleware: request id before anything else that may log
-const requestId = require('./middleware/requestId');
+const requestId = require("./middleware/requestId");
 app.use(requestId);
 // Response time + structured log middleware (lightweight)
 app.use((req, res, next) => {
   const start = process.hrtime.bigint();
-  res.on('finish', () => {
+  res.on("finish", () => {
     try {
       const end = process.hrtime.bigint();
       // eslint-disable-next-line no-magic-numbers
       const ms = Number(end - start) / 1e6;
       // Skip noisy health & metrics high-frequency endpoints logging at info
-      const skip = /\/api\/(health|bootstrap)/.test(req.path) && res.statusCode < 400;
+      const skip =
+        /\/api\/(health|bootstrap)/.test(req.path) && res.statusCode < 400;
       if (!skip) {
         // eslint-disable-next-line no-console
-        console.log(JSON.stringify({
-          ts: new Date().toISOString(),
-            level: res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
+        console.log(
+          JSON.stringify({
+            ts: new Date().toISOString(),
+            level:
+              res.statusCode >= 500
+                ? "error"
+                : res.statusCode >= 400
+                ? "warn"
+                : "info",
             requestId: req.requestId,
             method: req.method,
             path: req.path,
             status: res.statusCode,
             // eslint-disable-next-line no-magic-numbers
             durationMs: ms.toFixed(2),
-          }));
+          })
+        );
       }
-    } catch (_) { /* ignore */ }
+    } catch (_) {
+      /* ignore */
+    }
   });
   next();
 });
@@ -72,8 +82,9 @@ app.use((req, res, next) => {
 // Set trust proxy for proper IP detection
 app.set("trust proxy", 1);
 
-// Connect to database
-connectDB();
+// Connect to database (await before starting server to ensure persistence layer ready)
+// In test env we let tests control lifecycle; they import app without awaiting network listener.
+const dbReadyPromise = connectDB();
 
 // Security middleware
 app.use(helmet());
@@ -117,10 +128,13 @@ app.use(
 app.use(compression());
 
 // Logging (attach request id token to morgan output)
-const morganFormat = process.env.NODE_ENV === 'development' ? 'dev' : 'combined';
-app.use(morgan(morganFormat, {
-  stream: { write: (str) => process.stdout.write(str) },
-}));
+const morganFormat =
+  process.env.NODE_ENV === "development" ? "dev" : "combined";
+app.use(
+  morgan(morganFormat, {
+    stream: { write: (str) => process.stdout.write(str) },
+  })
+);
 
 // Body parser middleware
 app.use(express.json({ limit: "10mb" }));
@@ -139,6 +153,31 @@ app.get("/api/health", (req, res) => {
 });
 // Additional health diagnostics
 app.use("/api/health", healthRoutes);
+
+// Environment / readiness endpoint
+app.get("/api/system/readiness", (req, res) => {
+  const cloudinaryReady = !!(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  );
+  const openAiReady = !!process.env.OPENAI_API_KEY;
+  const dbReady = typeof isDbConnected === "function" ? isDbConnected() : true;
+  const warnings = [];
+  if (!cloudinaryReady) warnings.push("Cloudinary not configured");
+  if (!openAiReady) warnings.push("OpenAI not configured");
+  return res.status(200).json({
+    success: true,
+    ready: cloudinaryReady && openAiReady && dbReady,
+    services: {
+      cloudinary: cloudinaryReady,
+      openAI: openAiReady,
+      database: dbReady,
+    },
+    warnings,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Public routes that don't need authentication
 app.get("/favicon.ico", (req, res) => {
@@ -171,50 +210,110 @@ if (useClerkGlobally) {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 // Lightweight bootstrap route (auth + profile + analytics) placed near user routes for discoverability
-app.get('/api/bootstrap', async (req, res) => {
+app.get("/api/bootstrap", async (req, res) => {
   // In dev mock mode allow unauth to still get a stub
   try {
     const authCtx = req.auth || {};
     const userId = authCtx.userId || authCtx.id;
-    const usingMock = process.env.NODE_ENV !== 'production' && process.env.MOCK_AUTH_FALLBACK === 'true';
-    const { ok, fail } = require('./utils/responder');
+    const usingMock =
+      process.env.NODE_ENV !== "production" &&
+      process.env.MOCK_AUTH_FALLBACK === "true";
+    const { ok, fail } = require("./utils/responder");
     if (!userId && !usingMock) {
-      return fail(res, 401, 'UNAUTHORIZED', 'Authentication required');
+      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
     }
-    const UserProfile = require('./models/UserProfile');
+    const UserProfile = require("./models/UserProfile");
     let profile = null;
     if (userId) {
       try {
         profile = await UserProfile.findOne({ clerkUserId: userId }).lean();
       } catch (dbErr) {
         // Non-fatal for bootstrap; continue with stubbed analytics
-        if (process.env.NODE_ENV === 'development') {
-          req.log && req.log('warn', 'Bootstrap DB fetch failed', { detail: dbErr.message });
+        if (process.env.NODE_ENV === "development") {
+          req.log &&
+            req.log("warn", "Bootstrap DB fetch failed", {
+              detail: dbErr.message,
+            });
         }
       }
     }
     if (!profile && usingMock) {
       profile = {
-        clerkUserId: 'test-user-123',
-        email: 'test-user-123@dev.local',
-        firstName: 'Test',
-        lastName: 'User',
+        clerkUserId: "test-user-123",
+        email: "test-user-123@dev.local",
+        firstName: "Test",
+        lastName: "User",
         onboardingCompleted: false,
         analytics: { averageScore: 0 },
       };
     }
+    const analyticsData = profile ? profile.analytics || {} : {};
+    const subscription = profile ? profile.subscription || null : null;
     const payload = {
       auth: userId ? { userId } : null,
       profile,
-      analytics: profile ? profile.analytics || {} : {},
+      analytics: { ...analyticsData, subscription },
+      subscription, // duplicated at root for simpler client consumption
       requestId: req.requestId,
       timestamp: new Date().toISOString(),
-      dbConnected: require('./config/database').isDbConnected(),
+      dbConnected: require("./config/database").isDbConnected(),
     };
     return ok(res, payload);
   } catch (e) {
-    const { fail } = require('./utils/responder');
-    return fail(res, 500, 'BOOTSTRAP_FAILED', 'Failed to load bootstrap data', process.env.NODE_ENV === 'development' ? { detail: e.message } : undefined);
+    const { fail } = require("./utils/responder");
+    return fail(
+      res,
+      500,
+      "BOOTSTRAP_FAILED",
+      "Failed to load bootstrap data",
+      process.env.NODE_ENV === "development" ? { detail: e.message } : undefined
+    );
+  }
+});
+// Dev-only self-upgrade endpoint (premium) - not mounted in production
+app.post("/api/dev/upgrade-self", async (req, res) => {
+  const { ok, fail } = require("./utils/responder");
+  try {
+    if (process.env.NODE_ENV === "production") {
+      return fail(res, 403, "FORBIDDEN", "Not available in production");
+    }
+    // Accept either real Clerk auth or mock fallback
+    const authCtx = req.auth || {};
+    const usingMock = process.env.MOCK_AUTH_FALLBACK === "true";
+    const userId = authCtx.userId || (usingMock ? "test-user-123" : null);
+    if (!userId) {
+      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
+    }
+    const UserProfile = require("./models/UserProfile");
+    let profile = await UserProfile.findOne({ clerkUserId: userId });
+    if (!profile) {
+      // Create minimal profile if missing
+      const email = req.headers["x-user-email"] || `${userId}@dev.local`;
+      profile = await UserProfile.create({
+        clerkUserId: userId,
+        email,
+        firstName: req.headers["x-user-firstname"] || "Dev",
+        lastName: req.headers["x-user-lastname"] || "User",
+        onboardingCompleted: true,
+      });
+    }
+    const { getPlan, isUnlimited } = require("./config/plans");
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000; // eslint-disable-line no-magic-numbers
+    const premium = getPlan("premium");
+    profile.subscription = {
+      plan: premium.key,
+      interviewsRemaining: isUnlimited(premium.key) ? null : premium.interviews,
+      nextResetDate: new Date(Date.now() + THIRTY_DAYS_MS),
+    };
+    await profile.save();
+    return ok(res, {
+      subscription: profile.subscription,
+      clerkUserId: profile.clerkUserId,
+    });
+  } catch (e) {
+    return fail(res, 500, "UPGRADE_FAILED", "Failed to upgrade", {
+      detail: e.message,
+    });
   }
 });
 app.use("/api/interviews", interviewRoutes);
@@ -265,7 +364,14 @@ function startServer(port) {
   }
 }
 
-startServer(PORT);
+// Defer server start until DB connection attempt resolves (success or handled failure) to reduce 503 races
+if (process.env.NODE_ENV !== "test") {
+  Promise.resolve(dbReadyPromise)
+    .catch(() => {
+      /* connection errors already logged */
+    })
+    .finally(() => startServer(PORT));
+}
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, _promise) => {

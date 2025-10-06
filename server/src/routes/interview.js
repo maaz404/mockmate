@@ -14,18 +14,30 @@ const {
   getInterviewResults,
   markFollowUpsReviewed,
   deleteInterview,
+  getInterviewTranscripts,
+  updateAdaptiveDifficulty,
+  exportInterviewMetrics,
 } = require("../controllers/interviewController");
+const { getRemaining } = require("../utils/subscription");
 const dbReady = require("../middleware/dbReady");
 const inMem = require("../services/inMemoryInterviewService");
 
 // Basic ok/fail helpers (local copy to avoid import cycles)
 function ok(res, data = {}, meta = {}) {
-  return res.status(200).json({ success: true, data, requestId: res.locals.requestId, ...meta });
+  return res
+    .status(200)
+    .json({ success: true, data, requestId: res.locals.requestId, ...meta });
 }
 function fail(res, code, message, status = 400, extra = {}) {
   return res
     .status(status)
-    .json({ success: false, code, message, requestId: res.locals.requestId, ...extra });
+    .json({
+      success: false,
+      code,
+      message,
+      requestId: res.locals.requestId,
+      ...extra,
+    });
 }
 
 // Wrap to normalize existing controllers that may directly res.json today
@@ -52,8 +64,22 @@ function wrap(handler, { transform } = {}) {
 // @desc    Create interview session
 // @route   POST /api/interviews
 // @access  Private
-router.post("/", requireAuth, ensureUserProfile, dbReady, (req, res) => {
+router.post("/", requireAuth, ensureUserProfile, dbReady, async (req, res) => {
   if (req.useInMemory) return wrap(inMem.createInterview)(req, res);
+  // Quota guard (pre-creation) to surface friendlier error earlier than schema work.
+  try {
+    const remaining = await getRemaining(req.auth.userId);
+    if (remaining !== null && remaining <= 0) {
+      return fail(
+        res,
+        "INTERVIEW_LIMIT",
+        "Interview limit reached. Upgrade your plan to continue.",
+        403
+      );
+    }
+  } catch (_) {
+    /* non-fatal */
+  }
   return wrap(createInterview)(req, res);
 });
 
@@ -140,6 +166,33 @@ router.post(
       : wrap(getAdaptiveQuestion)(req, res)
 );
 
+// @desc    Explicitly update adaptive current difficulty
+// @route   PATCH /api/interviews/:id/adaptive-difficulty
+// @access  Private
+router.patch(
+  "/:id/adaptive-difficulty",
+  requireAuth,
+  ensureUserProfile,
+  dbReady,
+  (req, res) => {
+    req.params.interviewId = req.params.id;
+    return wrap(updateAdaptiveDifficulty)(req, res);
+  }
+);
+
+// @desc    Export metrics CSV
+// @route   GET /api/interviews/:id/metrics/export
+router.get(
+  "/:id/metrics/export",
+  requireAuth,
+  ensureUserProfile,
+  dbReady,
+  (req, res) => {
+    req.params.interviewId = req.params.id;
+    return exportInterviewMetrics(req, res); // direct send (CSV headers)
+  }
+);
+
 // @desc    Complete interview with final submission
 // @route   POST /api/interviews/:id/complete
 // @access  Private
@@ -183,6 +236,20 @@ router.post(
     return req.useInMemory
       ? wrap(inMem.markFollowUpsReviewed)(req, res)
       : wrap(markFollowUpsReviewed)(req, res);
+  }
+);
+
+// @desc    Get transcript statuses (polling)
+// @route   GET /api/interviews/:id/transcripts?full=0|1
+// @access  Private
+router.get(
+  "/:id/transcripts",
+  requireAuth,
+  ensureUserProfile,
+  dbReady,
+  (req, res) => {
+    req.params.interviewId = req.params.id;
+    return wrap(getInterviewTranscripts)(req, res);
   }
 );
 

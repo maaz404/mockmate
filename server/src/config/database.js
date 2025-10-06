@@ -26,7 +26,7 @@ const connectDB = async () => {
       // Lazy load to avoid dev dependency cost otherwise
       try {
         // eslint-disable-next-line global-require
-        const { MongoMemoryServer } = require('mongodb-memory-server');
+        const { MongoMemoryServer } = require("mongodb-memory-server");
         const mem = await MongoMemoryServer.create();
         uri = mem.getUri();
         process.env.MONGODB_URI = uri; // propagate for any downstream usage
@@ -95,7 +95,11 @@ const connectDB = async () => {
   mongoose.connection.on("disconnected", () => {
     isDbConnected = false;
     Logger.warn("⚠️  Mongoose disconnected");
-    if (process.env.NODE_ENV !== "production") {
+    // Avoid automatic reconnection loop in test environment to prevent stray async timers
+    if (
+      process.env.NODE_ENV !== "production" &&
+      process.env.NODE_ENV !== "test"
+    ) {
       const RETRY_DELAY_MS = 2000; // short retry while developing
       setTimeout(doConnect, RETRY_DELAY_MS);
     }

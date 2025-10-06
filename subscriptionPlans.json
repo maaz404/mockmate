@@ -1,0 +1,20 @@
+{
+  "free": {
+    "label": "Free",
+    "interviews": 5,
+    "unlimited": false,
+    "description": "Starter plan with limited monthly interviews"
+  },
+  "premium": {
+    "label": "Premium",
+    "interviews": null,
+    "unlimited": true,
+    "description": "Unlimited practice interviews and advanced features"
+  },
+  "enterprise": {
+    "label": "Enterprise",
+    "interviews": null,
+    "unlimited": true,
+    "description": "Custom enterprise offering with organizational analytics"
+  }
+}

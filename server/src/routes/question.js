@@ -35,7 +35,7 @@ router.post("/generate", requireAuth, ensureUserProfile, async (req, res) => {
       jobRole,
       experienceLevel,
       interviewType,
-      difficulty: config.difficulty || experienceLevel,
+      difficulty: config.difficulty || "intermediate",
       questionCount: config.questionCount || DEFAULT_QUESTION_COUNT,
     };
 
@@ -110,7 +110,7 @@ router.post(
         jobRole,
         experienceLevel,
         interviewType,
-        difficulty: config.difficulty || experienceLevel,
+        difficulty: config.difficulty || "intermediate",
         questionCount: config.questionCount || DEFAULT_QUESTION_COUNT,
         category,
       };

@@ -34,19 +34,40 @@ describe("Dashboard Metrics Tag Coverage & Horizon", () => {
     await Interview.deleteMany({ userId: "test-user-123" });
     const now = Date.now();
     // Two interviews spaced weeks apart with different tags
+    const profile = await UserProfile.findOne({ clerkUserId: "test-user-123" });
     await Interview.insertMany([
       {
         userId: "test-user-123",
         status: "completed",
         createdAt: new Date(now - 2 * 7 * 24 * 60 * 60 * 1000), // 2 weeks ago
         results: { overallScore: 75 },
+        userProfile: profile._id,
+        config: {
+          jobRole: "Engineer",
+          experienceLevel: "mid",
+          interviewType: "technical",
+          difficulty: "intermediate",
+          duration: 30,
+          questionCount: 5,
+        },
         questions: [
           {
+            questionId: new mongoose.Types.ObjectId(),
+            questionText: "System design scalability",
             category: "system-design",
             tags: ["scalability", "caching"],
             followUpsReviewed: true,
+            difficulty: "intermediate",
+            timeAllocated: 300,
           },
-          { category: "algorithms", tags: ["graph", "optimization"] },
+          {
+            questionId: new mongoose.Types.ObjectId(),
+            questionText: "Algorithms tagging",
+            category: "algorithms",
+            tags: ["graph", "optimization"],
+            difficulty: "beginner",
+            timeAllocated: 200,
+          },
         ],
       },
       {
@@ -54,8 +75,24 @@ describe("Dashboard Metrics Tag Coverage & Horizon", () => {
         status: "completed",
         createdAt: new Date(now - 10 * 7 * 24 * 60 * 60 * 1000), // 10 weeks ago (may be out of short horizon)
         results: { overallScore: 65 },
+        userProfile: profile._id,
+        config: {
+          jobRole: "Engineer",
+          experienceLevel: "mid",
+          interviewType: "technical",
+          difficulty: "intermediate",
+          duration: 30,
+          questionCount: 5,
+        },
         questions: [
-          { category: "communication", tags: ["communication", "teamwork"] },
+          {
+            questionId: new mongoose.Types.ObjectId(),
+            questionText: "Comm teamwork",
+            category: "communication",
+            tags: ["communication", "teamwork"],
+            difficulty: "intermediate",
+            timeAllocated: 180,
+          },
         ],
       },
     ]);

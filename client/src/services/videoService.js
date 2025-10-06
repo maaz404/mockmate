@@ -56,9 +56,17 @@ const videoService = {
    * @returns {Promise<Object>}
    */
   async getVideoPlayback(interviewId, questionIndex) {
-    return await apiService.get(
+    const resp = await apiService.get(
       `/video/playback/${interviewId}/${questionIndex}`
     );
+    if (resp?.success && resp.data?.videoUrl) {
+      return {
+        ...resp,
+        resolvedUrl: resp.data.videoUrl,
+        cdn: !!resp.data.cdn,
+      };
+    }
+    return resp;
   },
 
   /**
@@ -94,6 +102,20 @@ const videoService = {
   },
 
   /**
+   * Resolve best playback URL from either a prior getVideoPlayback call result
+   * or a raw question.video object (if present client-side)
+   */
+  resolvePlaybackUrl(source) {
+    if (!source) return null;
+    if (typeof source === "string") return source;
+    if (source.resolvedUrl) return source.resolvedUrl;
+    if (source.videoUrl) return source.videoUrl;
+    if (source.cloudinary?.url) return source.cloudinary.url;
+    if (source.filename) return this.getStreamUrl(source.filename);
+    return null;
+  },
+
+  /**
    * Get transcription for a specific video
    * @param {string} interviewId
    * @param {number} questionIndex
@@ -102,6 +124,37 @@ const videoService = {
   async getTranscription(interviewId, questionIndex) {
     return await apiService.get(
       `/video/transcript/${interviewId}/${questionIndex}`
+    );
+  },
+
+  /**
+   * Poll transcription until completed or failed
+   * @param {string} interviewId
+   * @param {number} questionIndex
+   * @param {object} options { intervalMs, timeoutMs, onUpdate }
+   */
+  async pollTranscription(interviewId, questionIndex, options = {}) {
+    const { intervalMs = 4000, timeoutMs = 60000, onUpdate } = options;
+    const start = Date.now();
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const resp = await this.getTranscription(interviewId, questionIndex);
+      const status = resp?.data?.transcription?.status;
+      if (onUpdate) onUpdate(resp?.data?.transcription);
+      if (status === "completed" || status === "failed") return resp;
+      if (Date.now() - start > timeoutMs) return resp; // timeout returns last state
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+  },
+
+  /**
+   * Retry a failed or not started transcription
+   * @param {string} interviewId
+   * @param {number} questionIndex
+   */
+  async retryTranscription(interviewId, questionIndex) {
+    return await apiService.post(
+      `/video/transcript/${interviewId}/${questionIndex}/retry`
     );
   },
 };

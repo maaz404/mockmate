@@ -192,3 +192,21 @@ export const reportService = {
     }
   },
 };
+
+/**
+ * Adaptive Service - Handles adaptive difficulty updates and metrics export
+ */
+export const adaptiveService = {
+  updateDifficulty: async (interviewId, difficulty) => {
+    const response = await api.patch(
+      `/interviews/${interviewId}/adaptive-difficulty`,
+      { difficulty }
+    );
+    return response.data;
+  },
+  exportMetricsCsv: (interviewId) => {
+    return api.get(`/interviews/${interviewId}/metrics/export`, {
+      responseType: "blob",
+    });
+  },
+};

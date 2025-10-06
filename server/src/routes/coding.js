@@ -4,6 +4,12 @@ const router = express.Router();
 const requireAuth = require("../middleware/auth");
 const codingChallengeService = require("../services/codingChallengeService");
 const Interview = require("../models/Interview");
+let CodingSubmission;
+try {
+  CodingSubmission = require("../models/CodingSubmission");
+} catch (_) {
+  CodingSubmission = null;
+}
 
 // @desc    Create coding challenge session
 // @route   POST /api/coding/session
@@ -167,6 +173,26 @@ router.post("/session/:sessionId/submit", requireAuth, async (req, res) => {
 
     if (!result.success) {
       return res.status(400).json(result);
+    }
+
+    // Persist submission if model available & DB connected
+    if (CodingSubmission && interview) {
+      try {
+        await CodingSubmission.create({
+          interviewId: interview._id,
+          sessionId,
+          challengeId,
+          language,
+          code,
+          score: result.score,
+          testResults: result.testResults,
+          feedback: result.feedback,
+          codeReview: result.codeReview,
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("Failed to persist coding submission", e.message);
+      }
     }
 
     res.json({

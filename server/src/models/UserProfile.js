@@ -235,7 +235,7 @@ const userProfileSchema = new mongoose.Schema(
       },
       interviewsRemaining: {
         type: Number,
-        default: 3, // free plan limit
+        default: 5, // free plan limit (updated from 3)
       },
       nextResetDate: Date,
     },

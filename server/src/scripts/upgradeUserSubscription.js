@@ -70,12 +70,24 @@ async function run() {
       }
     }
 
-    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    const {
+      getPlan,
+      getMonthlyQuota,
+      isUnlimited,
+    } = require("../config/plans");
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000; // eslint-disable-line no-magic-numbers
+    const premiumPlan = getPlan("premium");
     profile.subscription = {
-      plan: "premium",
-      interviewsRemaining: 999,
+      plan: premiumPlan.key,
+      interviewsRemaining: isUnlimited(premiumPlan.key)
+        ? getMonthlyQuota(premiumPlan.key) // Infinity for unlimited; store null to represent unlimited
+        : getMonthlyQuota(premiumPlan.key),
       nextResetDate: new Date(Date.now() + THIRTY_DAYS_MS),
     };
+    if (!isFinite(profile.subscription.interviewsRemaining)) {
+      // Normalize Infinity to null for persistence clarity
+      profile.subscription.interviewsRemaining = null;
+    }
 
     await profile.save();
 

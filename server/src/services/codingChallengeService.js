@@ -1079,6 +1079,7 @@ public class Main {
     if (!session) return null;
 
     return {
+      interviewId: session.interviewId,
       id: sessionId,
       status: session.status,
       currentChallengeIndex: session.currentChallengeIndex,

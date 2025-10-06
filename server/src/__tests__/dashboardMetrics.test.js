@@ -35,19 +35,40 @@ describe("Dashboard Metrics Endpoint", () => {
   test("returns structured metrics with weekly arrays", async () => {
     // Seed a couple of completed interviews with categories & followups
     const now = new Date();
+    const profile = await UserProfile.findOne({ clerkUserId: "test-user-123" });
     await Interview.create([
       {
         userId: "test-user-123",
         status: "completed",
         createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
         results: { overallScore: 80 },
+        userProfile: profile._id,
+        config: {
+          jobRole: "Engineer",
+          experienceLevel: "mid",
+          interviewType: "technical",
+          difficulty: "intermediate",
+          duration: 30,
+          questionCount: 5,
+        },
         questions: [
           {
+            questionId: new mongoose.Types.ObjectId(),
+            questionText: "System Design Q",
             category: "System Design",
             followUpsReviewed: true,
             followUps: ["a", "b"],
+            difficulty: "intermediate",
+            timeAllocated: 300,
           },
-          { category: "Behavioral", followUpsReviewed: false },
+          {
+            questionId: new mongoose.Types.ObjectId(),
+            questionText: "Behavioral Q",
+            category: "Behavioral",
+            followUpsReviewed: false,
+            difficulty: "intermediate",
+            timeAllocated: 180,
+          },
         ],
       },
       {
@@ -55,8 +76,25 @@ describe("Dashboard Metrics Endpoint", () => {
         status: "completed",
         createdAt: new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000),
         results: { overallScore: 60 },
+        userProfile: profile._id,
+        config: {
+          jobRole: "Engineer",
+          experienceLevel: "mid",
+          interviewType: "technical",
+          difficulty: "intermediate",
+          duration: 30,
+          questionCount: 5,
+        },
         questions: [
-          { category: "Behavioral", followUpsReviewed: true, followUps: ["x"] },
+          {
+            questionId: new mongoose.Types.ObjectId(),
+            questionText: "Behavioral Older",
+            category: "Behavioral",
+            followUpsReviewed: true,
+            followUps: ["x"],
+            difficulty: "intermediate",
+            timeAllocated: 200,
+          },
         ],
       },
     ]);

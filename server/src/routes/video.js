@@ -4,8 +4,16 @@ const path = require("path");
 const fs = require("fs").promises;
 const requireAuth = require("../middleware/auth");
 const Interview = require("../models/Interview");
-const UserProfile = require("../models/UserProfile");
 const transcriptionService = require("../services/transcriptionService");
+const Logger = require("../utils/logger");
+const MC = require("../utils/mediaConstants");
+let cloudinary = null;
+try {
+  // Lazy require so environments without credentials don't break
+  cloudinary = require("../config/cloudinary");
+} catch (e) {
+  cloudinary = null; // Cloudinary optional
+}
 
 const router = express.Router();
 
@@ -22,7 +30,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueName = `${req.auth.userId}_${Date.now()}_${Math.round(
-      Math.random() * 1e9
+      Math.random() * MC.RECORDING_RANDOM_MAX
     )}.webm`;
     cb(null, uniqueName);
   },
@@ -31,7 +39,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB limit
+    fileSize: MC.VIDEO_MAX_FILE_MB * MC.BYTES_PER_MB,
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith("video/") || file.mimetype === "audio/webm") {
@@ -78,7 +86,7 @@ router.post("/start/:interviewId", requireAuth, async (req, res) => {
 
     await interview.save();
 
-    res.json({
+    return res.json({
       success: true,
       message: "Video recording session started",
       data: {
@@ -87,12 +95,13 @@ router.post("/start/:interviewId", requireAuth, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Start video recording error:", error);
-    res.status(500).json({
+    Logger.error("Start video recording error:", error);
+    return res.status(500).json({
       success: false,
       message: "Failed to start video recording",
     });
   }
+  return null;
 });
 
 // @desc    Upload video recording
@@ -118,6 +127,15 @@ router.post(
         _id: interviewId,
         userId,
       });
+      // Guard: interview must be in-progress to accept uploads
+      if (interview.status !== "in-progress") {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Interview is not active for recording",
+          });
+      }
 
       if (!interview) {
         return res.status(404).json({
@@ -134,7 +152,7 @@ router.post(
         });
       }
 
-      // Store video information
+      // Store video information (local initially; may be replaced by Cloudinary)
       const videoData = {
         questionIndex: qIndex,
         filename: req.file.filename,
@@ -152,7 +170,7 @@ router.post(
         try {
           facialAnalysisData = JSON.parse(req.body.facialAnalysis);
         } catch (error) {
-          console.warn('Invalid facial analysis data:', error);
+          Logger.warn("Invalid facial analysis data:", error);
         }
       }
 
@@ -168,7 +186,47 @@ router.post(
       // Add recording to the session
       interview.videoSession.recordings.push(videoData);
 
-      // Add video reference to the specific question
+      // Attempt Cloudinary upload if configured
+      let cloudinaryAsset = null;
+      if (
+        cloudinary &&
+        process.env.CLOUDINARY_CLOUD_NAME &&
+        process.env.CLOUDINARY_API_KEY
+      ) {
+        try {
+          const folder = `interviews/${interviewId}`;
+          const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+            resource_type: "video",
+            folder,
+            filename_override: req.file.filename,
+            overwrite: true,
+            eager: [{ streaming_profile: "full_hd", format: "m3u8" }],
+          });
+          cloudinaryAsset = {
+            publicId: uploadResult.public_id,
+            url: uploadResult.secure_url || uploadResult.url,
+            bytes: uploadResult.bytes,
+            format: uploadResult.format,
+            width: uploadResult.width,
+            height: uploadResult.height,
+            duration: uploadResult.duration,
+            folder,
+          };
+          // Optionally delete local file to save space
+          try {
+            await fs.unlink(req.file.path);
+          } catch (_) {
+            /* ignore */
+          }
+        } catch (cloudErr) {
+          Logger.warn(
+            "Cloudinary upload failed, continuing with local file:",
+            cloudErr?.message || cloudErr
+          );
+        }
+      }
+
+      // Add video reference to the specific question (augment with cloudinary if available)
       const videoQuestion = {
         filename: req.file.filename,
         path: req.file.path,
@@ -177,8 +235,9 @@ router.post(
         transcript: {
           text: null,
           generatedAt: null,
-          status: 'pending'
-        }
+          status: "pending",
+        },
+        cloudinary: cloudinaryAsset || undefined,
       };
 
       // Add facial analysis data if provided
@@ -197,16 +256,18 @@ router.post(
       await interview.save();
 
       // Start transcription process asynchronously (don't await to not block response)
-      transcriptionService.processVideoTranscription(
-        interview, 
-        qIndex, 
-        req.file.path, 
-        req.file.filename
-      ).catch(error => {
-        console.error("Background transcription error:", error);
-      });
+      transcriptionService
+        .processVideoTranscription(
+          interview,
+          qIndex,
+          req.file.path,
+          req.file.filename
+        )
+        .catch((error) => {
+          Logger.error("Background transcription error:", error);
+        });
 
-      res.json({
+      return res.json({
         success: true,
         message: "Video uploaded successfully",
         data: {
@@ -214,26 +275,30 @@ router.post(
           videoId: req.file.filename,
           size: req.file.size,
           duration: req.body.duration,
-          transcriptionStatus: 'pending'
+          transcriptionStatus: "pending",
+          cloudinary: cloudinaryAsset
+            ? { publicId: cloudinaryAsset.publicId, url: cloudinaryAsset.url }
+            : null,
         },
       });
     } catch (error) {
-      console.error("Video upload error:", error);
+      Logger.error("Video upload error:", error);
 
       // Clean up uploaded file if there was an error
       if (req.file && req.file.path) {
         try {
           await fs.unlink(req.file.path);
         } catch (cleanupError) {
-          console.error("Failed to cleanup uploaded file:", cleanupError);
+          Logger.warn("Failed to cleanup uploaded file:", cleanupError);
         }
       }
 
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: "Failed to upload video",
       });
     }
+    return null;
   }
 );
 
@@ -268,12 +333,15 @@ router.post("/stop/:interviewId", requireAuth, async (req, res) => {
     interview.videoSession.isRecording = false;
     interview.videoSession.endedAt = new Date();
     interview.videoSession.totalDuration = Math.round(
-      (interview.videoSession.endedAt - interview.videoSession.startedAt) / 1000
+      Math.round(
+        (interview.videoSession.endedAt - interview.videoSession.startedAt) /
+          MC.MS_PER_SEC
+      )
     );
 
     await interview.save();
 
-    res.json({
+    return res.json({
       success: true,
       message: "Video recording session stopped",
       data: {
@@ -283,12 +351,13 @@ router.post("/stop/:interviewId", requireAuth, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Stop video recording error:", error);
-    res.status(500).json({
+    Logger.error("Stop video recording error:", error);
+    return res.status(500).json({
       success: false,
       message: "Failed to stop video recording",
     });
   }
+  return null;
 });
 
 // @desc    Get video playback URL
@@ -330,39 +399,53 @@ router.get(
         });
       }
 
+      // Prefer Cloudinary asset when available
+      if (question.video.cloudinary && question.video.cloudinary.url) {
+        return res.json({
+          success: true,
+          message: "Video found",
+          data: {
+            videoUrl: question.video.cloudinary.url,
+            cdn: true,
+            duration:
+              question.video.duration || question.video.cloudinary.duration,
+            uploadedAt: question.video.uploadedAt,
+            questionIndex: qIndex,
+          },
+        });
+      }
+
       const videoPath = path.join(
         __dirname,
         "../../uploads/videos",
         question.video.filename
       );
-
-      // Check if file exists
       try {
         await fs.access(videoPath);
       } catch (error) {
-        return res.status(404).json({
-          success: false,
-          message: "Video file not found",
-        });
+        return res
+          .status(404)
+          .json({ success: false, message: "Video file not found" });
       }
-
-      res.json({
+      return res.json({
         success: true,
         message: "Video found",
         data: {
           videoUrl: `/api/video/stream/${question.video.filename}`,
+          cdn: false,
           duration: question.video.duration,
           uploadedAt: question.video.uploadedAt,
           questionIndex: qIndex,
         },
       });
     } catch (error) {
-      console.error("Get video playback error:", error);
-      res.status(500).json({
+      Logger.error("Get video playback error:", error);
+      return res.status(500).json({
         success: false,
         message: "Failed to get video playback information",
       });
     }
+    return null;
   }
 );
 
@@ -410,7 +493,8 @@ router.get("/stream/:filename", requireAuth, async (req, res) => {
         const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
         const chunkSize = end - start + 1;
 
-        res.status(206).set({
+        const PARTIAL_CONTENT = 206; // HTTP 206
+        res.status(PARTIAL_CONTENT).set({
           "Content-Range": `bytes ${start}-${end}/${fileSize}`,
           "Content-Length": chunkSize,
         });
@@ -430,12 +514,13 @@ router.get("/stream/:filename", requireAuth, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Video streaming error:", error);
-    res.status(500).json({
+    Logger.error("Video streaming error:", error);
+    return res.status(500).json({
       success: false,
       message: "Failed to stream video",
     });
   }
+  return null;
 });
 
 // @desc    Delete video recording
@@ -483,7 +568,7 @@ router.delete("/:interviewId/:questionIndex", requireAuth, async (req, res) => {
     try {
       await fs.unlink(videoPath);
     } catch (error) {
-      console.error("Failed to delete video file:", error);
+      Logger.error("Failed to delete video file:", error);
     }
 
     // Remove video reference from question
@@ -499,17 +584,18 @@ router.delete("/:interviewId/:questionIndex", requireAuth, async (req, res) => {
 
     await interview.save();
 
-    res.json({
+    return res.json({
       success: true,
       message: "Video deleted successfully",
     });
   } catch (error) {
-    console.error("Delete video error:", error);
-    res.status(500).json({
+    Logger.error("Delete video error:", error);
+    return res.status(500).json({
       success: false,
       message: "Failed to delete video",
     });
   }
+  return null;
 });
 
 // @desc    Get interview video summary
@@ -545,91 +631,177 @@ router.get("/summary/:interviewId", requireAuth, async (req, res) => {
     // Get details for each question with video
     interview.questions.forEach((question, index) => {
       if (question.video && question.video.filename) {
-        const transcriptionStatus = transcriptionService.getTranscriptionStatus(question.video);
+        const transcriptionStatus = transcriptionService.getTranscriptionStatus(
+          question.video
+        );
         videoSummary.recordings.push({
           questionIndex: index,
-          questionText: question.questionText.substring(0, 100) + "...",
+          questionText: `${question.questionText.substring(
+            0,
+            MC.SUMMARY_TRUNCATE_LEN
+          )}...`,
           filename: question.video.filename,
           duration: question.video.duration,
           uploadedAt: question.video.uploadedAt,
           playbackUrl: `/api/video/stream/${question.video.filename}`,
-          transcription: transcriptionStatus
+          transcription: transcriptionStatus,
         });
       }
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: "Video summary retrieved",
       data: videoSummary,
     });
   } catch (error) {
-    console.error("Get video summary error:", error);
-    res.status(500).json({
+    Logger.error("Get video summary error:", error);
+    return res.status(500).json({
       success: false,
       message: "Failed to get video summary",
     });
   }
+  return null;
 });
 
 // @desc    Get transcription for a specific video
 // @route   GET /api/video/transcript/:interviewId/:questionIndex
 // @access  Private
-router.get("/transcript/:interviewId/:questionIndex", requireAuth, async (req, res) => {
-  try {
-    const { userId } = req.auth;
-    const { interviewId, questionIndex } = req.params;
+router.get(
+  "/transcript/:interviewId/:questionIndex",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const { userId } = req.auth;
+      const { interviewId, questionIndex } = req.params;
 
-    const interview = await Interview.findOne({
-      _id: interviewId,
-      userId,
-    });
+      const interview = await Interview.findOne({
+        _id: interviewId,
+        userId,
+      });
 
-    if (!interview) {
-      return res.status(404).json({
+      if (!interview) {
+        return res.status(404).json({
+          success: false,
+          message: "Interview not found",
+        });
+      }
+
+      const qIndex = parseInt(questionIndex);
+      if (qIndex >= interview.questions.length) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid question index",
+        });
+      }
+
+      const question = interview.questions[qIndex];
+      if (!question.video || !question.video.filename) {
+        return res.status(404).json({
+          success: false,
+          message: "No video found for this question",
+        });
+      }
+
+      const transcriptionStatus = transcriptionService.getTranscriptionStatus(
+        question.video
+      );
+
+      return res.json({
+        success: true,
+        message: "Transcription status retrieved",
+        data: {
+          questionIndex: qIndex,
+          transcription: transcriptionStatus,
+          video: {
+            filename: question.video.filename,
+            duration: question.video.duration,
+            uploadedAt: question.video.uploadedAt,
+          },
+        },
+      });
+    } catch (error) {
+      Logger.error("Get transcription error:", error);
+      return res.status(500).json({
         success: false,
-        message: "Interview not found",
+        message: "Failed to get transcription",
       });
     }
-
-    const qIndex = parseInt(questionIndex);
-    if (qIndex >= interview.questions.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid question index",
-      });
-    }
-
-    const question = interview.questions[qIndex];
-    if (!question.video || !question.video.filename) {
-      return res.status(404).json({
-        success: false,
-        message: "No video found for this question",
-      });
-    }
-
-    const transcriptionStatus = transcriptionService.getTranscriptionStatus(question.video);
-
-    res.json({
-      success: true,
-      message: "Transcription status retrieved",
-      data: {
-        questionIndex: qIndex,
-        transcription: transcriptionStatus,
-        video: {
-          filename: question.video.filename,
-          duration: question.video.duration,
-          uploadedAt: question.video.uploadedAt,
-        }
-      },
-    });
-  } catch (error) {
-    console.error("Get transcription error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to get transcription",
-    });
+    return null;
   }
-});
+);
+
+// @desc    Retry transcription for a specific video if previously failed or not started
+// @route   POST /api/video/transcript/:interviewId/:questionIndex/retry
+// @access  Private
+router.post(
+  "/transcript/:interviewId/:questionIndex/retry",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const { userId } = req.auth;
+      const { interviewId, questionIndex } = req.params;
+      const qIndex = parseInt(questionIndex);
+
+      const interview = await Interview.findOne({ _id: interviewId, userId });
+      if (!interview)
+        return res
+          .status(404)
+          .json({ success: false, message: "Interview not found" });
+      if (qIndex >= interview.questions.length)
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid question index" });
+
+      const question = interview.questions[qIndex];
+      if (!question.video || !question.video.filename) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: "No video found for this question",
+          });
+      }
+
+      const currentStatus = transcriptionService.getTranscriptionStatus(
+        question.video
+      );
+      if (currentStatus.status === "pending") {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Transcription already in progress",
+          });
+      }
+
+      // Kick off async transcription
+      const uploadDir = path.join(__dirname, "../../uploads/videos");
+      const videoPath = path.join(uploadDir, question.video.filename);
+      transcriptionService
+        .processVideoTranscription(
+          interview,
+          qIndex,
+          videoPath,
+          question.video.filename
+        )
+        .catch((err) =>
+          Logger.error("Retry transcription background error:", err)
+        );
+
+      return res.json({
+        success: true,
+        message: "Transcription retry started",
+        data: { status: "pending" },
+      });
+    } catch (error) {
+      Logger.error("Retry transcription error:", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Failed to retry transcription" });
+    }
+    return null;
+  }
+);
 
 module.exports = router;

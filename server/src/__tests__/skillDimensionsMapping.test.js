@@ -36,18 +36,38 @@ describe("Skill Dimensions Mapping", () => {
     await Interview.deleteMany({ userId: "test-user-123" });
     // 4 interviews -> first 2 older half, next 2 current half
     const docs = [];
+    const profile = await UserProfile.findOne({ clerkUserId: "test-user-123" });
     for (let i = 0; i < 4; i++) {
       docs.push({
         userId: "test-user-123",
         status: "completed",
         createdAt: new Date(now - (4 - i) * 3600 * 1000),
         results: { overallScore: 50 + i * 10 },
+        userProfile: profile._id,
+        config: {
+          jobRole: "Engineer",
+          experienceLevel: "mid",
+          interviewType: "technical",
+          difficulty: "intermediate",
+          duration: 30,
+          questionCount: 5,
+        },
         questions: [
           {
+            questionId: new mongoose.Types.ObjectId(),
+            questionText: "Q primary",
             category: i % 2 === 0 ? "System Design" : "Behavioral",
             followUpsReviewed: true,
+            difficulty: "intermediate",
+            timeAllocated: 240,
           },
-          { category: "Data Structures" },
+          {
+            questionId: new mongoose.Types.ObjectId(),
+            questionText: "Q secondary",
+            category: "Data Structures",
+            difficulty: "beginner",
+            timeAllocated: 200,
+          },
         ],
       });
     }
