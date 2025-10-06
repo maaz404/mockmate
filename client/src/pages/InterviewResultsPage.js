@@ -84,15 +84,18 @@ const InterviewResultsPage = () => {
 
   const { interview, analysis } = results;
   const facialMetrics = interview.metrics || {};
-  const hasFacial = Object.keys(facialMetrics).some((k) => [
-    "eyeContactScore",
-    "blinkRate",
-    "smilePercentage",
-    "headSteadiness",
-    "offScreenPercentage",
-    "environmentQuality",
-    "confidenceScore",
-  ].includes(k) && facialMetrics[k] != null);
+  const hasFacial = Object.keys(facialMetrics).some(
+    (k) =>
+      [
+        "eyeContactScore",
+        "blinkRate",
+        "smilePercentage",
+        "headSteadiness",
+        "offScreenPercentage",
+        "environmentQuality",
+        "confidenceScore",
+      ].includes(k) && facialMetrics[k] != null
+  );
 
   return (
     <div
@@ -282,7 +285,10 @@ const InterviewResultsPage = () => {
             </Collapsible>
 
             {hasFacial && (
-              <Collapsible title={"🎥 Facial & Delivery Metrics"} defaultOpen={false}>
+              <Collapsible
+                title={"🎥 Facial & Delivery Metrics"}
+                defaultOpen={false}
+              >
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                   {[
                     ["Eye Contact", facialMetrics.eyeContactScore, "%"],
@@ -291,21 +297,34 @@ const InterviewResultsPage = () => {
                     ["Blink Rate", facialMetrics.blinkRate, "/min"],
                     ["Steadiness", facialMetrics.headSteadiness, "%"],
                     ["Off Screen", facialMetrics.offScreenPercentage, "%"],
-                  ].filter(([,v]) => v != null).map(([label,val,suffix]) => (
-                    <div key={label} className="space-y-1">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-surface-600 dark:text-surface-400">{label}</span>
-                        <span className="font-semibold tabular-nums text-surface-900 dark:text-surface-200">{Math.round(val)}{suffix}</span>
+                  ]
+                    .filter(([, v]) => v != null)
+                    .map(([label, val, suffix]) => (
+                      <div key={label} className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="font-medium text-surface-600 dark:text-surface-400">
+                            {label}
+                          </span>
+                          <span className="font-semibold tabular-nums text-surface-900 dark:text-surface-200">
+                            {Math.round(val)}
+                            {suffix}
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-surface-200 dark:bg-surface-700 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary-500 to-primary-600"
+                            style={{
+                              width: `${Math.min(100, Math.max(0, val))}%`,
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 rounded-full bg-surface-200 dark:bg-surface-700 overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-primary-500 to-primary-600" style={{width: `${Math.min(100, Math.max(0, val))}%`}} />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
                 {facialMetrics.environmentQuality != null && (
                   <div className="mt-4 text-xs text-surface-500 dark:text-surface-400">
-                    Environment Quality: {Math.round(facialMetrics.environmentQuality)}%
+                    Environment Quality:{" "}
+                    {Math.round(facialMetrics.environmentQuality)}%
                   </div>
                 )}
               </Collapsible>

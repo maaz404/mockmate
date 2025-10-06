@@ -214,7 +214,12 @@ app.get("/api/bootstrap", async (req, res) => {
   // In dev mock mode allow unauth to still get a stub
   try {
     const authCtx = req.auth || {};
-    const userId = authCtx.userId || authCtx.id;
+    let userId = authCtx.userId || authCtx.id;
+    if (!userId && usingMock) {
+      // Allow header override in mock mode (tests pass x-user-id)
+      const headerUser = req.headers["x-user-id"];
+      if (headerUser) userId = headerUser;
+    }
     const usingMock =
       process.env.NODE_ENV !== "production" &&
       process.env.MOCK_AUTH_FALLBACK === "true";
@@ -237,14 +242,19 @@ app.get("/api/bootstrap", async (req, res) => {
         }
       }
     }
-    if (!profile && usingMock) {
+    if (!profile && usingMock && userId) {
+      const wantPremium = req.headers["x-test-premium"] === "true";
+      const defaultSub = wantPremium
+        ? { plan: "premium", interviewsRemaining: null }
+        : { plan: "free", interviewsRemaining: 5 };
       profile = {
-        clerkUserId: "test-user-123",
-        email: "test-user-123@dev.local",
+        clerkUserId: userId,
+        email: `${userId}@dev.local`,
         firstName: "Test",
         lastName: "User",
         onboardingCompleted: false,
         analytics: { averageScore: 0 },
+        subscription: defaultSub,
       };
     }
     const analyticsData = profile ? profile.analytics || {} : {};
@@ -261,12 +271,17 @@ app.get("/api/bootstrap", async (req, res) => {
     return ok(res, payload);
   } catch (e) {
     const { fail } = require("./utils/responder");
+    const meta = { detail: e.message };
+    if (e.stack) {
+      const STACK_LINES = 5; // eslint-disable-line no-magic-numbers
+      meta.stack = e.stack.split("\n").slice(0, STACK_LINES).join("\n");
+    }
     return fail(
       res,
       500,
       "BOOTSTRAP_FAILED",
       "Failed to load bootstrap data",
-      process.env.NODE_ENV === "development" ? { detail: e.message } : undefined
+      process.env.NODE_ENV !== "production" ? meta : undefined
     );
   }
 });

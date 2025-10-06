@@ -29,15 +29,13 @@ function ok(res, data = {}, meta = {}) {
     .json({ success: true, data, requestId: res.locals.requestId, ...meta });
 }
 function fail(res, code, message, status = 400, extra = {}) {
-  return res
-    .status(status)
-    .json({
-      success: false,
-      code,
-      message,
-      requestId: res.locals.requestId,
-      ...extra,
-    });
+  return res.status(status).json({
+    success: false,
+    code,
+    message,
+    requestId: res.locals.requestId,
+    ...extra,
+  });
 }
 
 // Wrap to normalize existing controllers that may directly res.json today
@@ -119,6 +117,14 @@ router.post(
 // @route   PUT /api/interviews/:id/start
 // @access  Private
 router.put("/:id/start", requireAuth, ensureUserProfile, dbReady, (req, res) =>
+  req.useInMemory
+    ? wrap(inMem.startInterview)(req, res)
+    : wrap(startInterview)(req, res)
+);
+
+// Backward compatibility: some tests (legacy) use POST to start interview
+// @route   POST /api/interviews/:id/start (alias)
+router.post("/:id/start", requireAuth, ensureUserProfile, dbReady, (req, res) =>
   req.useInMemory
     ? wrap(inMem.startInterview)(req, res)
     : wrap(startInterview)(req, res)

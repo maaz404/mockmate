@@ -446,14 +446,17 @@ const InterviewExperiencePage = () => {
   // Adaptive difficulty helpers
   const adaptiveEnabled = interview?.config?.adaptiveDifficulty?.enabled;
   const totalPlanned = interview?.config?.questionCount || 0;
-  const answeredCount = interview?.questions?.filter(q => q.response?.text).length || 0;
+  const answeredCount =
+    interview?.questions?.filter((q) => q.response?.text).length || 0;
 
   const fetchNextAdaptiveQuestion = useCallback(async () => {
     if (!adaptiveEnabled) return;
     try {
-      const resp = await apiService.post(`/interviews/${interviewId}/adaptive-question`);
+      const resp = await apiService.post(
+        `/interviews/${interviewId}/adaptive-question`
+      );
       if (resp.success && resp.data?.question) {
-        setInterview(prev => ({
+        setInterview((prev) => ({
           ...prev,
           questions: [
             ...prev.questions,
@@ -464,36 +467,56 @@ const InterviewExperiencePage = () => {
               category: resp.data.question.category,
               difficulty: resp.data.question.difficulty,
               timeAllocated: resp.data.question.timeAllocated,
-              adaptiveGenerated: true
-            }
-          ]
+              adaptiveGenerated: true,
+            },
+          ],
         }));
         // Refresh interview details to pull updated difficulty history from server
         try {
           const detail = await apiService.get(`/interviews/${interviewId}`);
           if (detail.success) setInterview(detail.data);
-        } catch (_) { /* silent */ }
+        } catch (_) {
+          /* silent */
+        }
         // Toast notification
-        setToasts(t => [...t, { id: Date.now(), message: `Adaptive question added (${resp.data.question.difficulty})` }]);
+        setToasts((t) => [
+          ...t,
+          {
+            id: Date.now(),
+            message: `Adaptive question added (${resp.data.question.difficulty})`,
+          },
+        ]);
       }
-    } catch (_) { /* non-fatal */ }
+    } catch (_) {
+      /* non-fatal */
+    }
   }, [adaptiveEnabled, interviewId]);
 
   // Request next adaptive question automatically after submitting answer if needed
   useEffect(() => {
     if (!adaptiveEnabled) return;
     // If we have answered last non-adaptive question and still below planned total
-    if (interview && answeredCount === interview.questions.length && answeredCount < totalPlanned) {
+    if (
+      interview &&
+      answeredCount === interview.questions.length &&
+      answeredCount < totalPlanned
+    ) {
       fetchNextAdaptiveQuestion();
     }
-  }, [answeredCount, adaptiveEnabled, interview, fetchNextAdaptiveQuestion, totalPlanned]);
+  }, [
+    answeredCount,
+    adaptiveEnabled,
+    interview,
+    fetchNextAdaptiveQuestion,
+    totalPlanned,
+  ]);
 
   // Facial metrics controls
   const facialToggle = () => {
     if (!facialInitialized) {
       initFacial();
     } else if (!facialAnalyzing) {
-      const videoEl = document.querySelector('video');
+      const videoEl = document.querySelector("video");
       if (videoEl) startFacial(videoEl);
     } else {
       stopFacial();
@@ -504,9 +527,11 @@ const InterviewExperiencePage = () => {
   const [toasts, setToasts] = useState([]);
   useEffect(() => {
     if (!toasts.length) return;
-    const timers = toasts.map(t => setTimeout(() => {
-      setToasts(curr => curr.filter(c => c.id !== t.id));
-    }, 4000));
+    const timers = toasts.map((t) =>
+      setTimeout(() => {
+        setToasts((curr) => curr.filter((c) => c.id !== t.id));
+      }, 4000)
+    );
     return () => timers.forEach(clearTimeout);
   }, [toasts]);
 
@@ -553,7 +578,8 @@ const InterviewExperiencePage = () => {
   // answeredCount already declared earlier (line ~430) - do not redeclare
 
   const SPARKLINE_MIN_POINTS = 3;
-  const sparklineEnabled = (process.env.REACT_APP_ENABLE_SPARKLINE || 'true') !== 'false';
+  const sparklineEnabled =
+    (process.env.REACT_APP_ENABLE_SPARKLINE || "true") !== "false";
 
   return (
     <div
@@ -569,7 +595,10 @@ const InterviewExperiencePage = () => {
               {interview.jobRole} Interview
             </h1>
             {adaptiveInfo?.enabled && (
-              <span className="hidden md:inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800" title="Adaptive difficulty active">
+              <span
+                className="hidden md:inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                title="Adaptive difficulty active"
+              >
                 🎯 Adaptive
               </span>
             )}
@@ -634,26 +663,58 @@ const InterviewExperiencePage = () => {
               </div>
             )}
             {adaptiveInfo?.enabled && (
-              <div className="flex items-center gap-2" title="Adaptive difficulty progression">
-                <span className="text-xs font-medium text-surface-500 dark:text-surface-400">Difficulty</span>
+              <div
+                className="flex items-center gap-2"
+                title="Adaptive difficulty progression"
+              >
+                <span className="text-xs font-medium text-surface-500 dark:text-surface-400">
+                  Difficulty
+                </span>
                 <div className="flex items-center gap-1 text-xs font-semibold tabular-nums">
-                  <span>{adaptiveInfo.currentDifficulty || interview.config?.difficulty}</span>
+                  <span>
+                    {adaptiveInfo.currentDifficulty ||
+                      interview.config?.difficulty}
+                  </span>
                   {/* sparkline */}
-                  {sparklineEnabled && (adaptiveInfo.difficultyHistory?.length || 0) >= SPARKLINE_MIN_POINTS && (
-                    <svg width="60" height="16" viewBox="0 0 60 16" className="text-primary-500 dark:text-primary-400">
-                      {(() => {
-                        const levels = { beginner: 12, intermediate: 8, advanced: 4 };
-                        const hist = adaptiveInfo.difficultyHistory.slice(-10);
-                        const denom = Math.max(1, Math.min(9, hist.length -1));
-                        const pts = hist.map((d,i) => {
-                          const y = levels[d.difficulty] ?? 8;
-                          const x = (i / denom) * 60;
-                          return `${x},${y}`;
-                        }).join(' ');
-                        return <polyline fill="none" stroke="currentColor" strokeWidth="2" points={pts} />;
-                      })()}
-                    </svg>
-                  )}
+                  {sparklineEnabled &&
+                    (adaptiveInfo.difficultyHistory?.length || 0) >=
+                      SPARKLINE_MIN_POINTS && (
+                      <svg
+                        width="60"
+                        height="16"
+                        viewBox="0 0 60 16"
+                        className="text-primary-500 dark:text-primary-400"
+                      >
+                        {(() => {
+                          const levels = {
+                            beginner: 12,
+                            intermediate: 8,
+                            advanced: 4,
+                          };
+                          const hist =
+                            adaptiveInfo.difficultyHistory.slice(-10);
+                          const denom = Math.max(
+                            1,
+                            Math.min(9, hist.length - 1)
+                          );
+                          const pts = hist
+                            .map((d, i) => {
+                              const y = levels[d.difficulty] ?? 8;
+                              const x = (i / denom) * 60;
+                              return `${x},${y}`;
+                            })
+                            .join(" ");
+                          return (
+                            <polyline
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              points={pts}
+                            />
+                          );
+                        })()}
+                      </svg>
+                    )}
                 </div>
               </div>
             )}
@@ -908,7 +969,9 @@ const InterviewExperiencePage = () => {
               )}
               <button
                 onClick={handleNextQuestion}
-                disabled={currentQuestionIndex >= interview.questions.length - 1}
+                disabled={
+                  currentQuestionIndex >= interview.questions.length - 1
+                }
                 className="btn-secondary disabled:opacity-50 h-11"
               >
                 Next →
@@ -928,38 +991,54 @@ const InterviewExperiencePage = () => {
         </div>
         {/* Existing interview UI retained */}
         {interview && (
-        <div className="mt-6 space-y-4">
-          {adaptiveEnabled && (
-            <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600 text-xs flex items-center justify-between">
-              <div>
-                Adaptive Difficulty Active • Answered {answeredCount}/{totalPlanned}
-                {interview.config?.adaptiveDifficulty?.currentDifficulty && (
-                  <span className="ml-2 font-medium">Current: {interview.config.adaptiveDifficulty.currentDifficulty}</span>
-                )}
+          <div className="mt-6 space-y-4">
+            {adaptiveEnabled && (
+              <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600 text-xs flex items-center justify-between">
+                <div>
+                  Adaptive Difficulty Active • Answered {answeredCount}/
+                  {totalPlanned}
+                  {interview.config?.adaptiveDifficulty?.currentDifficulty && (
+                    <span className="ml-2 font-medium">
+                      Current:{" "}
+                      {interview.config.adaptiveDifficulty.currentDifficulty}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={fetchNextAdaptiveQuestion}
+                  disabled={answeredCount >= totalPlanned}
+                  className="btn-outline !px-2 !py-1 text-[11px] disabled:opacity-40"
+                >
+                  Next Adaptive
+                </button>
               </div>
-              <button onClick={fetchNextAdaptiveQuestion} disabled={answeredCount >= totalPlanned} className="btn-outline !px-2 !py-1 text-[11px] disabled:opacity-40">Next Adaptive</button>
-            </div>
-          )}
-          {/* Facial metrics panel */}
-          {facialEnabled && subscription.isPremium && (
-            <FacialMetricsPanel
-              metrics={facialMetrics}
-              analyzing={facialAnalyzing}
-              initialized={facialInitialized}
-              error={facialError}
-              onStart={facialToggle}
-              onStop={facialToggle}
+            )}
+            {/* Facial metrics panel */}
+            {facialEnabled && subscription.isPremium && (
+              <FacialMetricsPanel
+                metrics={facialMetrics}
+                analyzing={facialAnalyzing}
+                initialized={facialInitialized}
+                error={facialError}
+                onStart={facialToggle}
+                onStop={facialToggle}
+              />
+            )}
+            <TranscriptViewer
+              transcriptsMap={transcriptStatuses}
+              questions={interview.questions}
             />
-          )}
-          <TranscriptViewer transcriptsMap={transcriptStatuses} questions={interview.questions} />
-        </div>
-      )}
+          </div>
+        )}
       </div>
 
       {toasts.length > 0 && (
         <div className="fixed bottom-4 right-4 space-y-2 z-50">
-          {toasts.map(t => (
-            <div key={t.id} className="px-4 py-2 rounded-lg shadow bg-surface-900/90 text-white text-sm animate-fade-in">
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className="px-4 py-2 rounded-lg shadow bg-surface-900/90 text-white text-sm animate-fade-in"
+            >
               {t.message}
             </div>
           ))}

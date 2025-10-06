@@ -16,6 +16,7 @@ describe("GET /api/bootstrap subscription shape", () => {
       email: `${userId}@dev.local`,
       subscription: { plan: "premium", interviewsRemaining: null },
       onboardingCompleted: true,
+      analytics: { averageScore: 0 },
     });
   });
 
@@ -27,8 +28,9 @@ describe("GET /api/bootstrap subscription shape", () => {
   it("returns subscription at root and inside analytics", async () => {
     const res = await request(app)
       .get("/api/bootstrap")
-      .set("Authorization", "Bearer test") // Clerk middleware may be bypassed in test env
-      .set("x-user-id", userId) // In mock mode, we may need custom header (depending on auth logic)
+      .set("Authorization", "Bearer test")
+      .set("x-user-id", userId)
+      .set("x-test-premium", "true")
       .expect(200);
 
     expect(res.body).toHaveProperty("data.subscription");

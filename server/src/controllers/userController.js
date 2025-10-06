@@ -1609,12 +1609,30 @@ async function getDashboardMetrics(req, res) {
       }),
     };
 
+    const normalizeCategoryLabel = (cat) => {
+      if (!cat) return "Uncategorized";
+      const base = cat.toString();
+      const lower = base.toLowerCase();
+      if (lower === "behavioral") return "Behavioral";
+      if (lower === "system-design" || lower === "system design")
+        return "System Design";
+      // Title case each word
+      return base
+        .replace(/[-_]/g, " ")
+        .split(/\s+/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    };
+
     const categoryCoverage = Object.entries(categoryAgg)
-      .map(([category, v]) => ({
-        category,
-        count: v.count,
-        avgScore: v.scoreCount ? Math.round(v.scoreSum / v.scoreCount) : null,
-      }))
+      .map(([category, v]) => {
+        const label = normalizeCategoryLabel(category);
+        return {
+          category: label,
+          count: v.count,
+          avgScore: v.scoreCount ? Math.round(v.scoreSum / v.scoreCount) : null,
+        };
+      })
       .sort((a, b) => b.count - a.count)
       .slice(0, 12); // limit for now
 

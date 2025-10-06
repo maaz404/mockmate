@@ -296,7 +296,7 @@ const submitAnswer = async (req, res) => {
     const { userId } = req.auth;
     const interviewId = req.params.interviewId || req.params.id;
     const { questionIndex } = req.params;
-  const { answer, timeSpent, notes, facialMetrics } = req.body;
+    const { answer, timeSpent, notes, facialMetrics } = req.body;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -637,11 +637,19 @@ const completeInterview = async (req, res) => {
     interview.status = "completed";
 
     // Merge facial metrics snapshot if provided by client
-    if (req.body && req.body.facialMetrics && typeof req.body.facialMetrics === "object") {
+    if (
+      req.body &&
+      req.body.facialMetrics &&
+      typeof req.body.facialMetrics === "object"
+    ) {
       const fm = req.body.facialMetrics;
       interview.metrics = interview.metrics || {};
       const mapNum = (k, targetKey) => {
-        if (fm[k] != null && typeof fm[k] === "number" && !Number.isNaN(fm[k])) {
+        if (
+          fm[k] != null &&
+          typeof fm[k] === "number" &&
+          !Number.isNaN(fm[k])
+        ) {
           interview.metrics[targetKey] = fm[k];
         }
       };
@@ -1592,13 +1600,21 @@ async function updateAdaptiveDifficulty(req, res) {
     const { userId } = req.auth;
     const interviewId = req.params.interviewId || req.params.id;
     const { difficulty } = req.body || {};
-    if (!difficulty || !["beginner","intermediate","advanced"].includes(difficulty)) {
+    if (
+      !difficulty ||
+      !["beginner", "intermediate", "advanced"].includes(difficulty)
+    ) {
       return fail(res, 400, "BAD_DIFFICULTY", "Invalid difficulty value");
     }
-    const interview = await Interview.findOne({_id: interviewId, userId});
+    const interview = await Interview.findOne({ _id: interviewId, userId });
     if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
     if (!interview.config?.adaptiveDifficulty?.enabled) {
-      return fail(res, 400, "ADAPTIVE_DISABLED", "Adaptive difficulty not enabled for this interview");
+      return fail(
+        res,
+        400,
+        "ADAPTIVE_DISABLED",
+        "Adaptive difficulty not enabled for this interview"
+      );
     }
     interview.config.adaptiveDifficulty.currentDifficulty = difficulty;
     // Append history marker (no score) for transparency
@@ -1609,9 +1625,18 @@ async function updateAdaptiveDifficulty(req, res) {
       timestamp: new Date(),
     });
     await interview.save();
-    return ok(res, { currentDifficulty: difficulty, historyLength: interview.config.adaptiveDifficulty.difficultyHistory.length });
+    return ok(res, {
+      currentDifficulty: difficulty,
+      historyLength:
+        interview.config.adaptiveDifficulty.difficultyHistory.length,
+    });
   } catch (e) {
-    return fail(res, 500, "ADAPTIVE_UPDATE_FAILED", "Failed to update adaptive difficulty");
+    return fail(
+      res,
+      500,
+      "ADAPTIVE_UPDATE_FAILED",
+      "Failed to update adaptive difficulty"
+    );
   }
 }
 module.exports.updateAdaptiveDifficulty = updateAdaptiveDifficulty;
@@ -1621,10 +1646,22 @@ async function exportInterviewMetrics(req, res) {
   try {
     const { userId } = req.auth;
     const interviewId = req.params.interviewId || req.params.id;
-    const interview = await Interview.findOne({_id: interviewId, userId});
+    const interview = await Interview.findOne({ _id: interviewId, userId });
     if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
     const format = (req.query.format || "csv").toLowerCase();
-    const headers = ["questionIndex","category","difficulty","score","timeSpent","eyeContact","blinkRate","smilePercentage","headSteadiness","offScreen","confidence"];
+    const headers = [
+      "questionIndex",
+      "category",
+      "difficulty",
+      "score",
+      "timeSpent",
+      "eyeContact",
+      "blinkRate",
+      "smilePercentage",
+      "headSteadiness",
+      "offScreen",
+      "confidence",
+    ];
     if (format === "pdf") {
       const PDFDocument = require("pdfkit");
       res.setHeader("Content-Type", "application/pdf");
@@ -1638,26 +1675,26 @@ async function exportInterviewMetrics(req, res) {
       doc.moveDown();
       doc.fontSize(10).text(`Interview ID: ${interviewId}`);
       doc.text(`User ID: ${userId}`);
-      doc.text(`Questions: ${(interview.questions||[]).length}`);
+      doc.text(`Questions: ${(interview.questions || []).length}`);
       doc.moveDown();
       // Table header
       doc.font("Helvetica-Bold");
       doc.text(headers.join(" | "));
       doc.font("Helvetica");
-      (interview.questions||[]).forEach((q, idx) => {
+      (interview.questions || []).forEach((q, idx) => {
         const fm = q.facial || {};
         const row = [
           idx,
           q.category || "",
-            q.difficulty || "",
-            q.score?.overall ?? "",
-            q.timeSpent ?? "",
-            fm.eyeContact ?? "",
-            fm.blinkRate ?? "",
-            fm.smilePercentage ?? "",
-            fm.headSteadiness ?? "",
-            fm.offScreenPercentage ?? "",
-            fm.confidenceScore ?? "",
+          q.difficulty || "",
+          q.score?.overall ?? "",
+          q.timeSpent ?? "",
+          fm.eyeContact ?? "",
+          fm.blinkRate ?? "",
+          fm.smilePercentage ?? "",
+          fm.headSteadiness ?? "",
+          fm.offScreenPercentage ?? "",
+          fm.confidenceScore ?? "",
         ].join(" | ");
         doc.text(row);
       });
@@ -1669,25 +1706,30 @@ async function exportInterviewMetrics(req, res) {
     }
     // default CSV
     const rows = [headers.join(",")];
-    (interview.questions||[]).forEach((q, idx) => {
+    (interview.questions || []).forEach((q, idx) => {
       const fm = q.facial || {};
-      rows.push([
-        idx,
-        JSON.stringify(q.category||""),
-        q.difficulty||"",
-        (q.score && q.score.overall != null) ? q.score.overall : "",
-        q.timeSpent||"",
-        fm.eyeContact!=null?fm.eyeContact:"",
-        fm.blinkRate!=null?fm.blinkRate:"",
-        fm.smilePercentage!=null?fm.smilePercentage:"",
-        fm.headSteadiness!=null?fm.headSteadiness:"",
-        fm.offScreenPercentage!=null?fm.offScreenPercentage:"",
-        fm.confidenceScore!=null?fm.confidenceScore:"",
-      ].join(","));
+      rows.push(
+        [
+          idx,
+          JSON.stringify(q.category || ""),
+          q.difficulty || "",
+          q.score && q.score.overall != null ? q.score.overall : "",
+          q.timeSpent || "",
+          fm.eyeContact != null ? fm.eyeContact : "",
+          fm.blinkRate != null ? fm.blinkRate : "",
+          fm.smilePercentage != null ? fm.smilePercentage : "",
+          fm.headSteadiness != null ? fm.headSteadiness : "",
+          fm.offScreenPercentage != null ? fm.offScreenPercentage : "",
+          fm.confidenceScore != null ? fm.confidenceScore : "",
+        ].join(",")
+      );
     });
     const csv = rows.join("\n");
     res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", `attachment; filename=interview_${interviewId}_metrics.csv`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=interview_${interviewId}_metrics.csv`
+    );
     return res.status(200).send(csv);
   } catch (e) {
     return fail(res, 500, "METRICS_EXPORT_FAILED", "Failed to export metrics");

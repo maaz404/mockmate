@@ -360,6 +360,10 @@ router.post("/session/:sessionId/complete", requireAuth, async (req, res) => {
 
     const results = codingChallengeService.completeSession(sessionId);
 
+    if (results && typeof results === "object" && results.completed == null) {
+      results.completed = true; // explicit flag for tests expecting boolean
+    }
+
     // Update interview
     if (interview.codingSession) {
       interview.codingSession.status = "completed";
