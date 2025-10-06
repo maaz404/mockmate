@@ -16,6 +16,10 @@ const InterviewCreationPage = () => {
     difficulty: "medium",
     focusAreas: [],
     adaptiveDifficultyEnabled: true,
+    includeCodingChallenges: false,
+    codingChallengeCount: 2,
+    codingDifficulty: "mixed",
+    codingLanguage: "javascript",
   });
   const [loading, setLoading] = useState(false);
 
@@ -161,6 +165,13 @@ const InterviewCreationPage = () => {
             difficultyMapping[formData.difficulty] || formData.difficulty,
           adaptiveDifficulty: { enabled: !!formData.adaptiveDifficultyEnabled },
           questionCount: Math.floor(formData.duration / 3), // Roughly 3 minutes per question
+          coding: formData.includeCodingChallenges
+            ? {
+                challengeCount: formData.codingChallengeCount,
+                difficulty: formData.codingDifficulty,
+                language: formData.codingLanguage,
+              }
+            : undefined,
         },
       });
 
@@ -323,6 +334,94 @@ const InterviewCreationPage = () => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Coding Challenges Opt-In */}
+            <div className="p-4 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800/40 space-y-4">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.includeCodingChallenges}
+                  onChange={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      includeCodingChallenges: !prev.includeCodingChallenges,
+                    }))
+                  }
+                  className="mt-1 text-primary-500 bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 focus:ring-primary-500"
+                />
+                <span>
+                  <span className="block font-medium text-surface-900 dark:text-surface-50">
+                    Include Coding Challenges
+                  </span>
+                  <span className="block text-sm text-surface-600 dark:text-surface-400">
+                    Adds hands-on coding problems during the interview session.
+                  </span>
+                </span>
+              </div>
+              {formData.includeCodingChallenges && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-surface-600 dark:text-surface-400 mb-1">
+                      Challenge Count
+                    </label>
+                    <select
+                      value={formData.codingChallengeCount}
+                      onChange={(e) =>
+                        setFormData((p) => ({
+                          ...p,
+                          codingChallengeCount: parseInt(e.target.value, 10),
+                        }))
+                      }
+                      className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-sm"
+                    >
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                      <option value={3}>3</option>
+                      <option value={4}>4</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-surface-600 dark:text-surface-400 mb-1">
+                      Coding Difficulty
+                    </label>
+                    <select
+                      value={formData.codingDifficulty}
+                      onChange={(e) =>
+                        setFormData((p) => ({
+                          ...p,
+                          codingDifficulty: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-sm"
+                    >
+                      <option value="mixed">Mixed</option>
+                      <option value="easy">Easy</option>
+                      <option value="medium">Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-surface-600 dark:text-surface-400 mb-1">
+                      Language
+                    </label>
+                    <select
+                      value={formData.codingLanguage}
+                      onChange={(e) =>
+                        setFormData((p) => ({
+                          ...p,
+                          codingLanguage: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-sm"
+                    >
+                      <option value="javascript">JavaScript</option>
+                      <option value="python">Python</option>
+                      <option value="java">Java</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Duration & Difficulty */}

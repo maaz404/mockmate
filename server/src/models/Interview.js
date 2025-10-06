@@ -108,9 +108,13 @@ const interviewSchema = new mongoose.Schema(
         },
         questionText: String, // cached for performance
         category: String,
+        // Added optional type to support distinguishing technical/coding vs behavioral in UI
+        type: String,
         difficulty: String,
         timeAllocated: Number, // seconds
         timeSpent: Number, // seconds
+        // When a question is a coding challenge injected from codingSession, store challengeId
+        challengeId: String,
         response: {
           text: String,
           // User's own notes captured alongside the answer

@@ -28,6 +28,10 @@ const InterviewExperiencePage = () => {
   const [codingLanguage, setCodingLanguage] = useState("javascript");
   const [codeExecutionResult, setCodeExecutionResult] = useState(null);
   const [isExecutingCode, setIsExecutingCode] = useState(false);
+  // Coding session integration
+  const [codingSessionId, setCodingSessionId] = useState(null);
+  const [currentChallenge, setCurrentChallenge] = useState(null);
+  const [codingSubmitting, setCodingSubmitting] = useState(false);
 
   // Function to fetch interview data
   const fetchInterview = useCallback(async () => {
@@ -164,6 +168,104 @@ const InterviewExperiencePage = () => {
       fetchInterview();
     }
   }, [isLoaded, user, interviewId, fetchInterview]);
+
+  // If interview config included coding, create a coding session when interview loads
+  useEffect(() => {
+    const maybeCreateCodingSession = async () => {
+      if (!interview || codingSessionId) return;
+      const codingCfg = interview?.config?.coding;
+      if (!codingCfg || !interview?._id) return;
+      try {
+        const resp = await apiService.post("/coding/session", {
+          interviewId: interview._id,
+          config: {
+            challengeCount: codingCfg.challengeCount || codingCfg.codingChallengeCount || 1,
+            difficulty: codingCfg.difficulty || "mixed",
+            language: codingCfg.language || "javascript",
+          },
+        });
+        if (resp.success) {
+          setCodingSessionId(resp.data.sessionId);
+          setCurrentChallenge(resp.data.currentChallenge);
+          // Seed first coding question into interview questions array if not present
+          if (resp.data.currentChallenge && !interview.questions.find(q => q.challengeId === resp.data.currentChallenge.id)) {
+            setInterview(prev => ({
+              ...prev,
+              questions: [
+                {
+                  _id: `coding-${resp.data.currentChallenge.id}`,
+                  questionText: resp.data.currentChallenge.title,
+                  text: resp.data.currentChallenge.title,
+                  category: "coding",
+                  type: "technical",
+                  difficulty: resp.data.currentChallenge.difficulty || "medium",
+                  challengeId: resp.data.currentChallenge.id,
+                  timeAllocated: (resp.data.currentChallenge.timeLimit || 30) * 60,
+                },
+                ...prev.questions,
+              ],
+            }));
+            setCurrentQuestionIndex(0);
+          }
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("Failed to create coding session", e);
+      }
+    };
+    maybeCreateCodingSession();
+  }, [interview, codingSessionId]);
+
+  const submitCodingAndNext = async () => {
+    if (!codingSessionId || !currentChallenge) return;
+    if (!currentAnswer.trim()) {
+      alert("Write code before submitting.");
+      return;
+    }
+    setCodingSubmitting(true);
+    try {
+      const submitResp = await apiService.post(`/coding/session/${codingSessionId}/submit`, {
+        challengeId: currentChallenge.id,
+        code: currentAnswer,
+        language: codingLanguage,
+      });
+      if (submitResp.success) {
+        setCodeExecutionResult(submitResp.data);
+        // Fetch next
+        const nextResp = await apiService.post(`/coding/session/${codingSessionId}/next`);
+        if (nextResp.success) {
+          if (nextResp.data.completed) {
+            // Session done; don't inject further
+            // Optionally mark completion
+          } else if (nextResp.data.challenge) {
+            setCurrentChallenge(nextResp.data.challenge);
+            // Append new challenge question after current coding question(s)
+            setInterview(prev => ({
+              ...prev,
+              questions: [
+                ...prev.questions,
+                {
+                  _id: `coding-${nextResp.data.challenge.id}`,
+                  questionText: nextResp.data.challenge.title,
+                  text: nextResp.data.challenge.title,
+                  category: "coding",
+                  type: "technical",
+                  difficulty: nextResp.data.challenge.difficulty || "medium",
+                  challengeId: nextResp.data.challenge.id,
+                  timeAllocated: (nextResp.data.challenge.timeLimit || 30) * 60,
+                },
+              ],
+            }));
+          }
+        }
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn("Coding submit failed", e);
+    } finally {
+      setCodingSubmitting(false);
+    }
+  };
 
   const handleAnswerChange = (value) => {
     // Handle both event objects (from textarea) and direct values (from Monaco Editor)
@@ -417,6 +519,18 @@ const InterviewExperiencePage = () => {
                   💡 Tip: Write clean, readable code and consider edge cases.
                   Press Ctrl+Enter to run your code.
                 </p>
+                {codingSessionId && (
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      onClick={submitCodingAndNext}
+                      disabled={codingSubmitting}
+                      className="btn-secondary disabled:opacity-50"
+                    >
+                      {codingSubmitting ? "Submitting..." : "Submit & Next Challenge"}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
