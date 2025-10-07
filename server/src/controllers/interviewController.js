@@ -298,6 +298,25 @@ const submitAnswer = async (req, res) => {
     const { questionIndex } = req.params;
     const { answer, timeSpent, notes, facialMetrics } = req.body;
 
+    // Basic validation – ensure non-empty textual answer unless explicit skip flag added later
+    if (typeof answer !== "string" || !answer.trim()) {
+      return fail(
+        res,
+        400,
+        "EMPTY_ANSWER",
+        "Answer cannot be empty. Provide a response before submitting."
+      );
+    }
+    // Optional minimal length heuristic (can be relaxed via future flag)
+    if (answer.trim().length < 3) {
+      return fail(
+        res,
+        400,
+        "ANSWER_TOO_SHORT",
+        "Answer is too short. Add more detail before submitting."
+      );
+    }
+
     const interview = await Interview.findOne({
       _id: interviewId,
       userId,
@@ -307,9 +326,22 @@ const submitAnswer = async (req, res) => {
     if (interview.status !== "in-progress")
       return fail(res, 400, "INVALID_STATE", "Interview is not in progress");
 
-    const qIndex = parseInt(questionIndex);
-    if (qIndex >= interview.questions.length)
-      return fail(res, 400, "BAD_INDEX", "Invalid question index");
+    const qIndex = Number.parseInt(questionIndex, 10);
+    if (Number.isNaN(qIndex) || qIndex < 0) {
+      return fail(res, 400, "BAD_INDEX", "Question index missing or invalid");
+    }
+    if (qIndex >= interview.questions.length) {
+      return fail(res, 400, "BAD_INDEX", "Question index out of range");
+    }
+
+    Logger.info("[submitAnswer] processing", {
+      interviewId,
+      userId,
+      questionIndex: qIndex,
+      answerLength: answer.length,
+      hasFacial: !!facialMetrics,
+      status: interview.status,
+    });
 
     // Update question response & optional facial metrics snapshot for this question
     interview.questions[qIndex].response = {
