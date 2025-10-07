@@ -147,7 +147,7 @@ const submitAnswer = async (req, res) => {
   const { userId } = req.auth || {};
   const interviewId = req.params.interviewId || req.params.id;
   const { questionIndex } = req.params;
-  const { answer, timeSpent, notes } = req.body || {};
+  const { answer, timeSpent, notes, skip } = req.body || {};
   const list = ensureUser(userId);
   const interview = list.find((i) => i._id === interviewId);
   if (!interview)
@@ -170,6 +170,17 @@ const submitAnswer = async (req, res) => {
       .json({ success: false, message: "Invalid question index" });
   }
   const question = interview.questions[qIndex];
+  if (skip === true) {
+    question.skipped = true;
+    question.skippedAt = now();
+    question.timeSpent = timeSpent || 0;
+    interview.updatedAt = now();
+    return res.json({
+      success: true,
+      message: "Question skipped",
+      data: { questionIndex: qIndex, skipped: true },
+    });
+  }
   question.response = { text: answer, notes: notes || "", submittedAt: now() };
   question.timeSpent = timeSpent || 0;
   // simple scoring

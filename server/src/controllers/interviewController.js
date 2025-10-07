@@ -296,25 +296,38 @@ const submitAnswer = async (req, res) => {
     const { userId } = req.auth;
     const interviewId = req.params.interviewId || req.params.id;
     const { questionIndex } = req.params;
-    const { answer, timeSpent, notes, facialMetrics } = req.body;
+  const { answer, timeSpent, notes, facialMetrics, skip } = req.body;
 
-    // Basic validation – ensure non-empty textual answer unless explicit skip flag added later
-    if (typeof answer !== "string" || !answer.trim()) {
-      return fail(
-        res,
-        400,
-        "EMPTY_ANSWER",
-        "Answer cannot be empty. Provide a response before submitting."
-      );
-    }
-    // Optional minimal length heuristic (can be relaxed via future flag)
-    if (answer.trim().length < 3) {
-      return fail(
-        res,
-        400,
-        "ANSWER_TOO_SHORT",
-        "Answer is too short. Add more detail before submitting."
-      );
+    // If explicitly skipping, bypass answer validation (skip requires truthy boolean and no meaningful answer text)
+    if (skip === true) {
+      // proceed, but ensure no non-trivial answer is being smuggled with skip
+      if (answer && answer.trim().length > 0) {
+        return fail(
+          res,
+          400,
+          "SKIP_WITH_ANSWER",
+          "Provide either an answer or skip, not both."
+        );
+      }
+    } else {
+      // Basic validation – ensure non-empty textual answer when not skipping
+      if (typeof answer !== "string" || !answer.trim()) {
+        return fail(
+          res,
+          400,
+          "EMPTY_ANSWER",
+          "Answer cannot be empty. Provide a response before submitting or use skip."
+        );
+      }
+      // Optional minimal length heuristic (can be relaxed via future flag)
+      if (answer.trim().length < 3) {
+        return fail(
+          res,
+          400,
+          "ANSWER_TOO_SHORT",
+          "Answer is too short. Add more detail before submitting."
+        );
+      }
     }
 
     const interview = await Interview.findOne({
@@ -338,31 +351,45 @@ const submitAnswer = async (req, res) => {
       interviewId,
       userId,
       questionIndex: qIndex,
-      answerLength: answer.length,
+      isSkip: !!skip,
+      answerLength: answer ? answer.length : 0,
       hasFacial: !!facialMetrics,
       status: interview.status,
     });
 
-    // Update question response & optional facial metrics snapshot for this question
-    interview.questions[qIndex].response = {
-      text: answer,
-      notes: notes || "",
-      submittedAt: new Date(),
-    };
-    interview.questions[qIndex].timeSpent = timeSpent || 0;
-    if (facialMetrics && typeof facialMetrics === "object") {
-      interview.questions[qIndex].facial = {
-        eyeContact: facialMetrics.eyeContact,
-        blinkRate: facialMetrics.blinkRate,
-        smilePercentage: facialMetrics.smilePercentage,
-        headSteadiness: facialMetrics.headSteadiness,
-        offScreenPercentage: facialMetrics.offScreenPercentage,
-        confidenceScore: facialMetrics.confidenceScore,
-        capturedAt: new Date(),
+    // If skipping: record skip metadata and do not evaluate or generate follow-ups
+    if (skip === true) {
+      interview.questions[qIndex].skipped = true;
+      interview.questions[qIndex].skippedAt = new Date();
+      interview.questions[qIndex].timeSpent = timeSpent || 0;
+      await interview.save();
+      return ok(
+        res,
+        { questionIndex: qIndex, skipped: true },
+        "Question skipped"
+      );
+    } else {
+      // Update question response & optional facial metrics snapshot for this question
+      interview.questions[qIndex].response = {
+        text: answer,
+        notes: notes || "",
+        submittedAt: new Date(),
       };
+      interview.questions[qIndex].timeSpent = timeSpent || 0;
+      if (facialMetrics && typeof facialMetrics === "object") {
+        interview.questions[qIndex].facial = {
+          eyeContact: facialMetrics.eyeContact,
+          blinkRate: facialMetrics.blinkRate,
+          smilePercentage: facialMetrics.smilePercentage,
+          headSteadiness: facialMetrics.headSteadiness,
+          offScreenPercentage: facialMetrics.offScreenPercentage,
+          confidenceScore: facialMetrics.confidenceScore,
+          capturedAt: new Date(),
+        };
+      }
     }
 
-    // AI-powered scoring with enhanced feedback
+  // AI-powered scoring with enhanced feedback (already returned if skip)
     let evaluation;
     try {
       Logger.info("Evaluating answer with AI for question:", qIndex);

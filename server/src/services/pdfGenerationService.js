@@ -104,15 +104,16 @@ class PDFGenerationService {
     doc.fontSize(10)
        .fillColor('#374151')
        .text(`Total Questions: ${metrics.totalQuestions}`, 50, startY)
-       .text(`Questions Answered: ${metrics.answeredQuestions}`, 50, startY + 15)
-       .text(`Completion Rate: ${metrics.completionRate}%`, 50, startY + 30);
+  .text(`Questions Answered: ${metrics.answeredQuestions}`, 50, startY + 15)
+  .text(`Questions Skipped: ${metrics.skippedQuestions || 0}`, 50, startY + 30)
+  .text(`Completion Rate: ${metrics.completionRate}%`, 50, startY + 45);
 
     // Right column
     doc.text(`Average Score: ${metrics.averageScore}/100`, 300, startY)
        .text(`Total Time: ${summary.sessionInfo.totalDuration} minutes`, 300, startY + 15)
        .text(`Avg. Response Time: ${metrics.averageResponseTime}s`, 300, startY + 30);
 
-    doc.y = startY + 60;
+  doc.y = startY + 75;
   }
 
   addPerformanceMetrics(doc, summary) {

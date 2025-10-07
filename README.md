@@ -12,12 +12,14 @@ MockMate is a comprehensive AI-powered interview practice application that helps
 This project has evolved through iterative "batches" of enhancements. Highlights of the last three batches:
 
 ### Batch 1 – Subscription & Core Infrastructure
+
 - Centralized plan configuration (Free = 5 interviews / month, Premium = unlimited via `null`).
 - Quota tracking & idempotent consumption (`consumeFreeInterview`) with automatic monthly reset helpers.
 - Bootstrap endpoint (`GET /api/bootstrap`) returning `subscription` at root and inside analytics for fast client hydration.
 - Dev self-upgrade endpoint (`POST /api/dev/upgrade-self`) for promoting a mock/dev user to premium locally.
 
 ### Batch 2 – Adaptive Difficulty & Global Facial Metrics
+
 - Adaptive difficulty seeding + runtime question progression.
 - Difficulty history timeline + lightweight sparkline visualization.
 - Interview completion stores a global facial metrics snapshot (eyeContact, blinkRate, smilePercentage, headSteadiness, offScreenPercentage, confidenceScore, environmentQuality).
@@ -25,6 +27,7 @@ This project has evolved through iterative "batches" of enhancements. Highlights
 - Transcript polling endpoint & viewer.
 
 ### Batch 3 – Precision Control, Granular Metrics & Export
+
 - Explicit adaptive difficulty override: `PATCH /api/interviews/:id/adaptive-difficulty`.
 - Per-question facial metrics ingestion (sent with `submitAnswer`).
 - Metrics export: CSV & PDF (`GET /api/interviews/:id/metrics/export[?format=pdf]`).
@@ -296,7 +299,10 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 - `GET /api/interviews` - Get user interviews
 - `GET /api/interviews/:id` - Get specific interview
 - `PUT /api/interviews/:id/start` - Start interview (activates quota decrement & timing)
-- `POST /api/interviews/:id/answer/:questionIndex` - Submit answer (body: `{ answer, timeSpent?, notes?, facialMetrics? }`)
+- `POST /api/interviews/:id/answer/:questionIndex` - Submit answer or skip. Body:
+   - To answer: `{ answer: string, timeSpent?, notes?, facialMetrics? }`
+   - To skip: `{ skip: true, timeSpent? }` (must NOT include a non-empty `answer`). Returns `{ questionIndex, skipped: true }`.
+   - Validation errors: `EMPTY_ANSWER`, `ANSWER_TOO_SHORT`, `SKIP_WITH_ANSWER`.
 - `POST /api/interviews/:id/followup/:questionIndex` - Generate (or fetch cached) follow-up questions
 - `POST /api/interviews/:id/adaptive-question` - Fetch next adaptive question (when adaptive enabled)
 - `PATCH /api/interviews/:id/adaptive-difficulty` - Explicitly override current adaptive difficulty
@@ -306,10 +312,12 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 - `GET /api/interviews/:id/metrics/export?format=pdf` - Export metrics (PDF)
 
 ### Bootstrap & Subscription
+
 - `GET /api/bootstrap` - Hydrate client with auth/profile/subscription & basic analytics
 - `POST /api/dev/upgrade-self` - (Dev only) Upgrade current mock user to premium
 
 ### Adaptive Difficulty (Summary)
+
 Difficulty shifts are automatically recommended based on score thresholds and stored in `config.adaptiveDifficulty.difficultyHistory`. Manual overrides create a synthetic history entry with `score: null`.
 
 ### Questions
@@ -332,10 +340,12 @@ Difficulty shifts are automatically recommended based on score thresholds and st
 - `GET /api/reports` - Get user reports
 
 ### Transcripts & Media
+
 - `GET /api/interviews/:id/transcripts` - Incremental transcript polling
 - (Video upload / playback routes under `/api/video/*`) – See feature docs or code for details
 
 ### Exports
+
 - CSV Header Fields: `questionIndex,category,difficulty,score,timeSpent,eyeContact,blinkRate,smilePercentage,headSteadiness,offScreen,confidence`
 - PDF mirrors CSV with a compact pipe-delimited layout.
 
@@ -351,14 +361,15 @@ The application uses a custom design system built with Tailwind CSS:
 
 ## 📊 Subscription & Quotas
 
-| Plan | Monthly Interviews | Marker |
-|------|--------------------|--------|
-| Free | 5                  | Numeric countdown (resets monthly) |
-| Premium | Unlimited       | `interviewsRemaining: null` |
+| Plan    | Monthly Interviews | Marker                             |
+| ------- | ------------------ | ---------------------------------- |
+| Free    | 5                  | Numeric countdown (resets monthly) |
+| Premium | Unlimited          | `interviewsRemaining: null`        |
 
 `consumeFreeInterview()` is idempotent & safe against double-start races. Use `GET /api/bootstrap` to retrieve the current plan & remaining quota.
 
 Dev upgrade (mock mode):
+
 ```bash
 curl -X POST http://localhost:5000/api/dev/upgrade-self \\
    -H "Authorization: Bearer test"
@@ -367,24 +378,28 @@ curl -X POST http://localhost:5000/api/dev/upgrade-self \\
 ## 🧠 Adaptive Difficulty & Scoring
 
 Heuristic thresholds (simplified):
+
 - Score < 45 → Recommend easier
 - Score ≥ 75 → Recommend harder
 - Mid-range → Stay same
 
 History entry shape:
+
 ```json
 {
-   "questionIndex": 2,
-   "difficulty": "intermediate",
-   "score": 68,
-   "timestamp": "2025-10-07T12:34:56.000Z"
+  "questionIndex": 2,
+  "difficulty": "intermediate",
+  "score": 68,
+  "timestamp": "2025-10-07T12:34:56.000Z"
 }
 ```
+
 Manual override appends `{ score: null }` preserving an auditable trail.
 
 ## 🪞 Facial Metrics
 
 Two levels of capture:
+
 - Global snapshot (on completion): `interview.metrics.{ eyeContactScore, blinkRate, smilePercentage, headSteadiness, offScreenPercentage, environmentQuality, confidenceScore }`
 - Per-question (on answer): `questions[n].facial.{ eyeContact, blinkRate, smilePercentage, headSteadiness, offScreenPercentage, confidenceScore, capturedAt }`
 
@@ -393,14 +408,18 @@ Premium-only panels in the UI surface live metrics and the adaptive difficulty s
 ## 📤 Metrics Export
 
 CSV Example:
+
 ```csv
 questionIndex,category,difficulty,score,timeSpent,eyeContact,blinkRate,smilePercentage,headSteadiness,offScreen,confidence
 0,"technical",intermediate,62,55,0.82,18,24,0.91,0.03,0.74
 ```
 
 Client consumption hint (React):
+
 ```js
-const blob = await adaptiveService.exportMetricsCsv(interviewId).then(r => r.data);
+const blob = await adaptiveService
+  .exportMetricsCsv(interviewId)
+  .then((r) => r.data);
 // createObjectURL & download
 ```
 

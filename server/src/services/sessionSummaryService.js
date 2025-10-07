@@ -66,8 +66,9 @@ class SessionSummaryService {
    * Calculate aggregate metrics for the session
    */
   calculateAggregateMetrics(interview) {
-    const questions = interview.questions || [];
-    const answeredQuestions = questions.filter(q => q.response && q.response.text);
+  const questions = interview.questions || [];
+  const skippedQuestions = questions.filter(q => q.skipped).length;
+  const answeredQuestions = questions.filter(q => q.response && q.response.text && !q.skipped);
     
     // Calculate average score
     const scores = answeredQuestions.map(q => q.score?.overall || 0);
@@ -76,7 +77,8 @@ class SessionSummaryService {
       : 0;
 
     // Calculate completion rate
-    const completionRate = questions.length > 0 
+    // Completion rate considers only answered vs total (skips still count as not answered)
+    const completionRate = questions.length > 0
       ? Math.round((answeredQuestions.length / questions.length) * 100)
       : 0;
 
@@ -88,7 +90,8 @@ class SessionSummaryService {
 
     return {
       totalQuestions: questions.length,
-      answeredQuestions: answeredQuestions.length,
+  answeredQuestions: answeredQuestions.length,
+  skippedQuestions,
       averageScore,
       completionRate,
       totalResponseTime,

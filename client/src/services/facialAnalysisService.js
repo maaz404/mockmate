@@ -10,18 +10,19 @@ class FacialAnalysisService {
       smilePercentage: 0,
       offScreenPercentage: 0,
       confidenceScore: 0,
-      environmentQuality: 0
+      environmentQuality: 0,
     };
     this.baseline = null;
   }
 
   async initialize() {
-    console.log('Facial Analysis Service initialized (mock mode)');
+    console.log("Facial Analysis Service initialized (mock mode)");
     this.isInitialized = true;
     return true;
   }
 
-  async startBaseline(videoElement) {
+  async startBaseline(_videoElement) {
+    // _videoElement intentionally unused (mock placeholder)
     return new Promise((resolve) => {
       setTimeout(() => {
         this.baseline = { completed: true };
@@ -30,7 +31,8 @@ class FacialAnalysisService {
     });
   }
 
-  startAnalysis(videoElement, onMetricsUpdate) {
+  startAnalysis(_videoElement, onMetricsUpdate) {
+    // _videoElement intentionally unused (mock placeholder)
     // Mock analysis with random metrics
     this.analysisInterval = setInterval(() => {
       this.metrics = {
@@ -40,9 +42,9 @@ class FacialAnalysisService {
         smilePercentage: Math.random() * 30,
         offScreenPercentage: Math.random() * 10,
         confidenceScore: 60 + Math.random() * 40,
-        environmentQuality: 80 + Math.random() * 20
+        environmentQuality: 80 + Math.random() * 20,
       };
-      
+
       if (onMetricsUpdate) {
         onMetricsUpdate(this.metrics);
       }
@@ -69,16 +71,16 @@ class FacialAnalysisService {
       detectionRate: 94.4,
       recommendations: [
         {
-          type: 'eye_contact',
-          message: 'Try to maintain more eye contact with the camera',
-          priority: 'medium'
+          type: "eye_contact",
+          message: "Try to maintain more eye contact with the camera",
+          priority: "medium",
         },
         {
-          type: 'stability',
-          message: 'Keep your head more stable during responses',
-          priority: 'low'
-        }
-      ]
+          type: "stability",
+          message: "Keep your head more stable during responses",
+          priority: "low",
+        },
+      ],
     };
   }
 

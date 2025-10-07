@@ -97,6 +97,9 @@ const questionSubSchema = new mongoose.Schema(
       confidenceScore: Number,
       capturedAt: Date,
     },
+    // Explicit skip state (user chose to skip this question instead of answering)
+    skipped: { type: Boolean, default: false },
+    skippedAt: Date,
   },
   { _id: false, strict: false }
 );
