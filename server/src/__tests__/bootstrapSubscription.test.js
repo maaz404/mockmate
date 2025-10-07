@@ -31,7 +31,9 @@ describe("GET /api/bootstrap subscription shape", () => {
       .set("Authorization", "Bearer test")
       .set("x-user-id", userId)
       .set("x-test-premium", "true")
-      .expect(200);
+    // eslint-disable-next-line no-console
+    console.log('BOOTSTRAP_DEBUG_STATUS', res.status, res.body);
+    expect(res.status).toBe(200);
 
     expect(res.body).toHaveProperty("data.subscription");
     expect(res.body.data.subscription).toHaveProperty("plan", "premium");
