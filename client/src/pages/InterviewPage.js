@@ -12,6 +12,9 @@ const InterviewPage = () => {
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [submittingAnswer, setSubmittingAnswer] = useState(false);
+  const [skipping, setSkipping] = useState(false);
+  const [validationError, setValidationError] = useState(null); // Holds backend validation errors for current question
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState({});
@@ -35,6 +38,8 @@ const InterviewPage = () => {
       return 0;
     const answerText = responses[currentQuestionIndex] || "";
     try {
+      setSubmittingAnswer(true);
+      setValidationError(null);
       const timeSpentSec = Math.max(
         0,
         Math.round((Date.now() - questionStartTime) / 1000)
@@ -75,7 +80,15 @@ const InterviewPage = () => {
         currentQuestionIndex,
         e
       );
+      const code = e?.response?.data?.code;
+      if (code === "EMPTY_ANSWER" || code === "ANSWER_TOO_SHORT") {
+        setValidationError(e?.response?.data?.message || "Validation error");
+        return 0; // treat as no follow-ups
+      }
       return 0;
+    }
+    finally {
+      setSubmittingAnswer(false);
     }
   }, [
     interview,
@@ -256,6 +269,8 @@ const InterviewPage = () => {
   const handleSkip = async () => {
     if (!interview) return;
     try {
+      setSkipping(true);
+      setValidationError(null);
       const timeSpentSec = Math.max(
         0,
         Math.round((Date.now() - questionStartTime) / 1000)
@@ -265,7 +280,9 @@ const InterviewPage = () => {
         { skip: true, timeSpent: timeSpentSec }
       );
       toast("Question skipped", { icon: "⏭️" });
-      setCurrentQuestionIndex((idx) => Math.min(idx + 1, (interview.questions?.length || 1) - 1));
+      setCurrentQuestionIndex((idx) =>
+        Math.min(idx + 1, (interview.questions?.length || 1) - 1)
+      );
       setQuestionStartTime(Date.now());
     } catch (e) {
       toast.error(
@@ -273,6 +290,8 @@ const InterviewPage = () => {
           e?.response?.data?.error ||
           "Failed to skip question"
       );
+    } finally {
+      setSkipping(false);
     }
   };
 
@@ -671,6 +690,11 @@ const InterviewPage = () => {
                 className="form-input-dark h-32"
                 placeholder="Take notes or outline your response here..."
               />
+              {validationError && (
+                <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  {validationError}
+                </div>
+              )}
               <p className="text-sm text-surface-600 dark:text-surface-400 mt-2">
                 These notes are saved with your answer for scoring and
                 follow-ups.
@@ -696,12 +720,31 @@ const InterviewPage = () => {
               <button
                 type="button"
                 onClick={handleSkip}
-                className="flex-1 bg-amber-500 text-white rounded-lg px-4 py-2 hover:bg-amber-600 focus:ring-2 focus:ring-amber-400"
+                disabled={skipping || currentQuestionIndex === (interview?.questions?.length || 1) - 1}
+                className={`flex-1 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 transition-colors ${
+                  currentQuestionIndex === (interview?.questions?.length || 1) - 1
+                    ? "bg-surface-300 text-surface-500 cursor-not-allowed dark:bg-surface-600 dark:text-surface-400"
+                    : skipping
+                    ? "bg-amber-400 text-white cursor-wait"
+                    : "bg-amber-500 text-white hover:bg-amber-600"
+                }`}
               >
-                Skip
+                {currentQuestionIndex === (interview?.questions?.length || 1) - 1
+                  ? "Skip (N/A)"
+                  : skipping
+                  ? "Skipping..."
+                  : "Skip"}
               </button>
-              <button onClick={handleNext} className="flex-1 btn-primary">
-                {currentQuestionIndex >= targetCount - 1
+              <button
+                onClick={handleNext}
+                disabled={submittingAnswer}
+                className={`flex-1 btn-primary ${
+                  submittingAnswer ? "opacity-70 cursor-wait" : ""
+                }`}
+              >
+                {submittingAnswer
+                  ? "Submitting..."
+                  : currentQuestionIndex >= targetCount - 1
                   ? "Finish Interview"
                   : "Next Question"}
               </button>
