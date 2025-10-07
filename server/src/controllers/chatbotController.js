@@ -26,6 +26,14 @@ exports.health = async (req, res) => {
         available: isConfigured,
         model: process.env.GROK_MODEL || "grok-beta",
         validation,
+        diagnostics: {
+          hasApiKey: !!process.env.GROK_API_KEY,
+          env: process.env.NODE_ENV,
+          openAIFallbackEnabled:
+            (process.env.GROK_ENABLE_OPENAI_FALLBACK || "true").toLowerCase() ===
+            "true",
+          appOnlyMode: (process.env.CHATBOT_APP_ONLY || "false").toLowerCase() === "true",
+        },
       },
       requestId: req.requestId,
     });

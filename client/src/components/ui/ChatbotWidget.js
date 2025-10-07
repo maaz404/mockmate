@@ -116,14 +116,38 @@ const ChatbotWidget = () => {
     if (isOpen && suggestions.length === 0) loadSuggestions();
   }, [isOpen, suggestions.length]);
 
-  // Health
+  // Health (with validation + diagnostics surfaced)
   useEffect(() => {
     (async () => {
       try {
-        const response = await api.get("/chatbot/health");
-        setChatbotAvailable(!!response.data.chatbot.available);
-      } catch {
-        setChatbotAvailable(false);
+        const response = await api.get("/chatbot/health?validate=true");
+        const { chatbot } = response.data || {};
+        const available = !!chatbot?.available && chatbot?.diagnostics?.hasApiKey;
+        setChatbotAvailable(available);
+        if (!available) {
+          if (chatbot?.validation && chatbot.validation.valid === false) {
+            setServiceNotice(
+              `Chatbot unavailable: ${chatbot.validation.reason || "validation failed"}`
+            );
+          } else if (chatbot?.diagnostics && !chatbot.diagnostics.hasApiKey) {
+            setServiceNotice("Chatbot API key missing on server");
+          } else {
+            setServiceNotice("Chatbot service not configured");
+          }
+        }
+      } catch (e) {
+        // Attempt a lighter retry once (no validation) after short delay
+        setTimeout(async () => {
+          try {
+            const response2 = await api.get("/chatbot/health");
+            const ok = !!response2.data?.chatbot?.available;
+            setChatbotAvailable(ok);
+            if (!ok) setServiceNotice("AI assistant unreachable (health)");
+          } catch (e2) {
+            setChatbotAvailable(false);
+            setServiceNotice("AI assistant network error");
+          }
+        }, 1200);
       }
     })();
   }, []);
