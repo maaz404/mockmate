@@ -58,10 +58,17 @@ router.post("/start/:interviewId", requireAuth, async (req, res) => {
     const { userId } = req.auth;
     const { interviewId } = req.params;
 
-    const interview = await Interview.findOne({
-      _id: interviewId,
-      userId,
-    });
+    // Validate interviewId format early to avoid CastError noise
+    const mongoose = require("mongoose");
+    if (!mongoose.Types.ObjectId.isValid(interviewId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid interview id format",
+        code: "INVALID_INTERVIEW_ID",
+      });
+    }
+
+    const interview = await Interview.findOne({ _id: interviewId, userId });
 
     if (!interview) {
       return res.status(404).json({
