@@ -693,6 +693,13 @@ const InterviewPage = () => {
               >
                 Previous
               </button>
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="flex-1 bg-amber-500 text-white rounded-lg px-4 py-2 hover:bg-amber-600 focus:ring-2 focus:ring-amber-400"
+              >
+                Skip
+              </button>
               <button onClick={handleNext} className="flex-1 btn-primary">
                 {currentQuestionIndex >= targetCount - 1
                   ? "Finish Interview"
@@ -725,13 +732,6 @@ const InterviewPage = () => {
                         ? "bg-primary-600"
                         : "bg-surface-600"
                     }`}
-                    <button
-                      type="button"
-                      onClick={handleSkip}
-                      className="px-4 py-2 rounded bg-amber-500 text-white hover:bg-amber-600"
-                    >
-                      Skip
-                    </button>
                   >
                     <div
                       className={`bg-white dark:bg-surface-100 w-4 h-4 rounded-full transition-transform ${
