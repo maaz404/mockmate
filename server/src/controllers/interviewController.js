@@ -592,9 +592,28 @@ const completeInterview = async (req, res) => {
       interview.timing = {};
     }
     interview.timing.completedAt = new Date();
-    interview.timing.totalDuration = Math.round(
-      (interview.timing.completedAt - interview.timing.startedAt) /
-        C.MINUTE_IN_MS
+    if (!interview.timing.startedAt) {
+      // Fallback: if start timestamp missing, approximate using question answer times
+      const anyAnswerTs = (interview.questions || [])
+        .map((q) => q?.response?.submittedAt)
+        .filter(Boolean)
+        .sort();
+      if (anyAnswerTs.length) {
+        interview.timing.startedAt = anyAnswerTs[0];
+      } else {
+        // fallback to completion minus configured duration (minutes)
+        const durMin = interview.config?.duration || 30; // eslint-disable-line no-magic-numbers
+        interview.timing.startedAt = new Date(
+          interview.timing.completedAt.getTime() - durMin * 60 * 1000
+        );
+      }
+    }
+    interview.timing.totalDuration = Math.max(
+      0,
+      Math.round(
+        (interview.timing.completedAt - interview.timing.startedAt) /
+          C.MINUTE_IN_MS
+      )
     );
 
     // Calculate overall results
@@ -684,7 +703,10 @@ const completeInterview = async (req, res) => {
       typeof interview.timing?.totalDuration === "number"
         ? interview.timing.totalDuration * 60 * 1000
         : 0;
+    // Preserve previously merged facial metrics if present
+    const existingMetrics = interview.metrics || {};
     interview.metrics = {
+      ...existingMetrics,
       totalQuestions,
       avgScore,
       avgAnswerDurationMs,
