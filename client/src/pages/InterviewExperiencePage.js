@@ -45,6 +45,10 @@ const InterviewExperiencePage = () => {
   const [codingSubmitting, setCodingSubmitting] = useState(false);
   const [codingCompleted, setCodingCompleted] = useState(false);
   const [codingSummary, setCodingSummary] = useState(null);
+  // Adaptive difficulty visual & control state
+  const [adaptiveInfoMap, setAdaptiveInfoMap] = useState({}); // questionIndex -> adaptiveInfo
+  const [adaptiveOverrideLoading, setAdaptiveOverrideLoading] = useState(false);
+  const [skipping, setSkipping] = useState(false);
 
   // Facial analysis
   const facialEnabled = interview?.config?.facialAnalysis?.enabled || false;
@@ -102,17 +106,78 @@ const InterviewExperiencePage = () => {
         currentQuestionIndex,
         { answer: currentAnswer, timeSpent: 0 }
       );
-      if (resp.success && resp.data.followUpQuestions?.length) {
-        setFollowUpQuestions((p) => ({
-          ...p,
-          [currentQuestionIndex]: resp.data.followUpQuestions,
-        }));
-        setShowFollowUps((p) => ({ ...p, [currentQuestionIndex]: true }));
+      if (resp.success) {
+        if (resp.data?.adaptiveInfo) {
+          setAdaptiveInfoMap((m) => ({ ...m, [currentQuestionIndex]: resp.data.adaptiveInfo }));
+        }
+        if (resp.data.followUpQuestions?.length) {
+          setFollowUpQuestions((p) => ({
+            ...p,
+            [currentQuestionIndex]: resp.data.followUpQuestions,
+          }));
+          setShowFollowUps((p) => ({ ...p, [currentQuestionIndex]: true }));
+        }
       }
     } finally {
       setLoadingFollowUps((p) => ({ ...p, [currentQuestionIndex]: false }));
     }
   }, [interview, currentAnswer, interviewId, currentQuestionIndex]);
+
+  // Skip logic
+  const handleSkip = useCallback(async () => {
+    if (!interview) return;
+    try {
+      setSkipping(true);
+      await apiService.post(`/interviews/${interviewId}/answer/${currentQuestionIndex}`, { skip: true, timeSpent: 0 });
+      // Move forward similar to next logic
+      if (currentQuestionIndex < interview.questions.length - 1) {
+        setCurrentQuestionIndex((i) => i + 1);
+        setCurrentAnswer("");
+      } else if (interview.config?.adaptiveDifficulty?.enabled) {
+        try {
+          const nq = await apiService.post(`/interviews/${interviewId}/adaptive-question`);
+          const newQ = nq?.data?.data?.question;
+            if (newQ) {
+              const normalized = {
+                _id: newQ.id || newQ.questionId,
+                questionText: newQ.text || newQ.questionText,
+                text: newQ.text || newQ.questionText,
+                category: newQ.category,
+                type: newQ.category === 'coding' ? 'technical' : 'general',
+                difficulty: newQ.difficulty,
+                timeAllocated: newQ.timeAllocated || 300,
+              };
+              setInterview((prev) => ({ ...prev, questions: [...prev.questions, normalized] }));
+              setCurrentQuestionIndex((i) => i + 1);
+              setCurrentAnswer("");
+            } else {
+              handleInterviewComplete();
+            }
+        } catch (_) {
+          handleInterviewComplete();
+        }
+      } else {
+        handleInterviewComplete();
+      }
+    } catch (_) {
+      // ignore for now
+    } finally {
+      setSkipping(false);
+    }
+  }, [interview, currentQuestionIndex, interviewId, handleInterviewComplete]);
+
+  const overrideDifficulty = async (difficulty) => {
+    if (!interview?.config?.adaptiveDifficulty?.enabled) return;
+    setAdaptiveOverrideLoading(true);
+    try {
+      await apiService.patch(`/interviews/${interviewId}/adaptive-difficulty`, { difficulty });
+      setAdaptiveInfoMap((m) => ({ ...m, [currentQuestionIndex]: { ...(m[currentQuestionIndex] || {}), currentDifficulty: difficulty, suggestedNextDifficulty: difficulty, difficultyWillChange: false, manualOverride: true }}));
+    } catch (_) {
+      /* ignore */
+    } finally {
+      setAdaptiveOverrideLoading(false);
+    }
+  };
 
   // Complete interview
   const handleInterviewComplete = useCallback(async () => {
@@ -766,6 +831,38 @@ const InterviewExperiencePage = () => {
             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-r from-surface-900 via-surface-800 to-surface-600 dark:from-surface-50 dark:via-surface-100 dark:to-surface-300">
               {currentQuestion.text}
             </h2>
+            {interview.config?.adaptiveDifficulty?.enabled && (
+              <div className="mb-6 flex flex-wrap items-center gap-3 text-xs">
+                {(() => {
+                  const info = adaptiveInfoMap[currentQuestionIndex] || {};
+                  const current = info.currentDifficulty || interview.config.adaptiveDifficulty.currentDifficulty || interview.config.difficulty;
+                  const next = info.suggestedNextDifficulty || current;
+                  return (
+                    <>
+                      <span className="px-2 py-1 rounded bg-indigo-600 text-white">Current: {current}</span>
+                      <span className="px-2 py-1 rounded bg-blue-600 text-white">Next Suggestion: {next}</span>
+                      {info.manualOverride && <span className="px-2 py-1 rounded bg-amber-500 text-white">Overridden</span>}
+                      <div className="flex items-center gap-1 ml-2">
+                        {["beginner","intermediate","advanced"].map(d => (
+                          <button
+                            key={d}
+                            disabled={adaptiveOverrideLoading || d===current}
+                            onClick={() => overrideDifficulty(d)}
+                            className={`px-2 py-0.5 rounded border text-[10px] ${d===current ? 'bg-surface-300 dark:bg-surface-700 text-surface-600 cursor-not-allowed' : 'hover:bg-indigo-700 hover:text-white border-indigo-500 text-indigo-600 dark:text-indigo-300'}`}
+                          >{d}</button>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  disabled={skipping}
+                  className={`ml-auto px-3 py-1 rounded bg-amber-500 text-white text-xs hover:bg-amber-600 ${skipping ? 'opacity-60 cursor-wait' : ''}`}
+                >{skipping ? 'Skipping...' : 'Skip'}</button>
+              </div>
+            )}
             {currentQuestion.context && (
               <div className="relative group bg-gradient-to-br from-surface-50 to-surface-100 dark:from-surface-800 dark:to-surface-700 rounded-lg p-4 md:p-5 mb-6 border border-surface-200 dark:border-surface-600 overflow-hidden">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-[radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.15),transparent_70%)]" />
