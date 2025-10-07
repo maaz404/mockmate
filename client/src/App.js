@@ -224,6 +224,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/interview/:interviewId/experience"
+                        element={
+                          <ProtectedRoute>
+                            <InterviewExperiencePage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
                         path="/interview/:interviewId/results"
                         element={
                           <ProtectedRoute>

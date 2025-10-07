@@ -86,8 +86,7 @@ const InterviewPage = () => {
         return 0; // treat as no follow-ups
       }
       return 0;
-    }
-    finally {
+    } finally {
       setSubmittingAnswer(false);
     }
   }, [
@@ -720,16 +719,22 @@ const InterviewPage = () => {
               <button
                 type="button"
                 onClick={handleSkip}
-                disabled={skipping || currentQuestionIndex === (interview?.questions?.length || 1) - 1}
+                disabled={
+                  skipping ||
+                  currentQuestionIndex ===
+                    (interview?.questions?.length || 1) - 1
+                }
                 className={`flex-1 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 transition-colors ${
-                  currentQuestionIndex === (interview?.questions?.length || 1) - 1
+                  currentQuestionIndex ===
+                  (interview?.questions?.length || 1) - 1
                     ? "bg-surface-300 text-surface-500 cursor-not-allowed dark:bg-surface-600 dark:text-surface-400"
                     : skipping
                     ? "bg-amber-400 text-white cursor-wait"
                     : "bg-amber-500 text-white hover:bg-amber-600"
                 }`}
               >
-                {currentQuestionIndex === (interview?.questions?.length || 1) - 1
+                {currentQuestionIndex ===
+                (interview?.questions?.length || 1) - 1
                   ? "Skip (N/A)"
                   : skipping
                   ? "Skipping..."
