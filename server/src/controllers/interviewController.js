@@ -296,7 +296,7 @@ const submitAnswer = async (req, res) => {
     const { userId } = req.auth;
     const interviewId = req.params.interviewId || req.params.id;
     const { questionIndex } = req.params;
-  const { answer, timeSpent, notes, facialMetrics, skip } = req.body;
+    const { answer, timeSpent, notes, facialMetrics, skip } = req.body;
 
     // If explicitly skipping, bypass answer validation (skip requires truthy boolean and no meaningful answer text)
     if (skip === true) {
@@ -389,7 +389,7 @@ const submitAnswer = async (req, res) => {
       }
     }
 
-  // AI-powered scoring with enhanced feedback (already returned if skip)
+    // AI-powered scoring with enhanced feedback (already returned if skip)
     let evaluation;
     try {
       Logger.info("Evaluating answer with AI for question:", qIndex);

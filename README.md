@@ -300,9 +300,9 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 - `GET /api/interviews/:id` - Get specific interview
 - `PUT /api/interviews/:id/start` - Start interview (activates quota decrement & timing)
 - `POST /api/interviews/:id/answer/:questionIndex` - Submit answer or skip. Body:
-   - To answer: `{ answer: string, timeSpent?, notes?, facialMetrics? }`
-   - To skip: `{ skip: true, timeSpent? }` (must NOT include a non-empty `answer`). Returns `{ questionIndex, skipped: true }`.
-   - Validation errors: `EMPTY_ANSWER`, `ANSWER_TOO_SHORT`, `SKIP_WITH_ANSWER`.
+  - To answer: `{ answer: string, timeSpent?, notes?, facialMetrics? }`
+  - To skip: `{ skip: true, timeSpent? }` (must NOT include a non-empty `answer`). Returns `{ questionIndex, skipped: true }`.
+  - Validation errors: `EMPTY_ANSWER`, `ANSWER_TOO_SHORT`, `SKIP_WITH_ANSWER`.
 - `POST /api/interviews/:id/followup/:questionIndex` - Generate (or fetch cached) follow-up questions
 - `POST /api/interviews/:id/adaptive-question` - Fetch next adaptive question (when adaptive enabled)
 - `PATCH /api/interviews/:id/adaptive-difficulty` - Explicitly override current adaptive difficulty

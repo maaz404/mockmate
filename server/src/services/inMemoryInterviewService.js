@@ -55,23 +55,19 @@ const createInterview = async (req, res) => {
   if (!userId)
     return res.status(401).json({ success: false, message: "Unauthorized" });
   if (!config.jobRole || !config.experienceLevel || !config.interviewType) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Missing required interview configuration",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Missing required interview configuration",
+    });
   }
   const interview = buildInterview(userId, config);
   const list = ensureUser(userId);
   list.push(interview);
-  return res
-    .status(201)
-    .json({
-      success: true,
-      message: "Interview created successfully",
-      data: interview,
-    });
+  return res.status(201).json({
+    success: true,
+    message: "Interview created successfully",
+    data: interview,
+  });
 };
 
 const startInterview = async (req, res) => {

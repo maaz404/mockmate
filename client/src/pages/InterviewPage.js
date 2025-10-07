@@ -252,6 +252,30 @@ const InterviewPage = () => {
     }
   };
 
+  // Skip current question without submitting an answer
+  const handleSkip = async () => {
+    if (!interview) return;
+    try {
+      const timeSpentSec = Math.max(
+        0,
+        Math.round((Date.now() - questionStartTime) / 1000)
+      );
+      await apiService.post(
+        `/interviews/${interviewId}/answer/${currentQuestionIndex}`,
+        { skip: true, timeSpent: timeSpentSec }
+      );
+      toast("Question skipped", { icon: "⏭️" });
+      setCurrentQuestionIndex((idx) => Math.min(idx + 1, (interview.questions?.length || 1) - 1));
+      setQuestionStartTime(Date.now());
+    } catch (e) {
+      toast.error(
+        e?.response?.data?.message ||
+          e?.response?.data?.error ||
+          "Failed to skip question"
+      );
+    }
+  };
+
   // Text-to-Speech helpers
   const stopSpeech = useCallback(() => {
     try {
@@ -701,6 +725,13 @@ const InterviewPage = () => {
                         ? "bg-primary-600"
                         : "bg-surface-600"
                     }`}
+                    <button
+                      type="button"
+                      onClick={handleSkip}
+                      className="px-4 py-2 rounded bg-amber-500 text-white hover:bg-amber-600"
+                    >
+                      Skip
+                    </button>
                   >
                     <div
                       className={`bg-white dark:bg-surface-100 w-4 h-4 rounded-full transition-transform ${
