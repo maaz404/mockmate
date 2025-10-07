@@ -49,6 +49,7 @@ const InterviewExperiencePage = () => {
   const [adaptiveInfoMap, setAdaptiveInfoMap] = useState({}); // questionIndex -> adaptiveInfo
   const [adaptiveOverrideLoading, setAdaptiveOverrideLoading] = useState(false);
   const [skipping, setSkipping] = useState(false);
+  const [answerValidationError, setAnswerValidationError] = useState(null);
 
   // Facial analysis
   const facialEnabled = interview?.config?.facialAnalysis?.enabled || false;
@@ -108,7 +109,10 @@ const InterviewExperiencePage = () => {
       );
       if (resp.success) {
         if (resp.data?.adaptiveInfo) {
-          setAdaptiveInfoMap((m) => ({ ...m, [currentQuestionIndex]: resp.data.adaptiveInfo }));
+          setAdaptiveInfoMap((m) => ({
+            ...m,
+            [currentQuestionIndex]: resp.data.adaptiveInfo,
+          }));
         }
         if (resp.data.followUpQuestions?.length) {
           setFollowUpQuestions((p) => ({
@@ -128,31 +132,39 @@ const InterviewExperiencePage = () => {
     if (!interview) return;
     try {
       setSkipping(true);
-      await apiService.post(`/interviews/${interviewId}/answer/${currentQuestionIndex}`, { skip: true, timeSpent: 0 });
+      await apiService.post(
+        `/interviews/${interviewId}/answer/${currentQuestionIndex}`,
+        { skip: true, timeSpent: 0 }
+      );
       // Move forward similar to next logic
       if (currentQuestionIndex < interview.questions.length - 1) {
         setCurrentQuestionIndex((i) => i + 1);
         setCurrentAnswer("");
       } else if (interview.config?.adaptiveDifficulty?.enabled) {
         try {
-          const nq = await apiService.post(`/interviews/${interviewId}/adaptive-question`);
+          const nq = await apiService.post(
+            `/interviews/${interviewId}/adaptive-question`
+          );
           const newQ = nq?.data?.data?.question;
-            if (newQ) {
-              const normalized = {
-                _id: newQ.id || newQ.questionId,
-                questionText: newQ.text || newQ.questionText,
-                text: newQ.text || newQ.questionText,
-                category: newQ.category,
-                type: newQ.category === 'coding' ? 'technical' : 'general',
-                difficulty: newQ.difficulty,
-                timeAllocated: newQ.timeAllocated || 300,
-              };
-              setInterview((prev) => ({ ...prev, questions: [...prev.questions, normalized] }));
-              setCurrentQuestionIndex((i) => i + 1);
-              setCurrentAnswer("");
-            } else {
-              handleInterviewComplete();
-            }
+          if (newQ) {
+            const normalized = {
+              _id: newQ.id || newQ.questionId,
+              questionText: newQ.text || newQ.questionText,
+              text: newQ.text || newQ.questionText,
+              category: newQ.category,
+              type: newQ.category === "coding" ? "technical" : "general",
+              difficulty: newQ.difficulty,
+              timeAllocated: newQ.timeAllocated || 300,
+            };
+            setInterview((prev) => ({
+              ...prev,
+              questions: [...prev.questions, normalized],
+            }));
+            setCurrentQuestionIndex((i) => i + 1);
+            setCurrentAnswer("");
+          } else {
+            handleInterviewComplete();
+          }
         } catch (_) {
           handleInterviewComplete();
         }
@@ -170,8 +182,34 @@ const InterviewExperiencePage = () => {
     if (!interview?.config?.adaptiveDifficulty?.enabled) return;
     setAdaptiveOverrideLoading(true);
     try {
-      await apiService.patch(`/interviews/${interviewId}/adaptive-difficulty`, { difficulty });
-      setAdaptiveInfoMap((m) => ({ ...m, [currentQuestionIndex]: { ...(m[currentQuestionIndex] || {}), currentDifficulty: difficulty, suggestedNextDifficulty: difficulty, difficultyWillChange: false, manualOverride: true }}));
+      await apiService.patch(`/interviews/${interviewId}/adaptive-difficulty`, {
+        difficulty,
+      });
+      setAdaptiveInfoMap((m) => ({
+        ...m,
+        [currentQuestionIndex]: {
+          ...(m[currentQuestionIndex] || {}),
+          currentDifficulty: difficulty,
+          suggestedNextDifficulty: difficulty,
+          difficultyWillChange: false,
+          manualOverride: true,
+        },
+      }));
+      // Update interview local state immediately
+      setInterview((prev) => ({
+        ...prev,
+        config: {
+          ...prev.config,
+          adaptiveDifficulty: {
+            ...prev.config.adaptiveDifficulty,
+            currentDifficulty: difficulty,
+          },
+        },
+      }));
+      setToasts((t) => [
+        ...t,
+        { id: Date.now(), message: `Difficulty set to ${difficulty}` },
+      ]);
     } catch (_) {
       /* ignore */
     } finally {
@@ -419,6 +457,13 @@ const InterviewExperiencePage = () => {
   const handleAnswerChange = (value) => {
     const newVal = typeof value === "string" ? value : value.target.value;
     setCurrentAnswer(newVal);
+    if (!newVal.trim()) {
+      setAnswerValidationError(null);
+    } else if (newVal.trim().length < 3) {
+      setAnswerValidationError("Answer is too short (min 3 characters)");
+    } else {
+      setAnswerValidationError(null);
+    }
     if (codingSessionId && currentChallenge) {
       try {
         localStorage.setItem(
@@ -835,21 +880,38 @@ const InterviewExperiencePage = () => {
               <div className="mb-6 flex flex-wrap items-center gap-3 text-xs">
                 {(() => {
                   const info = adaptiveInfoMap[currentQuestionIndex] || {};
-                  const current = info.currentDifficulty || interview.config.adaptiveDifficulty.currentDifficulty || interview.config.difficulty;
+                  const current =
+                    info.currentDifficulty ||
+                    interview.config.adaptiveDifficulty.currentDifficulty ||
+                    interview.config.difficulty;
                   const next = info.suggestedNextDifficulty || current;
                   return (
                     <>
-                      <span className="px-2 py-1 rounded bg-indigo-600 text-white">Current: {current}</span>
-                      <span className="px-2 py-1 rounded bg-blue-600 text-white">Next Suggestion: {next}</span>
-                      {info.manualOverride && <span className="px-2 py-1 rounded bg-amber-500 text-white">Overridden</span>}
+                      <span className="px-2 py-1 rounded bg-indigo-600 text-white">
+                        Current: {current}
+                      </span>
+                      <span className="px-2 py-1 rounded bg-blue-600 text-white">
+                        Next Suggestion: {next}
+                      </span>
+                      {info.manualOverride && (
+                        <span className="px-2 py-1 rounded bg-amber-500 text-white">
+                          Overridden
+                        </span>
+                      )}
                       <div className="flex items-center gap-1 ml-2">
-                        {["beginner","intermediate","advanced"].map(d => (
+                        {["beginner", "intermediate", "advanced"].map((d) => (
                           <button
                             key={d}
-                            disabled={adaptiveOverrideLoading || d===current}
+                            disabled={adaptiveOverrideLoading || d === current}
                             onClick={() => overrideDifficulty(d)}
-                            className={`px-2 py-0.5 rounded border text-[10px] ${d===current ? 'bg-surface-300 dark:bg-surface-700 text-surface-600 cursor-not-allowed' : 'hover:bg-indigo-700 hover:text-white border-indigo-500 text-indigo-600 dark:text-indigo-300'}`}
-                          >{d}</button>
+                            className={`px-2 py-0.5 rounded border text-[10px] ${
+                              d === current
+                                ? "bg-surface-300 dark:bg-surface-700 text-surface-600 cursor-not-allowed"
+                                : "hover:bg-indigo-700 hover:text-white border-indigo-500 text-indigo-600 dark:text-indigo-300"
+                            }`}
+                          >
+                            {d}
+                          </button>
                         ))}
                       </div>
                     </>
@@ -858,9 +920,21 @@ const InterviewExperiencePage = () => {
                 <button
                   type="button"
                   onClick={handleSkip}
-                  disabled={skipping}
-                  className={`ml-auto px-3 py-1 rounded bg-amber-500 text-white text-xs hover:bg-amber-600 ${skipping ? 'opacity-60 cursor-wait' : ''}`}
-                >{skipping ? 'Skipping...' : 'Skip'}</button>
+                  disabled={skipping || currentQuestionIndex === interview.questions.length - 1}
+                  className={`ml-auto px-3 py-1 rounded text-xs transition-colors ${
+                    currentQuestionIndex === interview.questions.length - 1
+                      ? "bg-surface-400 text-surface-100 cursor-not-allowed dark:bg-surface-600 dark:text-surface-300"
+                      : skipping
+                      ? "bg-amber-400 text-white cursor-wait"
+                      : "bg-amber-500 text-white hover:bg-amber-600"
+                  }`}
+                >
+                  {currentQuestionIndex === interview.questions.length - 1
+                    ? "Skip (N/A)"
+                    : skipping
+                    ? "Skipping..."
+                    : "Skip"}
+                </button>
               </div>
             )}
             {currentQuestion.context && (
@@ -899,6 +973,11 @@ const InterviewExperiencePage = () => {
                   result={codeExecutionResult}
                   loading={isExecutingCode}
                 />
+                {answerValidationError && (
+                  <div className="text-xs text-red-500 font-medium">
+                    {answerValidationError}
+                  </div>
+                )}
                 <p className="text-xs md:text-sm text-surface-500 flex items-start gap-2 bg-surface-100 dark:bg-surface-700/40 rounded-md px-3 py-2 border border-surface-200 dark:border-surface-600">
                   <span className="text-primary-600 dark:text-primary-400">
                     💡
@@ -942,6 +1021,11 @@ const InterviewExperiencePage = () => {
                   placeholder="Provide your detailed answer here..."
                   className="form-input h-48 resize-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500 transition"
                 />
+                {answerValidationError && (
+                  <div className="text-xs text-red-500 font-medium">
+                    {answerValidationError}
+                  </div>
+                )}
                 <p className="text-xs md:text-sm text-surface-500 flex items-start gap-2 bg-surface-100 dark:bg-surface-700/40 rounded-md px-3 py-2 border border-surface-200 dark:border-surface-600">
                   <span className="text-primary-600 dark:text-primary-400">
                     💡
@@ -982,7 +1066,7 @@ const InterviewExperiencePage = () => {
                 {!showFollowUps[currentQuestionIndex] && (
                   <button
                     onClick={handleSubmitAnswerWithFollowUp}
-                    disabled={loadingFollowUps[currentQuestionIndex]}
+                    disabled={loadingFollowUps[currentQuestionIndex] || !!answerValidationError}
                     className="btn-primary text-sm disabled:opacity-50 shadow-sm hover:shadow transition-shadow"
                   >
                     {loadingFollowUps[currentQuestionIndex] ? (
@@ -1056,7 +1140,7 @@ const InterviewExperiencePage = () => {
               {currentAnswer.trim() && !showFollowUps[currentQuestionIndex] && (
                 <button
                   onClick={handleSubmitAnswerWithFollowUp}
-                  disabled={loadingFollowUps[currentQuestionIndex]}
+                  disabled={loadingFollowUps[currentQuestionIndex] || !!answerValidationError}
                   className="btn-primary shadow-sm hover:shadow transition-shadow disabled:opacity-50"
                 >
                   {loadingFollowUps[currentQuestionIndex]

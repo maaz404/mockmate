@@ -177,7 +177,7 @@ const InterviewCreationPage = () => {
 
       if (response.success) {
         // Redirect to the interview
-  navigate(`/interview/${response.data._id}/experience`);
+        navigate(`/interview/${response.data._id}/experience`);
       }
     } catch (error) {
       // Surface server message if available for easier debugging
