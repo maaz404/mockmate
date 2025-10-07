@@ -7,53 +7,46 @@
 
 MockMate is a comprehensive AI-powered interview practice application that helps job seekers prepare for technical and behavioral interviews through realistic simulations and detailed feedback.
 
-## 🎨 Recent Updates
+## 🚀 Recent & Incremental Batches
 
-Over the past few days we delivered major stability and feature work across the stack:
+This project has evolved through iterative "batches" of enhancements. Highlights of the last three batches:
 
-- UI Polish & Theming
+### Batch 1 – Subscription & Core Infrastructure
+- Centralized plan configuration (Free = 5 interviews / month, Premium = unlimited via `null`).
+- Quota tracking & idempotent consumption (`consumeFreeInterview`) with automatic monthly reset helpers.
+- Bootstrap endpoint (`GET /api/bootstrap`) returning `subscription` at root and inside analytics for fast client hydration.
+- Dev self-upgrade endpoint (`POST /api/dev/upgrade-self`) for promoting a mock/dev user to premium locally.
 
-  - Modern dark theme with teal accents, refined typography, and responsive layout
-  - Hover-only scrollbars, improved cards, and dashboard-wide consistency
-  - Favicons, manifest polish, and accessibility improvements (focus, aria-live)
+### Batch 2 – Adaptive Difficulty & Global Facial Metrics
+- Adaptive difficulty seeding + runtime question progression.
+- Difficulty history timeline + lightweight sparkline visualization.
+- Interview completion stores a global facial metrics snapshot (eyeContact, blinkRate, smilePercentage, headSteadiness, offScreenPercentage, confidenceScore, environmentQuality).
+- Premium gating for facial metrics panel.
+- Transcript polling endpoint & viewer.
 
-- Onboarding Experience
+### Batch 3 – Precision Control, Granular Metrics & Export
+- Explicit adaptive difficulty override: `PATCH /api/interviews/:id/adaptive-difficulty`.
+- Per-question facial metrics ingestion (sent with `submitAnswer`).
+- Metrics export: CSV & PDF (`GET /api/interviews/:id/metrics/export[?format=pdf]`).
+- Sparkline feature flag via `REACT_APP_ENABLE_SPARKLINE` (default on) + minimum history threshold.
+- Per-question difficulty + score logging appended to `difficultyHistory` when manually overridden.
 
-  - Presets, smart defaults from recent activity, and live session preview
-  - Gentle validation and micro-coaching with an advanced disclosure for facial analysis
-  - Autosave + Reset to defaults (one-click) with local persistence
-
-- Coding & Judge0 Integration
-
-  - Secure multi-language execution via Judge0 (RapidAPI) with health endpoint
-  - Local JS-only fallback when Judge0 is not configured; UI disables other langs
-  - Expanded harnesses: JS/Python/Java; limited C++ support; explicit C guidance
-  - API: `/api/coding/health`, `/api/coding/test`, session flows
-  - Guide: see JUDGE0_SETUP_GUIDE.md
-
-- Interview Intelligence
-
-  - Adaptive difficulty with history tracking and dynamic next-question selection
-  - AI evaluation with robust fallback scoring and follow-up generation
-  - Hybrid question generation (templates + AI) with DB fallbacks
-
-- Dev Productivity & Stability
-  - Mock auth fallback (development) to run without Clerk tokens
-  - Clerk global middleware skipped in mock mode; route-level auth injects test user
-  - Clear server health `/api/health` and coding health `/api/coding/health`
-
-📖 Useful docs: [UI Redesign Summary](UI_REDESIGN_SUMMARY.md) • [Judge0 Setup](JUDGE0_SETUP_GUIDE.md) • [Clerk Setup](CLERK_SETUP_GUIDE.md)
+📖 Related docs: [UI Redesign Summary](UI_REDESIGN_SUMMARY.md) • [Judge0 Setup](JUDGE0_SETUP_GUIDE.md) • [Clerk Setup](CLERK_SETUP_GUIDE.md) • [ADAPTIVE_DIFFICULTY_GUIDE.md](ADAPTIVE_DIFFICULTY_GUIDE.md)
 
 ## 🚀 Features
 
 - **AI-Generated Questions**: Personalized interview questions based on role, experience, and industry
 - **Video Practice**: Record yourself with webcam integration for comprehensive practice
-- **Facial Expression Analysis**: Real-time analysis of facial expressions and body language
+- **Facial Expression Analysis**: Real-time analysis + per-question & session-level metrics
 - **Detailed Feedback**: AI-powered evaluation of responses with actionable insights
 - **Performance Analytics**: Track progress over time with comprehensive reports
 - **Coding Challenges**: In-browser code editor (Monaco) with multi-language support via Judge0; JS local fallback
 - **Multiple Interview Types**: Behavioral, technical, and mixed interview formats
 - **User Management**: Secure authentication and profile management
+- **Adaptive Difficulty**: Dynamic next-question difficulty + manual override endpoint + history visualization
+- **Exportable Insights**: One-click CSV / PDF export of question & facial performance metrics
+- **Follow-Up Generation**: AI-driven contextual follow-up questions per answer
+- **Transcripts Polling**: Fetch incremental transcript segments for multi-modal review
 
 ## 🛠️ Tech Stack
 
@@ -75,6 +68,7 @@ Over the past few days we delivered major stability and feature work across the 
 - **Mongoose** - MongoDB object modeling for Node.js
 - **Clerk** - Authentication (skipped in dev with mock fallback)
 - **OpenAI API** - AI-powered question generation and response evaluation
+- **pdfkit** - Lightweight server-side PDF generation for metrics export
 
 ### Additional Tools
 
@@ -245,6 +239,10 @@ RAPIDAPI_KEY=your_rapidapi_key
 # OpenAI (optional)
 OPENAI_API_KEY=your_openai_api_key
 
+# Feature Flags / Performance
+ENABLE_ADAPTIVE_SPARKLINE=true
+SPARKLINE_MIN_POINTS=3
+
 # Email Configuration
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -297,6 +295,22 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 - `POST /api/interviews` - Create interview session
 - `GET /api/interviews` - Get user interviews
 - `GET /api/interviews/:id` - Get specific interview
+- `PUT /api/interviews/:id/start` - Start interview (activates quota decrement & timing)
+- `POST /api/interviews/:id/answer/:questionIndex` - Submit answer (body: `{ answer, timeSpent?, notes?, facialMetrics? }`)
+- `POST /api/interviews/:id/followup/:questionIndex` - Generate (or fetch cached) follow-up questions
+- `POST /api/interviews/:id/adaptive-question` - Fetch next adaptive question (when adaptive enabled)
+- `PATCH /api/interviews/:id/adaptive-difficulty` - Explicitly override current adaptive difficulty
+- `POST /api/interviews/:id/complete` - Complete interview & persist global facial metrics snapshot
+- `GET /api/interviews/:id/transcripts` - Poll transcript segments (speech-to-text)
+- `GET /api/interviews/:id/metrics/export` - Export metrics (CSV)
+- `GET /api/interviews/:id/metrics/export?format=pdf` - Export metrics (PDF)
+
+### Bootstrap & Subscription
+- `GET /api/bootstrap` - Hydrate client with auth/profile/subscription & basic analytics
+- `POST /api/dev/upgrade-self` - (Dev only) Upgrade current mock user to premium
+
+### Adaptive Difficulty (Summary)
+Difficulty shifts are automatically recommended based on score thresholds and stored in `config.adaptiveDifficulty.difficultyHistory`. Manual overrides create a synthetic history entry with `score: null`.
 
 ### Questions
 
@@ -317,6 +331,14 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 - `POST /api/reports/generate` - Generate performance report
 - `GET /api/reports` - Get user reports
 
+### Transcripts & Media
+- `GET /api/interviews/:id/transcripts` - Incremental transcript polling
+- (Video upload / playback routes under `/api/video/*`) – See feature docs or code for details
+
+### Exports
+- CSV Header Fields: `questionIndex,category,difficulty,score,timeSpent,eyeContact,blinkRate,smilePercentage,headSteadiness,offScreen,confidence`
+- PDF mirrors CSV with a compact pipe-delimited layout.
+
 ## 🎨 UI Components
 
 The application uses a custom design system built with Tailwind CSS:
@@ -326,6 +348,63 @@ The application uses a custom design system built with Tailwind CSS:
 - **Components**: Cards, buttons, form inputs, modals, and more
 - **Animations**: Smooth transitions and micro-interactions
 - **Accessibility**: Focus management, aria-live announcements in onboarding
+
+## 📊 Subscription & Quotas
+
+| Plan | Monthly Interviews | Marker |
+|------|--------------------|--------|
+| Free | 5                  | Numeric countdown (resets monthly) |
+| Premium | Unlimited       | `interviewsRemaining: null` |
+
+`consumeFreeInterview()` is idempotent & safe against double-start races. Use `GET /api/bootstrap` to retrieve the current plan & remaining quota.
+
+Dev upgrade (mock mode):
+```bash
+curl -X POST http://localhost:5000/api/dev/upgrade-self \\
+   -H "Authorization: Bearer test"
+```
+
+## 🧠 Adaptive Difficulty & Scoring
+
+Heuristic thresholds (simplified):
+- Score < 45 → Recommend easier
+- Score ≥ 75 → Recommend harder
+- Mid-range → Stay same
+
+History entry shape:
+```json
+{
+   "questionIndex": 2,
+   "difficulty": "intermediate",
+   "score": 68,
+   "timestamp": "2025-10-07T12:34:56.000Z"
+}
+```
+Manual override appends `{ score: null }` preserving an auditable trail.
+
+## 🪞 Facial Metrics
+
+Two levels of capture:
+- Global snapshot (on completion): `interview.metrics.{ eyeContactScore, blinkRate, smilePercentage, headSteadiness, offScreenPercentage, environmentQuality, confidenceScore }`
+- Per-question (on answer): `questions[n].facial.{ eyeContact, blinkRate, smilePercentage, headSteadiness, offScreenPercentage, confidenceScore, capturedAt }`
+
+Premium-only panels in the UI surface live metrics and the adaptive difficulty sparkline (configurable via `REACT_APP_ENABLE_SPARKLINE`).
+
+## 📤 Metrics Export
+
+CSV Example:
+```csv
+questionIndex,category,difficulty,score,timeSpent,eyeContact,blinkRate,smilePercentage,headSteadiness,offScreen,confidence
+0,"technical",intermediate,62,55,0.82,18,24,0.91,0.03,0.74
+```
+
+Client consumption hint (React):
+```js
+const blob = await adaptiveService.exportMetricsCsv(interviewId).then(r => r.data);
+// createObjectURL & download
+```
+
+PDF export is a lightweight tabular report (no external rendering service needed).
 
 ## 🤝 Contributing
 
