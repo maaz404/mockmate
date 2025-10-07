@@ -11,6 +11,16 @@ import TranscriptViewer from "../components/interview/TranscriptViewer";
 import { useFacialExpressionAnalysis } from "../hooks/useFacialExpressionAnalysis";
 import FacialMetricsPanel from "../components/interview/FacialMetricsPanel";
 
+// Validation constants
+const MIN_ANSWER_CHARS = 3;
+const MAX_ANSWER_CHARS = 2000;
+const PROHIBITED_PATTERNS = [
+  /drop\s+table/i,
+  /select\s+\*/i,
+  /<script>/i,
+  /hackathon\s+test/i,
+];
+
 // CLEAN RECONSTRUCTION (Baseline) --------------------------------------------------
 // This version purposefully omits the previously broken tab system & toast abstractions.
 // Provides: interview Q&A + follow-ups, coding session rehydration/creation, draft persistence,
@@ -89,13 +99,51 @@ const InterviewExperiencePage = () => {
     }
   }, [interviewId, navigate]);
 
-  // Save current answer to map
+  // Save current answer to map (moved above completion to avoid use-before-define warnings)
   const handleSaveAnswer = useCallback(() => {
     if (!interview) return;
     const q = interview.questions[currentQuestionIndex];
     if (!q) return;
     setAnswers((prev) => ({ ...prev, [q._id]: currentAnswer }));
   }, [interview, currentQuestionIndex, currentAnswer]);
+
+  // Complete interview (moved earlier to avoid use-before-define in skip logic)
+  const handleInterviewComplete = useCallback(async () => {
+    if (submitting) return;
+    try {
+      setSubmitting(true);
+      handleSaveAnswer();
+      const payload = {
+        answers,
+        timeTaken: interview?.duration * 60 - timeRemaining,
+      };
+      if (facialEnabled && facialMetrics) {
+        payload.facialMetrics = facialMetrics;
+      }
+      const resp = await apiService.post(
+        `/interviews/${interviewId}/complete`,
+        payload
+      );
+      if (resp.success) navigate(`/interview/${interviewId}/results`);
+      else throw new Error("Submit failed");
+    } catch (e) {
+      alert("Failed to submit interview.");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [
+    submitting,
+    handleSaveAnswer,
+    interviewId,
+    answers,
+    interview,
+    timeRemaining,
+    navigate,
+    facialEnabled,
+    facialMetrics,
+  ]);
+
+  // (handleSaveAnswer moved earlier)
 
   // Generate follow-up questions
   const handleSubmitAnswerWithFollowUp = useCallback(async () => {
@@ -217,41 +265,6 @@ const InterviewExperiencePage = () => {
     }
   };
 
-  // Complete interview
-  const handleInterviewComplete = useCallback(async () => {
-    if (submitting) return;
-    try {
-      setSubmitting(true);
-      handleSaveAnswer();
-      const payload = {
-        answers,
-        timeTaken: interview?.duration * 60 - timeRemaining,
-      };
-      if (facialEnabled && facialMetrics) {
-        payload.facialMetrics = facialMetrics;
-      }
-      const resp = await apiService.post(
-        `/interviews/${interviewId}/complete`,
-        payload
-      );
-      if (resp.success) navigate(`/interview/${interviewId}/results`);
-      else throw new Error("Submit failed");
-    } catch (e) {
-      alert("Failed to submit interview.");
-    } finally {
-      setSubmitting(false);
-    }
-  }, [
-    submitting,
-    handleSaveAnswer,
-    interviewId,
-    answers,
-    interview,
-    timeRemaining,
-    navigate,
-    facialEnabled,
-    facialMetrics,
-  ]);
 
   // Timer tick
   useEffect(() => {
@@ -455,12 +468,23 @@ const InterviewExperiencePage = () => {
 
   // Editor / textarea change
   const handleAnswerChange = (value) => {
-    const newVal = typeof value === "string" ? value : value.target.value;
+    let newVal = typeof value === "string" ? value : value.target.value;
+    // Enforce max length
+    if (newVal.length > MAX_ANSWER_CHARS) {
+      newVal = newVal.slice(0, MAX_ANSWER_CHARS);
+    }
     setCurrentAnswer(newVal);
-    if (!newVal.trim()) {
+    const trimmed = newVal.trim();
+    if (!trimmed) {
       setAnswerValidationError(null);
-    } else if (newVal.trim().length < 3) {
-      setAnswerValidationError("Answer is too short (min 3 characters)");
+    } else if (trimmed.length < MIN_ANSWER_CHARS) {
+      setAnswerValidationError(
+        `Answer is too short (min ${MIN_ANSWER_CHARS} characters)`
+      );
+    } else if (PROHIBITED_PATTERNS.some((p) => p.test(trimmed))) {
+      setAnswerValidationError(
+        "Answer contains prohibited or unsafe content. Please revise."
+      );
     } else {
       setAnswerValidationError(null);
     }
@@ -566,21 +590,27 @@ const InterviewExperiencePage = () => {
         `/interviews/${interviewId}/adaptive-question`
       );
       if (resp.success && resp.data?.question) {
-        setInterview((prev) => ({
-          ...prev,
-          questions: [
-            ...prev.questions,
-            {
-              _id: resp.data.question.id || `adaptive-${Date.now()}`,
-              questionText: resp.data.question.text,
-              text: resp.data.question.text,
-              category: resp.data.question.category,
-              difficulty: resp.data.question.difficulty,
-              timeAllocated: resp.data.question.timeAllocated,
-              adaptiveGenerated: true,
-            },
-          ],
-        }));
+        setInterview((prev) => {
+          const newQuestion = {
+            _id: resp.data.question.id || `adaptive-${Date.now()}`,
+            questionText: resp.data.question.text,
+            text: resp.data.question.text,
+            category: resp.data.question.category,
+            difficulty: resp.data.question.difficulty,
+            timeAllocated: resp.data.question.timeAllocated,
+            adaptiveGenerated: true,
+          };
+          const updated = {
+            ...prev,
+            questions: [...prev.questions, newQuestion],
+          };
+          // Move to newly added question & reset answer (after state commit)
+            setTimeout(() => {
+              setCurrentQuestionIndex(updated.questions.length - 1);
+              setCurrentAnswer("");
+            }, 0);
+          return updated;
+        });
         // Refresh interview details to pull updated difficulty history from server
         try {
           const detail = await apiService.get(`/interviews/${interviewId}`);
@@ -845,7 +875,7 @@ const InterviewExperiencePage = () => {
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="card p-6 md:p-8 shadow-lg border border-surface-200 dark:border-surface-700/60 bg-white/95 dark:bg-surface-800/80 backdrop-blur-sm">
-          <div className="mb-8">
+          <div id={`question-${currentQuestionIndex}`} className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <span
@@ -914,13 +944,37 @@ const InterviewExperiencePage = () => {
                           </button>
                         ))}
                       </div>
+                      {interview.config?.adaptiveDifficulty?.difficultyHistory?.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 ml-4">
+                          {interview.config.adaptiveDifficulty.difficultyHistory
+                            .slice(-8)
+                            .map((d, idx) => (
+                              <span
+                                key={idx}
+                                title={`Q${d.questionIndex + 1 || idx + 1}: ${d.difficulty}`}
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                                  d.difficulty === "beginner"
+                                    ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700"
+                                    : d.difficulty === "intermediate"
+                                    ? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700"
+                                    : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700"
+                                }`}
+                              >
+                                {d.difficulty.charAt(0).toUpperCase()}
+                              </span>
+                            ))}
+                        </div>
+                      )}
                     </>
                   );
                 })()}
                 <button
                   type="button"
                   onClick={handleSkip}
-                  disabled={skipping || currentQuestionIndex === interview.questions.length - 1}
+                  disabled={
+                    skipping ||
+                    currentQuestionIndex === interview.questions.length - 1
+                  }
                   className={`ml-auto px-3 py-1 rounded text-xs transition-colors ${
                     currentQuestionIndex === interview.questions.length - 1
                       ? "bg-surface-400 text-surface-100 cursor-not-allowed dark:bg-surface-600 dark:text-surface-300"
@@ -978,6 +1032,28 @@ const InterviewExperiencePage = () => {
                     {answerValidationError}
                   </div>
                 )}
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span
+                    className={
+                      currentAnswer.trim().length < MIN_ANSWER_CHARS && currentAnswer.trim().length > 0
+                        ? "text-amber-600"
+                        : "text-surface-500 dark:text-surface-400"
+                    }
+                  >
+                    {currentAnswer.trim().length < MIN_ANSWER_CHARS && currentAnswer.trim().length > 0
+                      ? `${MIN_ANSWER_CHARS - currentAnswer.trim().length} more chars needed`
+                      : `Min ${MIN_ANSWER_CHARS}`}
+                  </span>
+                  <span
+                    className={
+                      currentAnswer.length > MAX_ANSWER_CHARS * 0.9
+                        ? "text-amber-600"
+                        : "text-surface-500 dark:text-surface-400"
+                    }
+                  >
+                    {currentAnswer.length}/{MAX_ANSWER_CHARS}
+                  </span>
+                </div>
                 <p className="text-xs md:text-sm text-surface-500 flex items-start gap-2 bg-surface-100 dark:bg-surface-700/40 rounded-md px-3 py-2 border border-surface-200 dark:border-surface-600">
                   <span className="text-primary-600 dark:text-primary-400">
                     💡
@@ -1026,6 +1102,28 @@ const InterviewExperiencePage = () => {
                     {answerValidationError}
                   </div>
                 )}
+                <div className="flex items-center justify-between text-[11px] font-mono -mt-1">
+                  <span
+                    className={
+                      currentAnswer.trim().length < MIN_ANSWER_CHARS && currentAnswer.trim().length > 0
+                        ? "text-amber-600"
+                        : "text-surface-500 dark:text-surface-400"
+                    }
+                  >
+                    {currentAnswer.trim().length < MIN_ANSWER_CHARS && currentAnswer.trim().length > 0
+                      ? `${MIN_ANSWER_CHARS - currentAnswer.trim().length} more chars needed`
+                      : `Min ${MIN_ANSWER_CHARS}`}
+                  </span>
+                  <span
+                    className={
+                      currentAnswer.length > MAX_ANSWER_CHARS * 0.9
+                        ? "text-amber-600"
+                        : "text-surface-500 dark:text-surface-400"
+                    }
+                  >
+                    {currentAnswer.length}/{MAX_ANSWER_CHARS}
+                  </span>
+                </div>
                 <p className="text-xs md:text-sm text-surface-500 flex items-start gap-2 bg-surface-100 dark:bg-surface-700/40 rounded-md px-3 py-2 border border-surface-200 dark:border-surface-600">
                   <span className="text-primary-600 dark:text-primary-400">
                     💡
@@ -1066,7 +1164,10 @@ const InterviewExperiencePage = () => {
                 {!showFollowUps[currentQuestionIndex] && (
                   <button
                     onClick={handleSubmitAnswerWithFollowUp}
-                    disabled={loadingFollowUps[currentQuestionIndex] || !!answerValidationError}
+                    disabled={
+                      loadingFollowUps[currentQuestionIndex] ||
+                      !!answerValidationError
+                    }
                     className="btn-primary text-sm disabled:opacity-50 shadow-sm hover:shadow transition-shadow"
                   >
                     {loadingFollowUps[currentQuestionIndex] ? (
@@ -1140,7 +1241,10 @@ const InterviewExperiencePage = () => {
               {currentAnswer.trim() && !showFollowUps[currentQuestionIndex] && (
                 <button
                   onClick={handleSubmitAnswerWithFollowUp}
-                  disabled={loadingFollowUps[currentQuestionIndex] || !!answerValidationError}
+                  disabled={
+                    loadingFollowUps[currentQuestionIndex] ||
+                    !!answerValidationError
+                  }
                   className="btn-primary shadow-sm hover:shadow transition-shadow disabled:opacity-50"
                 >
                   {loadingFollowUps[currentQuestionIndex]

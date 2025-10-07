@@ -124,8 +124,17 @@ app.use(
   })
 );
 
-// Compression
-app.use(compression());
+// Compression (disable for SSE endpoints like /api/chatbot/stream to avoid breaking event stream)
+app.use(
+  compression({
+    filter: (req, res) => {
+      if (req.path && req.path.startsWith("/api/chatbot/stream")) {
+        return false; // disable compression for SSE
+      }
+      return compression.filter(req, res);
+    },
+  })
+);
 
 // Logging (attach request id token to morgan output)
 const morganFormat =

@@ -258,6 +258,17 @@ exports.stream = async (req, res) => {
     res.write(`data: ${JSON.stringify(enriched)}\n\n`);
   };
 
+  let heartbeatInterval;
+  const startHeartbeat = () => {
+    heartbeatInterval = setInterval(() => {
+      try {
+        send("ping", { ts: Date.now() });
+      } catch (e) {
+        clearInterval(heartbeatInterval);
+      }
+    }, 15000); // 15s heartbeat to keep proxies from closing connection
+  };
+
   try {
     const { messages, context } = req.body || {};
     const userId = req.auth.userId || req.auth.id;
@@ -287,6 +298,7 @@ exports.stream = async (req, res) => {
           messages,
           enhancedContext
         );
+        startHeartbeat();
         let buffer = "";
         stream.on("data", (chunk) => {
           const piece = chunk.toString();
@@ -313,10 +325,12 @@ exports.stream = async (req, res) => {
           if (buffer.trim())
             send("chunk", { text: buffer.trim(), source: "grok-tail" });
           send("done", { timestamp: new Date().toISOString(), provider: "grok" });
+          clearInterval(heartbeatInterval);
           res.end();
         });
         stream.on("error", (err) => {
           send("error", { error: err.message, code: "CHAT_STREAM_ERROR" });
+          clearInterval(heartbeatInterval);
           res.end();
         });
         return; // streaming path succeeded
@@ -352,9 +366,11 @@ exports.stream = async (req, res) => {
       "Here is a helpful response while the live AI reconnects. Use STAR for behavioral answers; for coding, clarify constraints, outline, implement, and test."
     );
     let step = fallback.next();
+    startHeartbeat();
     const interval = setInterval(() => {
       if (step.done) {
         clearInterval(interval);
+        clearInterval(heartbeatInterval);
         send("done", { timestamp: new Date().toISOString(), source: "dev-fallback", provider: "dev-fallback" });
         return res.end();
       }
@@ -363,6 +379,7 @@ exports.stream = async (req, res) => {
     }, 30);
   } catch (error) {
     send("error", { error: "Failed to start stream", code: "CHAT_STREAM_START_FAILED" });
+    clearInterval(heartbeatInterval);
     res.end();
   }
 };
