@@ -51,12 +51,11 @@ const connectDB = async () => {
       mongoose.set("autoIndex", process.env.NODE_ENV !== "production");
 
       const conn = await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 8000,
-        family: 4, // prefer IPv4 for some corp networks
+        serverSelectionTimeoutMS: 30000, // Increased from 8000
+        socketTimeoutMS: 45000, // Add socket timeout
         maxPoolSize: 10,
-        minPoolSize: 1,
-        // Buffer commands for a short period while connecting
-        bufferCommands: true,
+        minPoolSize: 2, // Increased from 1
+        maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
         // Write concern/retry are generally encoded in the connection string, especially for Atlas
       });
       isDbConnected = true;
@@ -100,7 +99,8 @@ const connectDB = async () => {
       process.env.NODE_ENV !== "production" &&
       process.env.NODE_ENV !== "test"
     ) {
-      const RETRY_DELAY_MS = 2000; // short retry while developing
+      const RETRY_DELAY_MS = 5000; // Increased retry delay
+      Logger.info(`Attempting to reconnect in ${RETRY_DELAY_MS}ms...`);
       setTimeout(doConnect, RETRY_DELAY_MS);
     }
   });

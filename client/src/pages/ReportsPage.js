@@ -84,163 +84,171 @@ const ReportsPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
-          Reports & Analytics
-        </h1>
-        <p className="mt-2 text-surface-500 dark:text-surface-400">
-          Track your progress and analyze your interview performance.
-        </p>
-      </div>
-
-      {/* Top stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="card flex flex-col items-center">
-          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
-            Average Score
-          </h3>
-          <div className="text-3xl font-bold text-primary-600">
-            {stats.avg}%
-          </div>
-          <p className="text-surface-500 dark:text-surface-400">
-            Across {stats.count} interview{stats.count === 1 ? "" : "s"}
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-8 transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
+            Reports & Analytics
+          </h1>
+          <p className="mt-2 text-surface-500 dark:text-surface-400">
+            Track your progress and analyze your interview performance.
           </p>
         </div>
 
-        <div className="card flex flex-col items-center">
-          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
-            Interviews Completed
-          </h3>
-          <div className="text-3xl font-bold text-blue-600">{stats.count}</div>
-          <p className="text-surface-500 dark:text-surface-400">
-            Total completed
-          </p>
+        {/* Top stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="card flex flex-col items-center">
+            <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
+              Average Score
+            </h3>
+            <div className="text-3xl font-bold text-primary-600">
+              {stats.avg}%
+            </div>
+            <p className="text-surface-500 dark:text-surface-400">
+              Across {stats.count} interview{stats.count === 1 ? "" : "s"}
+            </p>
+          </div>
+
+          <div className="card flex flex-col items-center">
+            <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
+              Interviews Completed
+            </h3>
+            <div className="text-3xl font-bold text-blue-600">
+              {stats.count}
+            </div>
+            <p className="text-surface-500 dark:text-surface-400">
+              Total completed
+            </p>
+          </div>
+
+          <div className="card flex flex-col items-center">
+            <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
+              Improvement
+            </h3>
+            <div
+              className={`text-3xl font-bold ${
+                stats.improvement >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {stats.improvement >= 0 ? "+" : ""}
+              {stats.improvement}%
+            </div>
+            <p className="text-surface-500 dark:text-surface-400">
+              Change (latest − oldest)
+            </p>
+          </div>
         </div>
 
-        <div className="card flex flex-col items-center">
-          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">
-            Improvement
-          </h3>
-          <div
-            className={`text-3xl font-bold ${
-              stats.improvement >= 0 ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {stats.improvement >= 0 ? "+" : ""}
-            {stats.improvement}%
+        {/* Reports list */}
+        <div className="card p-0 overflow-hidden">
+          <div className="px-6 py-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Your Reports</h3>
+            <button onClick={() => fetchReports()} className="btn-ghost">
+              Refresh
+            </button>
           </div>
-          <p className="text-surface-500 dark:text-surface-400">
-            Change (latest − oldest)
-          </p>
-        </div>
-      </div>
 
-      {/* Reports list */}
-      <div className="card p-0 overflow-hidden">
-        <div className="px-6 py-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Your Reports</h3>
-          <button onClick={() => fetchReports()} className="btn-ghost">
-            Refresh
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="p-6 text-center text-surface-500 dark:text-surface-400">
-            Loading reports…
-          </div>
-        ) : error ? (
-          <div className="p-6 text-center text-red-500">{error}</div>
-        ) : reports.length === 0 ? (
-          <div className="p-6 text-center text-surface-500 dark:text-surface-400">
-            No completed interviews yet.
-          </div>
-        ) : (
-          <div className="overflow-x-auto hover-scrollbar">
-            <table className="table-base">
-              <thead className="table-head">
-                <tr>
-                  <th className="px-6 py-3">Job Role</th>
-                  <th className="px-6 py-3">Type</th>
-                  <th className="px-6 py-3">Score</th>
-                  <th className="px-6 py-3">Completed</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reports.map((r) => (
-                  <tr key={r.reportId} className="table-row">
-                    <td className="px-6 py-4 font-medium">{r.jobRole}</td>
-                    <td className="px-6 py-4 capitalize">{r.interviewType}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-2 py-1 rounded text-sm font-semibold ${
-                          (r.overallScore ?? 0) >= 80
-                            ? "bg-green-100 text-green-800"
-                            : (r.overallScore ?? 0) >= 60
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {r.overallScore ?? 0}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-surface-600 dark:text-surface-400">
-                      {r.completedAt
-                        ? new Date(r.completedAt).toLocaleString()
-                        : "-"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          className="btn-ghost"
-                          onClick={() =>
-                            navigate(`/interview/${r.interviewId}/results`)
-                          }
-                        >
-                          View Results
-                        </button>
-                        <button
-                          className="btn-ghost"
-                          onClick={() => handleGenerateReport(r.interviewId)}
-                        >
-                          Generate Report
-                        </button>
-                        <button
-                          className="btn-ghost"
-                          onClick={() =>
-                            navigate(`/session-summary/${r.interviewId}`)
-                          }
-                        >
-                          Session Summary
-                        </button>
-                        <button
-                          className="btn-ghost"
-                          onClick={() => handleDownload(r.interviewId, "json")}
-                        >
-                          Download JSON
-                        </button>
-                        <button
-                          className="btn-ghost"
-                          onClick={() => handleDownload(r.interviewId, "pdf")}
-                        >
-                          Export PDF
-                        </button>
-                      </div>
-                    </td>
+          {loading ? (
+            <div className="p-6 text-center text-surface-500 dark:text-surface-400">
+              Loading reports…
+            </div>
+          ) : error ? (
+            <div className="p-6 text-center text-red-500">{error}</div>
+          ) : reports.length === 0 ? (
+            <div className="p-6 text-center text-surface-500 dark:text-surface-400">
+              No completed interviews yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto hover-scrollbar">
+              <table className="table-base">
+                <thead className="table-head">
+                  <tr>
+                    <th className="px-6 py-3">Job Role</th>
+                    <th className="px-6 py-3">Type</th>
+                    <th className="px-6 py-3">Score</th>
+                    <th className="px-6 py-3">Completed</th>
+                    <th className="px-6 py-3 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {reports.map((r) => (
+                    <tr key={r.reportId} className="table-row">
+                      <td className="px-6 py-4 font-medium">{r.jobRole}</td>
+                      <td className="px-6 py-4 capitalize">
+                        {r.interviewType}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-1 rounded text-sm font-semibold ${
+                            (r.overallScore ?? 0) >= 80
+                              ? "bg-green-100 text-green-800"
+                              : (r.overallScore ?? 0) >= 60
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {r.overallScore ?? 0}%
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-surface-600 dark:text-surface-400">
+                        {r.completedAt
+                          ? new Date(r.completedAt).toLocaleString()
+                          : "-"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            className="btn-ghost"
+                            onClick={() =>
+                              navigate(`/interview/${r.interviewId}/results`)
+                            }
+                          >
+                            View Results
+                          </button>
+                          <button
+                            className="btn-ghost"
+                            onClick={() => handleGenerateReport(r.interviewId)}
+                          >
+                            Generate Report
+                          </button>
+                          <button
+                            className="btn-ghost"
+                            onClick={() =>
+                              navigate(`/session-summary/${r.interviewId}`)
+                            }
+                          >
+                            Session Summary
+                          </button>
+                          <button
+                            className="btn-ghost"
+                            onClick={() =>
+                              handleDownload(r.interviewId, "json")
+                            }
+                          >
+                            Download JSON
+                          </button>
+                          <button
+                            className="btn-ghost"
+                            onClick={() => handleDownload(r.interviewId, "pdf")}
+                          >
+                            Export PDF
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        {/* Pagination (simple placeholder using totals) */}
-        <div className="px-6 py-4 border-t border-surface-200 dark:border-surface-700 flex items-center justify-between text-sm">
-          <div className="text-surface-600 dark:text-surface-400">
-            {pagination.totalReports} total
+          {/* Pagination (simple placeholder using totals) */}
+          <div className="px-6 py-4 border-t border-surface-200 dark:border-surface-700 flex items-center justify-between text-sm">
+            <div className="text-surface-600 dark:text-surface-400">
+              {pagination.totalReports} total
+            </div>
+            {/* Server supports pagination params; current fetch uses defaults. Extend when needed. */}
           </div>
-          {/* Server supports pagination params; current fetch uses defaults. Extend when needed. */}
         </div>
       </div>
     </div>

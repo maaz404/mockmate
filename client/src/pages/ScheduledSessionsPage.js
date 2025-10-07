@@ -142,10 +142,10 @@ export default function ScheduledSessionsPage() {
   }, [items, onlySelectedDay, selectedDate]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-surface-900 py-8">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-8 transition-colors duration-200">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-heading text-2xl font-bold text-surface-900 dark:text-white">
+          <h1 className="font-heading text-2xl font-bold text-surface-900 dark:text-surface-50">
             Scheduled Sessions
           </h1>
           <button
@@ -159,7 +159,7 @@ export default function ScheduledSessionsPage() {
           </button>
         </div>
 
-        <div className="bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 mb-6">
+        <div className="surface-elevated dark:bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-200 dark:border-surface-700 mb-6">
           <div className="p-3 border-b border-surface-700 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {tabs.map((t) => (
@@ -177,7 +177,7 @@ export default function ScheduledSessionsPage() {
               ))}
             </div>
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-surface-300">
+              <label className="flex items-center gap-2 text-xs text-surface-600 dark:text-surface-300">
                 <input
                   type="checkbox"
                   className="accent-primary-500"
@@ -186,7 +186,7 @@ export default function ScheduledSessionsPage() {
                 />
                 Only selected day
               </label>
-              <div className="text-xs text-surface-400">
+              <div className="text-xs text-surface-600 dark:text-surface-400">
                 Page {pagination?.current || 1} of {pagination?.pages || 1}
               </div>
             </div>
@@ -207,7 +207,9 @@ export default function ScheduledSessionsPage() {
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <div className="text-xs text-surface-300">{weekLabel}</div>
+                <div className="text-xs text-surface-600 dark:text-surface-300">
+                  {weekLabel}
+                </div>
                 <button
                   aria-label="Next week"
                   className="btn-outline p-1.5"
@@ -237,7 +239,7 @@ export default function ScheduledSessionsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700">
+          <div className="lg:col-span-2 surface-elevated dark:bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-200 dark:border-surface-700">
             <div className="divide-y divide-surface-700">
               {displayItems.map((s) => (
                 <div
@@ -245,10 +247,10 @@ export default function ScheduledSessionsPage() {
                   className="flex items-center justify-between px-4 py-3 group"
                 >
                   <div>
-                    <div className="text-white text-sm font-medium">
+                    <div className="text-surface-900 dark:text-white text-sm font-medium">
                       {s.title}
                     </div>
-                    <div className="text-surface-400 text-xs">
+                    <div className="text-surface-600 dark:text-surface-400 text-xs">
                       {new Date(s.scheduledAt).toLocaleString()} • {s.type} •{" "}
                       {s.duration}m
                     </div>
@@ -279,7 +281,7 @@ export default function ScheduledSessionsPage() {
                 </div>
               ))}
               {displayItems.length === 0 && (
-                <div className="px-4 py-8 text-sm text-surface-400">
+                <div className="px-4 py-8 text-sm text-surface-600 dark:text-surface-400">
                   No sessions found.
                 </div>
               )}
@@ -309,8 +311,10 @@ export default function ScheduledSessionsPage() {
               sessions={items}
               onSelectDate={(d) => setSelectedDate(d)}
             />
-            <div className="mt-4 bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-700 p-3">
-              <div className="text-xs text-surface-400 mb-2">Selected Day</div>
+            <div className="mt-4 surface-elevated dark:bg-surface-800/50 backdrop-blur-sm rounded-xl shadow-surface-lg border border-surface-200 dark:border-surface-700 p-3">
+              <div className="text-xs text-surface-600 dark:text-surface-400 mb-2">
+                Selected Day
+              </div>
               <div className="space-y-2">
                 {items
                   .filter((s) => {
@@ -324,7 +328,7 @@ export default function ScheduledSessionsPage() {
                   .map((s) => (
                     <div
                       key={s._id}
-                      className="text-xs text-surface-300 flex items-center justify-between"
+                      className="text-xs text-surface-600 dark:text-surface-300 flex items-center justify-between"
                     >
                       <span>
                         {new Date(s.scheduledAt).toLocaleTimeString([], {
@@ -352,7 +356,7 @@ export default function ScheduledSessionsPage() {
                     a.getDate() === selectedDate.getDate()
                   );
                 }).length === 0 && (
-                  <div className="text-xs text-surface-500">
+                  <div className="text-xs text-surface-600 dark:text-surface-500">
                     No sessions for this day.
                   </div>
                 )}

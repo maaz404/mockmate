@@ -74,7 +74,7 @@ function App() {
   useGlobalApiErrors();
   if (process.env.NODE_ENV === "development") {
     // eslint-disable-next-line no-console
-    console.debug("[App] Render", { clerkKeyPresent: !!clerkKey });
+    // Debug App render state
   }
 
   // One-time readiness check with toast warnings

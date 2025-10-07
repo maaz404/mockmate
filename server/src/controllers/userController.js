@@ -28,6 +28,48 @@ const getProfile = async (req, res) => {
   }
 };
 
+// Bootstrap user profile - ensures profile exists and returns basic info
+const bootstrapProfile = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+
+    // Find or create user profile
+    let userProfile = await UserProfile.findOne({ clerkUserId: userId });
+
+    if (!userProfile) {
+      // Create a basic profile
+      userProfile = new UserProfile({
+        clerkUserId: userId,
+        email: req.auth.emailAddress || "user@example.com",
+        personalInfo: {
+          firstName: req.auth.firstName || "User",
+          lastName: req.auth.lastName || "",
+        },
+        onboardingCompleted: false,
+      });
+      await userProfile.save();
+    }
+
+    return ok(
+      res,
+      {
+        profile: userProfile,
+        isNewUser: !userProfile.onboardingCompleted,
+        needsOnboarding: !userProfile.onboardingCompleted,
+      },
+      "Profile bootstrapped successfully"
+    );
+  } catch (error) {
+    console.error("Bootstrap profile error:", error);
+    return fail(
+      res,
+      500,
+      "BOOTSTRAP_FAILED",
+      "Failed to bootstrap user profile"
+    );
+  }
+};
+
 // Save onboarding progress
 const saveOnboardingProgress = async (req, res) => {
   try {
@@ -602,9 +644,19 @@ async function getDashboardPreferences(req, res) {
       { clerkUserId: userId },
       { "preferences.dashboard": 1, _id: 0 }
     ).lean();
+
+    // Provide default preferences if none exist
+    const defaultPreferences = {
+      density: "comfortable",
+      upcomingView: "list",
+      thisWeekOnly: false,
+      metricsHorizon: 8,
+      benchmark: "personal",
+    };
+
     return res.json({
       success: true,
-      data: profile?.preferences?.dashboard || {},
+      data: profile?.preferences?.dashboard || defaultPreferences,
     });
   } catch (error) {
     console.error("Get dashboard preferences error:", error);
@@ -654,6 +706,7 @@ async function updateDashboardPreferences(req, res) {
 
 module.exports = {
   getProfile,
+  bootstrapProfile,
   updateProfile,
   completeOnboarding,
   saveOnboardingProgress,

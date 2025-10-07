@@ -105,9 +105,39 @@ async function destroyByPrefix(prefix, resource_type = "image") {
     next_cursor = list.next_cursor;
   }
 }
+// Health check for uploads
+const uploadHealth = async (req, res) => {
+  try {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res
+        .status(500)
+        .json({ success: false, error: "Cloudinary config missing" });
+    }
+    // Try to list resources as a health check
+    try {
+      const cloudinary = require("../config/cloudinary");
+      await cloudinary.api.resources({ max_results: 1 });
+      return res.json({ success: true, cloudName });
+    } catch (err) {
+      return res
+        .status(500)
+        .json({
+          success: false,
+          error: "Cloudinary API failed",
+          detail: err.message,
+        });
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
 
 module.exports = {
   getSignedUploadParams,
   destroyByPublicId,
   destroyByPrefix,
+  uploadHealth,
 };

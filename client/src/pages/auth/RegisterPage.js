@@ -29,7 +29,7 @@ const RegisterPage = () => {
   useEffect(() => {
     if (isVerified) {
       // eslint-disable-next-line no-console
-      console.debug("[RegisterPage] Email verified. Navigating to /dashboard");
+      // Email verified, navigate to dashboard
       navigate("/dashboard", { replace: true });
     }
   }, [isVerified, navigate]);
@@ -40,11 +40,11 @@ const RegisterPage = () => {
     const id = setInterval(async () => {
       try {
         // eslint-disable-next-line no-console
-        console.debug("[RegisterPage] polling verification status...");
+        // Polling verification status
         await user.reload();
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.warn("[RegisterPage] reload failed", e);
+        // Reload failed
       }
     }, 4000);
     return () => clearInterval(id);
@@ -166,28 +166,25 @@ const RegisterPage = () => {
                     },
             }}
             // Instrumentation callbacks
-            afterSignUp={(res) => {
+            afterSignUp={(_res) => {
               // eslint-disable-next-line no-console
-              console.debug("[RegisterPage] afterSignUp callback", res);
+              // After sign up callback
               // Redirect to dashboard after signup; EmailVerificationGate / ProtectedRoute
               // will handle any remaining verification gating if required.
               try {
                 navigate("/dashboard", { replace: true });
               } catch (e) {
                 // eslint-disable-next-line no-console
-                console.warn(
-                  "[RegisterPage] navigation to /dashboard failed",
-                  e
-                );
+                // Warning about unhandled error navigating to dashboard
               }
             }}
-            signUpStart={(ctx) => {
+            signUpStart={(_ctx) => {
               // eslint-disable-next-line no-console
-              console.debug("[RegisterPage] signUpStart", ctx);
+              // Sign up start callback
             }}
-            signUpComplete={(ctx) => {
+            signUpComplete={(_ctx) => {
               // eslint-disable-next-line no-console
-              console.debug("[RegisterPage] signUpComplete", ctx);
+              // Sign up complete callback
             }}
           />
           {!isVerified && user && (

@@ -197,7 +197,9 @@ questionSchema.index({ category: 1, difficulty: 1 });
 questionSchema.index({ type: 1, experienceLevel: 1 });
 questionSchema.index({ status: 1 });
 questionSchema.index({ tags: 1 });
-questionSchema.index({ industries: 1, roles: 1 });
+// Separate indexes for array fields (cannot compound index multiple arrays)
+questionSchema.index({ industries: 1 });
+questionSchema.index({ roles: 1 });
 
 // Method to check if question is suitable for user
 questionSchema.methods.isSuitableFor = function (userProfile, interviewConfig) {

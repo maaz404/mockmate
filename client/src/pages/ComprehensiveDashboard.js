@@ -52,7 +52,7 @@ const ComprehensiveDashboard = () => {
       }
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error("Error fetching user data:", error);
+      // Error fetching user data
       // If profile doesn't exist, show onboarding
       if (error.status === 404) {
         setShowOnboarding(true);
@@ -78,7 +78,7 @@ const ComprehensiveDashboard = () => {
       }
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error("Error completing onboarding:", error);
+      // Error completing onboarding
       // Re-throw the error so the onboarding modal can handle it
       throw error;
     }

@@ -136,12 +136,10 @@ router.post(
       });
       // Guard: interview must be in-progress to accept uploads
       if (interview.status !== "in-progress") {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Interview is not active for recording",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Interview is not active for recording",
+        });
       }
 
       if (!interview) {
@@ -762,24 +760,20 @@ router.post(
 
       const question = interview.questions[qIndex];
       if (!question.video || !question.video.filename) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: "No video found for this question",
-          });
+        return res.status(404).json({
+          success: false,
+          message: "No video found for this question",
+        });
       }
 
       const currentStatus = transcriptionService.getTranscriptionStatus(
         question.video
       );
       if (currentStatus.status === "pending") {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Transcription already in progress",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Transcription already in progress",
+        });
       }
 
       // Kick off async transcription

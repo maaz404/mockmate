@@ -51,8 +51,12 @@
   "author": "Maaz Sheikh",
   "jest": {
     "testEnvironment": "node",
-    "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
-    "testMatch": ["**/src/__tests__/**/*.test.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js"
+    ],
+    "testMatch": [
+      "**/src/__tests__/**/*.test.js"
+    ],
     "verbose": false
   },
   "license": "MIT"

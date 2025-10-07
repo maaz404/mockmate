@@ -122,12 +122,15 @@ const ChatbotWidget = () => {
       try {
         const response = await api.get("/chatbot/health?validate=true");
         const { chatbot } = response.data || {};
-        const available = !!chatbot?.available && chatbot?.diagnostics?.hasApiKey;
+        const available =
+          !!chatbot?.available && chatbot?.diagnostics?.hasApiKey;
         setChatbotAvailable(available);
         if (!available) {
           if (chatbot?.validation && chatbot.validation.valid === false) {
             setServiceNotice(
-              `Chatbot unavailable: ${chatbot.validation.reason || "validation failed"}`
+              `Chatbot unavailable: ${
+                chatbot.validation.reason || "validation failed"
+              }`
             );
           } else if (chatbot?.diagnostics && !chatbot.diagnostics.hasApiKey) {
             setServiceNotice("Chatbot API key missing on server");
@@ -216,13 +219,13 @@ const ChatbotWidget = () => {
       throw err;
     }
 
-  const reader = res.body?.getReader();
+    const reader = res.body?.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
     let finished = false;
-  let currentRequestId = null;
-  let currentProvider = null;
-  let currentFallback = false;
+    let currentRequestId = null;
+    let currentProvider = null;
+    let currentFallback = false;
 
     while (reader && !finished) {
       const { value, done } = await reader.read();
@@ -258,7 +261,11 @@ const ChatbotWidget = () => {
               u[i] = {
                 ...u[i],
                 content: (u[i].content || "") + clean,
-                provider: data.provider || data.source || snapshotProvider || u[i].provider,
+                provider:
+                  data.provider ||
+                  data.source ||
+                  snapshotProvider ||
+                  u[i].provider,
                 requestId: snapshotRequestId || u[i].requestId,
                 fallback: snapshotFallback || u[i].fallback,
               };
@@ -272,7 +279,14 @@ const ChatbotWidget = () => {
           setMessages((prev) => {
             const u = [...prev];
             const i = u.length - 1;
-            if (u[i]) u[i] = { ...u[i], isStreaming: false, provider: snapshotProvider || u[i].provider, requestId: snapshotRequestId || u[i].requestId, fallback: snapshotFallback || u[i].fallback };
+            if (u[i])
+              u[i] = {
+                ...u[i],
+                isStreaming: false,
+                provider: snapshotProvider || u[i].provider,
+                requestId: snapshotRequestId || u[i].requestId,
+                fallback: snapshotFallback || u[i].fallback,
+              };
             return u;
           });
           finished = true;
@@ -284,7 +298,15 @@ const ChatbotWidget = () => {
           setMessages((prev) => {
             const u = [...prev];
             const i = u.length - 1;
-            if (u[i]) u[i] = { ...u[i], isStreaming: false, provider: snapshotProvider || u[i].provider, requestId: snapshotRequestId || u[i].requestId, fallback: snapshotFallback || u[i].fallback, isError: true };
+            if (u[i])
+              u[i] = {
+                ...u[i],
+                isStreaming: false,
+                provider: snapshotProvider || u[i].provider,
+                requestId: snapshotRequestId || u[i].requestId,
+                fallback: snapshotFallback || u[i].fallback,
+                isError: true,
+              };
             return u;
           });
           finished = true;
@@ -674,27 +696,36 @@ const ChatbotWidget = () => {
                     <div className="text-sm whitespace-pre-wrap leading-relaxed">
                       {message.content}
                     </div>
-                    {message.role === 'assistant' && (message.provider || message.requestId || message.fallback) && (
-                      <div className="mt-2 flex flex-wrap gap-1 items-center">
-                        {message.provider && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-700/60 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-600">
-                            {message.provider.replace(/^(grok)(.*)/,'$1').toUpperCase()}
-                          </span>
-                        )}
-                        {message.fallback && (
-                          <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-200 border border-amber-200/60 dark:border-amber-700/60">fallback</span>
-                        )}
-                        {message.requestId && (
-                          <button
-                            onClick={() => navigator.clipboard.writeText(message.requestId)}
-                            className="text-[9px] px-1 py-0.5 rounded bg-surface-100 dark:bg-surface-700/60 text-surface-500 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200 border border-surface-200 dark:border-surface-600"
-                            title="Copy reference id"
-                          >
-                            ref:{message.requestId.slice(0,6)}
-                          </button>
-                        )}
-                      </div>
-                    )}
+                    {message.role === "assistant" &&
+                      (message.provider ||
+                        message.requestId ||
+                        message.fallback) && (
+                        <div className="mt-2 flex flex-wrap gap-1 items-center">
+                          {message.provider && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-700/60 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-600">
+                              {message.provider
+                                .replace(/^(grok)(.*)/, "$1")
+                                .toUpperCase()}
+                            </span>
+                          )}
+                          {message.fallback && (
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-200 border border-amber-200/60 dark:border-amber-700/60">
+                              fallback
+                            </span>
+                          )}
+                          {message.requestId && (
+                            <button
+                              onClick={() =>
+                                navigator.clipboard.writeText(message.requestId)
+                              }
+                              className="text-[9px] px-1 py-0.5 rounded bg-surface-100 dark:bg-surface-700/60 text-surface-500 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200 border border-surface-200 dark:border-surface-600"
+                              title="Copy reference id"
+                            >
+                              ref:{message.requestId.slice(0, 6)}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     {message.role !== "user" && !message.isError && (
                       <button
                         className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"

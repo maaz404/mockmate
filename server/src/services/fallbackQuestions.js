@@ -5,7 +5,7 @@ module.exports = [
     text: "Explain the concept of closures in JavaScript and provide a practical example.",
     type: "technical",
     category: "javascript",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: [
         "Understands scope",
@@ -21,7 +21,7 @@ module.exports = [
     text: "What are the differences between `let`, `const`, and `var` in JavaScript?",
     type: "technical",
     category: "javascript",
-    difficulty: "easy",
+    difficulty: "beginner",
     evaluationCriteria: {
       technical: [
         "Explains hoisting",
@@ -37,7 +37,7 @@ module.exports = [
     text: "How does the event loop work in JavaScript?",
     type: "technical",
     category: "javascript",
-    difficulty: "hard",
+    difficulty: "advanced",
     evaluationCriteria: {
       technical: [
         "Understands call stack",
@@ -58,7 +58,7 @@ module.exports = [
     text: "What are React Hooks and how do they differ from class components?",
     type: "technical",
     category: "react",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: [
         "Explains hook concept",
@@ -74,7 +74,7 @@ module.exports = [
     text: "Explain the virtual DOM and how React uses it for performance optimization.",
     type: "technical",
     category: "react",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: [
         "Understands virtual DOM concept",
@@ -93,7 +93,7 @@ module.exports = [
     text: "How would you optimize a React application for better performance?",
     type: "technical",
     category: "react",
-    difficulty: "hard",
+    difficulty: "advanced",
     evaluationCriteria: {
       technical: [
         "Mentions memoization",
@@ -114,7 +114,7 @@ module.exports = [
     text: "What is the event-driven architecture in Node.js and how does it work?",
     type: "technical",
     category: "nodejs",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: [
         "Explains event emitters",
@@ -130,7 +130,7 @@ module.exports = [
     text: "How would you handle errors in a Node.js application?",
     type: "technical",
     category: "nodejs",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: [
         "Mentions try-catch",
@@ -151,7 +151,7 @@ module.exports = [
     text: "Tell me about a challenging project you worked on. What made it challenging and how did you overcome the obstacles?",
     type: "behavioral",
     category: "general",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: ["Shows technical depth", "Explains technical challenges"],
       communication: ["STAR method", "Clear narrative", "Good storytelling"],
@@ -166,7 +166,7 @@ module.exports = [
     text: "Describe a time when you had to work with a difficult team member. How did you handle the situation?",
     type: "behavioral",
     category: "teamwork",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: ["Shows understanding of team dynamics"],
       communication: ["Professional approach", "Clear communication"],
@@ -178,7 +178,7 @@ module.exports = [
     text: "Tell me about a time when you had to learn a new technology quickly. How did you approach it?",
     type: "behavioral",
     category: "learning",
-    difficulty: "easy",
+    difficulty: "beginner",
     evaluationCriteria: {
       technical: ["Shows learning methodology", "Demonstrates adaptability"],
       communication: ["Clear learning process", "Good examples"],
@@ -190,7 +190,7 @@ module.exports = [
     text: "Describe a situation where you had to make a technical decision with incomplete information.",
     type: "behavioral",
     category: "decision-making",
-    difficulty: "hard",
+    difficulty: "advanced",
     evaluationCriteria: {
       technical: ["Shows technical judgment", "Risk assessment"],
       communication: ["Clear decision-making process", "Explains reasoning"],
@@ -204,7 +204,7 @@ module.exports = [
     text: "How would you design a URL shortener service like bit.ly?",
     type: "system-design",
     category: "system-design",
-    difficulty: "hard",
+    difficulty: "advanced",
     evaluationCriteria: {
       technical: [
         "Database design",
@@ -220,7 +220,7 @@ module.exports = [
     text: "Design a chat application that can handle millions of users. What are the key considerations?",
     type: "system-design",
     category: "system-design",
-    difficulty: "hard",
+    difficulty: "advanced",
     evaluationCriteria: {
       technical: ["Real-time communication", "Database design", "Scalability"],
       communication: ["Clear system overview", "Good diagrams"],
@@ -234,7 +234,7 @@ module.exports = [
     text: "Explain the difference between SQL and NoSQL databases. When would you use each?",
     type: "technical",
     category: "database",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: [
         "Understands ACID properties",
@@ -250,7 +250,7 @@ module.exports = [
     text: "How would you optimize a slow database query?",
     type: "technical",
     category: "database",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: ["Mentions indexing", "Query analysis", "Database profiling"],
       communication: ["Systematic optimization approach", "Clear steps"],
@@ -267,7 +267,7 @@ module.exports = [
     text: "What is the difference between synchronous and asynchronous programming?",
     type: "technical",
     category: "general",
-    difficulty: "easy",
+    difficulty: "beginner",
     evaluationCriteria: {
       technical: [
         "Understands blocking/non-blocking",
@@ -282,7 +282,7 @@ module.exports = [
     text: "Explain the concept of RESTful APIs and their principles.",
     type: "technical",
     category: "api-design",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: [
         "Knows REST principles",
@@ -300,7 +300,7 @@ module.exports = [
     text: "How would you implement authentication and authorization in a web application?",
     type: "technical",
     category: "security",
-    difficulty: "hard",
+    difficulty: "advanced",
     evaluationCriteria: {
       technical: [
         "JWT vs sessions",
@@ -322,7 +322,7 @@ module.exports = [
     text: "Explain how you would handle caching in a web application to improve performance.",
     type: "technical",
     category: "performance",
-    difficulty: "medium",
+    difficulty: "intermediate",
     evaluationCriteria: {
       technical: [
         "Different caching levels",

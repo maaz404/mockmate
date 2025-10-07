@@ -265,7 +265,6 @@ const InterviewExperiencePage = () => {
     }
   };
 
-
   // Timer tick
   useEffect(() => {
     if (timeRemaining > 0) {
@@ -605,10 +604,10 @@ const InterviewExperiencePage = () => {
             questions: [...prev.questions, newQuestion],
           };
           // Move to newly added question & reset answer (after state commit)
-            setTimeout(() => {
-              setCurrentQuestionIndex(updated.questions.length - 1);
-              setCurrentAnswer("");
-            }, 0);
+          setTimeout(() => {
+            setCurrentQuestionIndex(updated.questions.length - 1);
+            setCurrentAnswer("");
+          }, 0);
           return updated;
         });
         // Refresh interview details to pull updated difficulty history from server
@@ -944,14 +943,17 @@ const InterviewExperiencePage = () => {
                           </button>
                         ))}
                       </div>
-                      {interview.config?.adaptiveDifficulty?.difficultyHistory?.length > 0 && (
+                      {interview.config?.adaptiveDifficulty?.difficultyHistory
+                        ?.length > 0 && (
                         <div className="flex flex-wrap items-center gap-1 ml-4">
                           {interview.config.adaptiveDifficulty.difficultyHistory
                             .slice(-8)
                             .map((d, idx) => (
                               <span
                                 key={idx}
-                                title={`Q${d.questionIndex + 1 || idx + 1}: ${d.difficulty}`}
+                                title={`Q${d.questionIndex + 1 || idx + 1}: ${
+                                  d.difficulty
+                                }`}
                                 className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                                   d.difficulty === "beginner"
                                     ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700"
@@ -1035,13 +1037,17 @@ const InterviewExperiencePage = () => {
                 <div className="flex items-center justify-between text-[11px] font-mono">
                   <span
                     className={
-                      currentAnswer.trim().length < MIN_ANSWER_CHARS && currentAnswer.trim().length > 0
+                      currentAnswer.trim().length < MIN_ANSWER_CHARS &&
+                      currentAnswer.trim().length > 0
                         ? "text-amber-600"
                         : "text-surface-500 dark:text-surface-400"
                     }
                   >
-                    {currentAnswer.trim().length < MIN_ANSWER_CHARS && currentAnswer.trim().length > 0
-                      ? `${MIN_ANSWER_CHARS - currentAnswer.trim().length} more chars needed`
+                    {currentAnswer.trim().length < MIN_ANSWER_CHARS &&
+                    currentAnswer.trim().length > 0
+                      ? `${
+                          MIN_ANSWER_CHARS - currentAnswer.trim().length
+                        } more chars needed`
                       : `Min ${MIN_ANSWER_CHARS}`}
                   </span>
                   <span
@@ -1105,13 +1111,17 @@ const InterviewExperiencePage = () => {
                 <div className="flex items-center justify-between text-[11px] font-mono -mt-1">
                   <span
                     className={
-                      currentAnswer.trim().length < MIN_ANSWER_CHARS && currentAnswer.trim().length > 0
+                      currentAnswer.trim().length < MIN_ANSWER_CHARS &&
+                      currentAnswer.trim().length > 0
                         ? "text-amber-600"
                         : "text-surface-500 dark:text-surface-400"
                     }
                   >
-                    {currentAnswer.trim().length < MIN_ANSWER_CHARS && currentAnswer.trim().length > 0
-                      ? `${MIN_ANSWER_CHARS - currentAnswer.trim().length} more chars needed`
+                    {currentAnswer.trim().length < MIN_ANSWER_CHARS &&
+                    currentAnswer.trim().length > 0
+                      ? `${
+                          MIN_ANSWER_CHARS - currentAnswer.trim().length
+                        } more chars needed`
                       : `Min ${MIN_ANSWER_CHARS}`}
                   </span>
                   <span

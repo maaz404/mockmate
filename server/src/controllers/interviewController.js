@@ -14,6 +14,11 @@ const { mapDifficulty } = require("../utils/questionNormalization");
 
 // Create new interview session
 const createInterview = async (req, res) => {
+  const { userId } = req.auth;
+  const config = { ...(req.body?.config || req.body) };
+  const userProfile = req.userProfile;
+  Logger.info("[createInterview] config received:", config);
+  Logger.info("[createInterview] userProfile:", userProfile);
   try {
     const { userId } = req.auth;
     const config = { ...(req.body?.config || req.body) };
@@ -26,15 +31,6 @@ const createInterview = async (req, res) => {
       config.difficulty = "intermediate";
     }
     const userProfile = req.userProfile;
-
-    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
-      return fail(
-        res,
-        503,
-        "DB_NOT_CONNECTED",
-        "Database is not connected. Configure MONGODB_URI and restart."
-      );
-    }
 
     if (
       !config ||

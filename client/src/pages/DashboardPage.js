@@ -602,14 +602,11 @@ const DashboardPage = () => {
           const startResp = await apiService.put(`/interviews/${id}/start`);
           if (!startResp?.success) {
             // eslint-disable-next-line no-console
-            console.warn(
-              "[Dashboard] auto-start interview not successful",
-              startResp
-            );
+            // Warning: Cannot auto-start interview - not successful
           }
         } catch (e) {
           // eslint-disable-next-line no-console
-          console.warn("[Dashboard] auto-start interview error", e);
+          // Warning: auto-start interview error
         }
         navigate(`/interview/${id}`);
         return;
@@ -617,13 +614,10 @@ const DashboardPage = () => {
       const msg = response?.message || "Failed to create interview";
       toast.error(msg);
       // eslint-disable-next-line no-console
-      console.error(
-        "[Dashboard] create interview unexpected response",
-        response
-      );
+      // Error: create interview unexpected response
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error("[Dashboard] create interview error", error);
+      // Error: create interview error
       const detail =
         error?.message || error?.code || "Failed to create interview";
       const readable = /NO_QUESTIONS/.test(error?.code || detail)
@@ -699,13 +693,7 @@ const DashboardPage = () => {
 
   if (process.env.NODE_ENV === "development") {
     // eslint-disable-next-line no-console
-    console.debug("[DashboardPage] state", {
-      isLoaded,
-      hasUser: !!user,
-      loading,
-      analyticsLoaded: !!analytics,
-      recentInterviews: recentInterviews.length,
-    });
+    // Debug state information - isLoaded, hasUser, loading, analyticsLoaded, recentInterviews
   }
   return (
     <div className="relative min-h-screen bg-surface-50 dark:bg-gradient-to-br dark:from-surface-900 dark:via-surface-900 dark:to-surface-950 py-8 transition-colors duration-200">

@@ -24,6 +24,7 @@ const {
   updateDashboardPreferences,
   getDashboardMetrics,
   getDashboardRecommendation,
+  bootstrapProfile,
 } = require("../controllers/userController");
 
 // Multer storage for resume uploads
@@ -58,6 +59,8 @@ const upload = multer({
 router.get("/profile", requireAuth, ensureUserProfile, getProfile);
 router.post("/profile", requireAuth, ensureUserProfile, getProfile);
 router.put("/profile", requireAuth, ensureUserProfile, updateProfile);
+// Bootstrap endpoint - creates profile if needed
+router.post("/bootstrap", requireAuth, bootstrapProfile);
 
 // Analytics / stats
 router.get("/stats", requireAuth, ensureUserProfile, getAnalytics);
