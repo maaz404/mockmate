@@ -179,9 +179,18 @@ app.get("/api/system/readiness", (req, res) => {
     success: true,
     ready: cloudinaryReady && openAiReady && dbReady,
     services: {
-      cloudinary: cloudinaryReady,
-      openAI: openAiReady,
-      database: dbReady,
+      cloudinary: {
+        ready: cloudinaryReady,
+        reason: cloudinaryReady ? undefined : "Cloudinary not configured",
+      },
+      openAI: {
+        ready: openAiReady,
+        reason: openAiReady ? undefined : "OpenAI not configured",
+      },
+      database: {
+        ready: dbReady,
+        reason: dbReady ? undefined : "Database not connected",
+      },
     },
     warnings,
     timestamp: new Date().toISOString(),
