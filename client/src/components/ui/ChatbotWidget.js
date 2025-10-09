@@ -31,7 +31,7 @@ const ChatbotWidget = () => {
   const [chatbotAvailable, setChatbotAvailable] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [serviceNotice, setServiceNotice] = useState("");
-  const [isDocked, setIsDocked] = useState(false);
+  // Dock mode removed
   const [connectionLost, setConnectionLost] = useState(false);
 
   const messagesEndRef = useRef(null);
@@ -479,7 +479,7 @@ const ChatbotWidget = () => {
       (m) => m.role === "assistant" && !m.isInitial && m.provider
     )?.provider;
   return (
-    <div className={`fixed bottom-6 right-6 z-[9999] ${isDocked ? "" : ""}`}>
+    <div className={`fixed bottom-6 right-6 z-[9999]`}>
       {/* Floating Button */}
       {!isOpen && (
         <button
@@ -574,20 +574,7 @@ const ChatbotWidget = () => {
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => {
-                    setIsDocked((v) => {
-                      const next = !v;
-                      if (!v && isOpen) setIsOpen(false); // when minimizing, close widget to show dock
-                      return next;
-                    });
-                  }}
-                  className="p-1.5 hover:bg-white/10 rounded transition-colors"
-                  aria-label="Minimize"
-                  title={isDocked ? "Undock" : "Minimize to dock"}
-                >
-                  <span className="text-xs">{isDocked ? "↗" : "_"}</span>
-                </button>
+                {/* Dock toggle removed */}
                 <button
                   onClick={() => {
                     const next = false;
