@@ -193,57 +193,49 @@ const QuestionBankPage = () => {
   };
 
   // Rehydrate previously generated questions (optional UX nicety)
+  // Only restore appendMode, tagFilter, sort, favorites, etc. Do NOT auto-load generated questions
   React.useEffect(() => {
-    if (generatedQuestions.length === 0) {
-      try {
-        const cached = localStorage.getItem("hybridGeneratedQuestions");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length) {
-            setGeneratedQuestions(parsed);
-          }
-        }
-        const storedAppend = localStorage.getItem("qb_appendMode");
-        if (storedAppend === "1" || storedAppend === "true") {
-          setAppendMode(true);
-        }
-        const storedFilter = localStorage.getItem("qb_tagFilter");
-        if (storedFilter) setTagFilter(storedFilter);
-        const storedSort = localStorage.getItem("qb_sortMode");
-        if (storedSort) setSortMode(storedSort);
-        const storedFavs = localStorage.getItem("qb_favorites");
-        if (storedFavs) {
-          try {
-            const favParsed = JSON.parse(storedFavs);
-            if (Array.isArray(favParsed)) setFavorites(favParsed);
-          } catch (_) {}
-        }
-        const storedSearch = localStorage.getItem("qb_searchQuery");
-        if (storedSearch) {
-          setSearchQuery(storedSearch);
-          setRawSearch(storedSearch);
-        }
-        // favorites-only removed
-        const storedTagMode = localStorage.getItem("qb_tagMode");
-        if (storedTagMode === "multi") setTagMode("multi");
-        const storedMultiTags = localStorage.getItem("qb_multiTags");
-        if (storedMultiTags) {
-          try {
-            const parsed = JSON.parse(storedMultiTags);
-            if (Array.isArray(parsed)) setMultiTags(parsed);
-          } catch (_) {}
-        }
-        const storedTagLogic = localStorage.getItem("qb_tagLogic");
-        if (storedTagLogic === "AND") setTagLogic("AND");
-        // highlight style & export columns customization removed
-        // Clean up deprecated keys if they exist
+    try {
+      const storedAppend = localStorage.getItem("qb_appendMode");
+      if (storedAppend === "1" || storedAppend === "true") {
+        setAppendMode(true);
+      }
+      const storedFilter = localStorage.getItem("qb_tagFilter");
+      if (storedFilter) setTagFilter(storedFilter);
+      const storedSort = localStorage.getItem("qb_sortMode");
+      if (storedSort) setSortMode(storedSort);
+      const storedFavs = localStorage.getItem("qb_favorites");
+      if (storedFavs) {
         try {
-          localStorage.removeItem("qb_jobRole");
-          localStorage.removeItem("qb_experience");
+          const favParsed = JSON.parse(storedFavs);
+          if (Array.isArray(favParsed)) setFavorites(favParsed);
         } catch (_) {}
+      }
+      const storedSearch = localStorage.getItem("qb_searchQuery");
+      if (storedSearch) {
+        setSearchQuery(storedSearch);
+        setRawSearch(storedSearch);
+      }
+      // favorites-only removed
+      const storedTagMode = localStorage.getItem("qb_tagMode");
+      if (storedTagMode === "multi") setTagMode("multi");
+      const storedMultiTags = localStorage.getItem("qb_multiTags");
+      if (storedMultiTags) {
+        try {
+          const parsed = JSON.parse(storedMultiTags);
+          if (Array.isArray(parsed)) setMultiTags(parsed);
+        } catch (_) {}
+      }
+      const storedTagLogic = localStorage.getItem("qb_tagLogic");
+      if (storedTagLogic === "AND") setTagLogic("AND");
+      // highlight style & export columns customization removed
+      // Clean up deprecated keys if they exist
+      try {
+        localStorage.removeItem("qb_jobRole");
+        localStorage.removeItem("qb_experience");
       } catch (_) {}
-    }
-  }, [generatedQuestions.length]);
+    } catch (_) {}
+  }, []);
 
   // Persist filters & sort & role/experience when changed
   React.useEffect(() => {
@@ -715,7 +707,7 @@ const QuestionBankPage = () => {
         )}
 
         {/* Generated Questions Persisted Section */}
-        {generatedQuestions.length > 0 && (
+        {showGenerator && generatedQuestions.length > 0 && (
           <>
             <div ref={resultsRef} className="mt-12">
               <div className="flex items-center justify-between mb-4">

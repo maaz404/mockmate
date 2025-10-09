@@ -107,22 +107,93 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS configuration
+// CORS configuration (dynamic) -------------------------------------------------
+// Goal: eliminate local dev friction (CORS errors) while keeping production strict.
+// Strategy:
+//  - Production: only explicit ENV.CORS_ORIGINS list.
+//  - Dev/Test: auto-allow localhost + loopback + (optionally private LAN when ALLOW_LAN_CORS=true) plus ENV list.
+//  - Always allow requests with no Origin (curl, server internal calls).
+//  - Allow custom dev headers used for mock auth / profile hydration.
+//  - Provide verbose one-time logging & per-block logs with hint.
+const LOCAL_REGEX = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+const LAN_REGEX =
+  /^https?:\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/i; // RFC1918 ranges
+const allowLan = process.env.ALLOW_LAN_CORS === "true";
+const allowedSet = new Set(ENV.CORS_ORIGINS.filter(Boolean));
+// Core headers the frontend actually sends (Axios + our custom ones)
+const CORE_ALLOWED_HEADERS = [
+  "Content-Type",
+  "Authorization",
+  "X-Requested-With",
+  "Accept",
+  "Origin",
+  // Custom user metadata headers (dev)
+  "x-user-email",
+  "x-user-firstname",
+  "x-user-lastname",
+  "x-user-id",
+  // Allow client to send trace/request correlation if desired
+  "x-request-id",
+];
+if (!global.__CORS_LOGGED) {
+  // eslint-disable-next-line no-console
+  console.log("CORS base allowlist (env):", Array.from(allowedSet));
+  // eslint-disable-next-line no-console
+  console.log(
+    `CORS dev patterns: localhost/loopback always allowed${
+      allowLan ? ", plus private LAN ranges" : ""
+    }`
+  );
+  // eslint-disable-next-line no-console
+  console.log("CORS allowed headers:", CORE_ALLOWED_HEADERS);
+  global.__CORS_LOGGED = true;
+}
+
+// (Reserved hook for future response diagnostics; currently no-op)
+app.use((req, _res, next) => next());
+
 app.use(
   cors({
-    origin: ENV.CORS_ORIGINS,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // same-origin or server-to-server
+      const isExplicit = allowedSet.has(origin);
+      const isLocalDev =
+        ENV.NODE_ENV !== "production" && LOCAL_REGEX.test(origin);
+      const isLanDev =
+        ENV.NODE_ENV !== "production" && allowLan && LAN_REGEX.test(origin);
+      if (isExplicit || isLocalDev || isLanDev) return cb(null, true);
+      // eslint-disable-next-line no-console
+      console.warn("CORS blocked origin:", origin, {
+        hint: "Add to CORS_ORIGINS env or set ALLOW_LAN_CORS=true for private network in dev",
+      });
+      return cb(new Error("CORS_NOT_ALLOWED"));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-      "Origin",
-    ],
+    allowedHeaders: CORE_ALLOWED_HEADERS,
+    maxAge: 86400, // cache preflight for a day in browsers that honor it
     optionsSuccessStatus: 200,
   })
 );
+
+// Fallback handler to convert a CORS_NOT_ALLOWED error into JSON (so client gets structured info in dev)
+app.use((err, req, res, next) => {
+  if (err && err.message === "CORS_NOT_ALLOWED") {
+    // Deliberately DO NOT set Access-Control-Allow-Origin so browser still blocks, but we log meaningfully.
+    if (!res.headersSent) {
+      return res.status(403).json({
+        success: false,
+        code: "CORS_NOT_ALLOWED",
+        message: "Origin not permitted by CORS policy",
+        origin: req.headers.origin,
+        allowed: Array.from(allowedSet),
+        allowLan,
+        environment: ENV.NODE_ENV,
+      });
+    }
+  }
+  return next(err);
+});
 
 // Compression (disable for SSE endpoints like /api/chatbot/stream to avoid breaking event stream)
 app.use(
@@ -231,6 +302,9 @@ app.use("/api/users", userRoutes);
 app.get("/api/bootstrap", async (req, res) => {
   // In dev mock mode allow unauth to still get a stub
   try {
+    const usingMock =
+      process.env.NODE_ENV !== "production" &&
+      process.env.MOCK_AUTH_FALLBACK === "true";
     const authCtx = req.auth || {};
     let userId = authCtx.userId || authCtx.id;
     if (!userId && usingMock) {
@@ -238,9 +312,6 @@ app.get("/api/bootstrap", async (req, res) => {
       const headerUser = req.headers["x-user-id"];
       if (headerUser) userId = headerUser;
     }
-    const usingMock =
-      process.env.NODE_ENV !== "production" &&
-      process.env.MOCK_AUTH_FALLBACK === "true";
     const { ok, fail } = require("./utils/responder");
     if (!userId && !usingMock) {
       return fail(res, 401, "UNAUTHORIZED", "Authentication required");
@@ -264,7 +335,7 @@ app.get("/api/bootstrap", async (req, res) => {
       const wantPremium = req.headers["x-test-premium"] === "true";
       const defaultSub = wantPremium
         ? { plan: "premium", interviewsRemaining: null }
-        : { plan: "free", interviewsRemaining: 5 };
+        : { plan: "free", interviewsRemaining: 10 };
       profile = {
         clerkUserId: userId,
         email: `${userId}@dev.local`,

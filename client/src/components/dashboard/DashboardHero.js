@@ -7,7 +7,6 @@ const DashboardHero = ({
   profileCompleteness = 0,
   streak = 0,
   onboardingCompleted = false,
-  onStart,
   onCreate,
 }) => {
   const reduce = useReducedMotion();
@@ -76,24 +75,28 @@ const DashboardHero = ({
               className="inline-block w-2 h-2 rounded-full bg-emerald-500"
               aria-hidden
             />
-            Streak:{" "}
-            <strong className="ml-1 text-surface-900 dark:text-white">
-              {streak}
-            </strong>{" "}
-            days
+            Streak: {streak} days
           </div>
-          <button
-            onClick={() => onStart?.("mixed")}
-            className="px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
-          >
-            Start practice
-          </button>
-          <button
-            onClick={() => onCreate?.()}
-            className="px-5 py-3 rounded-xl border border-emerald-500/60 text-emerald-600 dark:text-emerald-300 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-600/10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            Create interview
-          </button>
+          <div className="flex flex-col md:flex-row gap-3">
+            <button
+              onClick={onCreate}
+              className="px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+            >
+              Create Interview
+            </button>
+            <button
+              onClick={() => (window.location.href = "/interviews")}
+              className="px-5 py-3 rounded-xl border border-surface-300 text-surface-700 dark:text-surface-300 text-sm font-medium hover:bg-surface-100 dark:hover:bg-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              View Interview History
+            </button>
+            <button
+              onClick={() => (window.location.href = "/settings")}
+              className="px-5 py-3 rounded-xl border border-surface-300 text-surface-700 dark:text-surface-300 text-sm font-medium hover:bg-surface-100 dark:hover:bg-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              Settings
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

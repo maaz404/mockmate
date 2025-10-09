@@ -32,7 +32,7 @@ beforeAll(async () => {
     email: "test@example.com",
     firstName: "Test",
     lastName: "User",
-    subscription: { plan: "free", interviewsRemaining: 5 },
+    subscription: { plan: "free", interviewsRemaining: 10 },
   });
 });
 

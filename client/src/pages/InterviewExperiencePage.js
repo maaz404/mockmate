@@ -4,6 +4,7 @@ import { useUser } from "@clerk/clerk-react";
 import { apiService } from "../services/api";
 import { interviewService } from "../services/mockmate";
 import CodeEditor from "../components/ui/CodeEditor";
+import VideoRecorder from "../components/VideoRecorder";
 import CodeExecutionResults from "../components/ui/CodeExecutionResults";
 import { useSubscription } from "../hooks/useSubscription";
 import { useTranscriptPoll } from "../hooks/useTranscriptPoll";
@@ -37,7 +38,7 @@ const InterviewExperiencePage = () => {
   const [answers, setAnswers] = useState({});
   const [currentAnswer, setCurrentAnswer] = useState("");
   const [timeRemaining, setTimeRemaining] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
+  // VideoRecorder now handles recording state internally; legacy isRecording flag removed.
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -60,6 +61,9 @@ const InterviewExperiencePage = () => {
   const [adaptiveOverrideLoading, setAdaptiveOverrideLoading] = useState(false);
   const [skipping, setSkipping] = useState(false);
   const [answerValidationError, setAnswerValidationError] = useState(null);
+  // Track which questions have an uploaded video (derive from interview.questions video field + local events)
+  const [videoUploadedMap, setVideoUploadedMap] = useState({}); // index -> true
+  const [videoUploadingIdx, setVideoUploadingIdx] = useState(null); // index of uploading question
 
   // Facial analysis
   const facialEnabled = interview?.config?.facialAnalysis?.enabled || false;
@@ -82,8 +86,34 @@ const InterviewExperiencePage = () => {
   const fetchInterview = useCallback(async () => {
     try {
       setLoading(true);
+      // eslint-disable-next-line no-console
+      console.log("Fetching interview with ID:", interviewId);
       const resp = await apiService.get(`/interviews/${interviewId}`);
-      if (!resp.success) throw new Error("Fetch failed");
+      // eslint-disable-next-line no-console
+      console.log("Interview fetch response:", resp);
+
+      if (!resp.success) {
+        // eslint-disable-next-line no-console
+        console.error("Interview fetch failed:", resp);
+        throw new Error(resp.message || "Fetch failed");
+      }
+
+      // Start the interview if it's not already in progress
+      if (resp.data.status === "scheduled") {
+        // eslint-disable-next-line no-console
+        console.log("Starting interview...");
+        const startResp = await apiService.put(
+          `/interviews/${interviewId}/start`
+        );
+        // eslint-disable-next-line no-console
+        console.log("Start interview response:", startResp);
+        if (startResp.success) {
+          // Update the interview data with the started status
+          resp.data.status = "in-progress";
+          resp.data.timing = startResp.data.timing || resp.data.timing;
+        }
+      }
+
       setInterview(resp.data);
       setTimeRemaining(resp.data.duration * 60);
       const init = {};
@@ -92,7 +122,11 @@ const InterviewExperiencePage = () => {
       });
       setAnswers(init);
     } catch (e) {
-      alert("Failed to load interview. Redirecting.");
+      // eslint-disable-next-line no-console
+      console.error("Full error details:", e);
+      // eslint-disable-next-line no-console
+      console.error("Error response:", e.response);
+      alert(`Failed to load interview: ${e.message || e}. Redirecting.`);
       navigate("/dashboard");
     } finally {
       setLoading(false);
@@ -168,6 +202,15 @@ const InterviewExperiencePage = () => {
             [currentQuestionIndex]: resp.data.followUpQuestions,
           }));
           setShowFollowUps((p) => ({ ...p, [currentQuestionIndex]: true }));
+        } else {
+          // No follow-ups: advance to next question
+          if (currentQuestionIndex < interview.questions.length - 1) {
+            setCurrentQuestionIndex((i) => i + 1);
+            setCurrentAnswer("");
+          } else {
+            // Last question: optionally complete interview or show summary
+            // handleInterviewComplete(); // Uncomment if you want auto-complete
+          }
         }
       }
     } finally {
@@ -542,13 +585,25 @@ const InterviewExperiencePage = () => {
   };
 
   // Navigation
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     handleSaveAnswer();
+
+    // If not on last question, move to next
     if (currentQuestionIndex < interview.questions.length - 1) {
       const next = currentQuestionIndex + 1;
       setCurrentQuestionIndex(next);
       const id = interview.questions[next]._id;
       setCurrentAnswer(answers[id] || "");
+      return;
+    }
+
+    // On last question - check if we can get adaptive questions or complete
+    if (adaptiveEnabled && answeredCount < totalPlanned) {
+      // Try to fetch next adaptive question
+      await fetchNextAdaptiveQuestion();
+    } else {
+      // Complete the interview
+      await handleInterviewComplete();
     }
   };
   const handlePreviousQuestion = () => {
@@ -1096,6 +1151,64 @@ const InterviewExperiencePage = () => {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Integrated Video Recorder (conditional) */}
+                {(() => {
+                  const videoEnabled =
+                    interview?.config?.videoAnswersEnabled !== false &&
+                    // auto-enable for behavioral, communication, or any non-coding category
+                    currentQuestion.category !== "coding";
+                  if (!videoEnabled) return null;
+                  return (
+                    <div className="mb-6">
+                      <h4 className="font-semibold mb-3 text-surface-700 dark:text-surface-200 flex items-center gap-2">
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-red-500/10 text-red-500 text-xs font-bold">
+                          🎥
+                        </span>
+                        Video Response (Optional)
+                      </h4>
+                      <VideoRecorder
+                        interviewId={interviewId}
+                        currentQuestionIndex={currentQuestionIndex}
+                        onVideoUploaded={(qIdx) => {
+                          setVideoUploadingIdx(null);
+                          setVideoUploadedMap((m) => ({ ...m, [qIdx]: true }));
+                          setToasts((t) => [
+                            ...t,
+                            {
+                              id: Date.now() + Math.random(),
+                              message: `Video uploaded for Q${
+                                (qIdx ?? currentQuestionIndex) + 1
+                              }`,
+                            },
+                          ]);
+                        }}
+                        onRecordingChange={(rec) => {
+                          if (rec) setVideoUploadingIdx(currentQuestionIndex);
+                        }}
+                        onPermissionChange={(p) => {
+                          if (p?.error) {
+                            setToasts((t) => [
+                              ...t,
+                              {
+                                id: Date.now() + Math.random(),
+                                message: `Camera error: ${p.error}`,
+                              },
+                            ]);
+                          }
+                        }}
+                        className="max-w-2xl"
+                        enableTranscript
+                        enableWaveform
+                        maxDuration={180}
+                      />
+                      <p className="mt-3 text-xs text-surface-500 dark:text-surface-400 max-w-2xl">
+                        Record yourself answering to build confidence & capture
+                        delivery metrics. Uploading is optional – you can still
+                        submit a written answer below.
+                      </p>
+                    </div>
+                  );
+                })()}
                 <textarea
                   id="answer"
                   value={currentAnswer}
@@ -1145,26 +1258,7 @@ const InterviewExperiencePage = () => {
                 </p>
               </div>
             )}
-            <div className="mt-4 p-4 bg-surface-50 dark:bg-surface-800 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium">Voice Response (Optional)</h4>
-                  <p className="text-sm text-surface-600">
-                    Practice speaking your answer
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsRecording(!isRecording)}
-                  className={
-                    isRecording
-                      ? "btn-outline text-red-600 border-red-300"
-                      : "btn-primary"
-                  }
-                >
-                  {isRecording ? "🎙️ Stop Recording" : "🎤 Start Recording"}
-                </button>
-              </div>
-            </div>
+            {/* Legacy audio-only practice block removed (superseded by video recorder) */}
           </div>
 
           {currentAnswer.trim() && (
@@ -1264,12 +1358,14 @@ const InterviewExperiencePage = () => {
               )}
               <button
                 onClick={handleNextQuestion}
-                disabled={
-                  currentQuestionIndex >= interview.questions.length - 1
-                }
-                className="btn-secondary disabled:opacity-50 h-11"
+                disabled={false} // Always allow Next button - let function handle logic
+                className="btn-secondary h-11"
               >
-                Next →
+                {currentQuestionIndex >= interview.questions.length - 1
+                  ? adaptiveEnabled && answeredCount < totalPlanned
+                    ? "Next Question →"
+                    : "Complete Interview"
+                  : "Next →"}
               </button>
             </div>
           </div>
@@ -1277,6 +1373,73 @@ const InterviewExperiencePage = () => {
       </div>
 
       <div className="mt-8">
+        {/* Question Navigation with Video Indicators */}
+        {interview && interview.questions?.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-sm font-semibold mb-2 text-surface-700 dark:text-surface-300 flex items-center gap-2">
+              <span>Question Navigator</span>
+              <span className="text-[10px] font-normal text-surface-500 dark:text-surface-400">
+                Click to jump
+              </span>
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {interview.questions.map((q, idx) => {
+                // Show upload spinner only for current question if uploading
+                const showUploading = idx === videoUploadingIdx;
+                const answered = !!answers[q._id]?.trim();
+                const hasVideo =
+                  videoUploadedMap[idx] || (q.video && q.video.uploadedAt);
+                const active = idx === currentQuestionIndex;
+                return (
+                  <button
+                    key={q._id || idx}
+                    type="button"
+                    onClick={() => setCurrentQuestionIndex(idx)}
+                    className={`relative px-3 py-1.5 rounded-md text-xs font-medium border transition-colors flex items-center gap-1.5 ${
+                      active
+                        ? "bg-primary-600 text-white border-primary-600 shadow"
+                        : "bg-surface-100 dark:bg-surface-800/60 text-surface-600 dark:text-surface-300 border-surface-200 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700"
+                    }`}
+                    title={`Question ${idx + 1}`}
+                  >
+                    <span>{idx + 1}</span>
+                    {answered && (
+                      <span
+                        className="w-2 h-2 rounded-full bg-emerald-500"
+                        title="Answered"
+                        style={{ cursor: "help" }}
+                      />
+                    )}
+                    {hasVideo && (
+                      <span
+                        className="w-2.5 h-2.5 rounded-sm bg-red-500"
+                        title="Video Uploaded"
+                        style={{ cursor: "help" }}
+                      />
+                    )}
+                    {showUploading && (
+                      <span
+                        className="w-3 h-3 animate-spin border-b-2 border-primary-500 rounded-full ml-1"
+                        title="Uploading..."
+                        style={{ cursor: "progress" }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex items-center gap-4 text-[10px] text-surface-500 dark:text-surface-400">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                Answered
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" />
+                Video Uploaded
+              </span>
+            </div>
+          </div>
+        )}
         {/* Subscription badge */}
         <div className="text-xs mb-4 opacity-70">
           Plan:{" "}

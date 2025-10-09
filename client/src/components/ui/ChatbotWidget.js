@@ -124,8 +124,10 @@ const ChatbotWidget = () => {
         const { chatbot } = response.data || {};
         const available =
           !!chatbot?.available && chatbot?.diagnostics?.hasApiKey;
-        setChatbotAvailable(available);
-        if (!available) {
+        // In development, allow assistant even if not fully available (dev fallback will engage)
+        const devOverride = process.env.NODE_ENV !== "production";
+        setChatbotAvailable(available || devOverride);
+        if (!(available || devOverride)) {
           if (chatbot?.validation && chatbot.validation.valid === false) {
             setServiceNotice(
               `Chatbot unavailable: ${
@@ -144,11 +146,14 @@ const ChatbotWidget = () => {
           try {
             const response2 = await api.get("/chatbot/health");
             const ok = !!response2.data?.chatbot?.available;
-            setChatbotAvailable(ok);
-            if (!ok) setServiceNotice("AI assistant unreachable (health)");
+            const devOverride = process.env.NODE_ENV !== "production";
+            setChatbotAvailable(ok || devOverride);
+            if (!(ok || devOverride))
+              setServiceNotice("AI assistant unreachable (health)");
           } catch (e2) {
-            setChatbotAvailable(false);
-            setServiceNotice("AI assistant network error");
+            const devOverride = process.env.NODE_ENV !== "production";
+            setChatbotAvailable(devOverride);
+            if (!devOverride) setServiceNotice("AI assistant network error");
           }
         }, 1200);
       }
@@ -820,24 +825,7 @@ const ChatbotWidget = () => {
         )}
       </AnimatePresence>
 
-      {/* Dock preview when closed and docked */}
-      {!isOpen && isDocked && messages.length > 0 && (
-        <div
-          className="absolute bottom-16 right-0 w-72 bg-white/90 dark:bg-surface-800/90 backdrop-blur rounded-lg shadow-xl border border-surface-200 dark:border-surface-700 p-3 cursor-pointer"
-          onClick={toggleWidget}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-teal-500" />
-              <span className="text-sm font-medium">AI Assistant</span>
-            </div>
-            <span className="text-[10px] text-gray-500">Preview</span>
-          </div>
-          <div className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3">
-            {messages[messages.length - 1]?.content || "Ask me anything..."}
-          </div>
-        </div>
-      )}
+      {/* Dock preview is intentionally removed */}
     </div>
   );
 };

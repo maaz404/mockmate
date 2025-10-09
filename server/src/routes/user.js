@@ -4,6 +4,7 @@ const multer = require("multer");
 const requireAuth = require("../middleware/auth");
 const ensureUserProfile = require("../middleware/ensureUserProfile");
 const {
+  upgradeToPremium,
   getProfile,
   updateProfile,
   getAnalytics,
@@ -26,6 +27,14 @@ const {
   getDashboardRecommendation,
   bootstrapProfile,
 } = require("../controllers/userController");
+
+// Upgrade to premium endpoint
+router.post(
+  "/upgrade/premium",
+  requireAuth,
+  ensureUserProfile,
+  upgradeToPremium
+);
 
 // Multer storage for resume uploads
 /* eslint-disable no-magic-numbers */

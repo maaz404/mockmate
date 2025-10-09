@@ -181,6 +181,7 @@ const interviewSchema = new mongoose.Schema(
           },
         ],
       },
+      videoAnswersEnabled: { type: Boolean, default: true },
     },
     status: {
       type: String,

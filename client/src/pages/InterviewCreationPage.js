@@ -20,6 +20,7 @@ const InterviewCreationPage = () => {
     codingChallengeCount: 2,
     codingDifficulty: "mixed",
     codingLanguage: "javascript",
+    videoAnswersEnabled: true,
   });
   const [loading, setLoading] = useState(false);
 
@@ -172,6 +173,7 @@ const InterviewCreationPage = () => {
                 language: formData.codingLanguage,
               }
             : undefined,
+          videoAnswersEnabled: formData.videoAnswersEnabled,
         },
       });
 
@@ -420,6 +422,38 @@ const InterviewCreationPage = () => {
                       <option value="java">Java</option>
                     </select>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Video Answers Opt-In */}
+            <div className="p-4 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800/40 space-y-3">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.videoAnswersEnabled}
+                  onChange={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      videoAnswersEnabled: !prev.videoAnswersEnabled,
+                    }))
+                  }
+                  className="mt-1 text-primary-500 bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 focus:ring-primary-500"
+                />
+                <span>
+                  <span className="block font-medium text-surface-900 dark:text-surface-50">
+                    Enable Video Answers
+                  </span>
+                  <span className="block text-sm text-surface-600 dark:text-surface-400">
+                    Allow recording optional video responses for non-coding
+                    questions.
+                  </span>
+                </span>
+              </div>
+              {!formData.videoAnswersEnabled && (
+                <div className="text-xs text-surface-500 dark:text-surface-400">
+                  Video recorder will be hidden; users can still provide written
+                  answers.
                 </div>
               )}
             </div>

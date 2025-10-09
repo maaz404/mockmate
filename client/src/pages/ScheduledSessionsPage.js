@@ -25,7 +25,7 @@ export default function ScheduledSessionsPage() {
       const res = await apiService.get(
         `/users/scheduled-sessions?limit=10&page=${p}&includePast=true&status=${st}`
       );
-      setItems(res.data || []);
+      setItems(Array.isArray(res.data) ? res.data : []);
       setPagination(res.pagination || null);
       setPage(p);
       localStorage.setItem("sched_page", String(p));

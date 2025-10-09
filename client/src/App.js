@@ -1,5 +1,10 @@
 import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { ToastProvider } from "./context/ToastContext";
 import { Toaster } from "react-hot-toast";
@@ -22,7 +27,6 @@ import InterviewHistoryPage from "./pages/InterviewHistoryPage";
 import QuestionBankPage from "./pages/QuestionBankPage";
 import QuestionCategoryPage from "./pages/QuestionCategoryPage";
 import EnhancedSettingsPage from "./pages/EnhancedSettingsPage";
-import MockInterviewPage from "./pages/MockInterviewPage";
 import PracticePage from "./pages/PracticePage";
 import ResourcesPage from "./pages/ResourcesPage";
 import ReportsPage from "./pages/ReportsPage";
@@ -281,11 +285,7 @@ function App() {
                       />
                       <Route
                         path="/mock-interview"
-                        element={
-                          <ProtectedRoute>
-                            <MockInterviewPage />
-                          </ProtectedRoute>
-                        }
+                        element={<Navigate to="/interview/new" replace />}
                       />
                       <Route
                         path="/practice"

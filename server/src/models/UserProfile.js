@@ -235,7 +235,7 @@ const userProfileSchema = new mongoose.Schema(
       },
       interviewsRemaining: {
         type: Number,
-        default: 5, // free plan limit (updated from 3)
+        default: 10, // free plan limit (updated from 5)
       },
       nextResetDate: Date,
     },
@@ -281,10 +281,8 @@ userProfileSchema.methods.calculateCompleteness = function () {
   const MAX_COMPLETENESS = 100;
   let completeness = 0;
 
-  // Safely access nested properties
+  // Only use onboarding fields for completeness
   const fields = [
-    this.firstName,
-    this.lastName,
     this.professionalInfo?.currentRole,
     this.professionalInfo?.experience,
     this.professionalInfo?.industry,

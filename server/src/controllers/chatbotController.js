@@ -61,7 +61,7 @@ exports.health = async (req, res) => {
 exports.chat = async (req, res) => {
   try {
     const { messages, context } = req.body;
-    const userId = req.auth.userId || req.auth.id;
+    const userId = req.auth?.userId || req.auth?.id;
 
     // Validation
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -73,20 +73,17 @@ exports.chat = async (req, res) => {
       );
     }
 
-    // Check if Grok is configured
+    // If Grok is not configured, deliberately throw to engage dev fallback (non-prod)
     if (!grokChatbotService.isConfigured()) {
-      return fail(
-        res,
-        503,
-        "CHATBOT_UNCONFIGURED",
-        "Chatbot is not configured. Please contact support."
-      );
+      throw new Error("Chatbot not configured");
     }
 
     // Get user profile for better context
     let userProfile = null;
     try {
-      userProfile = await UserProfile.findOne({ clerkUserId: userId });
+      if (userId) {
+        userProfile = await UserProfile.findOne({ clerkUserId: userId });
+      }
     } catch (error) {
       Logger.warn(
         "Could not fetch user profile for chatbot context:",
@@ -218,7 +215,7 @@ exports.chat = async (req, res) => {
  */
 exports.getChatSuggestions = async (req, res) => {
   try {
-    const userId = req.auth.userId || req.auth.id;
+    const userId = req.auth?.userId || req.auth?.id;
     let userProfile = null;
 
     try {
@@ -295,7 +292,7 @@ exports.stream = async (req, res) => {
 
   try {
     const { messages, context } = req.body || {};
-    const userId = req.auth.userId || req.auth.id;
+    const userId = req.auth?.userId || req.auth?.id;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       send("error", {
@@ -341,16 +338,25 @@ exports.stream = async (req, res) => {
               const maybe = JSON.parse(trimmed);
               const text =
                 maybe.choices?.[0]?.delta?.content || maybe.text || "";
-              if (text) send("chunk", { text, source: "grok" });
+              if (text)
+                send("chunk", { text, source: "grok", provider: "grok" });
             } catch {
               // fallback: treat raw text
-              send("chunk", { text: trimmed, source: "grok-raw" });
+              send("chunk", {
+                text: trimmed,
+                source: "grok-raw",
+                provider: "grok",
+              });
             }
           }
         });
         stream.on("end", () => {
           if (buffer.trim())
-            send("chunk", { text: buffer.trim(), source: "grok-tail" });
+            send("chunk", {
+              text: buffer.trim(),
+              source: "grok-tail",
+              provider: "grok",
+            });
           send("done", {
             timestamp: new Date().toISOString(),
             provider: "grok",
@@ -371,7 +377,12 @@ exports.stream = async (req, res) => {
             messages,
             enhancedContext
           );
-          send("chunk", { text: result.message, source: "grok-fallback" });
+          send("chunk", {
+            text: result.message,
+            source: "grok-fallback",
+            provider: "grok",
+            fallback: true,
+          });
           send("done", {
             timestamp: new Date().toISOString(),
             provider: "grok",
@@ -385,7 +396,12 @@ exports.stream = async (req, res) => {
               messages,
               enhancedContext
             );
-            send("chunk", { text: alt.message, source: "openai-fallback" });
+            send("chunk", {
+              text: alt.message,
+              source: "openai-fallback",
+              provider: alt.provider || "openai-fallback",
+              fallback: true,
+            });
             send("done", {
               timestamp: new Date().toISOString(),
               provider: alt.provider,
@@ -416,7 +432,11 @@ exports.stream = async (req, res) => {
         });
         return res.end();
       }
-      send("chunk", { text: step.value, source: "dev-fallback" });
+      send("chunk", {
+        text: step.value,
+        source: "dev-fallback",
+        provider: "dev-fallback",
+      });
       step = fallback.next();
     }, 30);
   } catch (error) {

@@ -103,7 +103,7 @@ async function validateBackend() {
           },
           subscription: {
             plan: "free",
-            interviewsRemaining: 5,
+            interviewsRemaining: 10,
           },
         },
         {

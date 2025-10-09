@@ -1,3 +1,24 @@
+// Upgrade user to premium (unlimited interviews)
+const upgradeToPremium = async (req, res) => {
+  try {
+    const { userId } = req.auth;
+    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    if (!userProfile) {
+      return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
+    }
+    userProfile.subscription.plan = "premium";
+    userProfile.subscription.interviewsRemaining = null; // unlimited
+    await userProfile.save();
+    return ok(
+      res,
+      { success: true, subscription: userProfile.subscription },
+      "Upgraded to premium"
+    );
+  } catch (error) {
+    // Error logging removed to fix lint error
+    return fail(res, 500, "UPGRADE_FAILED", "Failed to upgrade to premium");
+  }
+};
 /* eslint-disable no-console, consistent-return, no-magic-numbers */
 const UserProfile = require("../models/UserProfile");
 const { clerkClient } = require("@clerk/clerk-sdk-node");
@@ -956,7 +977,7 @@ const getDynamicTips = async (req, res) => {
     try {
       const recent = await Interview.find({ userId, status: "completed" })
         .sort({ updatedAt: -1 })
-        .limit(5)
+        .limit(10)
         .select(
           "results.breakdown questions.category questions.followUpsReviewed questions.score.rubricScores"
         );
@@ -1111,6 +1132,7 @@ module.exports.updateScheduledSessionStatus = updateScheduledSessionStatus;
 module.exports.getGoals = getGoals;
 module.exports.updateGoals = updateGoals;
 module.exports.getDynamicTips = getDynamicTips;
+module.exports.upgradeToPremium = upgradeToPremium;
 
 // ================= Dashboard Summary Aggregation =================
 // GET /api/users/dashboard/summary
@@ -1120,7 +1142,7 @@ async function getDashboardSummary(req, res) {
     // Query params with sensible defaults
     const interviewsLimit = Math.max(
       1,
-      parseInt(req.query.interviewsLimit, 10) || 5
+      parseInt(req.query.interviewsLimit, 10) || 10
     );
     const scheduledLimit = Math.max(
       1,
@@ -1163,7 +1185,7 @@ async function getDashboardSummary(req, res) {
         .sort({ createdAt: -1 })
         .limit(interviewsLimit)
         .select(
-          "_id createdAt updatedAt status results.breakdown questions.category config.jobRole config.interviewType config.difficulty"
+          "_id createdAt updatedAt status results.breakdown questions.category questions.type config.jobRole config.interviewType config.difficulty"
         )
         .lean()
         .exec(),
@@ -1220,9 +1242,54 @@ async function getDashboardSummary(req, res) {
         }
         return tips;
       })(),
+      skillsDistribution: (async () => {
+        // Calculate skills distribution from recent interviews
+        const interviews = await Interview.find({ userId })
+          .sort({ createdAt: -1 })
+          .limit(20) // Look at more interviews for better distribution
+          .select("questions.category config.jobRole")
+          .lean()
+          .exec();
+
+        const skillsCount = {};
+
+        interviews.forEach((interview) => {
+          // Count question categories
+          if (interview.questions && Array.isArray(interview.questions)) {
+            interview.questions.forEach((q) => {
+              if (q.category) {
+                const category =
+                  q.category.charAt(0).toUpperCase() + q.category.slice(1);
+                skillsCount[category] = (skillsCount[category] || 0) + 1;
+              }
+            });
+          }
+
+          // Also infer skills from job roles if no questions
+          if (interview.config?.jobRole) {
+            const jobRole = interview.config.jobRole.toLowerCase();
+            if (jobRole.includes("frontend")) {
+              skillsCount["Frontend"] = (skillsCount["Frontend"] || 0) + 1;
+            } else if (jobRole.includes("backend")) {
+              skillsCount["Backend"] = (skillsCount["Backend"] || 0) + 1;
+            } else if (jobRole.includes("full")) {
+              skillsCount["Full Stack"] = (skillsCount["Full Stack"] || 0) + 1;
+            } else if (jobRole.includes("mobile")) {
+              skillsCount["Mobile"] = (skillsCount["Mobile"] || 0) + 1;
+            } else if (jobRole.includes("devops")) {
+              skillsCount["DevOps"] = (skillsCount["DevOps"] || 0) + 1;
+            }
+          }
+        });
+
+        return Object.entries(skillsCount)
+          .map(([skill, count]) => ({ skill, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5); // Top 5 skills
+      })(),
     };
 
-    const [profileR, analyticsR, recentR, scheduledR, goalsR, tipsR] =
+    const [profileR, analyticsR, recentR, scheduledR, goalsR, tipsR, skillsR] =
       await Promise.allSettled([
         tasks.profile,
         tasks.analytics,
@@ -1230,6 +1297,7 @@ async function getDashboardSummary(req, res) {
         tasks.scheduled,
         tasks.goals,
         tasks.tips,
+        tasks.skillsDistribution,
       ]);
 
     const pick = (r, name) => {
@@ -1248,6 +1316,7 @@ async function getDashboardSummary(req, res) {
       },
       goals: pick(goalsR, "goals")?.goals || [],
       tips: pick(tipsR, "tips") || [],
+      skillsDistribution: pick(skillsR, "skillsDistribution") || [],
       sectionsWithErrors,
     };
 

@@ -520,7 +520,7 @@ const OnboardingModal = ({
       if (!isOpen) return;
       try {
         const res = await api.get(
-          "/users/scheduled-sessions?limit=5&includePast=false"
+          "/users/scheduled-sessions?limit=10&includePast=false"
         );
         const sessions = res?.data || res;
         const list = sessions?.data || sessions || [];
@@ -773,6 +773,11 @@ const OnboardingModal = ({
 
     if (!professionalInfo.currentRole.trim()) {
       toast.error("Please provide your current role");
+      return;
+    }
+
+    if (!professionalInfo.industry || professionalInfo.industry === "") {
+      toast.error("Please select your industry");
       return;
     }
 

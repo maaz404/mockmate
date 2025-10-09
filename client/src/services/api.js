@@ -33,6 +33,17 @@ api.interceptors.request.use(
           config.headers.Authorization = `Bearer ${token}`;
         }
       }
+
+      // In development mode, force the premium user ID for testing
+      if (
+        process.env.NODE_ENV === "development" ||
+        process.env.REACT_APP_MOCK_AUTH
+      ) {
+        config.headers["x-user-id"] = "user_32SjRWLQzT2Adf0C0MPuO0lezl3";
+        config.headers["x-user-email"] = "maazakbar404@gmail.com";
+        config.headers["x-user-firstname"] = "Maaz";
+        config.headers["x-user-lastname"] = "Sheikh";
+      }
     } catch (error) {
       // Authentication token retrieval failed
       // eslint-disable-next-line no-console
@@ -64,7 +75,10 @@ api.interceptors.response.use(
       message: response?.data?.message || error.message || "Request failed",
       meta: response?.data?.meta,
       requestId:
-        response?.data?.requestId || response?.headers?.["x-request-id"] || getLastRequestId() || null,
+        response?.data?.requestId ||
+        response?.headers?.["x-request-id"] ||
+        getLastRequestId() ||
+        null,
       raw: error,
     };
     return Promise.reject(normalized);

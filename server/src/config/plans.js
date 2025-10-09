@@ -5,7 +5,7 @@ const PLANS = Object.freeze({
   free: {
     key: "free",
     label: "Free",
-    interviews: 5, // monthly quota
+    interviews: 10, // monthly quota
     unlimited: false,
     features: [
       "Core practice interviews",

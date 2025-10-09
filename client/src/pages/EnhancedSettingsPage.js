@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuthContext } from "../context/AuthContext";
-import UserProfileCard from "../components/profile/UserProfileCard";
 import OnboardingModal from "../components/onboarding/OnboardingModal";
 import {
   Settings,
@@ -120,7 +119,7 @@ const SettingsPage = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
           <div className="lg:w-64">
-            <div className="card p-4">
+            <div className="card p-4 shadow-md rounded-xl">
               <nav className="space-y-2">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -128,14 +127,14 @@ const SettingsPage = () => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors font-semibold text-base ${
                         activeTab === tab.id
-                          ? "bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-700"
-                          : "text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-700"
+                          ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-700 shadow"
+                          : "text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
                       }`}
                     >
                       <Icon className="h-5 w-5" />
-                      <span className="font-medium">{tab.label}</span>
+                      <span>{tab.label}</span>
                     </button>
                   );
                 })}
@@ -146,10 +145,81 @@ const SettingsPage = () => {
           {/* Main Content */}
           <div className="flex-1">
             {activeTab === "profile" && (
-              <div className="space-y-6">
-                <UserProfileCard />
+              <div className="space-y-8">
+                <div className="card p-8 shadow-lg rounded-xl flex flex-col items-center text-center mb-6">
+                  {/* Avatar, Name, Email */}
+                  <div className="flex flex-col items-center mb-4">
+                    <img
+                      src={userProfile?.avatarUrl || "/default-avatar.png"}
+                      alt="Profile"
+                      className="w-20 h-20 rounded-full border-2 border-primary-200 mb-2 object-cover"
+                    />
+                    <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-50">
+                      {userProfile?.fullName || userProfile?.username}
+                    </h2>
+                    <p className="text-surface-600 dark:text-surface-400 text-base">
+                      {userProfile?.email}
+                    </p>
+                  </div>
+                  {/* Professional Info Grid */}
+                  <div className="w-full max-w-2xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-left mt-6">
+                    <div>
+                      <span className="font-semibold text-surface-700 dark:text-surface-200">
+                        Current Role
+                      </span>
+                      <div className="text-surface-600 dark:text-surface-400">
+                        {userProfile?.role || "Not specified"}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-surface-700 dark:text-surface-200">
+                        Company
+                      </span>
+                      <div className="text-surface-600 dark:text-surface-400">
+                        {userProfile?.company || "Not specified"}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-surface-700 dark:text-surface-200">
+                        Experience
+                      </span>
+                      <div className="text-surface-600 dark:text-surface-400">
+                        {userProfile?.experience || "Not specified"}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-surface-700 dark:text-surface-200">
+                        Industry
+                      </span>
+                      <div className="text-surface-600 dark:text-surface-400">
+                        {userProfile?.industry || "Not specified"}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="font-semibold text-surface-700 dark:text-surface-200">
+                        Skills
+                      </span>
+                      <div className="text-surface-600 dark:text-surface-400">
+                        {userProfile?.skills?.length
+                          ? userProfile.skills.join(", ")
+                          : "No skills added"}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="font-semibold text-surface-700 dark:text-surface-200">
+                        Career Goals
+                      </span>
+                      <div className="text-surface-600 dark:text-surface-400">
+                        {userProfile?.careerGoals || "Not specified"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                <div className="card p-6" ref={onboardingCardRef}>
+                <div
+                  className="card p-6 shadow rounded-xl"
+                  ref={onboardingCardRef}
+                >
                   <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4">
                     Onboarding
                   </h3>

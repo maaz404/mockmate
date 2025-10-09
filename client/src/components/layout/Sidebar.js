@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSubscription } from "../../hooks/useSubscription";
 import { Link, useLocation } from "react-router-dom";
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
 import DarkModeToggle from "../ui/DarkModeToggle";
@@ -7,6 +8,7 @@ import { navigationConfig } from "../../config/navigation";
 
 // Clean rebuilt Sidebar component (sign-out button removed; Clerk UserButton handles sign out)
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
+  const { subscription } = useSubscription();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [tooltip, setTooltip] = useState({
     visible: false,
@@ -266,8 +268,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 </div>
               )}
             </div>
-
-            {!isCollapsed && (
+            {!isCollapsed && subscription.isFree && (
               <div className="px-2">
                 <button className="w-full text-left px-3 py-2 text-xs text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium">
                   Upgrade to Pro

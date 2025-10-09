@@ -431,7 +431,7 @@ class ComprehensiveReportingService {
         status: "completed",
       })
         .sort({ createdAt: -1 })
-        .limit(5);
+        .limit(10);
 
       if (previousInterviews.length === 0) {
         return {

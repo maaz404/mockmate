@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import videoService from '../services/videoService';
+import { useState, useRef, useCallback, useEffect } from "react";
+import videoService from "../services/videoService";
 
 export const useVideoRecording = (interviewId) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -8,6 +8,7 @@ export const useVideoRecording = (interviewId) => {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [error, setError] = useState(null);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -18,10 +19,32 @@ export const useVideoRecording = (interviewId) => {
   const startSession = useCallback(async () => {
     try {
       setError(null);
+      // Validate a likely ObjectId format (24 hex chars) before calling backend
+      const isLikelyObjectId =
+        typeof interviewId === "string" &&
+        /^[a-fA-F0-9]{24}$/.test(interviewId);
+      if (!isLikelyObjectId) {
+        // Skip API call entirely and enter demo mode
+        setDemoMode(true);
+        setSessionStarted(true);
+        return;
+      }
       await videoService.startRecordingSession(interviewId);
       setSessionStarted(true);
     } catch (err) {
-      setError('Failed to start recording session');
+      // If backend rejects due to invalid ID format or not found, drop into demo mode instead of failing hard
+      const msg = err?.message?.toLowerCase?.() || "";
+      if (
+        msg.includes("invalid interview id") ||
+        msg.includes("not found") ||
+        err?.code === "INVALID_INTERVIEW_ID"
+      ) {
+        setDemoMode(true);
+        setSessionStarted(true);
+        setError(null);
+      } else {
+        setError("Failed to start recording session");
+      }
     }
   }, [interviewId]);
 
@@ -30,9 +53,9 @@ export const useVideoRecording = (interviewId) => {
     try {
       setError(null);
       recordedChunksRef.current = [];
-      
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp8,opus'
+        mimeType: "video/webm;codecs=vp8,opus",
       });
 
       mediaRecorder.ondataavailable = (event) => {
@@ -46,11 +69,13 @@ export const useVideoRecording = (interviewId) => {
         setHasRecorded(false);
         setRecordingDuration(0);
         startTimeRef.current = Date.now();
-        
+
         // Update duration every second
         durationIntervalRef.current = setInterval(() => {
           if (startTimeRef.current) {
-            setRecordingDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
+            setRecordingDuration(
+              Math.floor((Date.now() - startTimeRef.current) / 1000)
+            );
           }
         }, 1000);
       };
@@ -67,7 +92,7 @@ export const useVideoRecording = (interviewId) => {
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
     } catch (err) {
-      setError('Failed to start recording');
+      setError("Failed to start recording");
     }
   }, []);
 
@@ -79,32 +104,45 @@ export const useVideoRecording = (interviewId) => {
   }, [isRecording]);
 
   // Upload recorded video for a specific question
-  const uploadVideo = useCallback(async (questionIndex, facialAnalysisData = null) => {
-    if (!hasRecorded || recordedChunksRef.current.length === 0) {
-      setError('No recording to upload');
-      return false;
-    }
+  const uploadVideo = useCallback(
+    async (questionIndex, facialAnalysisData = null) => {
+      if (!hasRecorded || recordedChunksRef.current.length === 0) {
+        setError("No recording to upload");
+        return false;
+      }
 
-    try {
-      setIsUploading(true);
-      setError(null);
-
-      const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-      await videoService.uploadVideo(interviewId, questionIndex, blob, recordingDuration, facialAnalysisData);
-      
-      // Clear recorded data after successful upload
-      recordedChunksRef.current = [];
-      setHasRecorded(false);
-      setRecordingDuration(0);
-      
-      return true;
-    } catch (err) {
-      setError('Failed to upload video');
-      return false;
-    } finally {
-      setIsUploading(false);
-    }
-  }, [interviewId, hasRecorded, recordingDuration]);
+      try {
+        setIsUploading(true);
+        setError(null);
+        const blob = new Blob(recordedChunksRef.current, {
+          type: "video/webm",
+        });
+        if (demoMode) {
+          // Simulate upload latency
+          await new Promise((r) => setTimeout(r, 600));
+        } else {
+          await videoService.uploadVideo(
+            interviewId,
+            questionIndex,
+            blob,
+            recordingDuration,
+            facialAnalysisData
+          );
+        }
+        // Clear recorded data after (simulated) upload
+        recordedChunksRef.current = [];
+        setHasRecorded(false);
+        setRecordingDuration(0);
+        return true;
+      } catch (err) {
+        setError("Failed to upload video");
+        return false;
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [interviewId, hasRecorded, recordingDuration, demoMode]
+  );
 
   // Clear current recording
   const clearRecording = useCallback(() => {
@@ -133,10 +171,11 @@ export const useVideoRecording = (interviewId) => {
     recordingDuration,
     error,
     sessionStarted,
+    demoMode,
     startSession,
     startRecording,
     stopRecording,
     uploadVideo,
-    clearRecording
+    clearRecording,
   };
 };

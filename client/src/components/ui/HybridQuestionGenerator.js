@@ -93,11 +93,11 @@ const HybridQuestionGenerator = ({
   return (
     <div className="space-y-6">
       {/* Configuration Section */}
-      <div className="bg-white rounded-lg shadow-sm border border-surface-200 p-6">
-        <h2 className="text-xl font-semibold text-surface-900 mb-4">
+      <div className="bg-white dark:bg-surface-900 rounded-lg shadow-sm border border-surface-200 dark:border-surface-700 p-6">
+        <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-50 mb-4">
           Generate Interview Questions
         </h2>
-        <p className="text-surface-600 mb-6">
+        <p className="text-surface-600 dark:text-surface-300 mb-6">
           Configure your interview parameters to generate a mix of
           template-based and AI-generated questions.
         </p>
@@ -108,11 +108,14 @@ const HybridQuestionGenerator = ({
               <input
                 id="append-mode"
                 type="checkbox"
-                className="h-4 w-4"
+                className="h-4 w-4 accent-primary-600 dark:accent-primary-400"
                 checked={appendMode}
                 onChange={(e) => onAppendModeChange(e.target.checked)}
               />
-              <label htmlFor="append-mode" className="text-surface-600">
+              <label
+                htmlFor="append-mode"
+                className="text-surface-600 dark:text-surface-300"
+              >
                 Append to existing set instead of replacing
               </label>
             </div>
@@ -120,7 +123,7 @@ const HybridQuestionGenerator = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Job Role */}
           <div>
-            <label className="block text-sm font-medium text-surface-700 mb-2">
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-200 mb-2">
               Job Role
             </label>
             <StyledSelect
@@ -139,7 +142,7 @@ const HybridQuestionGenerator = ({
 
           {/* Experience Level */}
           <div>
-            <label className="block text-sm font-medium text-surface-700 mb-2">
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-200 mb-2">
               Experience Level
             </label>
             <StyledSelect
@@ -164,7 +167,7 @@ const HybridQuestionGenerator = ({
 
           {/* Interview Type */}
           <div>
-            <label className="block text-sm font-medium text-surface-700 mb-2">
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-200 mb-2">
               Interview Type
             </label>
             <StyledSelect
@@ -185,7 +188,7 @@ const HybridQuestionGenerator = ({
 
           {/* Question Count */}
           <div>
-            <label className="block text-sm font-medium text-surface-700 mb-2">
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-200 mb-2">
               Number of Questions
             </label>
             <input
@@ -196,7 +199,7 @@ const HybridQuestionGenerator = ({
               onChange={(e) =>
                 handleConfigChange("questionCount", parseInt(e.target.value))
               }
-              className="w-full px-3 py-2 border border-surface-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-md bg-white dark:bg-surface-800 text-surface-900 dark:text-surface-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
         </div>
@@ -206,7 +209,7 @@ const HybridQuestionGenerator = ({
           <button
             onClick={handleGenerateQuestions}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-surface-400 text-white px-6 py-2 rounded-md font-medium transition-colors duration-200 flex items-center space-x-2"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-surface-400 dark:disabled:bg-surface-700 text-white px-6 py-2 rounded-md font-medium transition-colors duration-200 flex items-center space-x-2"
           >
             {loading ? (
               <>
@@ -259,8 +262,8 @@ const HybridQuestionGenerator = ({
         <div className="space-y-6">
           {/* Metadata Section */}
           {metadata && (
-            <div className="bg-surface-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-surface-900 mb-3">
+            <div className="bg-surface-50 dark:bg-surface-800 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-3">
                 Generation Summary
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -269,12 +272,16 @@ const HybridQuestionGenerator = ({
                     {metadata.totalQuestions}
                   </div>
                   <div className="text-sm text-surface-600">
-                    Total Questions
+                    <span className="dark:text-surface-300">
+                      Total Questions
+                    </span>
                   </div>
                 </div>
                 <div className="text-center">
                   <div className="text-sm text-surface-700 mb-2">
-                    Source Breakdown:
+                    <span className="dark:text-surface-200">
+                      Source Breakdown:
+                    </span>
                   </div>
                   <div className="space-y-1">
                     {Object.entries(metadata.sourceBreakdown).map(
@@ -290,13 +297,13 @@ const HybridQuestionGenerator = ({
                 </div>
                 <div className="text-center">
                   <div className="text-sm text-surface-700 mb-2">
-                    Tag Coverage:
+                    <span className="dark:text-surface-200">Tag Coverage:</span>
                   </div>
                   <div className="flex flex-wrap gap-1 justify-center">
                     {metadata.tagCoverage.slice(0, 5).map((tag, index) => (
                       <span
                         key={index}
-                        className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full"
+                        className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full"
                       >
                         {tag}
                       </span>

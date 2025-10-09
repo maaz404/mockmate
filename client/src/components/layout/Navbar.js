@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   SignedIn,
   SignedOut,
@@ -8,18 +8,66 @@ import {
 } from "@clerk/clerk-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Calendar } from "lucide-react";
+import { Menu, X, Calendar, Play, Video, ArrowLeft } from "lucide-react";
 import DarkModeToggle from "../ui/DarkModeToggle";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import toast from "react-hot-toast";
 import BrandLogo from "../ui/BrandLogo";
+import {
+  onDemoState,
+  triggerDemoPrimaryAction,
+  clearDemoState,
+} from "../../utils/demoState";
+import { useLocation } from "react-router-dom";
 
 const Navbar = () => {
+  const location = useLocation();
+  const nav = useNavigate();
   const { user } = useUser();
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [demoState, setDemoState] = useState(null);
+  const [hideDemoPill, setHideDemoPill] = useState(false);
+  const pillRef = useRef(null);
+
+  // Listen for demo state updates (coding / video demos)
+  useEffect(() => {
+    const unsub = onDemoState((e) => setDemoState(e.detail));
+    return () => unsub();
+  }, []);
+
+  // Auto-clear demo state when leaving demo routes
+  useEffect(() => {
+    if (
+      !location.pathname.includes("coding-demo") &&
+      !location.pathname.includes("video-demo")
+    ) {
+      setDemoState(null);
+      clearDemoState();
+    }
+  }, [location.pathname]);
+
+  // Hide demo pill after 5 seconds of inactivity
+  useEffect(() => {
+    const inDemo =
+      demoState ||
+      location.pathname.includes("coding-demo") ||
+      location.pathname.includes("video-demo");
+    if (!inDemo) return;
+    setHideDemoPill(false);
+    const id = setTimeout(() => {
+      const el = pillRef.current;
+      if (!el) return;
+      const isFocused =
+        document.activeElement === el || el.contains(document.activeElement);
+      if (!el.matches(":hover") && !isFocused) {
+        setHideDemoPill(true);
+      }
+    }, 5000);
+    return () => clearTimeout(id);
+  }, [demoState, location.pathname]);
 
   const navigation = [
     { name: "Features", href: "#features" },
@@ -28,12 +76,50 @@ const Navbar = () => {
     { name: "Project Info", href: "#about" },
   ];
 
+  // Demo mode active if demoState present OR route matches known demos
+  const routeDemoMode =
+    location.pathname.includes("coding-demo") ||
+    location.pathname.includes("video-demo");
+  const activeDemoState =
+    demoState ||
+    (routeDemoMode
+      ? {
+          mode: location.pathname.includes("coding-demo") ? "coding" : "video",
+          title: location.pathname.includes("coding-demo")
+            ? "Coding Challenge Demo"
+            : "Video Recording Demo",
+          subtitle: "Interactive preview",
+        }
+      : null);
+
+  const isDemo = Boolean(activeDemoState);
+  const progressPct = Math.round((activeDemoState?.progress || 0) * 100);
+
   return (
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-lg border-b border-surface-800"
+      className={[
+        "fixed top-0 left-0 right-0 z-50 border-b border-surface-800",
+        "bg-black/70 backdrop-blur-sm transition-colors duration-300",
+      ].join(" ")}
     >
+      {/* Thin progress accent (minimal) */}
+      {isDemo && typeof activeDemoState.progress === "number" && (
+        <div
+          className="absolute top-0 inset-x-0 h-0.5 bg-surface-700/60 overflow-hidden group"
+          role="progressbar"
+          aria-valuenow={progressPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          title={`${progressPct}% complete`}
+        >
+          <div
+            className="h-full bg-teal-400 transition-all duration-500 group-hover:bg-teal-300"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      )}
       <div className="max-w-7xl mx-auto container-padding">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -73,8 +159,51 @@ const Navbar = () => {
             </SignedIn>
           </div>
 
-          {/* CTA & User Actions */}
+          {/* CTA & User Actions OR Demo Toolbar */}
           <div className="hidden md:flex items-center space-x-4">
+            {isDemo && (
+              <div className="flex items-center gap-2 pr-4 mr-4 border-r border-white/10">
+                <span
+                  ref={pillRef}
+                  tabIndex={0}
+                  onMouseEnter={() => setHideDemoPill(false)}
+                  onFocus={() => setHideDemoPill(false)}
+                  className={[
+                    "px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide outline-none transition-all duration-300",
+                    "bg-teal-600/20 text-teal-300 border border-teal-500/30",
+                    hideDemoPill
+                      ? "opacity-0 pointer-events-none translate-x-1"
+                      : "opacity-100",
+                  ].join(" ")}
+                  aria-label="Demo mode active"
+                >
+                  DEMO
+                </span>
+                <span className="text-xs font-medium text-surface-200 max-w-[12rem] truncate">
+                  {activeDemoState.title}
+                </span>
+                {activeDemoState.primaryActionLabel && (
+                  <button
+                    onClick={triggerDemoPrimaryAction}
+                    className="text-xs font-medium px-3 py-1.5 rounded-md bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-1 transition-colors"
+                  >
+                    {activeDemoState.mode === "coding" ? (
+                      <Play size={12} />
+                    ) : (
+                      <Video size={12} />
+                    )}
+                    {activeDemoState.primaryActionLabel}
+                  </button>
+                )}
+                <button
+                  onClick={() => nav("/")}
+                  className="text-xs font-medium px-2 py-1 rounded-md text-surface-300 hover:text-white hover:bg-white/5 flex items-center gap-1 transition-colors"
+                  title="Exit demo"
+                >
+                  <ArrowLeft size={12} /> Exit
+                </button>
+              </div>
+            )}
             {/* Dark Mode Toggle */}
             <DarkModeToggle />
 
@@ -122,6 +251,18 @@ const Navbar = () => {
 
           {/* Mobile controls */}
           <div className="md:hidden flex items-center space-x-2">
+            {isDemo && (
+              <span
+                className={[
+                  "px-2 py-0.5 text-[10px] font-medium rounded bg-teal-600/30 text-teal-200 border border-teal-500/30 transition-opacity duration-300",
+                  hideDemoPill
+                    ? "opacity-0 pointer-events-none"
+                    : "opacity-100",
+                ].join(" ")}
+              >
+                {progressPct ? `${progressPct}%` : "DEMO"}
+              </span>
+            )}
             {/* Mobile Dark Mode Toggle */}
             <DarkModeToggle />
             <Link
@@ -191,7 +332,6 @@ const Navbar = () => {
                     </Link>
                   </SignedOut>
                 </div>
-
                 <SignedIn>
                   <Link
                     to="/dashboard"
