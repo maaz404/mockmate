@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const requireAuth = require("../middleware/auth");
+const { ensureAuthenticated } = require("../middleware/auth");
 const ensureUserProfile = require("../middleware/ensureUserProfile");
 const {
   upgradeToPremium,
@@ -31,7 +31,7 @@ const {
 // Upgrade to premium endpoint
 router.post(
   "/upgrade/premium",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   upgradeToPremium
 );
@@ -65,26 +65,26 @@ const upload = multer({
 });
 
 // Profile (idempotent create via POST)
-router.get("/profile", requireAuth, ensureUserProfile, getProfile);
-router.post("/profile", requireAuth, ensureUserProfile, getProfile);
-router.put("/profile", requireAuth, ensureUserProfile, updateProfile);
+router.get("/profile", ensureAuthenticated, ensureUserProfile, getProfile);
+router.post("/profile", ensureAuthenticated, ensureUserProfile, getProfile);
+router.put("/profile", ensureAuthenticated, ensureUserProfile, updateProfile);
 // Bootstrap endpoint - creates profile if needed
-router.post("/bootstrap", requireAuth, bootstrapProfile);
+router.post("/bootstrap", ensureAuthenticated, bootstrapProfile);
 
 // Analytics / stats
-router.get("/stats", requireAuth, ensureUserProfile, getAnalytics);
-router.get("/analytics", requireAuth, ensureUserProfile, getAnalytics);
+router.get("/stats", ensureAuthenticated, ensureUserProfile, getAnalytics);
+router.get("/analytics", ensureAuthenticated, ensureUserProfile, getAnalytics);
 
 // Onboarding flows
 router.post(
   "/onboarding/complete",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   completeOnboarding
 );
 router.post(
   "/onboarding/save-progress",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   saveOnboardingProgress
 );
@@ -92,15 +92,20 @@ router.post(
 // Resume + profile media
 router.post(
   "/resume",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   upload.single("resume"),
   uploadResume
 );
-router.put("/profile/avatar", requireAuth, ensureUserProfile, updateAvatar);
+router.put(
+  "/profile/avatar",
+  ensureAuthenticated,
+  ensureUserProfile,
+  updateAvatar
+);
 router.put(
   "/profile/resume",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   updateResumeAsset
 );
@@ -108,58 +113,58 @@ router.put(
 // Scheduled sessions CRUD
 router.get(
   "/scheduled-sessions",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   getScheduledSessions
 );
 router.post(
   "/scheduled-sessions",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   upsertScheduledSession
 );
 router.put(
   "/scheduled-sessions/:id",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   upsertScheduledSession
 );
 router.delete(
   "/scheduled-sessions/:id",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   deleteScheduledSession
 );
 router.patch(
   "/scheduled-sessions/:id/status",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   updateScheduledSessionStatus
 );
 
 // Goals
-router.get("/goals", requireAuth, ensureUserProfile, getGoals);
-router.put("/goals", requireAuth, ensureUserProfile, updateGoals);
+router.get("/goals", ensureAuthenticated, ensureUserProfile, getGoals);
+router.put("/goals", ensureAuthenticated, ensureUserProfile, updateGoals);
 
 // Dynamic tips
-router.get("/tips", requireAuth, ensureUserProfile, getDynamicTips);
+router.get("/tips", ensureAuthenticated, ensureUserProfile, getDynamicTips);
 
 // Dashboard aggregation + preferences
 router.get(
   "/dashboard/summary",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   getDashboardSummary
 );
 router.get(
   "/dashboard/preferences",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   getDashboardPreferences
 );
 router.put(
   "/dashboard/preferences",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   updateDashboardPreferences
 );
@@ -167,7 +172,7 @@ router.put(
 // Enhanced metrics (Phase 1)
 router.get(
   "/dashboard/metrics",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   getDashboardMetrics
 );
@@ -175,7 +180,7 @@ router.get(
 // Next best action recommendation (Phase 3 Option A)
 router.get(
   "/dashboard/recommendation",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   getDashboardRecommendation
 );

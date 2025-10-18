@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const requireAuth = require("../middleware/auth");
+const { ensureAuthenticated } = require("../middleware/auth");
 const comprehensiveReportingService = require("../services/comprehensiveReportingService");
 const advancedFeedbackService = require("../services/advancedFeedbackService");
 const Interview = require("../models/Interview");
@@ -9,7 +9,7 @@ const UserProfile = require("../models/UserProfile");
 // @desc    Generate detailed interview report
 // @route   POST /api/reports/generate/:interviewId
 // @access  Private
-router.post("/generate/:interviewId", requireAuth, async (req, res) => {
+router.post("/generate/:interviewId", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId } = req.params;
@@ -95,7 +95,7 @@ router.post("/generate/:interviewId", requireAuth, async (req, res) => {
 // @desc    Get user reports history
 // @route   GET /api/reports
 // @access  Private
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { page = 1, limit = 10, reportType } = req.query;
@@ -152,7 +152,7 @@ router.get("/", requireAuth, async (req, res) => {
 // @desc    Get specific report by interview ID
 // @route   GET /api/reports/:interviewId
 // @access  Private
-router.get("/:interviewId", requireAuth, async (req, res) => {
+router.get("/:interviewId", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId } = req.params;
@@ -208,7 +208,7 @@ router.get("/:interviewId", requireAuth, async (req, res) => {
 // @desc    Get progress analytics across multiple interviews
 // @route   GET /api/reports/analytics/progress
 // @access  Private
-router.get("/analytics/progress", requireAuth, async (req, res) => {
+router.get("/analytics/progress", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { timeRange = "6months" } = req.query;
@@ -296,7 +296,7 @@ router.get("/analytics/progress", requireAuth, async (req, res) => {
 // @desc    Export report in different formats
 // @route   GET /api/reports/:interviewId/export
 // @access  Private
-router.get("/:interviewId/export", requireAuth, async (req, res) => {
+router.get("/:interviewId/export", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId } = req.params;
@@ -457,7 +457,7 @@ const { requireProPlan, checkProPlan } = require("../middleware/proPlan");
 // @desc    Get session summary
 // @route   GET /api/reports/:interviewId/session-summary
 // @access  Private
-router.get("/:interviewId/session-summary", requireAuth, async (req, res) => {
+router.get("/:interviewId/session-summary", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId } = req.params;
@@ -511,7 +511,7 @@ router.get("/:interviewId/session-summary", requireAuth, async (req, res) => {
 // @desc    Export session summary as PDF
 // @route   GET /api/reports/:interviewId/export-pdf
 // @access  Private (Pro plan required)
-router.get("/:interviewId/export-pdf", requireAuth, requireProPlan, async (req, res) => {
+router.get("/:interviewId/export-pdf", ensureAuthenticated, requireProPlan, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId } = req.params;

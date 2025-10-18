@@ -1,5 +1,5 @@
 const express = require("express");
-const requireAuth = require("../middleware/auth");
+const { ensureAuthenticated } = require("../middleware/auth");
 const {
   getSignedUploadParams,
   destroyByPublicId,
@@ -9,11 +9,11 @@ const {
 const router = express.Router();
 
 // GET /api/uploads/sign -> returns signature bundle
-router.get("/sign", requireAuth, getSignedUploadParams);
+router.get("/sign", ensureAuthenticated, getSignedUploadParams);
 // GET /api/uploads/health -> returns Cloudinary health
 router.get("/health", uploadHealth);
 
 // POST /api/uploads/destroy -> deletes a single asset by public_id
-router.post("/destroy", requireAuth, destroyByPublicId);
+router.post("/destroy", ensureAuthenticated, destroyByPublicId);
 
 module.exports = router;

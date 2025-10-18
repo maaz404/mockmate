@@ -190,22 +190,13 @@ const createInterview = async (req, res) => {
       }
     }
 
+    // Interview creation with validated references and config
     const interview = new Interview({
-      userId,
+      userId: userId,
       userProfile: userProfile._id,
       config: {
         ...config,
-        questionCount: config.adaptiveDifficulty?.enabled
-          ? config.questionCount || C.DEFAULT_QUESTION_COUNT
-          : // Cap upper bound by questions length but enforce lower bound of schema min (5)
-            Math.max(
-              // eslint-disable-next-line no-magic-numbers
-              5,
-              Math.min(
-                config.questionCount || C.DEFAULT_QUESTION_COUNT,
-                questions.length
-              )
-            ),
+        questionCount: Array.isArray(questions) ? questions.length : 0,
         adaptiveDifficulty: config.adaptiveDifficulty?.enabled
           ? {
               enabled: true,
@@ -215,21 +206,16 @@ const createInterview = async (req, res) => {
             }
           : { enabled: false },
       },
-      questions: questions
-        .slice(
-          0,
-          config?.adaptiveDifficulty?.enabled
-            ? C.ADAPTIVE_SEED_COUNT
-            : config.questionCount || C.DEFAULT_QUESTION_COUNT
-        )
-        .map((q) => ({
-          questionId: q._id,
-          questionText: q.text,
-          category: q.category,
-          difficulty: mapDifficulty(q.difficulty),
-          timeAllocated: q.estimatedTime,
-          hasVideo: false,
-        })),
+      questions: Array.isArray(questions)
+        ? questions.map((q) => ({
+            questionId: q._id,
+            questionText: q.text,
+            category: q.category,
+            difficulty: mapDifficulty(q.difficulty),
+            timeAllocated: q.estimatedTime,
+            hasVideo: false,
+          }))
+        : [],
       status: "scheduled",
     });
 

@@ -1,5 +1,5 @@
 const express = require("express");
-const requireAuth = require("../middleware/auth");
+const { ensureAuthenticated } = require("../middleware/auth");
 const dbReady = require("../middleware/dbReady");
 const {
   setRecording,
@@ -9,8 +9,8 @@ const {
 
 const router = express.Router();
 
-router.put("/sessions/:id/recording", requireAuth, dbReady, setRecording);
-router.post("/sessions/:id/snapshots", requireAuth, dbReady, addSnapshot);
-router.put("/sessions/:id/transcript", requireAuth, dbReady, setTranscript);
+router.put("/sessions/:id/recording", ensureAuthenticated, dbReady, setRecording);
+router.post("/sessions/:id/snapshots", ensureAuthenticated, dbReady, addSnapshot);
+router.put("/sessions/:id/transcript", ensureAuthenticated, dbReady, setTranscript);
 
 module.exports = router;

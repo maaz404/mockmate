@@ -1,6 +1,14 @@
 const UserProfile = require("../models/UserProfile");
 const { fail } = require("../utils/responder");
 
+// Dev-only premium whitelist by email; configurable via env
+const PREMIUM_TEST_EMAILS = (
+  process.env.PREMIUM_TEST_EMAILS || "maazakbar404@gmail.com"
+)
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 // Ensures a user profile exists for an authenticated request (Clerk adds req.auth.userId)
 // Attaches req.userProfile
 module.exports = async function ensureUserProfile(req, res, next) {
@@ -15,10 +23,12 @@ module.exports = async function ensureUserProfile(req, res, next) {
 
     // Derive safe email + names. In dev MOCK_AUTH_FALLBACK we may not have headers.
     const headerEmail = req.headers["x-user-email"]; // may be undefined
-    const safeEmail = headerEmail && /@/.test(headerEmail)
-      ? headerEmail
-      : `${userId}@dev.local`; // deterministic placeholder – satisfies unique required constraint
-    const firstName = req.headers["x-user-firstname"] || profile?.firstName || "";
+    const safeEmail =
+      headerEmail && /@/.test(headerEmail)
+        ? headerEmail
+        : `${userId}@dev.local`; // deterministic placeholder – satisfies unique required constraint
+    const firstName =
+      req.headers["x-user-firstname"] || profile?.firstName || "";
     const lastName = req.headers["x-user-lastname"] || profile?.lastName || "";
 
     if (!profile) {
@@ -37,6 +47,27 @@ module.exports = async function ensureUserProfile(req, res, next) {
         if (lastName && !profile.lastName) profile.lastName = lastName;
         await profile.save();
       }
+    }
+
+    // Auto-upgrade to premium for whitelisted emails in non-production envs
+    try {
+      if (
+        process.env.NODE_ENV !== "production" &&
+        profile?.email &&
+        PREMIUM_TEST_EMAILS.includes(String(profile.email).toLowerCase())
+      ) {
+        const currentPlan = profile.subscription?.plan || "free";
+        if (currentPlan !== "premium") {
+          profile.subscription = {
+            plan: "premium",
+            interviewsRemaining: null,
+            nextResetDate: profile.subscription?.nextResetDate || null,
+          };
+          await profile.save();
+        }
+      }
+    } catch (_) {
+      // non-fatal; continue
     }
 
     req.userProfile = profile;

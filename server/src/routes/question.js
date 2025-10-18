@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const requireAuth = require("../middleware/auth");
+const { ensureAuthenticated } = require("../middleware/auth");
 const hybridQuestionService = require("../services/hybridQuestionService");
 const ensureUserProfile = require("../middleware/ensureUserProfile");
 const { ok, fail } = require("../utils/responder");
@@ -10,7 +10,7 @@ const DEFAULT_QUESTION_COUNT = 10; // eslint-disable-line no-magic-numbers
 // @desc    Generate hybrid questions for interview session
 // @route   POST /api/questions/generate
 // @access  Private
-router.post("/generate", requireAuth, ensureUserProfile, async (req, res) => {
+router.post("/generate", ensureAuthenticated, ensureUserProfile, async (req, res) => {
   try {
     const { config } = req.body || {};
     if (!config) {
@@ -78,7 +78,7 @@ router.post("/generate", requireAuth, ensureUserProfile, async (req, res) => {
 // @access  Private
 router.post(
   "/generate/:category",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   async (req, res) => {
     try {
@@ -148,7 +148,7 @@ router.post(
 // @desc    Get question templates for a role and difficulty
 // @route   GET /api/questions/templates
 // @access  Private
-router.get("/templates", requireAuth, ensureUserProfile, async (req, res) => {
+router.get("/templates", ensureAuthenticated, ensureUserProfile, async (req, res) => {
   try {
     const { jobRole, experienceLevel, interviewType } = req.query;
 
@@ -195,7 +195,7 @@ router.get("/templates", requireAuth, ensureUserProfile, async (req, res) => {
 // @desc    Get cache statistics
 // @route   GET /api/questions/cache/stats
 // @access  Private
-router.get("/cache/stats", requireAuth, ensureUserProfile, async (req, res) => {
+router.get("/cache/stats", ensureAuthenticated, ensureUserProfile, async (req, res) => {
   try {
     const stats = await hybridQuestionService.getCacheStats();
     return ok(res, stats);
@@ -215,7 +215,7 @@ router.get("/cache/stats", requireAuth, ensureUserProfile, async (req, res) => {
 // @access  Private
 router.delete(
   "/cache/expired",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   async (req, res) => {
     try {

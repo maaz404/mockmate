@@ -1,24 +1,29 @@
 const mongoose = require("mongoose");
 const AssetSchema = require("./common/Asset");
 
-// User Profile Schema (extends Clerk user data)
+// User Profile Schema (Google/Local Auth only)
 const userProfileSchema = new mongoose.Schema(
   {
-    // Clerk user ID for linking
-    clerkUserId: {
-      type: String,
+    // Link to User model
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
+      index: true,
       unique: true,
     },
 
-    // Basic Information (synced from Clerk)
+    // Basic Information
     email: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
+      lowercase: true,
+      match: [/^\S+@\S+\.\S+$/, "Invalid email format"],
     },
-    firstName: String,
-    lastName: String,
+    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true },
     profileImage: String,
 
     // Cloudinary-managed media
@@ -63,7 +68,7 @@ const userProfileSchema = new mongoose.Schema(
         },
       ],
       careerGoals: String,
-      // Deprecated resume fields kept for backward compatibility
+      // Resume fields (active)
       resume: {
         filename: String,
         url: String,
@@ -272,7 +277,7 @@ const userProfileSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for performance (clerkUserId and email already have unique: true)
+// Indexes for performance (userId and email already have unique: true)
 userProfileSchema.index({ "professionalInfo.industry": 1 });
 userProfileSchema.index({ "analytics.totalInterviews": -1 });
 

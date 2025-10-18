@@ -1,56 +1,22 @@
 /* eslint-disable consistent-return, no-magic-numbers */
-const grokChatbotService = require("../services/grokChatbotService");
+const ollamaChatbotService = require("../services/ollamaChatbotService");
 const UserProfile = require("../models/UserProfile");
-const Logger = require("../utils/logger");
 const { ok, fail } = require("../utils/responder");
+const Logger = require("../utils/logger");
 
-/**
- * Health check for chatbot service
- * @route GET /api/chatbot/health
- * @access Public
- */
+// Health check for chatbot service (Ollama always available if running)
 exports.health = async (req, res) => {
-  try {
-    const isConfigured = grokChatbotService.isConfigured();
-    let validation = null;
-    if (req.query.validate === "true") {
-      try {
-        validation = await grokChatbotService.validateKey();
-      } catch (e) {
-        validation = { valid: false, reason: "Validation failed" };
-      }
-    }
-    return ok(res, {
-      chatbot: {
-        provider: "grok",
-        available: isConfigured,
-        model: process.env.GROK_MODEL || "grok-beta",
-        validation,
-        diagnostics: {
-          hasApiKey: !!process.env.GROK_API_KEY,
-          env: process.env.NODE_ENV,
-          openAIFallbackEnabled:
-            (
-              process.env.GROK_ENABLE_OPENAI_FALLBACK || "true"
-            ).toLowerCase() === "true",
-          appOnlyMode:
-            (process.env.CHATBOT_APP_ONLY || "false").toLowerCase() === "true",
-        },
+  return ok(res, {
+    chatbot: {
+      provider: "ollama",
+      available: true,
+      model: process.env.OLLAMA_MODEL || "phi3:mini",
+      diagnostics: {
+        env: process.env.NODE_ENV,
       },
-      requestId: req.requestId,
-    });
-  } catch (error) {
-    Logger.error("Chatbot health check error:", error);
-    return fail(
-      res,
-      500,
-      "CHATBOT_HEALTH_FAILED",
-      "Failed to check chatbot status",
-      process.env.NODE_ENV === "development"
-        ? { detail: error.message }
-        : undefined
-    );
-  }
+    },
+    requestId: req.requestId,
+  });
 };
 
 /**
@@ -73,16 +39,11 @@ exports.chat = async (req, res) => {
       );
     }
 
-    // If Grok is not configured, deliberately throw to engage dev fallback (non-prod)
-    if (!grokChatbotService.isConfigured()) {
-      throw new Error("Chatbot not configured");
-    }
-
     // Get user profile for better context
     let userProfile = null;
     try {
       if (userId) {
-        userProfile = await UserProfile.findOne({ clerkUserId: userId });
+        userProfile = await UserProfile.findOne({ userId });
       }
     } catch (error) {
       Logger.warn(
@@ -91,49 +52,22 @@ exports.chat = async (req, res) => {
       );
     }
 
-    // Build enhanced context
-    const enhancedContext = grokChatbotService.buildUserContext(
-      userProfile,
-      context?.currentPage,
-      context
-    );
+    // Build context for Ollama
+    const enhancedContext = {
+      userName: userProfile?.firstName || userProfile?.username,
+      currentPage: context?.currentPage,
+      ...context,
+    };
 
-    // Get response from Grok
-    try {
-      const response = await grokChatbotService.chat(messages, enhancedContext);
-      return ok(res, {
-        message: response.message,
-        provider: "grok",
-        model: response.model,
-        timestamp: new Date().toISOString(),
-        requestId: req.requestId,
-      });
-    } catch (primaryErr) {
-      Logger.warn(
-        "Primary Grok chat failed, attempting OpenAI fallback:",
-        primaryErr.message
-      );
-      try {
-        const fb = await grokChatbotService.openAIFallback(
-          messages,
-          enhancedContext
-        );
-        return ok(res, {
-          message: fb.message,
-          provider: fb.provider,
-          model: fb.model,
-          timestamp: new Date().toISOString(),
-          fallback: true,
-          requestId: req.requestId,
-        });
-      } catch (fbErr) {
-        Logger.warn(
-          "OpenAI fallback also failed, reverting to dev fallback response:",
-          fbErr.message
-        );
-        throw primaryErr; // triggers lower dev fallback section
-      }
-    }
+    // Get response from Ollama
+    const response = await ollamaChatbotService.chat(messages, enhancedContext);
+    return ok(res, {
+      message: response.message,
+      provider: "ollama",
+      model: response.model,
+      timestamp: new Date().toISOString(),
+      requestId: req.requestId,
+    });
   } catch (error) {
     Logger.error("Chat controller error:", error);
 
@@ -141,65 +75,17 @@ exports.chat = async (req, res) => {
     if (process.env.NODE_ENV !== "production") {
       return ok(res, {
         message:
-          "I'm having trouble connecting to Grok right now. Here are some quick tips while I reconnect:\n\n" +
-          "- Be concise and structure answers with a brief intro, 2-3 points, and a closing.\n" +
-          "- For behavioral questions, use STAR (Situation, Task, Action, Result).\n" +
-          "- For coding, clarify constraints, outline approach, then code and test.\n\n" +
-          "You can also ask me: ‘Explain this page’, ‘Common mistakes to avoid’, or ‘How to improve for my next interview’.",
+          "I'm having trouble connecting to the AI right now. Please ensure Ollama is running.",
         provider: "dev-fallback",
         model: "mock",
         timestamp: new Date().toISOString(),
         requestId: req.requestId,
       });
     }
-
-    // Send user-friendly error messages
-    if (error.message.includes("not configured")) {
-      return fail(
-        res,
-        503,
-        "CHATBOT_UNAVAILABLE",
-        "Chatbot service is currently unavailable. Please try again later."
-      );
-    }
-
-    if (error.message.includes("Rate limit")) {
-      return fail(
-        res,
-        429,
-        "CHATBOT_RATE_LIMIT",
-        "Too many requests. Please wait a moment and try again."
-      );
-    }
-
-    if (
-      error.message.includes("Invalid") &&
-      error.message.includes("API key")
-    ) {
-      return fail(
-        res,
-        500,
-        "GROK_INVALID_API_KEY",
-        "Chatbot service configuration error. Please contact support."
-      );
-    }
-
-    if (
-      error.message.includes("Insufficient credits") ||
-      error.message.includes("access denied")
-    ) {
-      // 402 - Payment Required-like signal
-      return fail(
-        res,
-        402,
-        "GROK_NO_CREDITS",
-        "Grok API is unavailable due to insufficient credits or access. Please add credits on xAI console."
-      );
-    }
     return fail(
       res,
       500,
-      "GROK_CHAT_ERROR",
+      "OLLAMA_CHAT_ERROR",
       "Failed to process your message. Please try again.",
       process.env.NODE_ENV === "development"
         ? { detail: error.message }
@@ -219,7 +105,7 @@ exports.getChatSuggestions = async (req, res) => {
     let userProfile = null;
 
     try {
-      userProfile = await UserProfile.findOne({ clerkUserId: userId });
+      userProfile = await UserProfile.findOne({ userId });
     } catch (error) {
       Logger.warn(
         "Could not fetch user profile for suggestions:",
@@ -279,17 +165,6 @@ exports.stream = async (req, res) => {
     res.write(`data: ${JSON.stringify(enriched)}\n\n`);
   };
 
-  let heartbeatInterval;
-  const startHeartbeat = () => {
-    heartbeatInterval = setInterval(() => {
-      try {
-        send("ping", { ts: Date.now() });
-      } catch (e) {
-        clearInterval(heartbeatInterval);
-      }
-    }, 15000); // 15s heartbeat to keep proxies from closing connection
-  };
-
   try {
     const { messages, context } = req.body || {};
     const userId = req.auth?.userId || req.auth?.id;
@@ -305,146 +180,44 @@ exports.stream = async (req, res) => {
     // Enrich context with user profile (best-effort)
     let userProfile = null;
     try {
-      userProfile = await UserProfile.findOne({ clerkUserId: userId });
+      userProfile = await UserProfile.findOne({ userId });
     } catch (e) {
       // ignore
     }
-    const enhancedContext = grokChatbotService.buildUserContext(
-      userProfile,
-      context?.currentPage,
-      context
-    );
+    // Build context for Ollama
+    const enhancedContext = {
+      userName: userProfile?.firstName || userProfile?.username,
+      currentPage: context?.currentPage,
+      ...context,
+    };
 
-    // Try Grok streaming first
-    if (grokChatbotService.isConfigured()) {
-      try {
-        const stream = await grokChatbotService.streamChat(
-          messages,
-          enhancedContext
-        );
-        startHeartbeat();
-        let buffer = "";
-        stream.on("data", (chunk) => {
-          const piece = chunk.toString();
-          buffer += piece;
-          // Grok may emit JSON lines delimited by newlines
-          const parts = buffer.split(/\n/);
-          buffer = parts.pop();
-          for (const part of parts) {
-            const trimmed = part.trim();
-            if (!trimmed) continue;
-            // Attempt to parse JSON structure {choices:[{delta:{content:..}}]}
-            try {
-              const maybe = JSON.parse(trimmed);
-              const text =
-                maybe.choices?.[0]?.delta?.content || maybe.text || "";
-              if (text)
-                send("chunk", { text, source: "grok", provider: "grok" });
-            } catch {
-              // fallback: treat raw text
-              send("chunk", {
-                text: trimmed,
-                source: "grok-raw",
-                provider: "grok",
-              });
-            }
-          }
-        });
-        stream.on("end", () => {
-          if (buffer.trim())
-            send("chunk", {
-              text: buffer.trim(),
-              source: "grok-tail",
-              provider: "grok",
-            });
-          send("done", {
-            timestamp: new Date().toISOString(),
-            provider: "grok",
-          });
-          clearInterval(heartbeatInterval);
-          res.end();
-        });
-        stream.on("error", (err) => {
-          send("error", { error: err.message, code: "CHAT_STREAM_ERROR" });
-          clearInterval(heartbeatInterval);
-          res.end();
-        });
-        return; // streaming path succeeded
-      } catch (err) {
-        // Attempt non-streaming fallback before dev static
-        try {
-          const result = await grokChatbotService.chat(
-            messages,
-            enhancedContext
-          );
-          send("chunk", {
-            text: result.message,
-            source: "grok-fallback",
-            provider: "grok",
-            fallback: true,
-          });
-          send("done", {
-            timestamp: new Date().toISOString(),
-            provider: "grok",
-            fallback: true,
-          });
-          return res.end();
-        } catch (inner) {
-          // Attempt OpenAI fallback before dev static
-          try {
-            const alt = await grokChatbotService.openAIFallback(
-              messages,
-              enhancedContext
-            );
-            send("chunk", {
-              text: alt.message,
-              source: "openai-fallback",
-              provider: alt.provider || "openai-fallback",
-              fallback: true,
-            });
-            send("done", {
-              timestamp: new Date().toISOString(),
-              provider: alt.provider,
-              fallback: true,
-            });
-            return res.end();
-          } catch (altErr) {
-            send("notice", { note: "Using development fallback response" });
-          }
-        }
-      }
-    }
-
-    // Development static streamer fallback
-    const fallback = grokChatbotService.getDevFallbackStreamer(
-      "Here is a helpful response while the live AI reconnects. Use STAR for behavioral answers; for coding, clarify constraints, outline, implement, and test."
-    );
-    let step = fallback.next();
-    startHeartbeat();
-    const interval = setInterval(() => {
-      if (step.done) {
-        clearInterval(interval);
-        clearInterval(heartbeatInterval);
-        send("done", {
-          timestamp: new Date().toISOString(),
-          source: "dev-fallback",
-          provider: "dev-fallback",
-        });
-        return res.end();
-      }
+    try {
+      const response = await ollamaChatbotService.chat(
+        messages,
+        enhancedContext
+      );
       send("chunk", {
-        text: step.value,
-        source: "dev-fallback",
-        provider: "dev-fallback",
+        text: response.message,
+        source: "ollama",
+        provider: "ollama",
       });
-      step = fallback.next();
-    }, 30);
+      send("done", {
+        timestamp: new Date().toISOString(),
+        provider: "ollama",
+      });
+      res.end();
+    } catch (error) {
+      send("error", {
+        error: "Failed to get response from Ollama",
+        code: "OLLAMA_CHAT_ERROR",
+      });
+      res.end();
+    }
   } catch (error) {
     send("error", {
       error: "Failed to start stream",
       code: "CHAT_STREAM_START_FAILED",
     });
-    clearInterval(heartbeatInterval);
     res.end();
   }
 };

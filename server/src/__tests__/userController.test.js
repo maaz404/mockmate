@@ -1,7 +1,7 @@
 // Unit tests for onboarding validation logic
-const { clerkClient } = require("@clerk/clerk-sdk-node");
+// const { clerkClient } = require("@clerk/clerk-sdk-node"); // REMOVED: Migrating to Google OAuth
 
-// Mock Clerk SDK
+// Mock Clerk SDK (DEPRECATED - keeping for now to avoid test breakage)
 jest.mock("@clerk/clerk-sdk-node", () => ({
   clerkClient: {
     users: {

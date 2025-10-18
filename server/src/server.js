@@ -6,21 +6,25 @@ const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const dotenv = require("dotenv");
 const path = require("path");
+const cookieParser = require("cookie-parser");
+const passport = require("passport");
+const buildSession = require("./config/session");
+const connectDB = require("./config/database");
+const Logger = require("./utils/logger");
+const { ENV, validateEnv } = require("./config/env");
+
 // Load environment variables BEFORE loading config/env so ENV gets real values
 if (process.env.NODE_ENV !== "test") {
   dotenv.config({ path: path.resolve(__dirname, "../.env") });
 }
-const { ClerkExpressWithAuth } = require("@clerk/clerk-sdk-node");
-const connectDB = require("./config/database");
-const Logger = require("./utils/logger");
-const { ENV, validateEnv } = require("./config/env");
+
 // Validate env after loading
 if (process.env.NODE_ENV !== "test") {
   validateEnv();
 }
 
 // Import routes
-const authRoutes = require("./routes/auth");
+const googleAuthRoutes = require("./auth/google");
 const userRoutes = require("./routes/user");
 const interviewRoutes = require("./routes/interview");
 const questionRoutes = require("./routes/question");
@@ -28,6 +32,7 @@ const reportRoutes = require("./routes/report");
 const videoRoutes = require("./routes/video");
 const codingRoutes = require("./routes/coding");
 const chatbotRoutes = require("./routes/chatbot");
+const chatbotHealthRoute = require("./routes/chatbotHealth");
 const healthRoutes = require("./routes/health");
 const uploadRoutes = require("./routes/uploads");
 const interviewMediaRoutes = require("./routes/interviewMedia");
@@ -38,22 +43,21 @@ const notFound = require("./middleware/notFound");
 
 // Create Express app
 const app = express();
+
 // Early middleware: request id before anything else that may log
 const requestId = require("./middleware/requestId");
 app.use(requestId);
+
 // Response time + structured log middleware (lightweight)
 app.use((req, res, next) => {
   const start = process.hrtime.bigint();
   res.on("finish", () => {
     try {
       const end = process.hrtime.bigint();
-      // eslint-disable-next-line no-magic-numbers
       const ms = Number(end - start) / 1e6;
-      // Skip noisy health & metrics high-frequency endpoints logging at info
       const skip =
         /\/api\/(health|bootstrap)/.test(req.path) && res.statusCode < 400;
       if (!skip) {
-        // eslint-disable-next-line no-console
         console.log(
           JSON.stringify({
             ts: new Date().toISOString(),
@@ -67,7 +71,6 @@ app.use((req, res, next) => {
             method: req.method,
             path: req.path,
             status: res.statusCode,
-            // eslint-disable-next-line no-magic-numbers
             durationMs: ms.toFixed(2),
           })
         );
@@ -83,124 +86,59 @@ app.use((req, res, next) => {
 app.set("trust proxy", 1);
 
 // Connect to database (await before starting server to ensure persistence layer ready)
-// In test env we let tests control lifecycle; they import app without awaiting network listener.
 const dbReadyPromise = connectDB();
+
+// Cookie parser and body parser
+app.use(cookieParser());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Initialize session and Passport middleware BEFORE routes
+app.use(
+  buildSession({
+    mongoUrl: process.env.MONGODB_URI,
+    isProd: process.env.NODE_ENV === "production",
+  })
+);
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
+require("./config/passport");
+
+// Mount local auth routes
+require("./auth/local");
+app.use("/api/auth", require("./auth/localRoutes"));
+app.use("/api/auth", require("./auth/google"));
 
 // Security middleware
 app.use(helmet());
 
 // Rate limiting
-// Default rate-limit window (ms)
-// eslint-disable-next-line no-magic-numbers
 const SECOND_MS = 1000;
-// eslint-disable-next-line no-magic-numbers
 const MINUTE_MS = 60 * SECOND_MS;
-// eslint-disable-next-line no-magic-numbers
 const FIFTEEN_MINUTES_MS = 15 * MINUTE_MS;
-const DEFAULT_MAX_REQUESTS = 100;
+const DEFAULT_MAX_REQUESTS = 1000;
 const limiter = rateLimit({
   windowMs: ENV.RATE_LIMIT_WINDOW_MS || FIFTEEN_MINUTES_MS,
   max: ENV.RATE_LIMIT_MAX_REQUESTS || DEFAULT_MAX_REQUESTS,
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === "development",
 });
 app.use(limiter);
-
-// CORS configuration (dynamic) -------------------------------------------------
-// Goal: eliminate local dev friction (CORS errors) while keeping production strict.
-// Strategy:
-//  - Production: only explicit ENV.CORS_ORIGINS list.
-//  - Dev/Test: auto-allow localhost + loopback + (optionally private LAN when ALLOW_LAN_CORS=true) plus ENV list.
-//  - Always allow requests with no Origin (curl, server internal calls).
-//  - Allow custom dev headers used for mock auth / profile hydration.
-//  - Provide verbose one-time logging & per-block logs with hint.
-const LOCAL_REGEX = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
-const LAN_REGEX =
-  /^https?:\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/i; // RFC1918 ranges
-const allowLan = process.env.ALLOW_LAN_CORS === "true";
-const allowedSet = new Set(ENV.CORS_ORIGINS.filter(Boolean));
-// Core headers the frontend actually sends (Axios + our custom ones)
-const CORE_ALLOWED_HEADERS = [
-  "Content-Type",
-  "Authorization",
-  "X-Requested-With",
-  "Accept",
-  "Origin",
-  // Custom user metadata headers (dev)
-  "x-user-email",
-  "x-user-firstname",
-  "x-user-lastname",
-  "x-user-id",
-  // Allow client to send trace/request correlation if desired
-  "x-request-id",
-];
-if (!global.__CORS_LOGGED) {
-  // eslint-disable-next-line no-console
-  console.log("CORS base allowlist (env):", Array.from(allowedSet));
-  // eslint-disable-next-line no-console
-  console.log(
-    `CORS dev patterns: localhost/loopback always allowed${
-      allowLan ? ", plus private LAN ranges" : ""
-    }`
-  );
-  // eslint-disable-next-line no-console
-  console.log("CORS allowed headers:", CORE_ALLOWED_HEADERS);
-  global.__CORS_LOGGED = true;
-}
-
-// (Reserved hook for future response diagnostics; currently no-op)
-app.use((req, _res, next) => next());
-
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // same-origin or server-to-server
-      const isExplicit = allowedSet.has(origin);
-      const isLocalDev =
-        ENV.NODE_ENV !== "production" && LOCAL_REGEX.test(origin);
-      const isLanDev =
-        ENV.NODE_ENV !== "production" && allowLan && LAN_REGEX.test(origin);
-      if (isExplicit || isLocalDev || isLanDev) return cb(null, true);
-      // eslint-disable-next-line no-console
-      console.warn("CORS blocked origin:", origin, {
-        hint: "Add to CORS_ORIGINS env or set ALLOW_LAN_CORS=true for private network in dev",
-      });
-      return cb(new Error("CORS_NOT_ALLOWED"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: CORE_ALLOWED_HEADERS,
-    maxAge: 86400, // cache preflight for a day in browsers that honor it
-    optionsSuccessStatus: 200,
-  })
-);
-
-// Fallback handler to convert a CORS_NOT_ALLOWED error into JSON (so client gets structured info in dev)
-app.use((err, req, res, next) => {
-  if (err && err.message === "CORS_NOT_ALLOWED") {
-    // Deliberately DO NOT set Access-Control-Allow-Origin so browser still blocks, but we log meaningfully.
-    if (!res.headersSent) {
-      return res.status(403).json({
-        success: false,
-        code: "CORS_NOT_ALLOWED",
-        message: "Origin not permitted by CORS policy",
-        origin: req.headers.origin,
-        allowed: Array.from(allowedSet),
-        allowLan,
-        environment: ENV.NODE_ENV,
-      });
-    }
-  }
-  return next(err);
-});
 
 // Compression (disable for SSE endpoints like /api/chatbot/stream to avoid breaking event stream)
 app.use(
   compression({
     filter: (req, res) => {
       if (req.path && req.path.startsWith("/api/chatbot/stream")) {
-        return false; // disable compression for SSE
+        return false;
       }
       return compression.filter(req, res);
     },
@@ -216,11 +154,7 @@ app.use(
   })
 );
 
-// Body parser middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// Health check route (before Clerk middleware)
+// Health check route
 const { isDbConnected } = require("./config/database");
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -231,7 +165,6 @@ app.get("/api/health", (req, res) => {
     ok: typeof isDbConnected === "function" ? isDbConnected() : true,
   });
 });
-// Additional health diagnostics
 app.use("/api/health", healthRoutes);
 
 // Environment / readiness endpoint
@@ -282,87 +215,38 @@ app.get("/*.json", (req, res) => {
   res.status(404).json({ message: "Not found" });
 });
 
-// Clerk middleware - adds auth context to all API requests only
-// In development with MOCK_AUTH_FALLBACK=true, skip global Clerk auth
-const useClerkGlobally =
-  ENV.NODE_ENV === "production" || !ENV.MOCK_AUTH_FALLBACK;
-
-if (useClerkGlobally) {
-  app.use("/api", ClerkExpressWithAuth());
-} else {
-  Logger.warn(
-    "Skipping global Clerk auth (MOCK_AUTH_FALLBACK=true). Route-level auth will use mock user."
-  );
-}
-
 // API routes
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-// Lightweight bootstrap route (auth + profile + analytics) placed near user routes for discoverability
+const { ensureAuthenticated } = require("./middleware/auth");
+app.use("/api/users", ensureAuthenticated, userRoutes);
 app.get("/api/bootstrap", async (req, res) => {
-  // In dev mock mode allow unauth to still get a stub
   try {
-    const usingMock =
-      process.env.NODE_ENV !== "production" &&
-      process.env.MOCK_AUTH_FALLBACK === "true";
-    const authCtx = req.auth || {};
-    let userId = authCtx.userId || authCtx.id;
-    if (!userId && usingMock) {
-      // Allow header override in mock mode (tests pass x-user-id)
-      const headerUser = req.headers["x-user-id"];
-      if (headerUser) userId = headerUser;
-    }
     const { ok, fail } = require("./utils/responder");
-    if (!userId && !usingMock) {
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
       return fail(res, 401, "UNAUTHORIZED", "Authentication required");
     }
-    const UserProfile = require("./models/UserProfile");
-    let profile = null;
-    if (userId) {
-      try {
-        profile = await UserProfile.findOne({ clerkUserId: userId }).lean();
-      } catch (dbErr) {
-        // Non-fatal for bootstrap; continue with stubbed analytics
-        if (process.env.NODE_ENV === "development") {
-          req.log &&
-            req.log("warn", "Bootstrap DB fetch failed", {
-              detail: dbErr.message,
-            });
-        }
-      }
+    const User = require("./models/User");
+    const user = await User.findById(req.user._id).lean();
+    if (!user) {
+      return fail(res, 404, "USER_NOT_FOUND", "User not found");
     }
-    if (!profile && usingMock && userId) {
-      const wantPremium = req.headers["x-test-premium"] === "true";
-      const defaultSub = wantPremium
-        ? { plan: "premium", interviewsRemaining: null }
-        : { plan: "free", interviewsRemaining: 10 };
-      profile = {
-        clerkUserId: userId,
-        email: `${userId}@dev.local`,
-        firstName: "Test",
-        lastName: "User",
-        onboardingCompleted: false,
-        analytics: { averageScore: 0 },
-        subscription: defaultSub,
-      };
-    }
-    const analyticsData = profile ? profile.analytics || {} : {};
-    const subscription = profile ? profile.subscription || null : null;
+    const subscription = user.subscription || null;
     const payload = {
-      auth: userId ? { userId } : null,
-      profile,
-      analytics: { ...analyticsData, subscription },
-      subscription, // duplicated at root for simpler client consumption
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+      },
+      subscription,
+      analytics: user.analytics || {},
       requestId: req.requestId,
       timestamp: new Date().toISOString(),
-      dbConnected: require("./config/database").isDbConnected(),
     };
     return ok(res, payload);
   } catch (e) {
     const { fail } = require("./utils/responder");
     const meta = { detail: e.message };
     if (e.stack) {
-      const STACK_LINES = 5; // eslint-disable-line no-magic-numbers
+      const STACK_LINES = 5;
       meta.stack = e.stack.split("\n").slice(0, STACK_LINES).join("\n");
     }
     return fail(
@@ -374,45 +258,42 @@ app.get("/api/bootstrap", async (req, res) => {
     );
   }
 });
-// Dev-only self-upgrade endpoint (premium) - not mounted in production
 app.post("/api/dev/upgrade-self", async (req, res) => {
   const { ok, fail } = require("./utils/responder");
   try {
     if (process.env.NODE_ENV === "production") {
       return fail(res, 403, "FORBIDDEN", "Not available in production");
     }
-    // Accept either real Clerk auth or mock fallback
-    const authCtx = req.auth || {};
-    const usingMock = process.env.MOCK_AUTH_FALLBACK === "true";
-    const userId = authCtx.userId || (usingMock ? "test-user-123" : null);
-    if (!userId) {
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
       return fail(res, 401, "UNAUTHORIZED", "Authentication required");
     }
-    const UserProfile = require("./models/UserProfile");
-    let profile = await UserProfile.findOne({ clerkUserId: userId });
-    if (!profile) {
-      // Create minimal profile if missing
-      const email = req.headers["x-user-email"] || `${userId}@dev.local`;
-      profile = await UserProfile.create({
-        clerkUserId: userId,
-        email,
-        firstName: req.headers["x-user-firstname"] || "Dev",
-        lastName: req.headers["x-user-lastname"] || "User",
-        onboardingCompleted: true,
-      });
+    const User = require("./models/User");
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return fail(res, 404, "USER_NOT_FOUND", "User not found");
     }
-    const { getPlan, isUnlimited } = require("./config/plans");
-    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000; // eslint-disable-line no-magic-numbers
+    const { getPlan } = require("./config/plans");
+    const MS_IN_SECOND = 1000;
+    const SECONDS_IN_MINUTE = 60;
+    const MINUTES_IN_HOUR = 60;
+    const HOURS_IN_DAY = 24;
+    const DAYS_IN_MONTH = 30;
+    const THIRTY_DAYS_MS =
+      MS_IN_SECOND *
+      SECONDS_IN_MINUTE *
+      MINUTES_IN_HOUR *
+      HOURS_IN_DAY *
+      DAYS_IN_MONTH;
     const premium = getPlan("premium");
-    profile.subscription = {
+    user.subscription = {
       plan: premium.key,
-      interviewsRemaining: isUnlimited(premium.key) ? null : premium.interviews,
+      interviewsRemaining: premium.unlimited ? null : premium.interviews,
       nextResetDate: new Date(Date.now() + THIRTY_DAYS_MS),
     };
-    await profile.save();
+    await user.save();
     return ok(res, {
-      subscription: profile.subscription,
-      clerkUserId: profile.clerkUserId,
+      subscription: user.subscription,
+      userId: user._id,
     });
   } catch (e) {
     return fail(res, 500, "UPGRADE_FAILED", "Failed to upgrade", {
@@ -420,20 +301,21 @@ app.post("/api/dev/upgrade-self", async (req, res) => {
     });
   }
 });
-app.use("/api/interviews", interviewRoutes);
-app.use("/api/interviews", interviewMediaRoutes);
-app.use("/api/questions", questionRoutes);
-app.use("/api/reports", reportRoutes);
-app.use("/api/video", videoRoutes);
-app.use("/api/coding", codingRoutes);
-app.use("/api/chatbot", chatbotRoutes);
-app.use("/api/uploads", uploadRoutes);
+app.use("/api/interviews", ensureAuthenticated, interviewRoutes);
+app.use("/api/interviews", ensureAuthenticated, interviewMediaRoutes);
+app.use("/api/questions", ensureAuthenticated, questionRoutes);
+app.use("/api/reports", ensureAuthenticated, reportRoutes);
+app.use("/api/video", ensureAuthenticated, videoRoutes);
+app.use("/api/coding", ensureAuthenticated, codingRoutes);
+app.use("/api/chatbot/health", chatbotHealthRoute);
+app.use("/api/chatbot", ensureAuthenticated, chatbotRoutes);
+app.use("/api/uploads", ensureAuthenticated, uploadRoutes);
 
 // Error handling middleware (must be last)
 app.use(notFound);
 app.use(errorHandler);
 
-const DEFAULT_PORT = 5000;
+const DEFAULT_PORT = 5002;
 const PORT = ENV.PORT || DEFAULT_PORT;
 let server;
 
@@ -444,11 +326,7 @@ function startServer(port) {
         Logger.info(
           `🚀 MockMate server is running on port ${port} in ${process.env.NODE_ENV} mode`
         );
-        Logger.info(
-          `🔐 Clerk authentication is ${
-            ENV.CLERK_SECRET_KEY ? "configured" : "NOT configured"
-          }`
-        );
+        Logger.info("🔐 Google OAuth authentication enabled");
       })
       .on("error", (err) => {
         if (err.code === "EADDRINUSE") {
@@ -480,7 +358,6 @@ if (process.env.NODE_ENV !== "test") {
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, _promise) => {
   Logger.error(`Unhandled Rejection: ${err.message}`);
-  // Close server & exit process
   server.close(() => {
     process.exit(1);
   });

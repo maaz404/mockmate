@@ -1,7 +1,7 @@
 /* eslint-disable consistent-return, no-magic-numbers, no-console */
 const express = require("express");
 const router = express.Router();
-const requireAuth = require("../middleware/auth");
+const { ensureAuthenticated } = require("../middleware/auth");
 const codingChallengeService = require("../services/codingChallengeService");
 const Interview = require("../models/Interview");
 let CodingSubmission;
@@ -14,7 +14,7 @@ try {
 // @desc    Create coding challenge session
 // @route   POST /api/coding/session
 // @access  Private
-router.post("/session", requireAuth, async (req, res) => {
+router.post("/session", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId, config } = req.body;
@@ -80,7 +80,7 @@ router.post("/session", requireAuth, async (req, res) => {
 // @desc    Coding system health (Judge0 availability & languages)
 // @route   GET /api/coding/health
 // @access  Private
-router.get("/health", requireAuth, async (_req, res) => {
+router.get("/health", ensureAuthenticated, async (_req, res) => {
   try {
     res.json({
       success: true,
@@ -100,7 +100,7 @@ router.get("/health", requireAuth, async (_req, res) => {
 // @desc    Get current challenge
 // @route   GET /api/coding/session/:sessionId/current
 // @access  Private
-router.get("/session/:sessionId/current", requireAuth, async (req, res) => {
+router.get("/session/:sessionId/current", ensureAuthenticated, async (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -130,7 +130,7 @@ router.get("/session/:sessionId/current", requireAuth, async (req, res) => {
 // @desc    Submit code for evaluation
 // @route   POST /api/coding/session/:sessionId/submit
 // @access  Private
-router.post("/session/:sessionId/submit", requireAuth, async (req, res) => {
+router.post("/session/:sessionId/submit", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { sessionId } = req.params;
@@ -219,7 +219,7 @@ router.post("/session/:sessionId/submit", requireAuth, async (req, res) => {
 // @desc    Get next challenge
 // @route   POST /api/coding/session/:sessionId/next
 // @access  Private
-router.post("/session/:sessionId/next", requireAuth, async (req, res) => {
+router.post("/session/:sessionId/next", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { sessionId } = req.params;
@@ -289,7 +289,7 @@ router.post("/session/:sessionId/next", requireAuth, async (req, res) => {
 // @desc    Get session status and progress
 // @route   GET /api/coding/session/:sessionId/status
 // @access  Private
-router.get("/session/:sessionId/status", requireAuth, async (req, res) => {
+router.get("/session/:sessionId/status", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { sessionId } = req.params;
@@ -333,7 +333,7 @@ router.get("/session/:sessionId/status", requireAuth, async (req, res) => {
 // @desc    End coding challenge session
 // @route   POST /api/coding/session/:sessionId/complete
 // @access  Private
-router.post("/session/:sessionId/complete", requireAuth, async (req, res) => {
+router.post("/session/:sessionId/complete", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { sessionId } = req.params;
@@ -389,7 +389,7 @@ router.post("/session/:sessionId/complete", requireAuth, async (req, res) => {
 // @desc    Get available coding challenges
 // @route   GET /api/coding/challenges
 // @access  Private
-router.get("/challenges", requireAuth, async (req, res) => {
+router.get("/challenges", ensureAuthenticated, async (req, res) => {
   try {
     // Optional filters (currently unused): difficulty, category
 
@@ -426,7 +426,7 @@ router.get("/challenges", requireAuth, async (req, res) => {
 // @desc    Get coding challenge results for an interview
 // @route   GET /api/coding/interview/:interviewId/results
 // @access  Private
-router.get("/interview/:interviewId/results", requireAuth, async (req, res) => {
+router.get("/interview/:interviewId/results", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId } = req.params;
@@ -483,7 +483,7 @@ router.get("/interview/:interviewId/results", requireAuth, async (req, res) => {
 // @desc    Test code without submitting (for practice)
 // @route   POST /api/coding/test
 // @access  Private
-router.post("/test", requireAuth, async (req, res) => {
+router.post("/test", ensureAuthenticated, async (req, res) => {
   try {
     const { code, language, challengeId } = req.body;
 

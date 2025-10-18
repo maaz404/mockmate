@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const requireAuth = require("../middleware/auth");
+const { ensureAuthenticated } = require("../middleware/auth");
 const ensureUserProfile = require("../middleware/ensureUserProfile");
 const {
   createInterview,
@@ -62,7 +62,7 @@ function wrap(handler, { transform } = {}) {
 // @desc    Create interview session
 // @route   POST /api/interviews
 // @access  Private
-router.post("/", requireAuth, ensureUserProfile, dbReady, async (req, res) => {
+router.post("/", ensureAuthenticated, ensureUserProfile, dbReady, async (req, res) => {
   if (req.useInMemory) return wrap(inMem.createInterview)(req, res);
   // Quota guard (pre-creation) to surface friendlier error earlier than schema work.
   try {
@@ -84,7 +84,7 @@ router.post("/", requireAuth, ensureUserProfile, dbReady, async (req, res) => {
 // @desc    Get user interviews
 // @route   GET /api/interviews
 // @access  Private
-router.get("/", requireAuth, ensureUserProfile, dbReady, (req, res) => {
+router.get("/", ensureAuthenticated, ensureUserProfile, dbReady, (req, res) => {
   return req.useInMemory
     ? wrap(inMem.getUserInterviews)(req, res)
     : wrap(getUserInterviews)(req, res);
@@ -93,7 +93,7 @@ router.get("/", requireAuth, ensureUserProfile, dbReady, (req, res) => {
 // @desc    Get specific interview
 // @route   GET /api/interviews/:id
 // @access  Private
-router.get("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) => {
+router.get("/:id", ensureAuthenticated, ensureUserProfile, dbReady, (req, res) => {
   return req.useInMemory
     ? wrap(inMem.getInterviewDetails)(req, res)
     : wrap(getInterviewDetails)(req, res);
@@ -104,7 +104,7 @@ router.get("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) => {
 // @access  Private
 router.post(
   "/:id/questions",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) =>
@@ -116,7 +116,7 @@ router.post(
 // @desc    Start interview session
 // @route   PUT /api/interviews/:id/start
 // @access  Private
-router.put("/:id/start", requireAuth, ensureUserProfile, dbReady, (req, res) =>
+router.put("/:id/start", ensureAuthenticated, ensureUserProfile, dbReady, (req, res) =>
   req.useInMemory
     ? wrap(inMem.startInterview)(req, res)
     : wrap(startInterview)(req, res)
@@ -124,7 +124,7 @@ router.put("/:id/start", requireAuth, ensureUserProfile, dbReady, (req, res) =>
 
 // Backward compatibility: some tests (legacy) use POST to start interview
 // @route   POST /api/interviews/:id/start (alias)
-router.post("/:id/start", requireAuth, ensureUserProfile, dbReady, (req, res) =>
+router.post("/:id/start", ensureAuthenticated, ensureUserProfile, dbReady, (req, res) =>
   req.useInMemory
     ? wrap(inMem.startInterview)(req, res)
     : wrap(startInterview)(req, res)
@@ -135,7 +135,7 @@ router.post("/:id/start", requireAuth, ensureUserProfile, dbReady, (req, res) =>
 // @access  Private
 router.post(
   "/:id/answer/:questionIndex",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) =>
@@ -149,7 +149,7 @@ router.post(
 // @access  Private
 router.post(
   "/:id/followup/:questionIndex",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) =>
@@ -163,7 +163,7 @@ router.post(
 // @access  Private
 router.post(
   "/:id/adaptive-question",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) =>
@@ -177,7 +177,7 @@ router.post(
 // @access  Private
 router.patch(
   "/:id/adaptive-difficulty",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) => {
@@ -190,7 +190,7 @@ router.patch(
 // @route   GET /api/interviews/:id/metrics/export
 router.get(
   "/:id/metrics/export",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) => {
@@ -204,7 +204,7 @@ router.get(
 // @access  Private
 router.post(
   "/:id/complete",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) =>
@@ -218,7 +218,7 @@ router.post(
 // @access  Private
 router.get(
   "/:id/results",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) => {
@@ -234,7 +234,7 @@ router.get(
 // @access  Private
 router.post(
   "/:id/followups-reviewed/:questionIndex",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) => {
@@ -250,7 +250,7 @@ router.post(
 // @access  Private
 router.get(
   "/:id/transcripts",
-  requireAuth,
+  ensureAuthenticated,
   ensureUserProfile,
   dbReady,
   (req, res) => {
@@ -264,7 +264,7 @@ const C = require("../utils/constants");
 // @desc    Delete interview (with Cloudinary cleanup)
 // @route   DELETE /api/interviews/:id
 // @access  Private
-router.delete("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) => {
+router.delete("/:id", ensureAuthenticated, ensureUserProfile, dbReady, (req, res) => {
   if (req.useInMemory) {
     return fail(
       res,

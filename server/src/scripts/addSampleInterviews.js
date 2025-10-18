@@ -14,6 +14,7 @@ async function addSampleInterviews() {
     const sampleInterviews = [
       {
         userId,
+        userProfile: mongoose.Types.ObjectId("68e68ad9814eb0b75d5ac597"),
         status: "completed",
         config: {
           jobRole: "Full Stack Developer",
@@ -52,6 +53,7 @@ async function addSampleInterviews() {
       },
       {
         userId,
+        userProfile: mongoose.Types.ObjectId("68e68ad9814eb0b75d5ac597"),
         status: "completed",
         config: {
           jobRole: "Frontend Developer",
@@ -90,6 +92,7 @@ async function addSampleInterviews() {
       },
       {
         userId,
+        userProfile: mongoose.Types.ObjectId("68e68ad9814eb0b75d5ac597"),
         status: "completed",
         config: {
           jobRole: "Backend Java Developer",
@@ -128,6 +131,7 @@ async function addSampleInterviews() {
       },
       {
         userId,
+        userProfile: mongoose.Types.ObjectId("68e68ad9814eb0b75d5ac597"),
         status: "in-progress",
         config: {
           jobRole: "Mobile App Developer",
@@ -150,6 +154,7 @@ async function addSampleInterviews() {
       },
       {
         userId,
+        userProfile: mongoose.Types.ObjectId("68e68ad9814eb0b75d5ac597"),
         status: "scheduled",
         config: {
           jobRole: "DevOps Engineer",

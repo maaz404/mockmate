@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs").promises;
-const requireAuth = require("../middleware/auth");
+const { ensureAuthenticated } = require("../middleware/auth");
 const Interview = require("../models/Interview");
 const transcriptionService = require("../services/transcriptionService");
 const Logger = require("../utils/logger");
@@ -53,7 +53,7 @@ const upload = multer({
 // @desc    Start video recording session
 // @route   POST /api/video/start/:interviewId
 // @access  Private
-router.post("/start/:interviewId", requireAuth, async (req, res) => {
+router.post("/start/:interviewId", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId } = req.params;
@@ -116,7 +116,7 @@ router.post("/start/:interviewId", requireAuth, async (req, res) => {
 // @access  Private
 router.post(
   "/upload/:interviewId/:questionIndex",
-  requireAuth,
+  ensureAuthenticated,
   upload.single("video"),
   async (req, res) => {
     try {
@@ -310,7 +310,7 @@ router.post(
 // @desc    Stop video recording session
 // @route   POST /api/video/stop/:interviewId
 // @access  Private
-router.post("/stop/:interviewId", requireAuth, async (req, res) => {
+router.post("/stop/:interviewId", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId } = req.params;
@@ -370,7 +370,7 @@ router.post("/stop/:interviewId", requireAuth, async (req, res) => {
 // @access  Private
 router.get(
   "/playback/:interviewId/:questionIndex",
-  requireAuth,
+  ensureAuthenticated,
   async (req, res) => {
     try {
       const { userId } = req.auth;
@@ -457,7 +457,7 @@ router.get(
 // @desc    Stream video file
 // @route   GET /api/video/stream/:filename
 // @access  Private
-router.get("/stream/:filename", requireAuth, async (req, res) => {
+router.get("/stream/:filename", ensureAuthenticated, async (req, res) => {
   try {
     const { filename } = req.params;
     const { userId } = req.auth;
@@ -531,7 +531,7 @@ router.get("/stream/:filename", requireAuth, async (req, res) => {
 // @desc    Delete video recording
 // @route   DELETE /api/video/:interviewId/:questionIndex
 // @access  Private
-router.delete("/:interviewId/:questionIndex", requireAuth, async (req, res) => {
+router.delete("/:interviewId/:questionIndex", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId, questionIndex } = req.params;
@@ -606,7 +606,7 @@ router.delete("/:interviewId/:questionIndex", requireAuth, async (req, res) => {
 // @desc    Get interview video summary
 // @route   GET /api/video/summary/:interviewId
 // @access  Private
-router.get("/summary/:interviewId", requireAuth, async (req, res) => {
+router.get("/summary/:interviewId", ensureAuthenticated, async (req, res) => {
   try {
     const { userId } = req.auth;
     const { interviewId } = req.params;
@@ -674,7 +674,7 @@ router.get("/summary/:interviewId", requireAuth, async (req, res) => {
 // @access  Private
 router.get(
   "/transcript/:interviewId/:questionIndex",
-  requireAuth,
+  ensureAuthenticated,
   async (req, res) => {
     try {
       const { userId } = req.auth;
@@ -741,7 +741,7 @@ router.get(
 // @access  Private
 router.post(
   "/transcript/:interviewId/:questionIndex/retry",
-  requireAuth,
+  ensureAuthenticated,
   async (req, res) => {
     try {
       const { userId } = req.auth;

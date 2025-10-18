@@ -2,7 +2,8 @@
   "name": "mockmate-root",
   "private": true,
   "dependencies": {
-    "@fontsource/inter": "^5.2.8"
+    "@fontsource/inter": "^5.2.8",
+    "passport-local": "^1.0.0"
   },
   "scripts": {
     "start": "npm --prefix server run start",

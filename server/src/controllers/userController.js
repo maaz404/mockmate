@@ -2,7 +2,7 @@
 const upgradeToPremium = async (req, res) => {
   try {
     const { userId } = req.auth;
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    const userProfile = await UserProfile.findOne({ userId });
     if (!userProfile) {
       return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
     }
@@ -21,10 +21,18 @@ const upgradeToPremium = async (req, res) => {
 };
 /* eslint-disable no-console, consistent-return, no-magic-numbers */
 const UserProfile = require("../models/UserProfile");
-const { clerkClient } = require("@clerk/clerk-sdk-node");
+// const { clerkClient } = require("@clerk/clerk-sdk-node"); // REMOVED: Migrating to Google OAuth
 const Interview = require("../models/Interview");
 const ScheduledSession = require("../models/ScheduledSession");
 const { ok, fail } = require("../utils/responder");
+
+// Dev-only premium whitelist by email
+const PREMIUM_TEST_EMAILS = (
+  process.env.PREMIUM_TEST_EMAILS || "maazakbar404@gmail.com"
+)
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
 
 // Get user profile (profile guaranteed by ensureUserProfile middleware)
 const getProfile = async (req, res) => {
@@ -55,17 +63,15 @@ const bootstrapProfile = async (req, res) => {
     const { userId } = req.auth;
 
     // Find or create user profile
-    let userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    let userProfile = await UserProfile.findOne({ userId });
 
     if (!userProfile) {
       // Create a basic profile
       userProfile = new UserProfile({
-        clerkUserId: userId,
+        userId,
         email: req.auth.emailAddress || "user@example.com",
-        personalInfo: {
-          firstName: req.auth.firstName || "User",
-          lastName: req.auth.lastName || "",
-        },
+        firstName: req.auth.firstName || "User",
+        lastName: req.auth.lastName || "",
         onboardingCompleted: false,
       });
       await userProfile.save();
@@ -336,47 +342,22 @@ const completeOnboarding = async (req, res) => {
       );
     }
 
-    // Ensure a profile exists; if not, create it from Clerk data when available
-    // In development with MOCK_AUTH_FALLBACK, skip Clerk calls and use stub data
+    // Ensure a profile exists; if not, create it from Google/Local data
     const usingMockAuth =
       process.env.NODE_ENV !== "production" &&
       process.env.NODE_ENV !== "test" &&
       process.env.MOCK_AUTH_FALLBACK === "true" &&
       (!req.headers?.authorization || String(userId).startsWith("test-"));
 
-    let clerkUser = null;
-    const shouldCallClerk =
-      !usingMockAuth &&
-      (process.env.CLERK_SECRET_KEY || process.env.NODE_ENV === "test");
-    if (shouldCallClerk) {
-      try {
-        clerkUser = await clerkClient.users.getUser(userId);
-      } catch (clerkError) {
-        console.error("Clerk API error:", clerkError);
-        if (
-          process.env.NODE_ENV === "production" ||
-          process.env.NODE_ENV === "test"
-        ) {
-          // Align with test expectation using fail helper
-          return fail(
-            res,
-            500,
-            "MISSING_DATA",
-            "Failed to fetch user data from authentication service"
-          );
-        }
-      }
-    }
+    let user = null;
 
     // Fallback stub user for development
-    if (!clerkUser && usingMockAuth) {
-      clerkUser = {
-        emailAddresses: [
-          { emailAddress: `${userId || "test-user-123"}@example.com` },
-        ],
+    if (!user && usingMockAuth) {
+      user = {
+        email: `${userId || "test-user-123"}@example.com`,
         firstName: "Test",
         lastName: "User",
-        profileImageUrl: null,
+        profileImage: null,
       };
     }
 
@@ -390,21 +371,21 @@ const completeOnboarding = async (req, res) => {
       userProfile.interviewGoals = interviewGoals;
       userProfile.onboardingCompleted = true;
       // Only hydrate missing base identity fields once
-      if (!userProfile.email && clerkUser?.emailAddresses?.[0]?.emailAddress) {
-        userProfile.email = clerkUser.emailAddresses[0].emailAddress;
+      if (!userProfile.email && user?.email) {
+        userProfile.email = user.email;
       }
-      if (!userProfile.firstName && clerkUser?.firstName) {
-        userProfile.firstName = clerkUser.firstName;
+      if (!userProfile.firstName && user?.firstName) {
+        userProfile.firstName = user.firstName;
       }
-      if (!userProfile.lastName && clerkUser?.lastName) {
-        userProfile.lastName = clerkUser.lastName;
+      if (!userProfile.lastName && user?.lastName) {
+        userProfile.lastName = user.lastName;
       }
-      if (!userProfile.profileImage && clerkUser?.profileImageUrl) {
-        userProfile.profileImage = clerkUser.profileImageUrl;
+      if (!userProfile.profileImage && user?.profileImage) {
+        userProfile.profileImage = user.profileImage;
       }
     } else {
       userProfile = await UserProfile.findOneAndUpdate(
-        { clerkUserId: userId },
+        { userId },
         {
           $set: {
             professionalInfo,
@@ -413,10 +394,10 @@ const completeOnboarding = async (req, res) => {
             onboardingCompleted: true,
           },
           $setOnInsert: {
-            email: clerkUser?.emailAddresses?.[0]?.emailAddress || null,
-            firstName: clerkUser?.firstName || null,
-            lastName: clerkUser?.lastName || null,
-            profileImage: clerkUser?.profileImageUrl || null,
+            email: user?.email || null,
+            firstName: user?.firstName || null,
+            lastName: user?.lastName || null,
+            profileImage: user?.profileImage || null,
           },
         },
         {
@@ -1319,6 +1300,45 @@ async function getDashboardSummary(req, res) {
       skillsDistribution: pick(skillsR, "skillsDistribution") || [],
       sectionsWithErrors,
     };
+
+    // Enforce premium override for whitelisted emails in non-production
+    try {
+      if (
+        process.env.NODE_ENV !== "production" &&
+        payload.profile?.email &&
+        PREMIUM_TEST_EMAILS.includes(
+          String(payload.profile.email).toLowerCase()
+        )
+      ) {
+        // Coalesce response objects
+        payload.profile = payload.profile || {};
+        payload.profile.subscription = {
+          plan: "premium",
+          interviewsRemaining: null,
+          nextResetDate: payload.profile.subscription?.nextResetDate || null,
+        };
+        if (payload.analytics) {
+          payload.analytics.subscription = {
+            plan: "premium",
+            interviewsRemaining: null,
+            nextResetDate:
+              payload.analytics.subscription?.nextResetDate || null,
+          };
+        }
+        // Persist to DB if necessary (best-effort)
+        await UserProfile.updateOne(
+          { clerkUserId: userId },
+          {
+            $set: {
+              "subscription.plan": "premium",
+              "subscription.interviewsRemaining": null,
+            },
+          }
+        ).catch(() => {});
+      }
+    } catch (_) {
+      // non-fatal
+    }
 
     return ok(res, payload);
   } catch (error) {
