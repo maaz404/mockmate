@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import StatsCard from "../components/dashboard/StatsCard";
@@ -10,9 +10,9 @@ import SkillsDistributionChart from "../components/dashboard/SkillsDistributionC
 import { apiService } from "../services/api";
 
 function DashboardPage() {
-  const { user, isLoaded } = useUser();
+  const { user, loading } = useAuthContext();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [recentInterviews, setRecentInterviews] = useState([]);
@@ -20,7 +20,7 @@ function DashboardPage() {
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      setLoading(true);
+      setDashboardLoading(true);
       const summary = await apiService.get("/users/dashboard/summary");
       const data = summary?.data || {};
       setUserProfile(data.profile || null);
@@ -30,17 +30,17 @@ function DashboardPage() {
     } catch (error) {
       // Handle error silently or use proper error handling
     } finally {
-      setLoading(false);
+      setDashboardLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isLoaded && user) {
+    if (!loading && user) {
       fetchDashboardData();
     }
-  }, [isLoaded, user, fetchDashboardData]);
+  }, [loading, user, fetchDashboardData]);
 
-  if (!isLoaded) {
+  if (loading || dashboardLoading) {
     return <LoadingSpinner />;
   }
 

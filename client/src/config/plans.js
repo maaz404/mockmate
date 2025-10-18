@@ -5,7 +5,7 @@ export const PLANS = Object.freeze({
   free: {
     key: "free",
     label: "Free",
-    interviews: 10,
+    interviews: 50,
     unlimited: false,
     features: [
       "Core practice interviews",

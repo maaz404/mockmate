@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@clerk/clerk-react": "^5.46.0",
     "@fontsource/archivo-black": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
     "@mediapipe/face_mesh": "^0.4.1633559619",
@@ -68,5 +67,5 @@
     "postcss": "^8.4.32",
     "sharp": "^0.33.5"
   },
-  "proxy": "http://localhost:5002"
+  "proxy": "http://localhost:5000"
 }

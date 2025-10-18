@@ -29,15 +29,14 @@ const IntegrationTests = {
 
       // Test 2: Authentication Integration
       try {
-        // Check if Clerk is properly configured
-        const clerkKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
-        if (clerkKey && clerkKey.startsWith("pk_")) {
+        // Check if Google OAuth endpoints are configured
+        const apiBase = process.env.REACT_APP_API_BASE_URL;
+        const hasAuth = !!apiBase;
+        if (hasAuth) {
           results.authIntegration = true;
           results.passedTests++;
         } else {
-          results.errors.push(
-            "Authentication: Clerk key not properly configured"
-          );
+          results.errors.push("Authentication: API base URL not configured");
         }
       } catch (error) {
         results.errors.push(

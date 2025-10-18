@@ -1,5 +1,8 @@
 import axios from "axios";
-import { getLastRequestId } from "./axiosRequestId"; // for enriched error context
+axios.defaults.withCredentials = true;
+
+// OPTIMIZATION: Define timeout constant to avoid magic number
+const API_TIMEOUT_MS = 10000;
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -8,7 +11,7 @@ const api = axios.create({
     process.env.REACT_APP_API_BASE ||
     process.env.REACT_APP_API_BASE_URL ||
     "/api",
-  timeout: 10000,
+  timeout: API_TIMEOUT_MS,
   headers: {
     "Content-Type": "application/json",
   },
@@ -23,29 +26,22 @@ export const setAuthToken = (getToken) => {
 };
 
 // Request interceptor to add auth token
+// NOTE: This is primarily for backward compatibility with JWT-based endpoints
+// MIGRATION: Session-based auth (Google OAuth) uses cookies, not Bearer tokens
 api.interceptors.request.use(
   async (config) => {
     try {
+      // Legacy JWT token support for backward compatibility
       if (getTokenFunction) {
-        // Get the JWT token for backend authentication
         const token = await getTokenFunction();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
       }
 
-      // In development mode, force the premium user ID for testing
-      if (
-        process.env.NODE_ENV === "development" ||
-        process.env.REACT_APP_MOCK_AUTH
-      ) {
-        config.headers["x-user-id"] = "user_32SjRWLQzT2Adf0C0MPuO0lezl3";
-        config.headers["x-user-email"] = "maazakbar404@gmail.com";
-        config.headers["x-user-firstname"] = "Maaz";
-        config.headers["x-user-lastname"] = "Sheikh";
-      }
+      // Removed deprecated mock auth headers for production cleanup
     } catch (error) {
-      // Authentication token retrieval failed
+      // Authentication token retrieval failed - silent fail for session-based auth
       // eslint-disable-next-line no-console
       console.warn("Failed to get authentication token:", error);
     }

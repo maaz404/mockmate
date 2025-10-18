@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuthContext } from "../../context/AuthContext.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageCircle,
@@ -38,7 +38,8 @@ const ChatbotWidget = () => {
   const inputRef = useRef(null);
   const controllerRef = useRef(null);
   const autoRetriedRef = useRef(false);
-  const { getToken, userId } = useAuth();
+  const { user } = useAuthContext();
+  const userId = user?.id || user?.userId || undefined;
 
   // Canonical helpful guidance message (requested implementation)
   const HELPFUL_GUIDANCE =
@@ -175,13 +176,10 @@ const ChatbotWidget = () => {
     process.env.REACT_APP_API_BASE_URL ||
     "/api";
   const buildHeaders = async () => {
-    const token = getToken ? await getToken() : null;
-    const headers = {
+    return {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
     };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    return headers;
   };
   const abortStream = () => {
     try {
@@ -541,13 +539,15 @@ const ChatbotWidget = () => {
                     </span>
                   </div>
                   <p className="text-[11px] text-teal-50 flex items-center gap-1">
-                    {lastProvider === "openai-fallback" && (
+                    {lastProvider === "ollama" && (
                       <span className="text-[10px] px-1 rounded bg-white/20">
-                        OpenAI
+                        Powered by Ollama
                       </span>
                     )}
-                    {(!lastProvider || lastProvider?.startsWith("grok")) && (
-                      <span>Powered by Grok</span>
+                    {!lastProvider && (
+                      <span className="text-[10px] px-1 rounded bg-white/20">
+                        Powered by Ollama
+                      </span>
                     )}
                     {process.env.REACT_APP_CHATBOT_APP_ONLY === "true" && (
                       <span className="text-[9px] px-1 py-0.5 rounded bg-white/20">
@@ -695,9 +695,9 @@ const ChatbotWidget = () => {
                         <div className="mt-2 flex flex-wrap gap-1 items-center">
                           {message.provider && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-700/60 text-surface-600 dark:text-surface-300 border border-surface-200 dark:border-surface-600">
-                              {message.provider
-                                .replace(/^(grok)(.*)/, "$1")
-                                .toUpperCase()}
+                              {message.provider === "ollama"
+                                ? "OLLAMA"
+                                : message.provider?.toUpperCase()}
                             </span>
                           )}
                           {message.fallback && (

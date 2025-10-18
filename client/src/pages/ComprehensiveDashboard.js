@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext.jsx";
 import StatsCard from "../components/dashboard/StatsCard";
 import RecentInterviews from "../components/dashboard/RecentInterviews";
 import QuickActions from "../components/dashboard/QuickActions";
@@ -8,22 +8,22 @@ import OnboardingModal from "../components/onboarding/OnboardingModal";
 import { apiService } from "../services/api";
 
 const ComprehensiveDashboard = () => {
-  const { user, isLoaded } = useUser();
+  const { user, loading } = useAuthContext();
   const [userProfile, setUserProfile] = useState(null);
   const [userStats, setUserStats] = useState(null);
   const [recentInterviews, setRecentInterviews] = useState([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    if (isLoaded && user) {
+    if (!loading && user) {
       fetchUserData();
     }
-  }, [isLoaded, user]);
+  }, [loading, user]);
 
   const fetchUserData = async () => {
     try {
-      setLoading(true);
+      setDataLoading(true);
 
       // Fetch user profile
       const profileResponse = await apiService.get("/users/profile");
@@ -58,7 +58,7 @@ const ComprehensiveDashboard = () => {
         setShowOnboarding(true);
       }
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -84,7 +84,7 @@ const ComprehensiveDashboard = () => {
     }
   };
 
-  if (!isLoaded || loading) {
+  if (loading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -93,15 +93,7 @@ const ComprehensiveDashboard = () => {
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-50 mb-4">
-            Please sign in to continue
-          </h2>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -112,8 +104,7 @@ const ComprehensiveDashboard = () => {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
-                Welcome back,{" "}
-                {user.firstName || user.emailAddresses[0]?.emailAddress}!
+                Welcome back, {user.name || user.email}!
               </h1>
               <p className="text-surface-600 dark:text-surface-400 mt-1">
                 {userProfile?.jobRole
@@ -264,6 +255,7 @@ const ComprehensiveDashboard = () => {
       </div>
 
       {/* Onboarding Modal */}
+
       {showOnboarding && (
         <OnboardingModal
           isOpen={showOnboarding}

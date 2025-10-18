@@ -101,7 +101,7 @@ const HybridQuestionDemo = () => {
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-8 transition-colors duration-200">
       <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
+        {/* Page Title */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50 mb-2">
             Hybrid Question Demo

@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useSubscription } from "../../hooks/useSubscription";
 import { Link, useLocation } from "react-router-dom";
-import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../../context/AuthContext.jsx";
 import DarkModeToggle from "../ui/DarkModeToggle";
 import BrandLogo from "../ui/BrandLogo";
 import { navigationConfig } from "../../config/navigation";
 
-// Clean rebuilt Sidebar component (sign-out button removed; Clerk UserButton handles sign out)
+// Clean rebuilt Sidebar component for session-based auth (sign-out handled via route/button)
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { subscription } = useSubscription();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -17,7 +17,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     left: 0,
   });
   const location = useLocation();
-  const { user } = useUser();
+  const { user } = useAuthContext();
 
   const showTooltip = (e, text) => {
     if (!isCollapsed) return;
@@ -240,45 +240,58 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             </div>
           )}
 
-          <SignedIn>
-            <div
-              className={`flex items-center ${
-                isCollapsed ? "justify-center h-8" : "space-x-2 px-2 h-8"
-              }`}
-            >
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: {
-                    avatarBox: "w-[22px] h-[22px]",
-                    userButtonPopoverCard: "shadow-lg",
-                    userButtonPopoverActionButton:
-                      "text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700",
-                  },
-                }}
-              />
-              {!isCollapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-surface-900 dark:text-white truncate">
-                    {user?.firstName || "User"} {user?.lastName || ""}
-                  </p>
-                  <p className="text-xs text-surface-500 dark:text-surface-400 truncate">
-                    {user?.primaryEmailAddress?.emailAddress || ""}
-                  </p>
+          {user ? (
+            <>
+              <div
+                className={`flex items-center ${
+                  isCollapsed ? "justify-center h-8" : "space-x-2 px-2 h-8"
+                }`}
+              >
+                <div className="w-[22px] h-[22px] rounded-full bg-primary-600 text-white flex items-center justify-center font-bold">
+                  {user.name ? user.name[0] : "U"}
+                </div>
+                {!isCollapsed && (
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-surface-900 dark:text-white truncate">
+                      {user.name || "User"}
+                    </p>
+                    <p className="text-xs text-surface-500 dark:text-surface-400 truncate">
+                      {user.email || ""}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {!isCollapsed && subscription.isFree && (
+                <div className="px-2">
+                  <button className="w-full text-left px-3 py-2 text-xs text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium">
+                    Upgrade to Pro
+                  </button>
                 </div>
               )}
-            </div>
-            {!isCollapsed && subscription.isFree && (
-              <div className="px-2">
-                <button className="w-full text-left px-3 py-2 text-xs text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium">
-                  Upgrade to Pro
-                </button>
-              </div>
-            )}
-          </SignedIn>
-
-          <SignedOut>
-            {!isCollapsed && (
+              {!isCollapsed && (
+                <div className="px-2 mt-2">
+                  <button
+                    className="block w-full text-center px-3 py-2 text-xs text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white border border-surface-300 dark:border-surface-600 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
+                    onClick={async () => {
+                      try {
+                        await import("react-hot-toast").then((m) =>
+                          m.default.success("Signed out")
+                        );
+                        const { logout } =
+                          require("../../context/AuthContext.jsx").useAuthContext();
+                        await logout();
+                      } finally {
+                        window.location.href = "/login";
+                      }
+                    }}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            !isCollapsed && (
               <div className="space-y-2 px-2">
                 <Link
                   to="/login"
@@ -293,8 +306,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                   Get Started
                 </Link>
               </div>
-            )}
-          </SignedOut>
+            )
+          )}
         </div>
       </div>
     </>

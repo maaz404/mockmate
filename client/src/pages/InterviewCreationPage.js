@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import StyledSelect from "../components/ui/StyledSelect";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext.jsx";
 import { apiService } from "../services/api";
 
 const InterviewCreationPage = () => {
   const navigate = useNavigate();
-  const { user, isLoaded } = useUser();
+  const { user, loading } = useAuthContext();
   const [formData, setFormData] = useState({
     jobRole: "",
     experienceLevel: "intermediate",
@@ -22,7 +22,7 @@ const InterviewCreationPage = () => {
     codingLanguage: "javascript",
     videoAnswersEnabled: true,
   });
-  const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
 
   const experienceLevels = [
     { value: "entry", label: "Entry Level (0-2 years)" },
@@ -87,10 +87,10 @@ const InterviewCreationPage = () => {
   ];
 
   useEffect(() => {
-    if (isLoaded && user) {
+    if (!loading && user) {
       fetchUserProfile();
     }
-  }, [isLoaded, user]);
+  }, [loading, user]);
 
   const fetchUserProfile = async () => {
     try {
@@ -137,7 +137,7 @@ const InterviewCreationPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setDataLoading(true);
 
     try {
       // Map client values to server expected values
@@ -195,11 +195,11 @@ const InterviewCreationPage = () => {
       });
       alert(serverMsg);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
-  if (!isLoaded || loading) {
+  if (loading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-surface-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>

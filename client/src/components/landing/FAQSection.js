@@ -9,7 +9,7 @@ const FAQSection = () => {
     {
       question: "What technologies power the MockMate platform?",
       answer:
-        "MockMate is built using a modern full-stack architecture: React 18.2.0 with hooks for the frontend, Node.js with Express.js for the backend, MongoDB as the database, Clerk for authentication, and Tailwind CSS for responsive styling. The platform also integrates with AI APIs for natural language processing and feedback generation.",
+        "MockMate is built using a modern full-stack architecture: React 18.2.0 with hooks for the frontend, Node.js with Express.js for the backend, MongoDB as the database, Google OAuth with server-managed sessions for authentication, and Tailwind CSS for responsive styling. The platform also integrates with AI APIs for natural language processing and feedback generation.",
     },
     {
       question: "How does the AI feedback system work technically?",
@@ -24,7 +24,7 @@ const FAQSection = () => {
     {
       question: "How is user authentication and security handled?",
       answer:
-        "Authentication is managed through Clerk, providing JWT-based session management, role-based access control, and secure user registration/login flows. The backend implements security middleware for API protection, input validation, and error handling to prevent common security vulnerabilities.",
+        "Authentication is managed via Google Sign-In (OAuth 2.0) with secure server-side sessions stored in MongoDB. The backend implements security middleware, input validation, and error handling to protect API routes and user data.",
     },
     {
       question: "What development methodologies were followed?",

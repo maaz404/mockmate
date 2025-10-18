@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext.jsx";
 import { apiService } from "../services/api";
 import { interviewService } from "../services/mockmate";
 import CodeEditor from "../components/ui/CodeEditor";
@@ -30,7 +30,7 @@ const PROHIBITED_PATTERNS = [
 const InterviewExperiencePage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
-  const { user, isLoaded } = useUser();
+  const { user, loading: authLoading } = useAuthContext();
 
   // Interview state
   const [interview, setInterview] = useState(null);
@@ -320,8 +320,8 @@ const InterviewExperiencePage = () => {
 
   // Initial load
   useEffect(() => {
-    if (isLoaded && user && interviewId) fetchInterview();
-  }, [isLoaded, user, interviewId, fetchInterview]);
+    if (!authLoading && user && interviewId) fetchInterview();
+  }, [authLoading, user, interviewId, fetchInterview]);
 
   // Rehydrate coding session if interview already has one
   useEffect(() => {
@@ -730,7 +730,7 @@ const InterviewExperiencePage = () => {
   }, [toasts]);
 
   // Loading / missing
-  if (!isLoaded || loading)
+  if (authLoading || loading)
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />

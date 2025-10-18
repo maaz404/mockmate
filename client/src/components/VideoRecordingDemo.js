@@ -45,24 +45,22 @@ const VideoRecordingDemo = () => {
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-900 text-surface-900 dark:text-white transition-colors duration-200">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Demo Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">
-              Video Recording Demo - Software Engineer Interview
-            </h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-surface-500 dark:text-surface-400">
-                Question {currentQuestionIndex + 1} of {questions.length}
-              </span>
-              <span className="text-sm text-yellow-400">DEMO MODE</span>
-            </div>
+        {/* Page Title & Progress (no top bar) */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-2">
+            Video Recording Demo - Software Engineer Interview
+          </h1>
+          <div className="flex items-center justify-between text-sm text-surface-500 dark:text-surface-400">
+            <span>
+              Question {currentQuestionIndex + 1} of {questions.length}
+            </span>
+            <span className="text-yellow-400">DEMO MODE</span>
           </div>
-          <div className="w-full bg-surface-200 dark:bg-surface-700 rounded-full h-2">
+          <div className="mt-2 w-full bg-surface-200 dark:bg-surface-700 rounded-full h-2">
             <div
               className="bg-primary-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
-            ></div>
+            />
           </div>
         </div>
 

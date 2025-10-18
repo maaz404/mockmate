@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext.jsx";
 import { apiService } from "../services/api";
 import TranscriptDisplay from "../components/TranscriptDisplay";
 import Collapsible from "../components/ui/Collapsible";
@@ -9,7 +9,7 @@ import { scoreFgClass, scoreBgClass, scoreLabel } from "../utils/scoreUtils";
 const InterviewResultsPage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
-  const { user, isLoaded } = useUser();
+  const { user, loading: authLoading } = useAuthContext();
 
   // State
   const [results, setResults] = useState(null);
@@ -39,8 +39,8 @@ const InterviewResultsPage = () => {
 
   // Initial fetch
   useEffect(() => {
-    if (isLoaded && user && interviewId) fetchResults();
-  }, [isLoaded, user, interviewId, fetchResults]);
+    if (!authLoading && user && interviewId) fetchResults();
+  }, [authLoading, user, interviewId, fetchResults]);
 
   // Fetch coding challenge results after main results load
   useEffect(() => {
@@ -60,7 +60,7 @@ const InterviewResultsPage = () => {
   const getScoreBgColor = (s) => scoreBgClass(s);
 
   // Loading / empty states
-  if (!isLoaded || loading)
+  if (authLoading || loading)
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />

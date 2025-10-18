@@ -1,58 +1,41 @@
-import React, { useState, useEffect } from "react";
-import { SignUp, useAuth, useUser } from "@clerk/clerk-react";
+import React, { useEffect } from "react";
+import { useAuthContext } from "../../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "../../context/ThemeContext";
 import AuthLoadingSpinner from "../../components/ui/AuthLoadingSpinner";
 
 const RegisterPage = () => {
-  const { isLoaded } = useAuth();
-  const { user } = useUser();
+  const { user, loginWithGoogle, signupWithEmail, loading, error } =
+    useAuthContext();
   const navigate = useNavigate();
-  const [showTimeout, setShowTimeout] = useState(false);
-  const { theme } = useTheme();
 
-  // Add a reasonable timeout to show content even if Clerk is slow to load
+  // BUGFIX: If already logged in, redirect to dashboard
+  // Note: navigate is stable in React Router v6, but we include it to satisfy eslint
+  // Only trigger redirect when user changes from null to authenticated
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowTimeout(true);
-    }, 2000); // 2 second timeout - much shorter
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Detect verification status
-  const emailStatus = user?.primaryEmailAddress?.verification?.status;
-  const isVerified = emailStatus === "verified";
-  const shouldShowSignUp = isLoaded || showTimeout;
-
-  // When user becomes verified (and is on /register), navigate manually
-  useEffect(() => {
-    if (isVerified) {
-      // eslint-disable-next-line no-console
-      // Email verified, navigate to dashboard
+    if (user && !loading) {
       navigate("/dashboard", { replace: true });
     }
-  }, [isVerified, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading]); // Deliberately omit navigate - it's stable
+  // Local form state (must be at top level, not inside any condition)
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [firstName, setFirstName] = React.useState("");
+  const [lastName, setLastName] = React.useState("");
 
-  // Poll for verification if user exists but not verified (handles separate tab verification)
-  useEffect(() => {
-    if (!user || isVerified) return;
-    const id = setInterval(async () => {
-      try {
-        // eslint-disable-next-line no-console
-        // Polling verification status
-        await user.reload();
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        // Reload failed
-      }
-    }, 4000);
-    return () => clearInterval(id);
-  }, [user, isVerified]);
-
-  if (!shouldShowSignUp) {
+  if (loading) {
     return <AuthLoadingSpinner message="Initializing authentication..." />;
   }
+
+  const handleLocalSignup = (e) => {
+    e.preventDefault();
+    signupWithEmail(email, password, firstName, lastName);
+  };
+
+  if (loading) {
+    return <AuthLoadingSpinner message="Initializing authentication..." />;
+  }
+
   return (
     <div className="min-h-screen bg-white dark:bg-surface-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors duration-200">
       {/* Background Elements */}
@@ -71,126 +54,86 @@ const RegisterPage = () => {
       </div>
 
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/90 dark:bg-surface-800/60 backdrop-blur-sm border border-surface-200 dark:border-surface-700 py-8 px-4 shadow-xl sm:rounded-xl sm:px-10">
-          <SignUp
-            routing="path"
-            path="/register"
-            signInUrl="/login"
-            // Remove automatic redirect; handle manually when verified
-            unsafeMetadata={{ source: "register-page" }}
-            // (Clerk v5) Use localization or event listeners if needed
-            // We can optionally intercept but for now rely on default. Add debug styling to see step component.
-            appearance={{
-              elements:
-                theme === "dark"
-                  ? {
-                      formButtonPrimary:
-                        "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
-                      card: "shadow-none bg-transparent",
-                      headerTitle: "hidden",
-                      headerSubtitle: "hidden",
-                      socialButtonsBlockButton:
-                        "border border-surface-600 hover:bg-surface-700 bg-surface-800 text-white rounded-lg transition-all duration-200",
-                      socialButtonsBlockButtonText: "text-white font-medium",
-                      formFieldInput:
-                        "bg-surface-700 border-surface-600 text-white placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
-                      footerActionLink:
-                        "text-primary-400 hover:text-primary-300 transition-colors duration-200",
-                      formFieldLabel: "text-surface-200",
-                      formResendCodeLink:
-                        "text-primary-400 hover:text-primary-300 transition-colors duration-200",
-                      identityPreviewText: "text-surface-300",
-                      identityPreviewEditButtonIcon: "text-surface-400",
-                      formFieldSuccessText: "text-green-400",
-                      formFieldErrorText: "text-red-400",
-                      identityPreview: "bg-surface-700 border-surface-600",
-                      otpCodeFieldInput:
-                        "bg-surface-700 border-surface-600 text-white transition-all duration-200",
-                      spinner: "text-primary-500",
-                      formFieldAction:
-                        "text-primary-400 hover:text-primary-300",
-                    }
-                  : {
-                      formButtonPrimary:
-                        "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
-                      card: "shadow-none bg-transparent",
-                      headerTitle: "hidden",
-                      headerSubtitle: "hidden",
-                      socialButtonsBlockButton:
-                        "border border-surface-300 hover:bg-surface-50 bg-white text-surface-800 rounded-lg transition-all duration-200",
-                      socialButtonsBlockButtonText:
-                        "text-surface-800 font-medium",
-                      formFieldInput:
-                        "bg-white border-surface-300 text-surface-900 placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
-                      footerActionLink:
-                        "text-primary-600 hover:text-primary-700 transition-colors duration-200",
-                      formFieldLabel: "text-surface-700",
-                      formResendCodeLink:
-                        "text-primary-600 hover:text-primary-700 transition-colors duration-200",
-                      identityPreviewText: "text-surface-700",
-                      identityPreviewEditButtonIcon: "text-surface-500",
-                      formFieldSuccessText: "text-green-600",
-                      formFieldErrorText: "text-red-600",
-                      identityPreview: "bg-white border-surface-200",
-                      otpCodeFieldInput:
-                        "bg-white border-surface-300 text-surface-900 transition-all duration-200",
-                      spinner: "text-primary-500",
-                      formFieldAction:
-                        "text-primary-600 hover:text-primary-700",
-                    },
-              variables:
-                theme === "dark"
-                  ? {
-                      colorPrimary: "#3b82f6",
-                      colorBackground: "transparent",
-                      colorInputBackground: "#334155",
-                      colorInputText: "#ffffff",
-                      colorText: "#ffffff",
-                      colorTextSecondary: "#cbd5e1",
-                      colorNeutral: "#64748b",
-                      colorSuccess: "#10b981",
-                      colorWarning: "#f59e0b",
-                      colorDanger: "#ef4444",
-                    }
-                  : {
-                      colorPrimary: "#2563eb",
-                      colorBackground: "transparent",
-                      colorInputBackground: "#ffffff",
-                      colorInputText: "#0f172a",
-                      colorText: "#0f172a",
-                      colorTextSecondary: "#475569",
-                      colorNeutral: "#64748b",
-                      colorSuccess: "#16a34a",
-                      colorWarning: "#ea580c",
-                      colorDanger: "#dc2626",
-                    },
-            }}
-            // Instrumentation callbacks
-            afterSignUp={(_res) => {
-              // eslint-disable-next-line no-console
-              // After sign up callback
-              // Redirect to dashboard after signup; EmailVerificationGate / ProtectedRoute
-              // will handle any remaining verification gating if required.
-              try {
-                navigate("/dashboard", { replace: true });
-              } catch (e) {
-                // eslint-disable-next-line no-console
-                // Warning about unhandled error navigating to dashboard
-              }
-            }}
-            signUpStart={(_ctx) => {
-              // eslint-disable-next-line no-console
-              // Sign up start callback
-            }}
-            signUpComplete={(_ctx) => {
-              // eslint-disable-next-line no-console
-              // Sign up complete callback
-            }}
-          />
-          {!isVerified && user && (
-            <div className="mt-4 text-center text-xs text-surface-500 dark:text-surface-400">
-              Status: {emailStatus || "unknown"} (waiting for verification)
-            </div>
+        <div className="bg-white/90 dark:bg-surface-800/60 backdrop-blur-sm border border-surface-200 dark:border-surface-700 py-8 px-4 shadow-xl sm:rounded-xl sm:px-10 flex flex-col items-center">
+          <form
+            className="w-full flex flex-col gap-4"
+            onSubmit={handleLocalSignup}
+          >
+            <input
+              type="text"
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="First Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+            />
+            <input
+              type="text"
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Last Name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+            />
+            <input
+              type="email"
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="submit"
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg py-3"
+              disabled={loading}
+            >
+              Sign up
+            </button>
+          </form>
+          <div className="w-full flex items-center my-4">
+            <hr className="flex-grow border-surface-300 dark:border-surface-700" />
+            <span className="mx-2 text-xs text-surface-500">OR</span>
+            <hr className="flex-grow border-surface-300 dark:border-surface-700" />
+          </div>
+          <button
+            onClick={loginWithGoogle}
+            className="w-full bg-primary-600 hover:bg-primary-700 text-white text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200 flex items-center justify-center"
+            disabled={loading}
+          >
+            <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48">
+              <g>
+                <path
+                  fill="#4285F4"
+                  d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C36.68 2.69 30.77 0 24 0 14.82 0 6.71 5.13 2.69 12.56l7.98 6.2C12.13 13.13 17.62 9.5 24 9.5z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M46.1 24.5c0-1.64-.15-3.22-.42-4.74H24v9.04h12.42c-.54 2.9-2.18 5.36-4.65 7.04l7.18 5.59C43.98 37.13 46.1 31.27 46.1 24.5z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M10.67 28.76c-1.13-3.36-1.13-6.99 0-10.35l-7.98-6.2C.86 16.18 0 20.01 0 24c0 3.99.86 7.82 2.69 11.29l7.98-6.2z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M24 48c6.48 0 11.93-2.15 15.9-5.85l-7.18-5.59c-2.01 1.35-4.59 2.14-8.72 2.14-6.38 0-11.87-3.63-13.33-8.76l-7.98 6.2C6.71 42.87 14.82 48 24 48z"
+                />
+                <path fill="none" d="M0 0h48v48H0z" />
+              </g>
+            </svg>
+            Sign up with Google
+          </button>
+          {error && (
+            <div className="mt-4 text-red-500 text-sm text-center">{error}</div>
           )}
         </div>
 

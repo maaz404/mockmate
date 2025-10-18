@@ -10,7 +10,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import { useAuthContext } from "../../context/AuthContext.jsx";
 
 const ProjectShowcaseSection = () => {
   const projectHighlights = [
@@ -44,6 +44,7 @@ const ProjectShowcaseSection = () => {
     },
   ];
 
+  const { user } = useAuthContext();
   return (
     <section className="relative section-padding bg-surface-50 dark:bg-gradient-to-br dark:from-surface-900 dark:via-surface-800 dark:to-surface-900 overflow-hidden transition-colors duration-200">
       {/* Background Elements */}
@@ -101,8 +102,13 @@ const ProjectShowcaseSection = () => {
         >
           {projectHighlights.map((highlight, index) => (
             <div key={index} className="flex items-center space-x-3 text-left">
-              <Star size={20} className="text-primary-600 dark:text-primary-400 flex-shrink-0" />
-              <span className="text-surface-700 dark:text-surface-300">{highlight}</span>
+              <Star
+                size={20}
+                className="text-primary-600 dark:text-primary-400 flex-shrink-0"
+              />
+              <span className="text-surface-700 dark:text-surface-300">
+                {highlight}
+              </span>
             </div>
           ))}
         </motion.div>
@@ -166,24 +172,9 @@ const ProjectShowcaseSection = () => {
           transition={{ duration: 0.6, delay: 0.7 }}
           className="mb-8"
         >
-          <SignedOut>
-            <div className="bg-surface-800/30 backdrop-blur-sm border border-surface-700 rounded-xl p-6 max-w-md mx-auto">
-              <p className="text-surface-300 mb-4">
-                Experience the full platform capabilities
-              </p>
-              <Link to="/register" className="btn-primary w-full group">
-                Access Platform Demo
-                <ExternalLink
-                  size={16}
-                  className="ml-2 group-hover:translate-x-1 transition-transform"
-                />
-              </Link>
-            </div>
-          </SignedOut>
-
-          <SignedIn>
-            <div className="bg-surface-800/30 backdrop-blur-sm border border-surface-700 rounded-xl p-6 max-w-md mx-auto">
-              <p className="text-surface-300 mb-4">
+          {user ? (
+            <div className="bg-white/90 dark:bg-surface-800/70 backdrop-blur-sm border border-surface-200 dark:border-surface-700 rounded-xl p-6 max-w-md mx-auto shadow">
+              <p className="text-surface-600 dark:text-surface-300 mb-4">
                 Continue exploring the platform
               </p>
               <Link to="/dashboard" className="btn-primary w-full group">
@@ -194,7 +185,20 @@ const ProjectShowcaseSection = () => {
                 />
               </Link>
             </div>
-          </SignedIn>
+          ) : (
+            <div className="bg-white/90 dark:bg-surface-800/70 backdrop-blur-sm border border-surface-200 dark:border-surface-700 rounded-xl p-6 max-w-md mx-auto shadow">
+              <p className="text-surface-600 dark:text-surface-300 mb-4">
+                Experience the full platform capabilities
+              </p>
+              <Link to="/register" className="btn-primary w-full group">
+                Access Platform Demo
+                <ExternalLink
+                  size={16}
+                  className="ml-2 group-hover:translate-x-1 transition-transform"
+                />
+              </Link>
+            </div>
+          )}
         </motion.div>
 
         {/* Technical Specifications */}

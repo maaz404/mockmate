@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext.jsx";
 import {
   Clock,
   Target,
@@ -19,7 +19,7 @@ import { apiService } from "../services/api";
 const SessionSummaryPage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
-  const { user } = useUser();
+  useAuthContext();
 
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,11 +59,8 @@ const SessionSummaryPage = () => {
     try {
       setExportingPDF(true);
 
-      const response = await fetch(`/api/reports/${interviewId}/export-pdf`, {
-        headers: {
-          Authorization: `Bearer ${await user.getToken()}`,
-        },
-      });
+      // Session cookie is sent automatically; no need for token
+      const response = await fetch(`/api/reports/${interviewId}/export-pdf`);
 
       if (response.ok) {
         // Create download link
@@ -90,7 +87,6 @@ const SessionSummaryPage = () => {
         toast.error("Failed to export PDF");
       }
     } catch (error) {
-      // Remove console.error for production
       toast.error("Failed to export PDF");
     } finally {
       setExportingPDF(false);

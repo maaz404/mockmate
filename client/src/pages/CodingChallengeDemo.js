@@ -201,32 +201,15 @@ console.log(twoSum([3, 2, 4], 6)); // Expected: [1, 2]`);
   };
 
   return (
-    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-4 transition-colors duration-200">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-6 transition-colors duration-200">
       <div className="max-w-[1500px] mx-auto px-4">
-        {/* Top header mimic */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-md bg-teal-600/20 text-teal-400 flex items-center justify-center font-semibold">
-              X
-            </div>
-            <h1 className="text-lg md:text-xl font-semibold tracking-tight text-surface-800 dark:text-surface-50">
-              Two Sum Problem
-            </h1>
-            <span className="text-xs px-2 py-1 rounded bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300">
-              Array • Hash Table
-            </span>
-            <span className="text-xs px-2 py-1 rounded bg-green-500/15 text-green-600 dark:text-green-400 border border-green-500/30">
-              Easy
-            </span>
-          </div>
-          <div className="flex items-center gap-4 text-xs">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
-              {timeDisplay}
-            </span>
-            <span className="hidden md:inline text-surface-500 dark:text-surface-400">
-              Auto-save enabled
-            </span>
-          </div>
+          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-surface-800 dark:text-surface-50">
+            Two Sum Problem
+          </h1>
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-xs">
+            {timeDisplay}
+          </span>
         </div>
 
         <div className="grid grid-cols-12 gap-6 items-start">

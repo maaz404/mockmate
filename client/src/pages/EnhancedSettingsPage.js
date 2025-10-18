@@ -407,8 +407,9 @@ const SettingsPage = () => {
                         Account Security
                       </h4>
                       <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
-                        Your account is secured through Clerk authentication
-                        with industry-standard security measures.
+                        Your account is secured through Google Sign-In with
+                        server-managed sessions and industry-standard security
+                        measures.
                       </p>
                       <div className="flex space-x-4">
                         <div className="flex items-center space-x-2 text-green-600">

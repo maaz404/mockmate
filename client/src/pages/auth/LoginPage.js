@@ -1,35 +1,37 @@
-import React, { useEffect, useState } from "react";
-import { SignIn, useAuth } from "@clerk/clerk-react";
-import { useTheme } from "../../context/ThemeContext";
+import React, { useEffect } from "react";
+import { useAuthContext } from "../../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 import AuthLoadingSpinner from "../../components/ui/AuthLoadingSpinner";
 
 const LoginPage = () => {
-  const { isLoaded, isSignedIn, userId } = useAuth();
+  const { user, loginWithGoogle, loginWithEmail, loading, error } =
+    useAuthContext();
   const navigate = useNavigate();
-  const [showTimeout, setShowTimeout] = useState(false);
-  const { theme } = useTheme();
 
-  // Add timeout for Clerk loading
+  // BUGFIX: If already logged in, redirect to dashboard
+  // Note: navigate is stable in React Router v6, but we include it to satisfy eslint
+  // Only trigger redirect when user changes from null to authenticated
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowTimeout(true);
-    }, 2000); // 2 second timeout
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    // Redirect if already signed in
-    if (isLoaded && isSignedIn) {
-      navigate("/dashboard");
+    if (user && !loading) {
+      navigate("/dashboard", { replace: true });
     }
-  }, [isLoaded, isSignedIn, userId, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading]); // Deliberately omit navigate - it's stable
 
-  // Show the SignIn component if Clerk is loaded OR after timeout
-  const shouldShowSignIn = isLoaded || showTimeout;
+  // Local form state (must be at top level, not inside any condition)
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
 
-  if (!shouldShowSignIn) {
+  if (loading) {
+    return <AuthLoadingSpinner message="Initializing authentication..." />;
+  }
+
+  const handleLocalLogin = (e) => {
+    e.preventDefault();
+    loginWithEmail(email, password);
+  };
+
+  if (loading) {
     return <AuthLoadingSpinner message="Initializing authentication..." />;
   }
 
@@ -51,109 +53,71 @@ const LoginPage = () => {
       </div>
 
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/90 dark:bg-surface-800/60 backdrop-blur-sm border border-surface-200 dark:border-surface-700 py-8 px-4 shadow-xl sm:rounded-xl sm:px-10">
-          {/* Debug info for development */}
-          {process.env.NODE_ENV === "development" && (
-            <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-600 rounded-lg">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <strong>Development Mode:</strong> Clerk OAuth may require
-                proper dashboard configuration.
-                <br />
-                Check:{" "}
-                <a
-                  href="https://clerk.com/dashboard"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  Clerk Dashboard
-                </a>{" "}
-                → Social Connections → Enable Google
-              </p>
-            </div>
+        <div className="bg-white/90 dark:bg-surface-800/60 backdrop-blur-sm border border-surface-200 dark:border-surface-700 py-8 px-4 shadow-xl sm:rounded-xl sm:px-10 flex flex-col items-center">
+          <form
+            className="w-full flex flex-col gap-4"
+            onSubmit={handleLocalLogin}
+          >
+            <input
+              type="email"
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="submit"
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg py-3"
+              disabled={loading}
+            >
+              Sign in
+            </button>
+          </form>
+          <div className="w-full flex items-center my-4">
+            <hr className="flex-grow border-surface-300 dark:border-surface-700" />
+            <span className="mx-2 text-xs text-surface-500">OR</span>
+            <hr className="flex-grow border-surface-300 dark:border-surface-700" />
+          </div>
+          <button
+            onClick={loginWithGoogle}
+            className="w-full bg-primary-600 hover:bg-primary-700 text-white text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200 flex items-center justify-center"
+            disabled={loading}
+          >
+            <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48">
+              <g>
+                <path
+                  fill="#4285F4"
+                  d="M24 9.5c3.54 0 6.7 1.22 9.19 3.23l6.85-6.85C36.68 2.69 30.77 0 24 0 14.82 0 6.71 5.13 2.69 12.56l7.98 6.2C12.13 13.13 17.62 9.5 24 9.5z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M46.1 24.5c0-1.64-.15-3.22-.42-4.74H24v9.04h12.42c-.54 2.9-2.18 5.36-4.65 7.04l7.18 5.59C43.98 37.13 46.1 31.27 46.1 24.5z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M10.67 28.76c-1.13-3.36-1.13-6.99 0-10.35l-7.98-6.2C.86 16.18 0 20.01 0 24c0 3.99.86 7.82 2.69 11.29l7.98-6.2z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M24 48c6.48 0 11.93-2.15 15.9-5.85l-7.18-5.59c-2.01 1.35-4.59 2.14-8.72 2.14-6.38 0-11.87-3.63-13.33-8.76l-7.98 6.2C6.71 42.87 14.82 48 24 48z"
+                />
+                <path fill="none" d="M0 0h48v48H0z" />
+              </g>
+            </svg>
+            Sign in with Google
+          </button>
+          {error && (
+            <div className="mt-4 text-red-500 text-sm text-center">{error}</div>
           )}
-
-          <SignIn
-            routing="path"
-            path="/login"
-            redirectUrl="/dashboard"
-            signUpUrl="/register"
-            appearance={{
-              elements:
-                theme === "dark"
-                  ? {
-                      formButtonPrimary:
-                        "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
-                      card: "shadow-none bg-transparent",
-                      headerTitle: "hidden",
-                      headerSubtitle: "hidden",
-                      socialButtonsBlockButton:
-                        "border border-surface-600 hover:bg-surface-700 bg-surface-800 text-white rounded-lg transition-all duration-200",
-                      socialButtonsBlockButtonText: "text-white font-medium",
-                      formFieldInput:
-                        "bg-surface-700 border-surface-600 text-white placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
-                      footerActionLink:
-                        "text-primary-400 hover:text-primary-300 transition-colors duration-200",
-                      formFieldLabel: "text-surface-200",
-                      formResendCodeLink:
-                        "text-primary-400 hover:text-primary-300 transition-colors duration-200",
-                      identityPreviewText: "text-surface-300",
-                      identityPreviewEditButtonIcon: "text-surface-400",
-                      spinner: "text-primary-500",
-                      formFieldAction:
-                        "text-primary-400 hover:text-primary-300",
-                    }
-                  : {
-                      formButtonPrimary:
-                        "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
-                      card: "shadow-none bg-transparent",
-                      headerTitle: "hidden",
-                      headerSubtitle: "hidden",
-                      socialButtonsBlockButton:
-                        "border border-surface-200 hover:bg-surface-100 bg-white text-surface-800 rounded-lg transition-all duration-200",
-                      socialButtonsBlockButtonText:
-                        "text-surface-800 font-medium",
-                      formFieldInput:
-                        "bg-white border-surface-300 text-surface-900 placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
-                      footerActionLink:
-                        "text-primary-600 hover:text-primary-700 transition-colors duration-200",
-                      formFieldLabel: "text-surface-700",
-                      formResendCodeLink:
-                        "text-primary-600 hover:text-primary-700 transition-colors duration-200",
-                      identityPreviewText: "text-surface-700",
-                      identityPreviewEditButtonIcon: "text-surface-500",
-                      spinner: "text-primary-500",
-                      formFieldAction:
-                        "text-primary-600 hover:text-primary-700",
-                    },
-              variables:
-                theme === "dark"
-                  ? {
-                      colorPrimary: "#3b82f6",
-                      colorBackground: "transparent",
-                      colorInputBackground: "#334155",
-                      colorInputText: "#ffffff",
-                      colorText: "#ffffff",
-                      colorTextSecondary: "#cbd5e1",
-                      colorNeutral: "#64748b",
-                      colorSuccess: "#10b981",
-                      colorWarning: "#f59e0b",
-                      colorDanger: "#ef4444",
-                    }
-                  : {
-                      colorPrimary: "#2563eb",
-                      colorBackground: "transparent",
-                      colorInputBackground: "#ffffff",
-                      colorInputText: "#0f172a",
-                      colorText: "#0f172a",
-                      colorTextSecondary: "#475569",
-                      colorNeutral: "#64748b",
-                      colorSuccess: "#16a34a",
-                      colorWarning: "#ea580c",
-                      colorDanger: "#dc2626",
-                    },
-            }}
-          />
         </div>
 
         {/* Additional info */}

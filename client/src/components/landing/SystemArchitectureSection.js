@@ -57,12 +57,12 @@ const SystemArchitectureSection = () => {
     },
     {
       name: "Authentication",
-      description: "Clerk-based user management and security",
+      description: "Google OAuth with Express session management",
       icon: Shield,
       color: "purple",
       technologies: [
-        "Clerk authentication service",
-        "JWT token management",
+        "Google OAuth 2.0",
+        "Express-session + Mongo store",
         "User session handling",
         "Role-based access control",
         "Security middleware",
