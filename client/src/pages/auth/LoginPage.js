@@ -74,6 +74,16 @@ const LoginPage = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <div className="flex items-center justify-end">
+              <div className="text-sm">
+                <a
+                  href="/forgot-password"
+                  className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+                >
+                  Forgot your password?
+                </a>
+              </div>
+            </div>
             <button
               type="submit"
               className="w-full bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg py-3"

@@ -1,14 +1,4 @@
 // Unit tests for onboarding validation logic
-// const { clerkClient } = require("@clerk/clerk-sdk-node"); // REMOVED: Migrating to Google OAuth
-
-// Mock Clerk SDK (DEPRECATED - keeping for now to avoid test breakage)
-jest.mock("@clerk/clerk-sdk-node", () => ({
-  clerkClient: {
-    users: {
-      getUser: jest.fn(),
-    },
-  },
-}));
 
 // Mock UserProfile model
 const mockUserProfile = {
@@ -38,15 +28,6 @@ describe("Complete Onboarding Validation", () => {
 
     // Reset mocks
     jest.clearAllMocks();
-
-    // Default successful Clerk response
-    clerkClient.users.getUser.mockResolvedValue({
-      id: "test-user-123",
-      emailAddresses: [{ emailAddress: "test@example.com" }],
-      firstName: "John",
-      lastName: "Doe",
-      profileImageUrl: "https://example.com/avatar.jpg",
-    });
 
     // Default successful database response
     const mockProfileData = {
@@ -147,30 +128,6 @@ describe("Complete Onboarding Validation", () => {
     });
   });
 
-  test("should handle Clerk API errors", async () => {
-    req.body = {
-      professionalInfo: {
-        currentRole: "Developer",
-        industry: "Technology",
-      },
-      preferences: {
-        interviewTypes: ["technical"],
-        difficulty: "beginner",
-      },
-    };
-
-    clerkClient.users.getUser.mockRejectedValue(new Error("Clerk API error"));
-
-    await completeOnboarding(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      error: "MISSING_DATA",
-      message: "Failed to fetch user data from authentication service",
-    });
-  });
-
   test("should succeed with valid data", async () => {
     req.body = {
       professionalInfo: {
@@ -188,7 +145,6 @@ describe("Complete Onboarding Validation", () => {
 
     await completeOnboarding(req, res);
 
-    expect(clerkClient.users.getUser).toHaveBeenCalledWith("test-user-123");
     expect(mockUserProfile.findOneAndUpdate).toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({
       success: true,

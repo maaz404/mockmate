@@ -73,7 +73,6 @@ api.interceptors.response.use(
       requestId:
         response?.data?.requestId ||
         response?.headers?.["x-request-id"] ||
-        getLastRequestId() ||
         null,
       raw: error,
     };
