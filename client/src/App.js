@@ -16,6 +16,8 @@ import Layout from "./components/layout/Layout";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import DashboardPage from "./pages/DashboardPage";
 import ComprehensiveDashboard from "./pages/ComprehensiveDashboard";
 import InterviewCreationPage from "./pages/InterviewCreationPage";
@@ -118,6 +120,8 @@ function App() {
                   />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                  <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
                   {/* Protected Routes */}
                   <Route
