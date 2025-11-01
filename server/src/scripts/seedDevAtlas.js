@@ -15,13 +15,13 @@ async function run() {
   try {
     await connectDB();
 
-    const clerkUserId = process.env.SEED_CLERK_USER_ID || "seed-user-123";
+    const testUserId = process.env.SEED_CLERK_USER_ID || "seed-user-123";
     const email = process.env.SEED_EMAIL || "seed.user@example.com";
 
-    let profile = await UserProfile.findOne({ clerkUserId });
+    let profile = await UserProfile.findOne({ userId });
     if (!profile) {
       profile = await UserProfile.create({
-        clerkUserId,
+        testUserId,
         email,
         firstName: "Seed",
         lastName: "User",
@@ -50,7 +50,7 @@ async function run() {
 
     // Create a sample interview
     const sample = await Interview.create({
-      userId: clerkUserId,
+      userId: testUserId,
       userProfile: profile._id,
       config: {
         jobRole: "Frontend Developer",

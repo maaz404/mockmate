@@ -9,7 +9,7 @@ const PREMIUM_TEST_EMAILS = (
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
-// Ensures a user profile exists for an authenticated request (Clerk adds req.auth.userId)
+// Ensures a user profile exists for an authenticated request (Passport adds req.user)
 // Attaches req.userProfile
 module.exports = async function ensureUserProfile(req, res, next) {
   try {
@@ -19,21 +19,17 @@ module.exports = async function ensureUserProfile(req, res, next) {
       return fail(res, 401, "UNAUTHORIZED", "Authentication required");
     }
 
-    let profile = await UserProfile.findOne({ clerkUserId: userId });
+    let profile = await UserProfile.findOne({ userId: userId });
 
-    // Derive safe email + names. In dev MOCK_AUTH_FALLBACK we may not have headers.
-    const headerEmail = req.headers["x-user-email"]; // may be undefined
-    const safeEmail =
-      headerEmail && /@/.test(headerEmail)
-        ? headerEmail
-        : `${userId}@dev.local`; // deterministic placeholder – satisfies unique required constraint
-    const firstName =
-      req.headers["x-user-firstname"] || profile?.firstName || "";
-    const lastName = req.headers["x-user-lastname"] || profile?.lastName || "";
+    // Derive safe email + names from authenticated user
+    const user = req.user;
+    const safeEmail = user?.email || `${userId}@dev.local`;
+    const firstName = user?.firstName || profile?.firstName || "";
+    const lastName = user?.lastName || profile?.lastName || "";
 
     if (!profile) {
       profile = await UserProfile.create({
-        clerkUserId: userId,
+        userId: userId,
         email: safeEmail,
         firstName,
         lastName,
@@ -41,8 +37,8 @@ module.exports = async function ensureUserProfile(req, res, next) {
       });
     } else if (!profile.email || profile.email.endsWith("@dev.local")) {
       // Backfill email if we now have a real one
-      if (headerEmail && /@/.test(headerEmail)) {
-        profile.email = headerEmail;
+      if (user?.email && /@/.test(user.email)) {
+        profile.email = user.email;
         if (firstName && !profile.firstName) profile.firstName = firstName;
         if (lastName && !profile.lastName) profile.lastName = lastName;
         await profile.save();

@@ -141,7 +141,7 @@ const saveOnboardingProgress = async (req, res) => {
     }
 
     // Remove sensitive fields that shouldn't be updated
-    delete progressData.clerkUserId;
+    delete progressData.userId;
     delete progressData.email;
     delete progressData.analytics;
     delete progressData.subscription;
@@ -153,7 +153,7 @@ const saveOnboardingProgress = async (req, res) => {
     );
 
     const userProfile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { userId: userId },
       {
         $set: progressData,
       },
@@ -210,12 +210,12 @@ const updateProfile = async (req, res) => {
     const { userId } = req.auth;
     const updates = { ...req.body };
 
-    ["clerkUserId", "email", "analytics", "subscription"].forEach(
+    ["userId", "email", "analytics", "subscription"].forEach(
       (f) => delete updates[f]
     );
 
     const userProfile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { userId: userId },
       { ...updates },
       { new: true }
     );
@@ -460,7 +460,7 @@ const getAnalytics = async (req, res) => {
   try {
     const { userId } = req.auth;
     const userProfile = await UserProfile.findOne(
-      { clerkUserId: userId },
+      { userId: userId },
       { analytics: 1, subscription: 1 }
     );
     if (!userProfile)
@@ -483,7 +483,7 @@ const getAnalytics = async (req, res) => {
 // Update user analytics (internal use)
 const updateAnalytics = async (userId, analyticsUpdate) => {
   try {
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    const userProfile = await UserProfile.findOne({ userId: userId });
 
     if (!userProfile) {
       throw new Error("User profile not found");
@@ -575,7 +575,7 @@ const updateAvatar = async (req, res) => {
     const asset = normalizeAsset(req.body);
     if (!asset) return fail(res, 400, "INVALID_ASSET", "Invalid asset payload");
     const profile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { userId: userId },
       { $set: { avatar: asset } },
       { new: true }
     ).lean();
@@ -594,7 +594,7 @@ const updateResumeAsset = async (req, res) => {
     const asset = normalizeAsset(req.body);
     if (!asset) return fail(res, 400, "INVALID_ASSET", "Invalid asset payload");
     const profile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { userId: userId },
       { $set: { resume: asset } },
       { new: true }
     ).lean();
@@ -614,7 +614,7 @@ const uploadResume = async (req, res) => {
     if (!req.file) return fail(res, 400, "NO_FILE", "No file uploaded");
 
     const userProfile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { userId: userId },
       {
         "professionalInfo.resume": {
           filename: req.file.originalname,
@@ -643,7 +643,7 @@ async function getDashboardPreferences(req, res) {
   try {
     const { userId } = req.auth;
     const profile = await UserProfile.findOne(
-      { clerkUserId: userId },
+      { userId: userId },
       { "preferences.dashboard": 1, _id: 0 }
     ).lean();
 
@@ -689,7 +689,7 @@ async function updateDashboardPreferences(req, res) {
     }
 
     const profile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { userId: userId },
       { $set: update },
       { new: true }
     ).lean();
@@ -864,7 +864,7 @@ const getGoals = async (req, res) => {
   try {
     const { userId } = req.auth;
     const userProfile = await UserProfile.findOne(
-      { clerkUserId: userId },
+      { userId: userId },
       { goals: 1 }
     );
     if (!userProfile)
@@ -883,7 +883,7 @@ const updateGoals = async (req, res) => {
     if (!Array.isArray(goals))
       return fail(res, 400, "INVALID_GOALS", "Goals must be an array");
     const userProfile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { userId: userId },
       { $set: { goals } },
       { new: true }
     );
@@ -901,7 +901,7 @@ const getDynamicTips = async (req, res) => {
   try {
     const { userId } = req.auth;
     const userProfile = await UserProfile.findOne(
-      { clerkUserId: userId },
+      { userId: userId },
       { analytics: 1 }
     );
     if (!userProfile)
@@ -1152,13 +1152,13 @@ async function getDashboardSummary(req, res) {
     }
 
     const tasks = {
-      profile: UserProfile.findOne({ clerkUserId: userId })
+      profile: UserProfile.findOne({ userId: userId })
         .select(
-          "clerkUserId email firstName lastName profileImage professionalInfo onboardingCompleted subscription"
+          "userId email firstName lastName profileImage professionalInfo onboardingCompleted subscription"
         )
         .lean()
         .exec(),
-      analytics: UserProfile.findOne({ clerkUserId: userId })
+      analytics: UserProfile.findOne({ userId: userId })
         .select("analytics subscription")
         .lean()
         .exec(),
@@ -1189,14 +1189,14 @@ async function getDashboardSummary(req, res) {
           },
         };
       })(),
-      goals: UserProfile.findOne({ clerkUserId: userId })
+      goals: UserProfile.findOne({ userId: userId })
         .select("goals")
         .lean()
         .exec(),
       tips: (async () => {
         // Reuse internal logic by calling getDynamicTips helpers directly is complex here;
         // instead, perform a lightweight tip generation similar to getDynamicTips
-        const profile = await UserProfile.findOne({ clerkUserId: userId })
+        const profile = await UserProfile.findOne({ userId: userId })
           .select("analytics")
           .lean()
           .exec();
@@ -1327,7 +1327,7 @@ async function getDashboardSummary(req, res) {
         }
         // Persist to DB if necessary (best-effort)
         await UserProfile.updateOne(
-          { clerkUserId: userId },
+          { userId: userId },
           {
             $set: {
               "subscription.plan": "premium",
@@ -1373,7 +1373,7 @@ async function getDashboardRecommendation(req, res) {
 
     // Fetch relevant documents in parallel
     const [profile, interviews, upcoming] = await Promise.all([
-      UserProfile.findOne({ clerkUserId: userId })
+      UserProfile.findOne({ userId: userId })
         .select("analytics preferences.dashboard")
         .lean()
         .exec(),

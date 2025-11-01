@@ -15,14 +15,14 @@ async function upgradeUser() {
 
     // First, find if user exists with this email or clerkUserId
     let profile = await UserProfile.findOne({
-      $or: [{ email }, { clerkUserId }],
+      $or: [{ email }, { userId }],
     });
 
     if (!profile) {
       // Create a new profile for this user
       console.log("Creating new profile for", email);
       profile = await UserProfile.create({
-        clerkUserId,
+        testUserId,
         email,
         firstName: "Maaz",
         lastName: "Sheikh",
@@ -54,8 +54,8 @@ async function upgradeUser() {
       console.log("Updating existing profile for", email);
 
       // Update clerkUserId if missing or different
-      if (!profile.clerkUserId || profile.clerkUserId !== clerkUserId) {
-        profile.clerkUserId = clerkUserId;
+      if (!profile.userId || profile.userId !== testUserId) {
+        profile.userId = clerkUserId;
       }
 
       // Update email if missing or different
@@ -115,7 +115,7 @@ async function upgradeUser() {
     console.log("✅ Successfully upgraded user to premium");
     console.log({
       email: profile.email,
-      clerkUserId: profile.clerkUserId,
+      userId: profile.userId,
       subscription: profile.subscription,
       onboardingCompleted: profile.onboardingCompleted,
     });

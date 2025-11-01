@@ -12,9 +12,9 @@ async function testSubscription() {
 
     const clerkUserId = "user_32SjRWLQzT2Adf0C0MPuO0lezl3";
 
-    console.log("Testing subscription for user:", clerkUserId);
+    console.log("Testing subscription for user:", testUserId);
 
-    const remaining = await getRemaining(clerkUserId);
+    const remaining = await getRemaining(testUserId);
     console.log("Remaining interviews:", remaining);
     console.log("Is unlimited?", remaining === null);
 
