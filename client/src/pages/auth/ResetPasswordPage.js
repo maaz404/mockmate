@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const ResetPasswordPage = () => {
   const { token } = useParams();
@@ -35,8 +36,8 @@ const ResetPasswordPage = () => {
       );
 
       if (res.data.success) {
-        // Show success message briefly then redirect
-        alert("Password reset successful! Redirecting to login...");
+        // Show success message and redirect
+        toast.success("Password reset successful! Redirecting to login...");
         setTimeout(() => {
           navigate("/login");
         }, 1500);

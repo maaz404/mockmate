@@ -148,7 +148,8 @@ exports.resetPassword = async (req, res) => {
  */
 exports.getMeJWT = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    // JWT middleware sets req.user from decoded token with _id
+    const user = await User.findById(req.user._id || req.user.id);
 
     if (!user) {
       return res.status(404).json({

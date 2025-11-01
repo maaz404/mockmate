@@ -70,8 +70,12 @@ async function protectJWT(req, res, next) {
   }
 
   try {
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is not defined in environment variables");
+    }
+
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default-secret-change-in-production");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Get user from database (excluding password)
     req.user = await User.findById(decoded.id);

@@ -99,12 +99,16 @@ UserSchema.methods.matchPassword = async function (enteredPassword) {
  * @returns {string} - Signed JWT token
  */
 UserSchema.methods.getSignedJwtToken = function () {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not defined in environment variables");
+  }
+
   const payload = {
     id: this._id,
     email: this.email,
   };
 
-  return jwt.sign(payload, process.env.JWT_SECRET || "default-secret-change-in-production", {
+  return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || "7d",
   });
 };
