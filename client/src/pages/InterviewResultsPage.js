@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext";
 import { apiService } from "../services/api";
 import TranscriptDisplay from "../components/TranscriptDisplay";
 import Collapsible from "../components/ui/Collapsible";
@@ -9,7 +9,7 @@ import { scoreFgClass, scoreBgClass, scoreLabel } from "../utils/scoreUtils";
 const InterviewResultsPage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useAuthContext();
 
   // State
   const [results, setResults] = useState(null);

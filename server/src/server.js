@@ -10,7 +10,9 @@ const path = require("path");
 if (process.env.NODE_ENV !== "test") {
   dotenv.config({ path: path.resolve(__dirname, "../.env") });
 }
-const { ClerkExpressWithAuth } = require("@clerk/clerk-sdk-node");
+const cookieParser = require("cookie-parser");
+const session = require("express-session");
+const { configurePassport, passport } = require("./config/passport");
 const connectDB = require("./config/database");
 const Logger = require("./utils/logger");
 const { ENV, validateEnv } = require("./config/env");
@@ -220,6 +222,38 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Sessions & Passport (Google OAuth)
+app.use(cookieParser());
+const SESSION_SECRET =
+  process.env.SESSION_SECRET || "dev_session_secret_change_me";
+// Session cookie lifetime helpers
+const MS_IN_SECOND = 1000; // eslint-disable-line no-magic-numbers
+const SECONDS_IN_MINUTE = 60; // eslint-disable-line no-magic-numbers
+const MINUTES_IN_HOUR = 60; // eslint-disable-line no-magic-numbers
+const HOURS_IN_DAY = 24; // eslint-disable-line no-magic-numbers
+const DAYS = 7; // eslint-disable-line no-magic-numbers
+app.use(
+  session({
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "lax" : "lax",
+      maxAge:
+        MS_IN_SECOND *
+        SECONDS_IN_MINUTE *
+        MINUTES_IN_HOUR *
+        HOURS_IN_DAY *
+        DAYS,
+    },
+  })
+);
+configurePassport();
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Health check route (before Clerk middleware)
 const { isDbConnected } = require("./config/database");
 app.get("/api/health", (req, res) => {
@@ -282,21 +316,13 @@ app.get("/*.json", (req, res) => {
   res.status(404).json({ message: "Not found" });
 });
 
-// Clerk middleware - adds auth context to all API requests only
-// In development with MOCK_AUTH_FALLBACK=true, skip global Clerk auth
-const useClerkGlobally =
-  ENV.NODE_ENV === "production" || !ENV.MOCK_AUTH_FALLBACK;
-
-if (useClerkGlobally) {
-  app.use("/api", ClerkExpressWithAuth());
-} else {
-  Logger.warn(
-    "Skipping global Clerk auth (MOCK_AUTH_FALLBACK=true). Route-level auth will use mock user."
-  );
-}
+// REMOVED: Clerk middleware - now using session-based authentication
+// Session auth is configured via express-session + passport earlier in the middleware stack
 
 // API routes
-app.use("/api/auth", authRoutes);
+const sessionAuthRoutes = require("./routes/sessionAuth");
+app.use("/api/session", sessionAuthRoutes);
+app.use("/api/auth", authRoutes); // Legacy Clerk routes - can be removed
 app.use("/api/users", userRoutes);
 // Lightweight bootstrap route (auth + profile + analytics) placed near user routes for discoverability
 app.get("/api/bootstrap", async (req, res) => {

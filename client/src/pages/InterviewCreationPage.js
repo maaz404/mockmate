@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import StyledSelect from "../components/ui/StyledSelect";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext";
 import { apiService } from "../services/api";
 
 const InterviewCreationPage = () => {
   const navigate = useNavigate();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useAuthContext();
   const [formData, setFormData] = useState({
     jobRole: "",
     experienceLevel: "intermediate",

@@ -1,11 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  SignedIn,
-  SignedOut,
-  UserButton,
-  useUser,
-  useAuth,
-} from "@clerk/clerk-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Calendar, Play, Video, ArrowLeft } from "lucide-react";
@@ -19,13 +12,12 @@ import {
   clearDemoState,
 } from "../../utils/demoState";
 import { useLocation } from "react-router-dom";
+import { useAuthContext } from "../../context/AuthContext";
 
 const Navbar = () => {
   const location = useLocation();
   const nav = useNavigate();
-  const { user } = useUser();
-  const { signOut } = useAuth();
-  const navigate = useNavigate();
+  const { user, isSignedIn, signOut } = useAuthContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [demoState, setDemoState] = useState(null);
@@ -138,25 +130,29 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <SignedOut>
-              {navigation.map((item) => (
-                <a key={item.name} href={item.href} className="nav-link-dark">
-                  {item.name}
-                </a>
-              ))}
-            </SignedOut>
+            {!isSignedIn && (
+              <>
+                {navigation.map((item) => (
+                  <a key={item.name} href={item.href} className="nav-link-dark">
+                    {item.name}
+                  </a>
+                ))}
+              </>
+            )}
 
-            <SignedIn>
-              <Link to="/dashboard" className="nav-link-dark">
-                Dashboard
-              </Link>
-              <Link to="/interviews" className="nav-link-dark">
-                Interviews
-              </Link>
-              <Link to="/mock-interview" className="nav-link-dark">
-                Practice
-              </Link>
-            </SignedIn>
+            {isSignedIn && (
+              <>
+                <Link to="/dashboard" className="nav-link-dark">
+                  Dashboard
+                </Link>
+                <Link to="/interviews" className="nav-link-dark">
+                  Interviews
+                </Link>
+                <Link to="/mock-interview" className="nav-link-dark">
+                  Practice
+                </Link>
+              </>
+            )}
           </div>
 
           {/* CTA & User Actions OR Demo Toolbar */}
@@ -207,22 +203,24 @@ const Navbar = () => {
             {/* Dark Mode Toggle */}
             <DarkModeToggle />
 
-            <SignedOut>
-              <Link to="/login" className="nav-link-dark">
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                className="btn-primary focus:ring-offset-surface-900"
-              >
-                Sign Up Free
-              </Link>
-            </SignedOut>
+            {!isSignedIn && (
+              <>
+                <Link to="/login" className="nav-link-dark">
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="btn-primary focus:ring-offset-surface-900"
+                >
+                  Sign Up Free
+                </Link>
+              </>
+            )}
 
-            <SignedIn>
+            {isSignedIn && (
               <div className="flex items-center space-x-3">
                 <span className="text-surface-300 text-sm">
-                  Welcome, {user?.firstName}
+                  Welcome, {user?.name || user?.email}
                 </span>
                 <Link
                   to="/scheduled"
@@ -231,14 +229,19 @@ const Navbar = () => {
                 >
                   <Calendar size={18} />
                 </Link>
-                <UserButton
-                  appearance={{
-                    elements: {
-                      avatarBox:
-                        "w-8 h-8 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900",
-                    },
-                  }}
-                />
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt="avatar"
+                    className="w-8 h-8 rounded-full border border-white/20"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/80 text-sm">
+                    {(user?.name || user?.email || "?")
+                      .toUpperCase()
+                      .slice(0, 1)}
+                  </div>
+                )}
                 <button
                   onClick={() => setConfirmOpen(true)}
                   className="nav-link-dark"
@@ -246,7 +249,7 @@ const Navbar = () => {
                   Sign out
                 </button>
               </div>
-            </SignedIn>
+            )}
           </div>
 
           {/* Mobile controls */}
@@ -299,88 +302,99 @@ const Navbar = () => {
               aria-label="Mobile navigation"
             >
               <div className="py-4 space-y-4">
-                <SignedOut>
-                  {navigation.map((item) => (
-                    <a
-                      key={item.name}
-                      href={item.href}
-                      className="block nav-link-dark"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      role="menuitem"
-                    >
-                      {item.name}
-                    </a>
-                  ))}
-                </SignedOut>
+                {!isSignedIn && (
+                  <>
+                    {navigation.map((item) => (
+                      <a
+                        key={item.name}
+                        href={item.href}
+                        className="block nav-link-dark"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        role="menuitem"
+                      >
+                        {item.name}
+                      </a>
+                    ))}
+                  </>
+                )}
                 <div className="pt-4 space-y-3">
-                  <SignedOut>
+                  {!isSignedIn && (
+                    <>
+                      <Link
+                        to="/login"
+                        className="block nav-link-dark"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        role="menuitem"
+                      >
+                        Sign In
+                      </Link>
+                      <Link
+                        to="/register"
+                        className="block btn-primary text-center focus:ring-offset-surface-900"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        role="menuitem"
+                      >
+                        Sign Up Free
+                      </Link>
+                    </>
+                  )}
+                </div>
+                {isSignedIn && (
+                  <>
                     <Link
-                      to="/login"
+                      to="/dashboard"
                       className="block nav-link-dark"
                       onClick={() => setIsMobileMenuOpen(false)}
                       role="menuitem"
                     >
-                      Sign In
+                      Dashboard
                     </Link>
                     <Link
-                      to="/register"
-                      className="block btn-primary text-center focus:ring-offset-surface-900"
+                      to="/interviews"
+                      className="block nav-link-dark"
                       onClick={() => setIsMobileMenuOpen(false)}
                       role="menuitem"
                     >
-                      Sign Up Free
+                      Interviews
                     </Link>
-                  </SignedOut>
-                </div>
-                <SignedIn>
-                  <Link
-                    to="/dashboard"
-                    className="block nav-link-dark"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    role="menuitem"
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    to="/interviews"
-                    className="block nav-link-dark"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    role="menuitem"
-                  >
-                    Interviews
-                  </Link>
-                  <Link
-                    to="/mock-interview"
-                    className="block nav-link-dark"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    role="menuitem"
-                  >
-                    Practice
-                  </Link>
-                  <div className="pt-4 flex items-center space-x-3 px-2">
-                    <UserButton
-                      appearance={{
-                        elements: {
-                          avatarBox:
-                            "w-8 h-8 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-900",
-                        },
+                    <Link
+                      to="/mock-interview"
+                      className="block nav-link-dark"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      role="menuitem"
+                    >
+                      Practice
+                    </Link>
+                    <div className="pt-4 flex items-center space-x-3 px-2">
+                      {user?.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt="avatar"
+                          className="w-8 h-8 rounded-full border border-white/20"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/80 text-sm">
+                          {(user?.name || user?.email || "?")
+                            .toUpperCase()
+                            .slice(0, 1)}
+                        </div>
+                      )}
+                      <span className="text-surface-300 text-sm">
+                        {user?.name || user?.email}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setConfirmOpen(true);
                       }}
-                    />
-                    <span className="text-surface-300 text-sm">
-                      {user?.firstName}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setConfirmOpen(true);
-                    }}
-                    className="mt-3 block w-full text-left nav-link-dark px-2"
-                    role="menuitem"
-                  >
-                    Sign out
-                  </button>
-                </SignedIn>
+                      className="mt-3 block w-full text-left nav-link-dark px-2"
+                      role="menuitem"
+                    >
+                      Sign out
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           )}
@@ -396,10 +410,10 @@ const Navbar = () => {
             setConfirmOpen(false);
             try {
               toast.success("Signed out");
-              await signOut({ redirectUrl: "/login" });
+              await signOut();
             } catch (_) {
-              toast.success("Signed out");
-              navigate("/login");
+              // Fallback redirect
+              window.location.href = "/";
             }
           }}
         />

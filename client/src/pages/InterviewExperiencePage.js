@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext";
 import { apiService } from "../services/api";
 import { interviewService } from "../services/mockmate";
 import CodeEditor from "../components/ui/CodeEditor";
@@ -30,7 +30,7 @@ const PROHIBITED_PATTERNS = [
 const InterviewExperiencePage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useAuthContext();
 
   // Interview state
   const [interview, setInterview] = useState(null);

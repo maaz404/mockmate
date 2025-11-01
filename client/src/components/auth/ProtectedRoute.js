@@ -1,7 +1,6 @@
 import React from "react";
-import { useAuth, RedirectToSignIn } from "@clerk/clerk-react";
 import LoadingSpinner from "../ui/LoadingSpinner";
-import EmailVerificationGate from "./EmailVerificationGate";
+import { useAuthContext } from "../../context/AuthContext";
 
 /**
  * Protected Route component that wraps pages requiring authentication
@@ -9,7 +8,7 @@ import EmailVerificationGate from "./EmailVerificationGate";
  * Shows loading spinner while checking authentication status
  */
 const ProtectedRoute = ({ children }) => {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded } = useAuthContext();
 
   // Show loading while authentication state is being determined
   if (!isLoaded) {
@@ -22,15 +21,12 @@ const ProtectedRoute = ({ children }) => {
 
   // Redirect to sign-in if not authenticated
   if (!isSignedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-surface-900">
-        <RedirectToSignIn signInUrl="/login" />
-      </div>
-    );
+    window.location.href = "/login";
+    return null;
   }
 
   // Render protected content if authenticated
-  return <EmailVerificationGate>{children}</EmailVerificationGate>;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

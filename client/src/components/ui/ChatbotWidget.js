@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuthContext } from "../../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageCircle,
@@ -38,7 +38,8 @@ const ChatbotWidget = () => {
   const inputRef = useRef(null);
   const controllerRef = useRef(null);
   const autoRetriedRef = useRef(false);
-  const { getToken, userId } = useAuth();
+  const { user } = useAuthContext();
+  const userId = user?.id;
 
   // Canonical helpful guidance message (requested implementation)
   const HELPFUL_GUIDANCE =
@@ -174,15 +175,10 @@ const ChatbotWidget = () => {
     process.env.REACT_APP_API_BASE ||
     process.env.REACT_APP_API_BASE_URL ||
     "/api";
-  const buildHeaders = async () => {
-    const token = getToken ? await getToken() : null;
-    const headers = {
-      "Content-Type": "application/json",
-      Accept: "text/event-stream",
-    };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    return headers;
-  };
+  const buildHeaders = async () => ({
+    "Content-Type": "application/json",
+    Accept: "text/event-stream",
+  });
   const abortStream = () => {
     try {
       controllerRef.current?.abort();
@@ -473,11 +469,7 @@ const ChatbotWidget = () => {
   };
   const isDisabled = !chatbotAvailable;
 
-  const lastProvider = [...messages]
-    .reverse()
-    .find(
-      (m) => m.role === "assistant" && !m.isInitial && m.provider
-    )?.provider;
+  // provider tracking retained on individual messages; header shows static provider label
   return (
     <div className={`fixed bottom-6 right-6 z-[9999]`}>
       {/* Floating Button */}
@@ -541,14 +533,7 @@ const ChatbotWidget = () => {
                     </span>
                   </div>
                   <p className="text-[11px] text-teal-50 flex items-center gap-1">
-                    {lastProvider === "openai-fallback" && (
-                      <span className="text-[10px] px-1 rounded bg-white/20">
-                        OpenAI
-                      </span>
-                    )}
-                    {(!lastProvider || lastProvider?.startsWith("grok")) && (
-                      <span>Powered by Grok</span>
-                    )}
+                    <span>Powered by Ollama</span>
                     {process.env.REACT_APP_CHATBOT_APP_ONLY === "true" && (
                       <span className="text-[9px] px-1 py-0.5 rounded bg-white/20">
                         App-only

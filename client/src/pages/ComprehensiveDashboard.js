@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext";
 import StatsCard from "../components/dashboard/StatsCard";
 import RecentInterviews from "../components/dashboard/RecentInterviews";
 import QuickActions from "../components/dashboard/QuickActions";
@@ -8,7 +8,7 @@ import OnboardingModal from "../components/onboarding/OnboardingModal";
 import { apiService } from "../services/api";
 
 const ComprehensiveDashboard = () => {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useAuthContext();
   const [userProfile, setUserProfile] = useState(null);
   const [userStats, setUserStats] = useState(null);
   const [recentInterviews, setRecentInterviews] = useState([]);

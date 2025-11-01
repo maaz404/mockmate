@@ -1,33 +1,23 @@
-import React, { useEffect, useState } from "react";
-import { SignIn, useAuth } from "@clerk/clerk-react";
+import React, { useEffect } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import AuthLoadingSpinner from "../../components/ui/AuthLoadingSpinner";
+import { useAuthContext } from "../../context/AuthContext";
 
 const LoginPage = () => {
-  const { isLoaded, isSignedIn, userId } = useAuth();
+  const { isLoaded, isSignedIn, signInWithGoogle } = useAuthContext();
   const navigate = useNavigate();
-  const [showTimeout, setShowTimeout] = useState(false);
   const { theme } = useTheme();
-
-  // Add timeout for Clerk loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowTimeout(true);
-    }, 2000); // 2 second timeout
-
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     // Redirect if already signed in
     if (isLoaded && isSignedIn) {
       navigate("/dashboard");
     }
-  }, [isLoaded, isSignedIn, userId, navigate]);
+  }, [isLoaded, isSignedIn, navigate]);
 
   // Show the SignIn component if Clerk is loaded OR after timeout
-  const shouldShowSignIn = isLoaded || showTimeout;
+  const shouldShowSignIn = isLoaded;
 
   if (!shouldShowSignIn) {
     return <AuthLoadingSpinner message="Initializing authentication..." />;
@@ -73,99 +63,27 @@ const LoginPage = () => {
             </div>
           )}
 
-          <SignIn
-            routing="path"
-            path="/login"
-            redirectUrl="/dashboard"
-            signUpUrl="/register"
-            appearance={{
-              elements:
-                theme === "dark"
-                  ? {
-                      formButtonPrimary:
-                        "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
-                      card: "shadow-none bg-transparent",
-                      headerTitle: "hidden",
-                      headerSubtitle: "hidden",
-                      socialButtonsBlockButton:
-                        "border border-surface-600 hover:bg-surface-700 bg-surface-800 text-white rounded-lg transition-all duration-200",
-                      socialButtonsBlockButtonText: "text-white font-medium",
-                      formFieldInput:
-                        "bg-surface-700 border-surface-600 text-white placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
-                      footerActionLink:
-                        "text-primary-400 hover:text-primary-300 transition-colors duration-200",
-                      formFieldLabel: "text-surface-200",
-                      formResendCodeLink:
-                        "text-primary-400 hover:text-primary-300 transition-colors duration-200",
-                      identityPreviewText: "text-surface-300",
-                      identityPreviewEditButtonIcon: "text-surface-400",
-                      spinner: "text-primary-500",
-                      formFieldAction:
-                        "text-primary-400 hover:text-primary-300",
-                    }
-                  : {
-                      formButtonPrimary:
-                        "bg-primary-600 hover:bg-primary-700 text-sm normal-case font-medium rounded-lg py-3 transition-all duration-200",
-                      card: "shadow-none bg-transparent",
-                      headerTitle: "hidden",
-                      headerSubtitle: "hidden",
-                      socialButtonsBlockButton:
-                        "border border-surface-200 hover:bg-surface-100 bg-white text-surface-800 rounded-lg transition-all duration-200",
-                      socialButtonsBlockButtonText:
-                        "text-surface-800 font-medium",
-                      formFieldInput:
-                        "bg-white border-surface-300 text-surface-900 placeholder-surface-400 focus:ring-primary-500 focus:border-primary-500 rounded-lg transition-all duration-200",
-                      footerActionLink:
-                        "text-primary-600 hover:text-primary-700 transition-colors duration-200",
-                      formFieldLabel: "text-surface-700",
-                      formResendCodeLink:
-                        "text-primary-600 hover:text-primary-700 transition-colors duration-200",
-                      identityPreviewText: "text-surface-700",
-                      identityPreviewEditButtonIcon: "text-surface-500",
-                      spinner: "text-primary-500",
-                      formFieldAction:
-                        "text-primary-600 hover:text-primary-700",
-                    },
-              variables:
-                theme === "dark"
-                  ? {
-                      colorPrimary: "#3b82f6",
-                      colorBackground: "transparent",
-                      colorInputBackground: "#334155",
-                      colorInputText: "#ffffff",
-                      colorText: "#ffffff",
-                      colorTextSecondary: "#cbd5e1",
-                      colorNeutral: "#64748b",
-                      colorSuccess: "#10b981",
-                      colorWarning: "#f59e0b",
-                      colorDanger: "#ef4444",
-                    }
-                  : {
-                      colorPrimary: "#2563eb",
-                      colorBackground: "transparent",
-                      colorInputBackground: "#ffffff",
-                      colorInputText: "#0f172a",
-                      colorText: "#0f172a",
-                      colorTextSecondary: "#475569",
-                      colorNeutral: "#64748b",
-                      colorSuccess: "#16a34a",
-                      colorWarning: "#ea580c",
-                      colorDanger: "#dc2626",
-                    },
-            }}
-          />
+          <button
+            onClick={signInWithGoogle}
+            className={`w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
+              theme === "dark"
+                ? "bg-surface-800 hover:bg-surface-700 text-white border border-surface-600"
+                : "bg-white hover:bg-surface-100 text-surface-800 border border-surface-300"
+            }`}
+          >
+            <img
+              src="https://www.google.com/favicon.ico"
+              alt="Google"
+              className="w-5 h-5"
+            />
+            Continue with Google
+          </button>
         </div>
 
         {/* Additional info */}
         <div className="mt-6 text-center">
           <p className="text-sm text-surface-600 dark:text-surface-300">
-            Don't have an account?{" "}
-            <a
-              href="/register"
-              className="text-primary-400 hover:text-primary-300 font-medium"
-            >
-              Sign up here
-            </a>
+            Trouble signing in? Contact support.
           </p>
         </div>
       </div>

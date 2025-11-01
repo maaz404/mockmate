@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useAuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import StatsCard from "../components/dashboard/StatsCard";
@@ -10,7 +10,7 @@ import SkillsDistributionChart from "../components/dashboard/SkillsDistributionC
 import { apiService } from "../services/api";
 
 function DashboardPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useAuthContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);

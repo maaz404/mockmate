@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
 import {
   Clock,
   Target,
@@ -19,7 +18,6 @@ import { apiService } from "../services/api";
 const SessionSummaryPage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
-  const { user } = useUser();
 
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,9 +58,7 @@ const SessionSummaryPage = () => {
       setExportingPDF(true);
 
       const response = await fetch(`/api/reports/${interviewId}/export-pdf`, {
-        headers: {
-          Authorization: `Bearer ${await user.getToken()}`,
-        },
+        credentials: "include",
       });
 
       if (response.ok) {

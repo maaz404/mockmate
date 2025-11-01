@@ -1,21 +1,20 @@
-import { useUser as useClerkUser, useAuth } from "@clerk/clerk-react";
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
+import { useAuthContext } from "../context/AuthContext";
 import { userService } from "../services/mockmate";
 
 /**
- * Custom hook that combines Clerk user data with MockMate user stats
+ * Custom hook that combines auth user data with MockMate user stats
  * Provides a complete user profile with authentication and application data
  */
 export const useUser = () => {
-  const { user: clerkUser, isLoaded: clerkLoaded } = useClerkUser();
-  const { isSignedIn } = useAuth();
+  const { user, isSignedIn, isLoaded } = useAuthContext();
   const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (clerkLoaded && isSignedIn && clerkUser) {
+      if (isLoaded && isSignedIn && user) {
         try {
           setLoading(true);
           const statsResponse = await userService.getStats();
@@ -34,25 +33,25 @@ export const useUser = () => {
         } finally {
           setLoading(false);
         }
-      } else if (clerkLoaded) {
+      } else if (isLoaded) {
         setLoading(false);
       }
     };
 
     fetchUserData();
-  }, [clerkLoaded, isSignedIn, clerkUser]);
+  }, [isLoaded, isSignedIn, user]);
 
   return {
-    // Clerk user data
-    user: clerkUser,
+    // Auth user data
+    user,
     isSignedIn,
-    isLoaded: clerkLoaded,
+    isLoaded,
 
     // MockMate user stats
     userStats,
 
     // Loading states
-    loading: loading || !clerkLoaded,
+    loading: loading || !isLoaded,
     error,
 
     // Utility methods

@@ -10,9 +10,11 @@ import {
   BookOpen,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import { useAuthContext } from "../../context/AuthContext";
 
 const ProjectShowcaseSection = () => {
+  const { user } = useAuthContext();
+
   const projectHighlights = [
     "Full-stack development with modern technologies",
     "Advanced AI integration and real-time processing",
@@ -101,8 +103,13 @@ const ProjectShowcaseSection = () => {
         >
           {projectHighlights.map((highlight, index) => (
             <div key={index} className="flex items-center space-x-3 text-left">
-              <Star size={20} className="text-primary-600 dark:text-primary-400 flex-shrink-0" />
-              <span className="text-surface-700 dark:text-surface-300">{highlight}</span>
+              <Star
+                size={20}
+                className="text-primary-600 dark:text-primary-400 flex-shrink-0"
+              />
+              <span className="text-surface-700 dark:text-surface-300">
+                {highlight}
+              </span>
             </div>
           ))}
         </motion.div>
@@ -166,7 +173,7 @@ const ProjectShowcaseSection = () => {
           transition={{ duration: 0.6, delay: 0.7 }}
           className="mb-8"
         >
-          <SignedOut>
+          {!user && (
             <div className="bg-surface-800/30 backdrop-blur-sm border border-surface-700 rounded-xl p-6 max-w-md mx-auto">
               <p className="text-surface-300 mb-4">
                 Experience the full platform capabilities
@@ -179,9 +186,9 @@ const ProjectShowcaseSection = () => {
                 />
               </Link>
             </div>
-          </SignedOut>
+          )}
 
-          <SignedIn>
+          {user && (
             <div className="bg-surface-800/30 backdrop-blur-sm border border-surface-700 rounded-xl p-6 max-w-md mx-auto">
               <p className="text-surface-300 mb-4">
                 Continue exploring the platform
@@ -194,7 +201,7 @@ const ProjectShowcaseSection = () => {
                 />
               </Link>
             </div>
-          </SignedIn>
+          )}
         </motion.div>
 
         {/* Technical Specifications */}
