@@ -5,9 +5,9 @@ const Interview = require("../models/Interview");
 
 // Utility to create a premium user profile
 async function ensureUser(userId = "test-user-adaptive") {
-  await UserProfile.deleteMany({ clerkUserId: userId });
+  await UserProfile.deleteMany({ userId: userId });
   return UserProfile.create({
-    clerkUserId: userId,
+    userId: userId,
     email: `${userId}@dev.local`,
     subscription: { plan: "premium", interviewsRemaining: null },
     onboardingCompleted: true,
@@ -89,7 +89,7 @@ describe("Adaptive difficulty PATCH + metrics export CSV", () => {
 
   afterAll(async () => {
     await Interview.deleteMany({ userId });
-    await UserProfile.deleteMany({ clerkUserId: userId });
+    await UserProfile.deleteMany({ userId: userId });
     // Do not close mongoose connection here to avoid interfering with subsequent test suites
   });
 

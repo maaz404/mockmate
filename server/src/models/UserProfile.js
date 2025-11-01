@@ -4,10 +4,9 @@ const AssetSchema = require("./common/Asset");
 // User Profile Schema (Google/Local Auth only)
 const userProfileSchema = new mongoose.Schema(
   {
-    // Link to User model
+    // Link to User model (accepts ObjectId or string for backward compatibility)
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      type: mongoose.Schema.Types.Mixed,
       required: true,
       index: true,
       unique: true,

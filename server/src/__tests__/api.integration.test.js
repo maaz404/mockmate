@@ -8,10 +8,10 @@ process.env.MOCK_AUTH_FALLBACK = "true";
 
 // Helper to ensure a profile exists for test user
 async function ensureProfile(userId = "test-user-123") {
-  let doc = await UserProfile.findOne({ clerkUserId: userId });
+  let doc = await UserProfile.findOne({ userId: userId });
   if (!doc) {
     doc = await UserProfile.create({
-      clerkUserId: userId,
+      userId: userId,
       email: `${userId}@example.com`,
     });
   }
@@ -42,7 +42,7 @@ describe("API Integration Smoke", () => {
     const res = await request(app).get("/api/users/profile");
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.clerkUserId).toBe("test-user-123");
+    expect(res.body.data.userId).toBe("test-user-123");
   });
 
   test("Create interview + start + answer first question", async () => {

@@ -9,10 +9,10 @@ process.env.MOCK_AUTH_FALLBACK = "true";
 
 // Helper ensure profile
 async function ensureProfile(userId = "test-user-123") {
-  let doc = await UserProfile.findOne({ clerkUserId: userId });
+  let doc = await UserProfile.findOne({ userId: userId });
   if (!doc) {
     doc = await UserProfile.create({
-      clerkUserId: userId,
+      userId: userId,
       email: `${userId}@example.com`,
       analytics: { averageScore: 72 },
     });
@@ -35,7 +35,7 @@ describe("Dashboard Metrics Endpoint", () => {
   test("returns structured metrics with weekly arrays", async () => {
     // Seed a couple of completed interviews with categories & followups
     const now = new Date();
-    const profile = await UserProfile.findOne({ clerkUserId: "test-user-123" });
+    const profile = await UserProfile.findOne({ userId: "test-user-123" });
     await Interview.create([
       {
         userId: "test-user-123",

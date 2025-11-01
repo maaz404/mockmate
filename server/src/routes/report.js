@@ -519,7 +519,7 @@ router.get("/:interviewId/export-pdf", ensureAuthenticated, requireProPlan, asyn
     // Get interview and user profile
     const [interview, userProfile] = await Promise.all([
       Interview.findOne({ _id: interviewId, userId }),
-      UserProfile.findOne({ clerkUserId: userId })
+      UserProfile.findOne({ userId: userId })
     ]);
 
     if (!interview) {

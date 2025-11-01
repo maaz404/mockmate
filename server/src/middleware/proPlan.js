@@ -9,7 +9,7 @@ const requireProPlan = async (req, res, next) => {
     const { userId } = req.auth;
 
     // Get user profile
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    const userProfile = await UserProfile.findOne({ userId: userId });
 
     if (!userProfile) {
       return res.status(404).json({
@@ -57,7 +57,7 @@ const requireProPlan = async (req, res, next) => {
  */
 const checkProPlan = async (userId) => {
   try {
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    const userProfile = await UserProfile.findOne({ userId: userId });
     
     if (!userProfile) {
       return false;

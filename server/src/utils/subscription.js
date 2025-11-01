@@ -58,7 +58,7 @@ async function consumeFreeInterview(userId, interviewId) {
     let user = await User.findById(userId);
     if (!user && userId) {
       // fallback: try legacy UserProfile by clerkUserId
-      const legacy = await UserProfile.findOne({ clerkUserId: userId });
+      const legacy = await UserProfile.findOne({ userId: userId });
       if (legacy) user = legacy;
     }
     if (!user) return { updated: false, remaining: 0 };
@@ -106,7 +106,7 @@ async function getRemaining(userId) {
     let user = await User.findById(userId);
     if (!user && userId) {
       // fallback: try legacy UserProfile by clerkUserId
-      const legacy = await UserProfile.findOne({ clerkUserId: userId });
+      const legacy = await UserProfile.findOne({ userId: userId });
       if (legacy) user = legacy;
     }
     if (!user) return 0;

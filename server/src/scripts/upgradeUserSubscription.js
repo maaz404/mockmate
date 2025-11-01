@@ -43,7 +43,7 @@ async function run() {
       const regex = new RegExp(`^${email}$`, "i");
       profile = await UserProfile.findOne({ email: regex });
     } else if (userId) {
-      profile = await UserProfile.findOne({ clerkUserId: userId });
+      profile = await UserProfile.findOne({ userId: userId });
     }
 
     if (!profile) {
@@ -52,9 +52,9 @@ async function run() {
           console.error("❌ Cannot create profile without --email.");
           process.exit(3);
         }
-        const clerkUserId = userId || `manual-${Date.now()}`;
+        const testUserId = userId || `manual-${Date.now()}`;
         profile = await UserProfile.create({
-          clerkUserId,
+          testUserId,
           email,
           firstName: firstName || "Premium",
           lastName: lastName || "User",
@@ -94,7 +94,7 @@ async function run() {
     console.log("✅ Upgraded user to premium");
     console.log({
       email: profile.email,
-      clerkUserId: profile.clerkUserId,
+      userId: profile.testUserId,
       subscription: profile.subscription,
     });
   } catch (err) {
