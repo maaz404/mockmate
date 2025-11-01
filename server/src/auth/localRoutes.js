@@ -3,7 +3,9 @@ const router = express.Router();
 const passport = require("passport");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
-const UserProfile = require("../models/UserProfile"); // Add at the top
+const UserProfile = require("../models/UserProfile");
+const { forgotPassword, resetPassword, getMeJWT } = require("../controllers/authController");
+const { protectJWT } = require("../middleware/auth");
 
 // Logout route
 router.post("/logout", (req, res) => {
@@ -14,6 +16,7 @@ router.post("/logout", (req, res) => {
     });
   });
 });
+
 // Sign up route
 router.post("/signup", async (req, res, next) => {
   try {
@@ -70,7 +73,7 @@ router.post("/signin", (req, res, next) => {
   })(req, res, next);
 });
 
-// Get current user
+// Get current user (session-based)
 router.get("/me", (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
     res.json({ authenticated: true, user: req.user });
@@ -78,5 +81,14 @@ router.get("/me", (req, res) => {
     res.json({ authenticated: false });
   }
 });
+
+// Forgot password
+router.post("/forgot-password", forgotPassword);
+
+// Reset password
+router.put("/reset-password/:token", resetPassword);
+
+// Get current user (JWT-based) - for mobile apps or JWT-only clients
+router.get("/me-jwt", protectJWT, getMeJWT);
 
 module.exports = router;
