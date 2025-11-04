@@ -1,14 +1,13 @@
 import axios from "axios";
-import { getLastRequestId } from "./axiosRequestId"; // for enriched error context
+import { getLastRequestId } from "./axiosRequestId";
 
 // Create axios instance with base configuration
 const api = axios.create({
-  // Prefer explicit REACT_APP_API_BASE, fall back to legacy var, then proxy-friendly '/api'
   baseURL:
     process.env.REACT_APP_API_BASE ||
     process.env.REACT_APP_API_BASE_URL ||
-    "/api",
-  timeout: 10000,
+    "http://localhost:5000/api",
+  timeout: 30000, // Increased timeout for large requests
   headers: {
     "Content-Type": "application/json",
   },
@@ -25,28 +24,19 @@ export const setAuthToken = (getToken) => {
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
+    // Skip adding token for refresh requests
+    if (config.skipAuth) {
+      return config;
+    }
+
     try {
       if (getTokenFunction) {
-        // Get the JWT token for backend authentication
         const token = await getTokenFunction();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
       }
-
-      // In development mode, force the premium user ID for testing
-      if (
-        process.env.NODE_ENV === "development" ||
-        process.env.REACT_APP_MOCK_AUTH
-      ) {
-        config.headers["x-user-id"] = "user_32SjRWLQzT2Adf0C0MPuO0lezl3";
-        config.headers["x-user-email"] = "maazakbar404@gmail.com";
-        config.headers["x-user-firstname"] = "Maaz";
-        config.headers["x-user-lastname"] = "Sheikh";
-      }
     } catch (error) {
-      // Authentication token retrieval failed
-      // eslint-disable-next-line no-console
       console.warn("Failed to get authentication token:", error);
     }
 
@@ -60,18 +50,58 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
-    // Unified success envelope already inside response.data
     return response;
   },
-  (error) => {
-    const { response } = error || {};
-    if (response?.status === 401) {
-      window.location.href = "/login"; // Auth expired / invalid
+  async (error) => {
+    const { response, config } = error || {};
+
+    // Handle 401 Unauthorized - token expired
+    if (response?.status === 401 && !config._retry) {
+      config._retry = true;
+
+      try {
+        // Try to refresh the token
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (refreshToken) {
+          const baseURL =
+            process.env.REACT_APP_API_BASE ||
+            process.env.REACT_APP_API_BASE_URL ||
+            "http://localhost:5000/api";
+          const refreshResponse = await axios.post(`${baseURL}/auth/refresh`, {
+            refreshToken,
+          });
+
+          const { accessToken, refreshToken: newRefreshToken } =
+            refreshResponse.data.data;
+
+          // Update tokens
+          localStorage.setItem("accessToken", accessToken);
+          localStorage.setItem("refreshToken", newRefreshToken);
+
+          // Retry the original request with new token
+          config.headers.Authorization = `Bearer ${accessToken}`;
+          return axios(config);
+        }
+      } catch (refreshError) {
+        // Refresh failed, redirect to login
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/login";
+        return Promise.reject(refreshError);
+      }
     }
-    // Normalize error object so callers can rely on a shape
+
+    // For other 401s or if retry failed, redirect to login
+    if (response?.status === 401) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      window.location.href = "/login";
+    }
+
+    // Normalize error object
     const normalized = {
       status: response?.status || 0,
-      code: response?.data?.error || null,
+      code: response?.data?.error || response?.data?.code || null,
       message: response?.data?.message || error.message || "Request failed",
       meta: response?.data?.meta,
       requestId:
@@ -81,36 +111,43 @@ api.interceptors.response.use(
         null,
       raw: error,
     };
+
     return Promise.reject(normalized);
   }
 );
 
 // API service object with common methods
 export const apiService = {
-  get: async (url) => {
-    const response = await api.get(url);
-    return response.data; // { success, data, message? }
-  },
-
-  post: async (url, data) => {
-    const response = await api.post(url, data);
+  get: async (url, config) => {
+    const response = await api.get(url, config);
     return response.data;
   },
 
-  put: async (url, data) => {
-    const response = await api.put(url, data);
+  post: async (url, data, config) => {
+    const response = await api.post(url, data, config);
     return response.data;
   },
 
-  delete: async (url) => {
-    const response = await api.delete(url);
+  put: async (url, data, config) => {
+    const response = await api.put(url, data, config);
+    return response.data;
+  },
+
+  patch: async (url, data, config) => {
+    const response = await api.patch(url, data, config);
+    return response.data;
+  },
+
+  delete: async (url, config) => {
+    const response = await api.delete(url, config);
     return response.data;
   },
 
   // File upload method
-  upload: async (url, formData) => {
+  upload: async (url, formData, onProgress) => {
     const response = await api.post(url, formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: onProgress,
     });
     return response.data;
   },

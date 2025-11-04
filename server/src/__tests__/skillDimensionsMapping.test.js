@@ -8,11 +8,13 @@ const UserProfile = require("../models/UserProfile");
 process.env.MOCK_AUTH_FALLBACK = "true";
 
 async function ensureProfile(userId = "test-user-123") {
-  let doc = await UserProfile.findOne({ clerkUserId: userId });
+  let doc = await UserProfile.findOne({ user: userId });
   if (!doc) {
     doc = await UserProfile.create({
-      clerkUserId: userId,
-      email: `${userId}@example.com`,
+      user: userId,
+      personalInfo: {
+        email: `${userId}@example.com`,
+      },
     });
   }
   return doc;
@@ -36,7 +38,7 @@ describe("Skill Dimensions Mapping", () => {
     await Interview.deleteMany({ userId: "test-user-123" });
     // 4 interviews -> first 2 older half, next 2 current half
     const docs = [];
-    const profile = await UserProfile.findOne({ clerkUserId: "test-user-123" });
+    const profile = await UserProfile.findOne({ user: "test-user-123" });
     for (let i = 0; i < 4; i++) {
       docs.push({
         userId: "test-user-123",

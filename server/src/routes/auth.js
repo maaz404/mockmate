@@ -1,172 +1,107 @@
 /* eslint-disable consistent-return, no-magic-numbers */
 const express = require("express");
-const { clerkClient } = require("@clerk/clerk-sdk-node");
-const requireAuth = require("../middleware/auth");
-const UserProfile = require("../models/UserProfile");
+const bcrypt = require("bcrypt");
 const { body, validationResult } = require("express-validator");
+const User = require("../models/User");
+const UserProfile = require("../models/UserProfile");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyToken,
+} = require("../config/jwt");
+const requireAuth = require("../middleware/auth");
+const { ok, fail } = require("../utils/responder");
 const Logger = require("../utils/logger");
 
 const router = express.Router();
 
 /**
- * @desc    Test Clerk connection and OAuth setup
+ * @desc    Test authentication setup
  * @route   GET /api/auth/test
  * @access  Public (for debugging)
  */
 router.get("/test", async (req, res) => {
   try {
-    // Test Clerk SDK connection
-    const testUser = await clerkClient.users.getUserList({ limit: 1 });
+    const userCount = await User.countDocuments();
 
-    const { ok } = require('../utils/responder');
-    return ok(res, {
-      clerkConfigured: true,
-      userCount: testUser.length,
-      environment: process.env.NODE_ENV,
-      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ? 'Set' : 'Missing',
-      clerkSecretKey: process.env.CLERK_SECRET_KEY ? 'Set' : 'Missing',
-    }, 'Clerk authentication is working');
-  } catch (error) {
-    const { fail } = require('../utils/responder');
-    return fail(res, 500, 'CLERK_TEST_FAILED', 'Clerk authentication not configured properly', {
-      detail: error.message,
-      clerkConfigured: false,
-      environment: process.env.NODE_ENV,
-      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY ? 'Set' : 'Missing',
-      clerkSecretKey: process.env.CLERK_SECRET_KEY ? 'Set' : 'Missing',
-      troubleshooting: {
-        step1: 'Check if CLERK_SECRET_KEY is set in server/.env',
-        step2: 'Verify Clerk application exists at https://clerk.com/dashboard',
-        step3: 'Ensure Google OAuth is enabled in Social Connections',
-        step4: 'Add http://localhost:3000 to Authorized redirect URIs',
-        step5: 'Restart both server and client applications',
+    return ok(
+      res,
+      {
+        authConfigured: true,
+        userCount,
+        environment: process.env.NODE_ENV,
+        jwtConfigured: !!process.env.JWT_SECRET,
+        googleOAuthConfigured: !!(
+          process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+        ),
       },
-    });
-  }
-});
-router.post("/sync", requireAuth, async (req, res) => {
-  try {
-    const { userId } = req.auth;
-
-    const usingMockAuth =
-      process.env.NODE_ENV !== "production" &&
-      process.env.MOCK_AUTH_FALLBACK === "true" &&
-      (!req.headers?.authorization || String(userId).startsWith("test-"));
-
-    let clerkUser = null;
-    if (!usingMockAuth && process.env.CLERK_SECRET_KEY) {
-      clerkUser = await clerkClient.users.getUser(userId);
-    } else {
-      // Stub user in mock mode
-      clerkUser = {
-        emailAddresses: [{ emailAddress: `${userId}@example.com` }],
-        firstName: "Test",
-        lastName: "User",
-        profileImageUrl: null,
-      };
-    }
-
-    // Check if user profile already exists
-    let userProfile = await UserProfile.findOne({ clerkUserId: userId });
-
-    const userData = {
-      clerkUserId: userId,
-      email: clerkUser.emailAddresses[0]?.emailAddress || "",
-      firstName: clerkUser.firstName || "",
-      lastName: clerkUser.lastName || "",
-      profileImage: clerkUser.profileImageUrl || "",
-      lastLoginAt: new Date(),
-    };
-
-    if (userProfile) {
-      // Update existing profile
-      userProfile = await UserProfile.findOneAndUpdate(
-        { clerkUserId: userId },
-        userData,
-        { new: true, runValidators: true }
-      );
-    } else {
-      // Create new profile
-      userProfile = new UserProfile(userData);
-      await userProfile.save();
-    }
-
-    const { ok } = require('../utils/responder');
-    return ok(res, {
-      user: userProfile,
-      isNewUser: !userProfile.professionalInfo?.currentRole,
-    }, 'User profile synced successfully');
+      "Authentication is working"
+    );
   } catch (error) {
-    Logger.error('Auth sync error:', error);
-    const { fail } = require('../utils/responder');
-    return fail(res, 500, 'SYNC_FAILED', 'Failed to sync user profile', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
-  }
-});
-
-// Lightweight whoami debugging route
-router.get("/whoami", requireAuth, async (req, res) => {
-  try {
-    const { userId } = req.auth;
-    let clerkUser = null;
-    if (process.env.CLERK_SECRET_KEY) {
-      try {
-        clerkUser = await clerkClient.users.getUser(userId);
-      } catch (e) {
-        clerkUser = null;
+    return fail(
+      res,
+      500,
+      "AUTH_TEST_FAILED",
+      "Authentication not configured properly",
+      {
+        detail: error.message,
+        environment: process.env.NODE_ENV,
+        troubleshooting: {
+          step1: "Check if JWT_SECRET is set in server/.env",
+          step2: "Verify MongoDB connection is working",
+          step3: "Ensure Google OAuth credentials are set (if using)",
+          step4: "Restart server application",
+        },
       }
-    }
-    const { ok } = require('../utils/responder');
-    return ok(res, {
-      auth: req.auth,
-      emailVerified: clerkUser?.primaryEmailAddress?.verification?.status === 'verified',
-      emailStatus: clerkUser?.primaryEmailAddress?.verification?.status || 'unknown',
-    });
-  } catch (e) {
-    const { fail } = require('../utils/responder');
-    return fail(res, 500, 'WHOAMI_FAILED', 'Failed to resolve user identity', process.env.NODE_ENV === 'development' ? { detail: e.message } : undefined);
+    );
   }
 });
 
 /**
+ * Helper function to calculate profile completeness
+ */
+function calculateProfileCompleteness(profile) {
+  const fields = [
+    profile.personalInfo?.fullName,
+    profile.personalInfo?.email,
+    profile.professionalInfo?.currentRole,
+    profile.professionalInfo?.experience,
+    profile.professionalInfo?.industry,
+    profile.professionalInfo?.targetRoles?.length > 0,
+    profile.professionalInfo?.skills?.length > 0,
+  ];
+
+  const completedFields = fields.filter((field) => field).length;
+  return Math.round((completedFields / fields.length) * 100);
+}
+
+/**
  * @desc    Get current user profile
- * @route   GET /api/auth/me
+ * @route   GET /api/auth/profile
  * @access  Private
  */
-router.get("/me", requireAuth, async (req, res) => {
+router.get("/profile", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
 
-    // Get user profile from database
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    const userProfile = await UserProfile.findOne({ user: userId });
 
     if (!userProfile) {
-      return res.status(404).json({
-        success: false,
-        error: "User profile not found",
-        message: "Please complete your profile setup",
-      });
+      return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
     }
 
-    // Get fresh Clerk data
-    const clerkUser = await clerkClient.users.getUser(userId);
-
-    const { ok } = require('../utils/responder');
-    return ok(res, {
-      profile: userProfile,
-      clerk: {
-        id: clerkUser.id,
-        email: clerkUser.emailAddresses[0]?.emailAddress,
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-        profileImageUrl: clerkUser.profileImageUrl,
-        createdAt: clerkUser.createdAt,
-        lastSignInAt: clerkUser.lastSignInAt,
-      },
-    });
+    return ok(res, userProfile, "Profile retrieved successfully");
   } catch (error) {
-    Logger.error('Get user error:', error);
-    const { fail } = require('../utils/responder');
-    return fail(res, 500, 'USER_FETCH_FAILED', 'Failed to get user profile', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
+    Logger.error("Get profile error:", error);
+    return fail(
+      res,
+      500,
+      "PROFILE_FETCH_FAILED",
+      "Failed to get profile",
+      process.env.NODE_ENV === "development"
+        ? { detail: error.message }
+        : undefined
+    );
   }
 });
 
@@ -179,8 +114,10 @@ router.put(
   "/profile",
   requireAuth,
   [
-    body("firstName").optional().trim().isLength({ min: 1, max: 50 }),
-    body("lastName").optional().trim().isLength({ min: 1, max: 50 }),
+    body("personalInfo.fullName")
+      .optional()
+      .trim()
+      .isLength({ min: 1, max: 100 }),
     body("professionalInfo.currentRole")
       .optional()
       .trim()
@@ -197,16 +134,16 @@ router.put(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        const { fail } = require('../utils/responder');
-        return fail(res, 400, 'VALIDATION_FAILED', 'Validation failed', { details: errors.array() });
+        return fail(res, 400, "VALIDATION_FAILED", "Validation failed", {
+          details: errors.array(),
+        });
       }
 
-      const { userId } = req.auth;
+      const userId = req.user?.id;
       const updateData = req.body;
 
-      // Update user profile
       const userProfile = await UserProfile.findOneAndUpdate(
-        { clerkUserId: userId },
+        { user: userId },
         {
           ...updateData,
           updatedAt: new Date(),
@@ -214,75 +151,25 @@ router.put(
         { new: true, runValidators: true }
       );
 
-      const { ok, fail } = require('../utils/responder');
       if (!userProfile) {
-        return fail(res, 404, 'PROFILE_NOT_FOUND', 'User profile not found');
+        return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
       }
-      return ok(res, userProfile, 'Profile updated successfully');
+
+      return ok(res, userProfile, "Profile updated successfully");
     } catch (error) {
-      Logger.error('Update profile error:', error);
-      const { fail } = require('../utils/responder');
-      return fail(res, 500, 'PROFILE_UPDATE_FAILED', 'Failed to update profile', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
+      Logger.error("Update profile error:", error);
+      return fail(
+        res,
+        500,
+        "PROFILE_UPDATE_FAILED",
+        "Failed to update profile",
+        process.env.NODE_ENV === "development"
+          ? { detail: error.message }
+          : undefined
+      );
     }
   }
 );
-
-/**
- * @desc    Delete user account
- * @route   DELETE /api/auth/account
- * @access  Private
- */
-router.delete("/account", requireAuth, async (req, res) => {
-  try {
-    const { userId } = req.auth;
-
-    // Delete from our database
-    await UserProfile.findOneAndDelete({ clerkUserId: userId });
-
-    // Delete from Clerk (optional - you might want to keep this separate)
-    // await clerkClient.users.deleteUser(userId);
-
-    const { ok } = require('../utils/responder');
-    return ok(res, null, 'Account deleted successfully');
-  } catch (error) {
-    Logger.error('Delete account error:', error);
-    const { fail } = require('../utils/responder');
-    return fail(res, 500, 'ACCOUNT_DELETE_FAILED', 'Failed to delete account', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
-  }
-});
-
-/**
- * @desc    Upload profile avatar
- * @route   POST /api/auth/avatar
- * @access  Private
- */
-router.post("/avatar", requireAuth, async (req, res) => {
-  try {
-    const { userId } = req.auth;
-    const { imageUrl } = req.body;
-
-    const { ok, fail } = require('../utils/responder');
-    if (!imageUrl) {
-      return fail(res, 400, 'MISSING_IMAGE_URL', 'Image URL is required');
-    }
-
-    // Update profile image in our database
-    const userProfile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
-      { profileImage: imageUrl },
-      { new: true }
-    );
-
-    if (!userProfile) {
-      return fail(res, 404, 'PROFILE_NOT_FOUND', 'User profile not found');
-    }
-    return ok(res, { profileImage: imageUrl }, 'Avatar updated successfully');
-  } catch (error) {
-    Logger.error('Update avatar error:', error);
-    const { fail } = require('../utils/responder');
-    return fail(res, 500, 'AVATAR_UPDATE_FAILED', 'Failed to update avatar', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
-  }
-});
 
 /**
  * @desc    Get user statistics
@@ -291,51 +178,267 @@ router.post("/avatar", requireAuth, async (req, res) => {
  */
 router.get("/stats", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
 
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    const userProfile = await UserProfile.findOne({ user: userId });
 
     if (!userProfile) {
-      return res.status(404).json({
-        success: false,
-        error: "User profile not found",
-      });
+      return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
     }
 
-    // Calculate user statistics
     const stats = {
       profileCompleteness: calculateProfileCompleteness(userProfile),
       memberSince: userProfile.createdAt,
-      lastActive: userProfile.lastLoginAt,
+      lastActive: userProfile.subscription?.lastLoginAt,
       totalInterviews: userProfile.interviewHistory?.length || 0,
       averageScore: userProfile.analytics?.averageScore || 0,
     };
 
-    const { ok } = require('../utils/responder');
-    return ok(res, stats);
+    return ok(res, stats, "Statistics retrieved successfully");
   } catch (error) {
-    Logger.error('Get stats error:', error);
-    const { fail } = require('../utils/responder');
-    return fail(res, 500, 'STATS_FETCH_FAILED', 'Failed to get user statistics', process.env.NODE_ENV === 'development' ? { detail: error.message } : undefined);
+    Logger.error("Get stats error:", error);
+    return fail(
+      res,
+      500,
+      "STATS_FETCH_FAILED",
+      "Failed to get user statistics",
+      process.env.NODE_ENV === "development"
+        ? { detail: error.message }
+        : undefined
+    );
   }
 });
 
-/**
- * Helper function to calculate profile completeness
- */
-function calculateProfileCompleteness(profile) {
-  const fields = [
-    profile.firstName,
-    profile.lastName,
-    profile.professionalInfo?.currentRole,
-    profile.professionalInfo?.experience,
-    profile.professionalInfo?.industry,
-    profile.professionalInfo?.targetRoles?.length > 0,
-    profile.professionalInfo?.skills?.length > 0,
-  ];
+// @desc    Register new user
+// @route   POST /api/auth/register
+// @access  Public
+router.post(
+  "/register",
+  [
+    body("email").isEmail().normalizeEmail(),
+    body("password").isLength({ min: 8 }),
+    body("name").optional().trim(),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return fail(res, 400, "VALIDATION_FAILED", "Validation failed", {
+          details: errors.array(),
+        });
+      }
 
-  const completedFields = fields.filter((field) => field).length;
-  return Math.round((completedFields / fields.length) * 100);
-}
+      const { email, password, name } = req.body;
+
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return fail(res, 409, "USER_EXISTS", "User already exists");
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await User.create({
+        email,
+        password: hashedPassword,
+        name: name || email.split("@")[0],
+      });
+
+      const accessPayload = {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+      };
+      const refreshPayload = {
+        id: user._id.toString(),
+        type: "refresh",
+      };
+
+      const accessToken = generateAccessToken(accessPayload);
+      const refreshToken = generateRefreshToken(refreshPayload);
+
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        domain: process.env.COOKIE_DOMAIN || undefined,
+      });
+
+      return ok(
+        res,
+        {
+          user: {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          },
+          accessToken,
+        },
+        "Registration successful"
+      );
+    } catch (error) {
+      Logger.error("Registration error:", error);
+      return fail(res, 500, "REGISTRATION_FAILED", "Registration failed");
+    }
+  }
+);
+
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
+router.post(
+  "/login",
+  [body("email").isEmail().normalizeEmail(), body("password").exists()],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return fail(res, 400, "VALIDATION_FAILED", "Validation failed", {
+          details: errors.array(),
+        });
+      }
+
+      const { email, password } = req.body;
+
+      const user = await User.findOne({ email }).select("+password");
+      if (!user) {
+        return fail(res, 401, "INVALID_CREDENTIALS", "Invalid credentials");
+      }
+
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) {
+        return fail(res, 401, "INVALID_CREDENTIALS", "Invalid credentials");
+      }
+
+      const accessPayload = {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+      };
+      const refreshPayload = {
+        id: user._id.toString(),
+        type: "refresh",
+      };
+
+      const accessToken = generateAccessToken(accessPayload);
+      const refreshToken = generateRefreshToken(refreshPayload);
+
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        domain: process.env.COOKIE_DOMAIN || undefined,
+      });
+
+      return ok(
+        res,
+        {
+          user: {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          },
+          accessToken,
+        },
+        "Login successful"
+      );
+    } catch (error) {
+      Logger.error("Login error:", error);
+      return fail(res, 500, "LOGIN_FAILED", "Login failed");
+    }
+  }
+);
+
+// @desc    Refresh access token
+// @route   POST /api/auth/refresh
+// @access  Public (uses refresh token from cookie or body)
+router.post("/refresh", async (req, res) => {
+  try {
+    // Accept refresh token from either cookies or request body
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    if (!refreshToken) {
+      return fail(res, 401, "NO_REFRESH_TOKEN", "No refresh token provided");
+    }
+
+    const payload = verifyToken(refreshToken);
+    const user = await User.findById(payload.id);
+    if (!user) {
+      return fail(res, 401, "INVALID_TOKEN", "Invalid refresh token");
+    }
+
+    const newAccessPayload = {
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    };
+    const newRefreshPayload = {
+      id: user._id.toString(),
+      type: "refresh",
+    };
+
+    const newAccessToken = generateAccessToken(newAccessPayload);
+    const newRefreshToken = generateRefreshToken(newRefreshPayload);
+
+    // Set cookie if original token was from cookie
+    if (req.cookies?.refreshToken) {
+      res.cookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        domain: process.env.COOKIE_DOMAIN || undefined,
+      });
+    }
+
+    // Return new tokens in response body
+    return ok(
+      res,
+      {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      },
+      "Token refreshed"
+    );
+  } catch (error) {
+    Logger.error("Refresh error:", error);
+    return fail(res, 401, "REFRESH_FAILED", "Failed to refresh token");
+  }
+});
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+router.post("/logout", requireAuth, (req, res) => {
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    domain: process.env.COOKIE_DOMAIN || undefined,
+  });
+  return ok(res, null, "Logged out successfully");
+});
+
+// @desc    Get current user
+// @route   GET /api/auth/me
+// @access  Private
+router.get("/me", requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return fail(res, 404, "USER_NOT_FOUND", "User not found");
+    }
+    return ok(res, {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
+  } catch (error) {
+    Logger.error("Get me error:", error);
+    return fail(res, 500, "USER_FETCH_FAILED", "Failed to get user");
+  }
+});
 
 module.exports = router;

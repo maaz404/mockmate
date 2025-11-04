@@ -61,7 +61,8 @@ exports.health = async (req, res) => {
 exports.chat = async (req, res) => {
   try {
     const { messages, context } = req.body;
-    const userId = req.auth?.userId || req.auth?.id;
+    // CHANGED: const userId = req.auth?.userId || req.auth?.id; → const userId = req.user?.id;
+    const userId = req.user?.id;
 
     // Validation
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -82,7 +83,8 @@ exports.chat = async (req, res) => {
     let userProfile = null;
     try {
       if (userId) {
-        userProfile = await UserProfile.findOne({ clerkUserId: userId });
+        // CHANGED: clerkUserId → user
+        userProfile = await UserProfile.findOne({ user: userId });
       }
     } catch (error) {
       Logger.warn(
@@ -145,7 +147,7 @@ exports.chat = async (req, res) => {
           "- Be concise and structure answers with a brief intro, 2-3 points, and a closing.\n" +
           "- For behavioral questions, use STAR (Situation, Task, Action, Result).\n" +
           "- For coding, clarify constraints, outline approach, then code and test.\n\n" +
-          "You can also ask me: ‘Explain this page’, ‘Common mistakes to avoid’, or ‘How to improve for my next interview’.",
+          "You can also ask me: 'Explain this page', 'Common mistakes to avoid', or 'How to improve for my next interview'.",
         provider: "dev-fallback",
         model: "mock",
         timestamp: new Date().toISOString(),
@@ -188,7 +190,6 @@ exports.chat = async (req, res) => {
       error.message.includes("Insufficient credits") ||
       error.message.includes("access denied")
     ) {
-      // 402 - Payment Required-like signal
       return fail(
         res,
         402,
@@ -213,13 +214,14 @@ exports.chat = async (req, res) => {
  * @route GET /api/chatbot/suggestions
  * @access Private
  */
-exports.getChatSuggestions = async (req, res) => {
+exports.getSuggestions = async (req, res) => {
   try {
-    const userId = req.auth?.userId || req.auth?.id;
+    const userId = req.user?.id;
+    const { interviewId } = req.params;
     let userProfile = null;
 
     try {
-      userProfile = await UserProfile.findOne({ clerkUserId: userId });
+      userProfile = await UserProfile.findOne({ user: userId });
     } catch (error) {
       Logger.warn(
         "Could not fetch user profile for suggestions:",
@@ -262,6 +264,127 @@ exports.getChatSuggestions = async (req, res) => {
 };
 
 /**
+ * Get chat history for an interview
+ * @route GET /api/chatbot/history/:interviewId
+ * @access Private
+ */
+exports.getChatHistory = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { interviewId } = req.params;
+
+    if (!interviewId) {
+      return fail(res, 400, "MISSING_INTERVIEW_ID", "Interview ID is required");
+    }
+
+    // TODO: Implement chat history storage/retrieval
+    // For now, return empty array as placeholder
+    const history = [];
+
+    return ok(res, {
+      history,
+      interviewId,
+      requestId: req.requestId,
+    });
+  } catch (error) {
+    Logger.error("Get chat history error:", error);
+    return fail(
+      res,
+      500,
+      "CHAT_HISTORY_FAILED",
+      "Failed to fetch chat history",
+      process.env.NODE_ENV === "development"
+        ? { detail: error.message }
+        : undefined
+    );
+  }
+};
+
+/**
+ * Clear chat history for an interview
+ * @route DELETE /api/chatbot/history/:interviewId
+ * @access Private
+ */
+exports.clearChatHistory = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { interviewId } = req.params;
+
+    if (!interviewId) {
+      return fail(res, 400, "MISSING_INTERVIEW_ID", "Interview ID is required");
+    }
+
+    // TODO: Implement chat history clearing
+    // For now, return success
+    Logger.info(
+      `Clearing chat history for interview ${interviewId}, user ${userId}`
+    );
+
+    return ok(
+      res,
+      {
+        cleared: true,
+        interviewId,
+        requestId: req.requestId,
+      },
+      "Chat history cleared successfully"
+    );
+  } catch (error) {
+    Logger.error("Clear chat history error:", error);
+    return fail(
+      res,
+      500,
+      "CLEAR_HISTORY_FAILED",
+      "Failed to clear chat history",
+      process.env.NODE_ENV === "development"
+        ? { detail: error.message }
+        : undefined
+    );
+  }
+};
+
+/**
+ * Update chatbot context
+ * @route POST /api/chatbot/context
+ * @access Private
+ */
+exports.updateContext = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { context } = req.body;
+
+    if (!context) {
+      return fail(res, 400, "MISSING_CONTEXT", "Context data is required");
+    }
+
+    // TODO: Implement context persistence if needed
+    // For now, acknowledge the context update
+    Logger.info(`Context updated for user ${userId}`);
+
+    return ok(
+      res,
+      {
+        updated: true,
+        context,
+        requestId: req.requestId,
+      },
+      "Context updated successfully"
+    );
+  } catch (error) {
+    Logger.error("Update context error:", error);
+    return fail(
+      res,
+      500,
+      "UPDATE_CONTEXT_FAILED",
+      "Failed to update context",
+      process.env.NODE_ENV === "development"
+        ? { detail: error.message }
+        : undefined
+    );
+  }
+};
+
+/**
  * Stream chat responses (Server-Sent Events)
  * @route POST /api/chatbot/stream
  * @access Private
@@ -287,12 +410,13 @@ exports.stream = async (req, res) => {
       } catch (e) {
         clearInterval(heartbeatInterval);
       }
-    }, 15000); // 15s heartbeat to keep proxies from closing connection
+    }, 15000);
   };
 
   try {
     const { messages, context } = req.body || {};
-    const userId = req.auth?.userId || req.auth?.id;
+    // CHANGED: const userId = req.auth?.userId || req.auth?.id;
+    const userId = req.user?.id;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       send("error", {
@@ -305,7 +429,8 @@ exports.stream = async (req, res) => {
     // Enrich context with user profile (best-effort)
     let userProfile = null;
     try {
-      userProfile = await UserProfile.findOne({ clerkUserId: userId });
+      // CHANGED: clerkUserId → user
+      userProfile = await UserProfile.findOne({ user: userId });
     } catch (e) {
       // ignore
     }
@@ -327,13 +452,11 @@ exports.stream = async (req, res) => {
         stream.on("data", (chunk) => {
           const piece = chunk.toString();
           buffer += piece;
-          // Grok may emit JSON lines delimited by newlines
           const parts = buffer.split(/\n/);
           buffer = parts.pop();
           for (const part of parts) {
             const trimmed = part.trim();
             if (!trimmed) continue;
-            // Attempt to parse JSON structure {choices:[{delta:{content:..}}]}
             try {
               const maybe = JSON.parse(trimmed);
               const text =
@@ -341,7 +464,6 @@ exports.stream = async (req, res) => {
               if (text)
                 send("chunk", { text, source: "grok", provider: "grok" });
             } catch {
-              // fallback: treat raw text
               send("chunk", {
                 text: trimmed,
                 source: "grok-raw",
@@ -369,9 +491,8 @@ exports.stream = async (req, res) => {
           clearInterval(heartbeatInterval);
           res.end();
         });
-        return; // streaming path succeeded
+        return;
       } catch (err) {
-        // Attempt non-streaming fallback before dev static
         try {
           const result = await grokChatbotService.chat(
             messages,
@@ -390,7 +511,6 @@ exports.stream = async (req, res) => {
           });
           return res.end();
         } catch (inner) {
-          // Attempt OpenAI fallback before dev static
           try {
             const alt = await grokChatbotService.openAIFallback(
               messages,
@@ -448,3 +568,5 @@ exports.stream = async (req, res) => {
     res.end();
   }
 };
+
+module.exports = exports;

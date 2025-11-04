@@ -119,9 +119,14 @@ const ChatbotWidget = () => {
 
   // Health (with validation + diagnostics surfaced)
   useEffect(() => {
+    let isMounted = true;
+    let retryAttempted = false;
+
     (async () => {
       try {
         const response = await api.get("/chatbot/health?validate=true");
+        if (!isMounted) return;
+
         const { chatbot } = response.data || {};
         const available =
           !!chatbot?.available && chatbot?.diagnostics?.hasApiKey;
@@ -142,16 +147,23 @@ const ChatbotWidget = () => {
           }
         }
       } catch (e) {
+        if (!isMounted || retryAttempted) return;
+        retryAttempted = true;
+
         // Attempt a lighter retry once (no validation) after short delay
         setTimeout(async () => {
+          if (!isMounted) return;
           try {
             const response2 = await api.get("/chatbot/health");
+            if (!isMounted) return;
+
             const ok = !!response2.data?.chatbot?.available;
             const devOverride = process.env.NODE_ENV !== "production";
             setChatbotAvailable(ok || devOverride);
             if (!(ok || devOverride))
               setServiceNotice("AI assistant unreachable (health)");
           } catch (e2) {
+            if (!isMounted) return;
             const devOverride = process.env.NODE_ENV !== "production";
             setChatbotAvailable(devOverride);
             if (!devOverride) setServiceNotice("AI assistant network error");
@@ -159,6 +171,10 @@ const ChatbotWidget = () => {
         }, 1200);
       }
     })();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Cleanup

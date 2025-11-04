@@ -1,3 +1,4 @@
+const User = require("../models/User");
 const UserProfile = require("../models/UserProfile");
 
 /**
@@ -6,23 +7,28 @@ const UserProfile = require("../models/UserProfile");
  */
 const requireProPlan = async (req, res, next) => {
   try {
-    const { userId } = req.auth;
-
-    // Get user profile
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
-
-    if (!userProfile) {
-      return res.status(404).json({
-        success: false,
-        message: "User profile not found",
-      });
+    const userId = req.user?.id;
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Login required" });
     }
 
-    // Check for Pro plan using the existing subscription structure
-    const hasProPlan = userProfile.subscription?.plan === 'premium' || 
-                      userProfile.subscription?.plan === 'enterprise';
+    // Prefer User.plan; fallback to UserProfile.subscription.plan
+    const user = await User.findById(userId, "plan").lean();
+    let plan = user?.plan;
 
-    if (!hasProPlan) {
+    if (!plan) {
+      const userProfile = await UserProfile.findOne(
+        { user: userId },
+        "subscription.plan"
+      ).lean();
+      plan = userProfile?.subscription?.plan || "free";
+    }
+
+    const hasPro =
+      plan === "premium" || plan === "enterprise" || plan === "pro";
+    if (!hasPro) {
       return res.status(403).json({
         success: false,
         message: "Pro plan required for this feature",
@@ -34,21 +40,22 @@ const requireProPlan = async (req, res, next) => {
             "PDF report exports",
             "Advanced analytics",
             "Detailed performance insights",
-            "Progress tracking"
-          ]
-        }
+            "Progress tracking",
+          ],
+        },
       });
     }
 
-    // Add subscription info to request for potential use in handlers
-    req.subscription = userProfile.subscription || { plan: 'pro' };
+    req.subscription = { plan: plan || "pro" };
     next();
   } catch (error) {
     console.error("Pro plan check error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to verify subscription status",
-    });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to verify subscription status",
+      });
   }
 };
 
@@ -57,21 +64,27 @@ const requireProPlan = async (req, res, next) => {
  */
 const checkProPlan = async (userId) => {
   try {
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
-    
-    if (!userProfile) {
-      return false;
+    const user = await User.findById(userId, "plan").lean();
+    if (
+      user?.plan &&
+      (user.plan === "premium" ||
+        user.plan === "enterprise" ||
+        user.plan === "pro")
+    ) {
+      return true;
     }
-
-    return userProfile.subscription?.plan === 'premium' || 
-           userProfile.subscription?.plan === 'enterprise';
+    const profile = await UserProfile.findOne(
+      { user: userId },
+      "subscription.plan"
+    ).lean();
+    return (
+      profile?.subscription?.plan === "premium" ||
+      profile?.subscription?.plan === "enterprise"
+    );
   } catch (error) {
     console.error("Pro plan check error:", error);
     return false;
   }
 };
 
-module.exports = {
-  requireProPlan,
-  checkProPlan,
-};
+module.exports = { requireProPlan, checkProPlan };

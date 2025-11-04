@@ -28,10 +28,12 @@ beforeAll(async () => {
   await mongoose.connection.asPromise();
   // Seed a user profile (required by interview create)
   await UserProfile.create({
-    clerkUserId: "test-user-123",
-    email: "test@example.com",
-    firstName: "Test",
-    lastName: "User",
+    user: "test-user-123",
+    personalInfo: {
+      email: "test@example.com",
+      firstName: "Test",
+      lastName: "User",
+    },
     subscription: { plan: "free", interviewsRemaining: 10 },
   });
 });

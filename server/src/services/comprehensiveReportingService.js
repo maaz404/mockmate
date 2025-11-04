@@ -20,7 +20,7 @@ class ComprehensiveReportingService {
     try {
       const interview = await Interview.findOne({
         _id: interviewId,
-        userId,
+        user: userId, // ✅ CORRECT
       }).populate("userProfile");
 
       if (!interview) {
@@ -426,7 +426,7 @@ class ComprehensiveReportingService {
   async generateProgressMetrics(userId, currentInterview) {
     try {
       const previousInterviews = await Interview.find({
-        userId,
+        user: userId, // ✅ CORRECT
         _id: { $ne: currentInterview._id },
         status: "completed",
       })

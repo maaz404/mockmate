@@ -8,12 +8,24 @@ const {
 
 const router = express.Router();
 
-// GET /api/uploads/sign -> returns signature bundle
-router.get("/sign", requireAuth, getSignedUploadParams);
-// GET /api/uploads/health -> returns Cloudinary health
-router.get("/health", uploadHealth);
+/**
+ * Upload Routes
+ * Base: /api/uploads
+ */
 
-// POST /api/uploads/destroy -> deletes a single asset by public_id
-router.post("/destroy", requireAuth, destroyByPublicId);
+// @desc    Get signed upload parameters for Cloudinary
+// @route   GET /api/uploads/sign
+// @access  Private
+router.get("/sign", requireAuth, getSignedUploadParams);
+
+// @desc    Delete uploaded resource by public ID
+// @route   DELETE /api/uploads/:publicId
+// @access  Private
+router.delete("/:publicId", requireAuth, destroyByPublicId);
+
+// @desc    Health check for upload service
+// @route   GET /api/uploads/health
+// @access  Public
+router.get("/health", uploadHealth);
 
 module.exports = router;

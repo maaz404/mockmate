@@ -22,28 +22,28 @@ const { getRemaining } = require("../utils/subscription");
 const dbReady = require("../middleware/dbReady");
 const inMem = require("../services/inMemoryInterviewService");
 
-// Basic ok/fail helpers (local copy to avoid import cycles)
 function ok(res, data = {}, meta = {}) {
   return res
     .status(200)
     .json({ success: true, data, requestId: res.locals.requestId, ...meta });
 }
 function fail(res, code, message, status = 400, extra = {}) {
-  return res.status(status).json({
-    success: false,
-    code,
-    message,
-    requestId: res.locals.requestId,
-    ...extra,
-  });
+  return res
+    .status(status)
+    .json({
+      success: false,
+      code,
+      message,
+      requestId: res.locals.requestId,
+      ...extra,
+    });
 }
 
-// Wrap to normalize existing controllers that may directly res.json today
 function wrap(handler, { transform } = {}) {
   return async (req, res, next) => {
     try {
       const result = await handler(req, res, next);
-      if (res.headersSent) return; // controller already responded
+      if (res.headersSent) return;
       const payload = transform ? transform(result, req, res) : result;
       ok(res, payload || {});
     } catch (err) {
@@ -64,9 +64,8 @@ function wrap(handler, { transform } = {}) {
 // @access  Private
 router.post("/", requireAuth, ensureUserProfile, dbReady, async (req, res) => {
   if (req.useInMemory) return wrap(inMem.createInterview)(req, res);
-  // Quota guard (pre-creation) to surface friendlier error earlier than schema work.
   try {
-    const remaining = await getRemaining(req.auth.userId);
+    const remaining = await getRemaining(req.user.id);
     if (remaining !== null && remaining <= 0) {
       return fail(
         res,
@@ -82,8 +81,6 @@ router.post("/", requireAuth, ensureUserProfile, dbReady, async (req, res) => {
 });
 
 // @desc    Get user interviews
-// @route   GET /api/interviews
-// @access  Private
 router.get("/", requireAuth, ensureUserProfile, dbReady, (req, res) => {
   return req.useInMemory
     ? wrap(inMem.getUserInterviews)(req, res)
@@ -91,17 +88,13 @@ router.get("/", requireAuth, ensureUserProfile, dbReady, (req, res) => {
 });
 
 // @desc    Get specific interview
-// @route   GET /api/interviews/:id
-// @access  Private
 router.get("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) => {
   return req.useInMemory
     ? wrap(inMem.getInterviewDetails)(req, res)
     : wrap(getInterviewDetails)(req, res);
 });
 
-// @desc    Generate questions for interview
-// @route   POST /api/interviews/:id/questions
-// @access  Private
+// @desc    Generate questions
 router.post(
   "/:id/questions",
   requireAuth,
@@ -111,28 +104,23 @@ router.post(
     req.useInMemory
       ? wrap(inMem.startInterview)(req, res)
       : wrap(startInterview)(req, res)
-); // This will generate questions
+);
 
 // @desc    Start interview session
-// @route   PUT /api/interviews/:id/start
-// @access  Private
 router.put("/:id/start", requireAuth, ensureUserProfile, dbReady, (req, res) =>
   req.useInMemory
     ? wrap(inMem.startInterview)(req, res)
     : wrap(startInterview)(req, res)
 );
 
-// Backward compatibility: some tests (legacy) use POST to start interview
-// @route   POST /api/interviews/:id/start (alias)
+// Alias
 router.post("/:id/start", requireAuth, ensureUserProfile, dbReady, (req, res) =>
   req.useInMemory
     ? wrap(inMem.startInterview)(req, res)
     : wrap(startInterview)(req, res)
 );
 
-// @desc    Submit answer to question
-// @route   POST /api/interviews/:id/answer/:questionIndex
-// @access  Private
+// @desc    Submit answer
 router.post(
   "/:id/answer/:questionIndex",
   requireAuth,
@@ -144,9 +132,7 @@ router.post(
       : wrap(submitAnswer)(req, res)
 );
 
-// @desc    Generate follow-up question
-// @route   POST /api/interviews/:id/followup/:questionIndex
-// @access  Private
+// @desc    Generate follow-up
 router.post(
   "/:id/followup/:questionIndex",
   requireAuth,
@@ -159,8 +145,6 @@ router.post(
 );
 
 // @desc    Get next adaptive question
-// @route   POST /api/interviews/:id/adaptive-question
-// @access  Private
 router.post(
   "/:id/adaptive-question",
   requireAuth,
@@ -172,9 +156,7 @@ router.post(
       : wrap(getAdaptiveQuestion)(req, res)
 );
 
-// @desc    Explicitly update adaptive current difficulty
-// @route   PATCH /api/interviews/:id/adaptive-difficulty
-// @access  Private
+// @desc    Update adaptive difficulty
 router.patch(
   "/:id/adaptive-difficulty",
   requireAuth,
@@ -187,7 +169,6 @@ router.patch(
 );
 
 // @desc    Export metrics CSV
-// @route   GET /api/interviews/:id/metrics/export
 router.get(
   "/:id/metrics/export",
   requireAuth,
@@ -195,13 +176,11 @@ router.get(
   dbReady,
   (req, res) => {
     req.params.interviewId = req.params.id;
-    return exportInterviewMetrics(req, res); // direct send (CSV headers)
+    return exportInterviewMetrics(req, res);
   }
 );
 
-// @desc    Complete interview with final submission
-// @route   POST /api/interviews/:id/complete
-// @access  Private
+// @desc    Complete interview
 router.post(
   "/:id/complete",
   requireAuth,
@@ -213,9 +192,7 @@ router.post(
       : wrap(completeInterview)(req, res)
 );
 
-// @desc    Get interview results (formatted)
-// @route   GET /api/interviews/:id/results
-// @access  Private
+// @desc    Get interview results
 router.get(
   "/:id/results",
   requireAuth,
@@ -229,9 +206,7 @@ router.get(
   }
 );
 
-// @desc    Mark follow-ups reviewed for a question
-// @route   POST /api/interviews/:id/followups-reviewed/:questionIndex
-// @access  Private
+// @desc    Mark follow-ups reviewed
 router.post(
   "/:id/followups-reviewed/:questionIndex",
   requireAuth,
@@ -245,9 +220,7 @@ router.post(
   }
 );
 
-// @desc    Get transcript statuses (polling)
-// @route   GET /api/interviews/:id/transcripts?full=0|1
-// @access  Private
+// @desc    Get transcripts
 router.get(
   "/:id/transcripts",
   requireAuth,
@@ -261,9 +234,7 @@ router.get(
 
 const C = require("../utils/constants");
 
-// @desc    Delete interview (with Cloudinary cleanup)
-// @route   DELETE /api/interviews/:id
-// @access  Private
+// @desc    Delete interview
 router.delete("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) => {
   if (req.useInMemory) {
     return fail(

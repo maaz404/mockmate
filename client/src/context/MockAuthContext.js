@@ -18,7 +18,7 @@ export const MockAuthProvider = ({ children }) => {
 
   const mockProfile = {
     _id: "mock-profile-123",
-    clerkUserId: "mock-user-123",
+    user: "mock-user-123", // ✅ Changed to 'user' field
     firstName: "Test",
     lastName: "User",
     email: "test@example.com",

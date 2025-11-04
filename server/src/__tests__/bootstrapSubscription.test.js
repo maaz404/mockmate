@@ -10,10 +10,12 @@ describe("GET /api/bootstrap subscription shape", () => {
 
   beforeAll(async () => {
     // Ensure a profile exists
-    await UserProfile.deleteMany({ clerkUserId: userId });
+    await UserProfile.deleteMany({ user: userId });
     await UserProfile.create({
-      clerkUserId: userId,
-      email: `${userId}@dev.local`,
+      user: userId,
+      personalInfo: {
+        email: `${userId}@dev.local`,
+      },
       subscription: { plan: "premium", interviewsRemaining: null },
       onboardingCompleted: true,
       analytics: { averageScore: 0 },
@@ -21,7 +23,7 @@ describe("GET /api/bootstrap subscription shape", () => {
   });
 
   afterAll(async () => {
-    await UserProfile.deleteMany({ clerkUserId: userId });
+    await UserProfile.deleteMany({ user: userId });
     if (mongoose.connection.readyState === 1) await mongoose.connection.close();
   });
 

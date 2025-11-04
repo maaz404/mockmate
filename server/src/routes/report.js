@@ -5,20 +5,24 @@ const comprehensiveReportingService = require("../services/comprehensiveReportin
 const advancedFeedbackService = require("../services/advancedFeedbackService");
 const Interview = require("../models/Interview");
 const UserProfile = require("../models/UserProfile");
+const sessionSummaryService = require("../services/sessionSummaryService");
+const pdfGenerationService = require("../services/pdfGenerationService");
+const { requireProPlan, checkProPlan } = require("../middleware/proPlan");
 
 // @desc    Generate detailed interview report
 // @route   POST /api/reports/generate/:interviewId
 // @access  Private
 router.post("/generate/:interviewId", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED: const { userId } = req.auth; -> const userId = req.user?.id;
+    const userId = req.user?.id;
     const { interviewId } = req.params;
     const { reportType } = req.body;
 
-    // Validate interview exists and belongs to user
+    // CHANGED: query by user field
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
     if (!interview) {
@@ -97,12 +101,12 @@ router.post("/generate/:interviewId", requireAuth, async (req, res) => {
 // @access  Private
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED
+    const userId = req.user?.id;
     const { page = 1, limit = 10, reportType } = req.query;
 
-    // Get completed interviews for the user
     let query = {
-      userId,
+      user: userId,
       status: "completed",
     };
 
@@ -154,13 +158,14 @@ router.get("/", requireAuth, async (req, res) => {
 // @access  Private
 router.get("/:interviewId", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED
+    const userId = req.user?.id;
     const { interviewId } = req.params;
     const { type = "comprehensive" } = req.query;
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
     if (!interview) {
@@ -177,7 +182,6 @@ router.get("/:interviewId", requireAuth, async (req, res) => {
       });
     }
 
-    // Generate report based on type
     const report = await comprehensiveReportingService.generateDetailedReport(
       interviewId,
       userId
@@ -210,10 +214,10 @@ router.get("/:interviewId", requireAuth, async (req, res) => {
 // @access  Private
 router.get("/analytics/progress", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED
+    const userId = req.user?.id;
     const { timeRange = "6months" } = req.query;
 
-    // Calculate date range
     const endDate = new Date();
     const startDate = new Date();
 
@@ -235,7 +239,7 @@ router.get("/analytics/progress", requireAuth, async (req, res) => {
     }
 
     const interviews = await Interview.find({
-      userId,
+      user: userId,
       status: "completed",
       completedAt: { $gte: startDate, $lte: endDate },
     }).sort({ completedAt: 1 });
@@ -262,7 +266,7 @@ router.get("/analytics/progress", requireAuth, async (req, res) => {
             0
           ) / interviews.length,
         latestScore: interviews[interviews.length - 1].results.overallScore,
-        improvementTrend: this.calculateImprovementTrend(interviews),
+        improvementTrend: calculateImprovementTrend(interviews),
         scoreProgression: interviews.map((i) => ({
           date: i.completedAt,
           score: i.results.overallScore,
@@ -270,9 +274,9 @@ router.get("/analytics/progress", requireAuth, async (req, res) => {
         })),
       },
 
-      skillAnalytics: this.analyzeSkillProgression(interviews),
-      performanceMetrics: this.calculatePerformanceMetrics(interviews),
-      recommendations: this.generateProgressRecommendations(interviews),
+      skillAnalytics: analyzeSkillProgression(interviews),
+      performanceMetrics: calculatePerformanceMetrics(interviews),
+      recommendations: generateProgressRecommendations(interviews),
     };
 
     res.json({
@@ -298,13 +302,14 @@ router.get("/analytics/progress", requireAuth, async (req, res) => {
 // @access  Private
 router.get("/:interviewId/export", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED
+    const userId = req.user?.id;
     const { interviewId } = req.params;
     const { format = "json" } = req.query;
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
     if (!interview) {
@@ -338,7 +343,7 @@ router.get("/:interviewId/export", requireAuth, async (req, res) => {
         break;
 
       case "txt":
-        const textReport = this.convertReportToText(report.report);
+        const textReport = convertReportToText(report.report);
         res.setHeader("Content-Type", "text/plain");
         res.setHeader(
           "Content-Disposition",
@@ -362,7 +367,6 @@ router.get("/:interviewId/export", requireAuth, async (req, res) => {
   }
 });
 
-// Helper methods
 function calculateImprovementTrend(interviews) {
   if (interviews.length < 2) return "insufficient-data";
 
@@ -377,7 +381,6 @@ function calculateImprovementTrend(interviews) {
 }
 
 function analyzeSkillProgression(interviews) {
-  // Analyze progression in different skill areas
   return {
     technical: calculateSkillTrend(interviews, "technical"),
     communication: calculateSkillTrend(interviews, "communication"),
@@ -387,11 +390,10 @@ function analyzeSkillProgression(interviews) {
 }
 
 function calculateSkillTrend(interviews, skillType) {
-  // This would analyze specific skill metrics over time
   return {
-    trend: "improving", // or 'stable', 'declining'
+    trend: "improving",
     currentLevel: "intermediate",
-    improvementRate: 2.5, // points per interview
+    improvementRate: 2.5,
   };
 }
 
@@ -414,7 +416,6 @@ function generateProgressRecommendations(interviews) {
 }
 
 function convertReportToText(report) {
-  // Convert JSON report to readable text format
   return `INTERVIEW PERFORMANCE REPORT
 Generated: ${report.generatedAt}
 
@@ -449,22 +450,18 @@ ${
 For detailed analysis, please view the full JSON report.`;
 }
 
-// Import new services
-const sessionSummaryService = require("../services/sessionSummaryService");
-const pdfGenerationService = require("../services/pdfGenerationService");
-const { requireProPlan, checkProPlan } = require("../middleware/proPlan");
-
 // @desc    Get session summary
 // @route   GET /api/reports/:interviewId/session-summary
 // @access  Private
 router.get("/:interviewId/session-summary", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED
+    const userId = req.user?.id;
     const { interviewId } = req.params;
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
     if (!interview) {
@@ -487,7 +484,6 @@ router.get("/:interviewId/session-summary", requireAuth, async (req, res) => {
       });
     }
 
-    // Check if user has pro plan for enhanced features
     const hasProPlan = await checkProPlan(userId);
 
     res.json({
@@ -511,62 +507,63 @@ router.get("/:interviewId/session-summary", requireAuth, async (req, res) => {
 // @desc    Export session summary as PDF
 // @route   GET /api/reports/:interviewId/export-pdf
 // @access  Private (Pro plan required)
-router.get("/:interviewId/export-pdf", requireAuth, requireProPlan, async (req, res) => {
-  try {
-    const { userId } = req.auth;
-    const { interviewId } = req.params;
+router.get(
+  "/:interviewId/export-pdf",
+  requireAuth,
+  requireProPlan,
+  async (req, res) => {
+    try {
+      // CHANGED
+      const userId = req.user?.id;
+      const { interviewId } = req.params;
 
-    // Get interview and user profile
-    const [interview, userProfile] = await Promise.all([
-      Interview.findOne({ _id: interviewId, userId }),
-      UserProfile.findOne({ clerkUserId: userId })
-    ]);
+      const [interview, userProfile] = await Promise.all([
+        Interview.findOne({ _id: interviewId, user: userId }),
+        UserProfile.findOne({ user: userId }),
+      ]);
 
-    if (!interview) {
-      return res.status(404).json({
+      if (!interview) {
+        return res.status(404).json({
+          success: false,
+          message: "Interview not found",
+        });
+      }
+
+      const summaryResult = await sessionSummaryService.generateSessionSummary(
+        interviewId,
+        userId
+      );
+
+      if (!summaryResult.success) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to generate session summary for PDF export",
+          error: summaryResult.error,
+        });
+      }
+
+      const pdfBuffer = await pdfGenerationService.generateSessionSummaryPDF(
+        summaryResult.summary,
+        userProfile
+      );
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="interview-summary-${interviewId}.pdf"`
+      );
+      res.setHeader("Content-Length", pdfBuffer.length);
+
+      res.end(pdfBuffer);
+    } catch (error) {
+      console.error("Export PDF error:", error);
+      res.status(500).json({
         success: false,
-        message: "Interview not found",
+        message: "Failed to export PDF",
+        error: error.message,
       });
     }
-
-    // Generate session summary
-    const summaryResult = await sessionSummaryService.generateSessionSummary(
-      interviewId,
-      userId
-    );
-
-    if (!summaryResult.success) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to generate session summary for PDF export",
-        error: summaryResult.error,
-      });
-    }
-
-    // Generate PDF
-    const pdfBuffer = await pdfGenerationService.generateSessionSummaryPDF(
-      summaryResult.summary,
-      userProfile
-    );
-
-    // Set headers for PDF download
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="interview-summary-${interviewId}.pdf"`
-    );
-    res.setHeader("Content-Length", pdfBuffer.length);
-
-    // Send PDF
-    res.end(pdfBuffer);
-  } catch (error) {
-    console.error("Export PDF error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to export PDF",
-      error: error.message,
-    });
   }
-});
+);
 
 module.exports = router;

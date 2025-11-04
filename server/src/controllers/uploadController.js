@@ -4,7 +4,7 @@ const cloudinary = require("../config/cloudinary");
 // Helper: sign upload parameters for direct unsigned client upload
 const getSignedUploadParams = async (req, res) => {
   try {
-    const { userId } = req.auth || {};
+    const userId = req.user?.id;
     if (!userId) {
       return res
         .status(401)
@@ -105,6 +105,7 @@ async function destroyByPrefix(prefix, resource_type = "image") {
     next_cursor = list.next_cursor;
   }
 }
+
 // Health check for uploads
 const uploadHealth = async (req, res) => {
   try {
@@ -122,13 +123,11 @@ const uploadHealth = async (req, res) => {
       await cloudinary.api.resources({ max_results: 1 });
       return res.json({ success: true, cloudName });
     } catch (err) {
-      return res
-        .status(500)
-        .json({
-          success: false,
-          error: "Cloudinary API failed",
-          detail: err.message,
-        });
+      return res.status(500).json({
+        success: false,
+        error: "Cloudinary API failed",
+        detail: err.message,
+      });
     }
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });

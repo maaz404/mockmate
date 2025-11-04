@@ -49,13 +49,14 @@ async function ensureMonthlyQuota(profile) {
 /**
  * Idempotently consume one interview from a free plan (or limited paid) quota.
  * Tracks lastConsumedInterviewId to avoid double decrement when start API retried.
- * @param {string} userId
+ * @param {string} userId - MongoDB user ID (not Clerk ID)
  * @param {string} interviewId
  * @returns {Promise<{updated:boolean, remaining:number}>}
  */
 async function consumeFreeInterview(userId, interviewId) {
   try {
-    const profile = await UserProfile.findOne({ clerkUserId: userId });
+    // CHANGED: clerkUserId → user
+    const profile = await UserProfile.findOne({ user: userId });
     if (!profile) return { updated: false, remaining: 0 };
     await ensureMonthlyQuota(profile); // opportunistic reset
 
@@ -93,12 +94,13 @@ async function consumeFreeInterview(userId, interviewId) {
 
 /**
  * Helper to fetch remaining interviews (after opportunistic monthly reset).
- * @param {string} userId
+ * @param {string} userId - MongoDB user ID (not Clerk ID)
  * @returns {Promise<number|null>} remaining or null for unlimited
  */
 async function getRemaining(userId) {
   try {
-    const profile = await UserProfile.findOne({ clerkUserId: userId });
+    // CHANGED: clerkUserId → user
+    const profile = await UserProfile.findOne({ user: userId });
     if (!profile) return 0;
     await ensureMonthlyQuota(profile);
     if (isUnlimited(profile.subscription.plan)) return null;

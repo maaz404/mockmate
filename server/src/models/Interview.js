@@ -54,6 +54,43 @@ const questionSubSchema = new mongoose.Schema(
         ],
         error: String,
       },
+      cloudinary: {
+        publicId: String,
+        url: String,
+        bytes: Number,
+        format: String,
+        width: Number,
+        height: Number,
+        duration: Number,
+        folder: String,
+      },
+      facialAnalysis: {
+        enabled: { type: Boolean, default: false },
+        metrics: {
+          eyeContact: Number,
+          blinkRate: Number,
+          smilePercentage: Number,
+          headSteadiness: Number,
+          offScreenPercentage: Number,
+          confidenceScore: Number,
+        },
+        baseline: {
+          completed: { type: Boolean, default: false },
+          eyeContact: Number,
+          blinkRate: Number,
+          smilePercentage: Number,
+          headSteadiness: Number,
+          calibratedAt: Date,
+        },
+        sessionSummary: {
+          averageEyeContact: Number,
+          averageBlinkRate: Number,
+          averageSmile: Number,
+          averageHeadSteadiness: Number,
+          confidenceTrend: String,
+        },
+        analysisTimestamp: Date,
+      },
     },
     score: {
       overall: { type: Number, min: 0, max: 100 },
@@ -87,7 +124,6 @@ const questionSubSchema = new mongoose.Schema(
         generatedAt: { type: Date, default: Date.now },
       },
     ],
-    // Optional per-question facial metrics snapshot ( captured at answer submit or client request )
     facial: {
       eyeContact: Number,
       blinkRate: Number,
@@ -97,7 +133,6 @@ const questionSubSchema = new mongoose.Schema(
       confidenceScore: Number,
       capturedAt: Date,
     },
-    // Explicit skip state (user chose to skip this question instead of answering)
     skipped: { type: Boolean, default: false },
     skippedAt: Date,
   },
@@ -136,7 +171,13 @@ function parseSerializedQuestions(raw) {
 // ---------------- Main Schema ----------------
 const interviewSchema = new mongoose.Schema(
   {
-    userId: { type: String, required: true, index: true },
+    // CHANGED: userId: String → user: ObjectId
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
     userProfile: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "UserProfile",
@@ -168,6 +209,7 @@ const interviewSchema = new mongoose.Schema(
       },
       duration: { type: Number, required: true, min: 15, max: 120 },
       questionCount: { type: Number, default: 10, min: 5, max: 50 },
+      focusAreas: [String],
       adaptiveDifficulty: {
         enabled: { type: Boolean, default: false },
         initialDifficulty: String,
@@ -187,6 +229,7 @@ const interviewSchema = new mongoose.Schema(
       type: String,
       enum: ["scheduled", "in-progress", "completed", "abandoned"],
       default: "scheduled",
+      index: true,
     },
     recording: { type: AssetSchema },
     snapshots: { type: [AssetSchema], default: [] },
@@ -199,7 +242,6 @@ const interviewSchema = new mongoose.Schema(
       eyeContactScore: Number,
       fillerWordsPerMin: Number,
       wpm: Number,
-      // Extended facial / delivery metrics
       blinkRate: Number,
       smilePercentage: Number,
       headSteadiness: Number,
@@ -244,6 +286,7 @@ const interviewSchema = new mongoose.Schema(
     },
     results: {
       overallScore: { type: Number, min: 0, max: 100 },
+      completionRate: { type: Number, min: 0, max: 100 },
       breakdown: {
         technical: Number,
         communication: Number,
@@ -388,13 +431,15 @@ interviewSchema.pre("validate", function (next) {
 });
 
 // ---------------- Indexes ----------------
-interviewSchema.index({ userId: 1, createdAt: -1, status: 1 });
-interviewSchema.index({ userId: 1, "questions.category": 1 });
-interviewSchema.index({ userId: 1, "questions.tags": 1 });
-interviewSchema.index({ userId: 1, createdAt: -1 });
+// CHANGED: All userId indexes → user indexes
+interviewSchema.index({ user: 1, createdAt: -1, status: 1 });
+interviewSchema.index({ user: 1, "questions.category": 1 });
+interviewSchema.index({ user: 1, "questions.tags": 1 });
+interviewSchema.index({ user: 1, createdAt: -1 });
 interviewSchema.index({ status: 1 });
 interviewSchema.index({ "config.jobRole": 1 });
 interviewSchema.index({ "results.overallScore": -1 });
+interviewSchema.index({ userProfile: 1 });
 
 // ---------------- Methods ----------------
 interviewSchema.methods.calculateOverallScore = function () {
@@ -406,6 +451,17 @@ interviewSchema.methods.calculateOverallScore = function () {
   const total = valid.reduce((s, v) => s + v, 0);
   this.results.overallScore = Math.round(total / valid.length);
   return this.results.overallScore;
+};
+
+interviewSchema.methods.calculateCompletionRate = function () {
+  if (!this.questions || this.questions.length === 0) return 0;
+  const answered = this.questions.filter(
+    (q) => q.response && q.response.text && !q.skipped
+  ).length;
+  this.results.completionRate = Math.round(
+    (answered / this.questions.length) * 100
+  );
+  return this.results.completionRate;
 };
 
 interviewSchema.methods.getPerformanceLevel = function () {

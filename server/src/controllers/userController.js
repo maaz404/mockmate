@@ -1,30 +1,34 @@
+/* eslint-disable no-console, consistent-return, no-magic-numbers */
+const User = require("../models/User");
+const UserProfile = require("../models/UserProfile");
+const Interview = require("../models/Interview");
+const ScheduledSession = require("../models/ScheduledSession");
+const { ok, fail } = require("../utils/responder");
+
 // Upgrade user to premium (unlimited interviews)
 const upgradeToPremium = async (req, res) => {
   try {
-    const { userId } = req.auth;
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
-    if (!userProfile) {
+    const userId = req.user?.id;
+    if (!userId)
+      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
+
+    const userProfile = await UserProfile.findOne({ user: userId });
+    if (!userProfile)
       return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
-    }
+
     userProfile.subscription.plan = "premium";
     userProfile.subscription.interviewsRemaining = null; // unlimited
     await userProfile.save();
+
     return ok(
       res,
       { success: true, subscription: userProfile.subscription },
       "Upgraded to premium"
     );
   } catch (error) {
-    // Error logging removed to fix lint error
     return fail(res, 500, "UPGRADE_FAILED", "Failed to upgrade to premium");
   }
 };
-/* eslint-disable no-console, consistent-return, no-magic-numbers */
-const UserProfile = require("../models/UserProfile");
-const { clerkClient } = require("@clerk/clerk-sdk-node");
-const Interview = require("../models/Interview");
-const ScheduledSession = require("../models/ScheduledSession");
-const { ok, fail } = require("../utils/responder");
 
 // Get user profile (profile guaranteed by ensureUserProfile middleware)
 const getProfile = async (req, res) => {
@@ -52,20 +56,20 @@ const getProfile = async (req, res) => {
 // Bootstrap user profile - ensures profile exists and returns basic info
 const bootstrapProfile = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
+    if (!userId)
+      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
 
-    // Find or create user profile
-    let userProfile = await UserProfile.findOne({ clerkUserId: userId });
+    let userProfile = await UserProfile.findOne({ user: userId });
 
     if (!userProfile) {
-      // Create a basic profile
+      const user = await User.findById(userId).lean();
       userProfile = new UserProfile({
-        clerkUserId: userId,
-        email: req.auth.emailAddress || "user@example.com",
-        personalInfo: {
-          firstName: req.auth.firstName || "User",
-          lastName: req.auth.lastName || "",
-        },
+        user: userId,
+        email: user?.email || `${userId}@example.com`,
+        firstName: user?.name || "User",
+        lastName: "",
+        profileImage: user?.picture || "",
         onboardingCompleted: false,
       });
       await userProfile.save();
@@ -94,23 +98,20 @@ const bootstrapProfile = async (req, res) => {
 // Save onboarding progress
 const saveOnboardingProgress = async (req, res) => {
   try {
-    const { userId } = req.auth;
-    const progressData = req.body;
+    const userId = req.user?.id;
+    if (!userId)
+      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
 
-    console.log("Save onboarding progress - userId:", userId);
-    console.log("Progress data:", JSON.stringify(progressData, null, 2));
+    const progressData = req.body;
 
     // Sanitize data
     if (progressData.professionalInfo) {
-      // Handle empty experience
       if (
         !progressData.professionalInfo.experience ||
         progressData.professionalInfo.experience === ""
       ) {
         progressData.professionalInfo.experience = "entry";
       }
-
-      // Ensure arrays are arrays
       if (!Array.isArray(progressData.professionalInfo.skills)) {
         progressData.professionalInfo.skills = [];
       }
@@ -118,13 +119,11 @@ const saveOnboardingProgress = async (req, res) => {
         progressData.professionalInfo.skillsToImprove = [];
       }
     }
-
     if (progressData.interviewGoals) {
       if (!Array.isArray(progressData.interviewGoals.targetCompanies)) {
         progressData.interviewGoals.targetCompanies = [];
       }
     }
-
     if (progressData.preferences) {
       if (!Array.isArray(progressData.preferences.interviewTypes)) {
         progressData.preferences.interviewTypes = [];
@@ -135,35 +134,22 @@ const saveOnboardingProgress = async (req, res) => {
     }
 
     // Remove sensitive fields that shouldn't be updated
-    delete progressData.clerkUserId;
+    delete progressData.user;
     delete progressData.email;
     delete progressData.analytics;
     delete progressData.subscription;
-    delete progressData.onboardingCompleted; // Don't mark as completed when saving progress
-
-    console.log(
-      "Filtered progress data:",
-      JSON.stringify(progressData, null, 2)
-    );
+    delete progressData.onboardingCompleted;
 
     const userProfile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
-      {
-        $set: progressData,
-      },
-      {
-        new: true,
-        upsert: true,
-      }
+      { user: userId },
+      { $set: progressData },
+      { new: true, upsert: true }
     );
 
-    console.log("User profile after update:", userProfile);
-
     if (!userProfile) {
-      return res.status(404).json({
-        success: false,
-        message: "User profile not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User profile not found" });
     }
 
     // Calculate completeness but don't save yet (progress save)
@@ -173,13 +159,11 @@ const saveOnboardingProgress = async (req, res) => {
   } catch (error) {
     console.error("Save onboarding progress error:", error);
 
-    // Handle MongoDB validation errors
     if (error.name === "ValidationError") {
       const validationErrors = {};
       Object.keys(error.errors).forEach((key) => {
         validationErrors[key] = error.errors[key].message;
       });
-
       return fail(res, 400, "VALIDATION_FAILED", "Validation failed", {
         details: validationErrors,
       });
@@ -201,15 +185,15 @@ const updateProfile = async (req, res) => {
   try {
     if (!req.userProfile)
       return fail(res, 500, "PROFILE_NOT_ATTACHED", "User profile missing");
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const updates = { ...req.body };
 
-    ["clerkUserId", "email", "analytics", "subscription"].forEach(
+    ["user", "email", "analytics", "subscription"].forEach(
       (f) => delete updates[f]
     );
 
     const userProfile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { user: userId },
       { ...updates },
       { new: true }
     );
@@ -233,24 +217,19 @@ const updateProfile = async (req, res) => {
 // Complete onboarding
 const completeOnboarding = async (req, res) => {
   try {
-    // Get userId from auth - handle different possible formats
-    let userId = req.auth?.userId || req.auth?.id || req.auth?.sub;
+    let userId = req.user?.id;
 
-    console.log("Complete onboarding - req.auth:", req.auth);
-    console.log("Complete onboarding - extracted userId:", userId);
-
-    // Fallback for development: use a test user ID if not authenticated
-    if (!userId && process.env.NODE_ENV !== "production") {
-      console.warn("No userId found in auth, using test user for development");
-      userId = "test-user-123";
+    if (!userId) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("No userId found, using test user for development");
+        userId = "000000000000000000000001";
+      } else {
+        return fail(res, 401, "UNAUTHORIZED", "Authentication required");
+      }
     }
-
-    if (!userId)
-      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
 
     let { professionalInfo, preferences, interviewGoals } = req.body;
 
-    // Early validation to match test expectations
     if (!professionalInfo && !preferences) {
       return fail(
         res,
@@ -263,7 +242,6 @@ const completeOnboarding = async (req, res) => {
         }
       );
     }
-
     if (!professionalInfo) {
       return fail(
         res,
@@ -276,28 +254,26 @@ const completeOnboarding = async (req, res) => {
         }
       );
     }
-
     if (!preferences) {
       return fail(
         res,
         400,
         "MISSING_PREFERENCES",
         "Missing required onboarding data",
-        { professionalInfo: null, preferences: "Preferences are required" }
+        {
+          professionalInfo: null,
+          preferences: "Preferences are required",
+        }
       );
     }
 
-    // Sanitize and validate data
     if (!professionalInfo) professionalInfo = {};
     if (!preferences) preferences = {};
     if (!interviewGoals) interviewGoals = {};
 
-    // Handle empty experience - set default if empty
     if (!professionalInfo.experience || professionalInfo.experience === "") {
       professionalInfo.experience = "entry";
     }
-
-    // Ensure arrays are arrays
     if (!Array.isArray(professionalInfo.skills)) professionalInfo.skills = [];
     if (!Array.isArray(professionalInfo.skillsToImprove))
       professionalInfo.skillsToImprove = [];
@@ -307,104 +283,24 @@ const completeOnboarding = async (req, res) => {
       preferences.interviewTypes = [];
     if (!Array.isArray(preferences.focusAreas)) preferences.focusAreas = [];
 
-    // Validate required data
-    if (!professionalInfo.currentRole || !professionalInfo.industry) {
-      return fail(
-        res,
-        400,
-        "MISSING_PROFESSIONAL_FIELDS",
-        "Missing required professional information",
-        {
-          currentRole: !professionalInfo.currentRole
-            ? "Current role is required"
-            : null,
-          industry: !professionalInfo.industry ? "Industry is required" : null,
-        }
-      );
-    }
-
-    // Validate preferences
-    if (
-      !preferences.interviewTypes ||
-      preferences.interviewTypes.length === 0
-    ) {
-      return fail(
-        res,
-        400,
-        "NO_INTERVIEW_TYPE",
-        "At least one interview type must be selected"
-      );
-    }
-
-    // Ensure a profile exists; if not, create it from Clerk data when available
-    // In development with MOCK_AUTH_FALLBACK, skip Clerk calls and use stub data
-    const usingMockAuth =
-      process.env.NODE_ENV !== "production" &&
-      process.env.NODE_ENV !== "test" &&
-      process.env.MOCK_AUTH_FALLBACK === "true" &&
-      (!req.headers?.authorization || String(userId).startsWith("test-"));
-
-    let clerkUser = null;
-    const shouldCallClerk =
-      !usingMockAuth &&
-      (process.env.CLERK_SECRET_KEY || process.env.NODE_ENV === "test");
-    if (shouldCallClerk) {
-      try {
-        clerkUser = await clerkClient.users.getUser(userId);
-      } catch (clerkError) {
-        console.error("Clerk API error:", clerkError);
-        if (
-          process.env.NODE_ENV === "production" ||
-          process.env.NODE_ENV === "test"
-        ) {
-          // Align with test expectation using fail helper
-          return fail(
-            res,
-            500,
-            "MISSING_DATA",
-            "Failed to fetch user data from authentication service"
-          );
-        }
-      }
-    }
-
-    // Fallback stub user for development
-    if (!clerkUser && usingMockAuth) {
-      clerkUser = {
-        emailAddresses: [
-          { emailAddress: `${userId || "test-user-123"}@example.com` },
-        ],
-        firstName: "Test",
-        lastName: "User",
-        profileImageUrl: null,
-      };
-    }
-
-    console.log("About to create/update user profile for userId:", userId);
-
-    // Prefer profile already attached by ensureUserProfile to avoid double upsert
+    // Prefer profile already attached by ensureUserProfile
     let userProfile = req.userProfile;
+    const baseIdentity = await User.findById(userId).lean();
+
     if (userProfile) {
       userProfile.professionalInfo = professionalInfo;
       userProfile.preferences = preferences;
       userProfile.interviewGoals = interviewGoals;
       userProfile.onboardingCompleted = true;
-      // Only hydrate missing base identity fields once
-      if (!userProfile.email && clerkUser?.emailAddresses?.[0]?.emailAddress) {
-        userProfile.email = clerkUser.emailAddresses[0].emailAddress;
-      }
-      if (!userProfile.firstName && clerkUser?.firstName) {
-        userProfile.firstName = clerkUser.firstName;
-      }
-      if (!userProfile.lastName && clerkUser?.lastName) {
-        userProfile.lastName = clerkUser.lastName;
-      }
-      if (!userProfile.profileImage && clerkUser?.profileImageUrl) {
-        userProfile.profileImage = clerkUser.profileImageUrl;
-      }
+      if (!userProfile.email && baseIdentity?.email)
+        userProfile.email = baseIdentity.email;
+      if (!userProfile.firstName && baseIdentity?.name)
+        userProfile.firstName = baseIdentity.name;
+      if (!userProfile.profileImage && baseIdentity?.picture)
+        userProfile.profileImage = baseIdentity.picture;
     } else {
       userProfile = await UserProfile.findOneAndUpdate(
-        { clerkUserId: userId },
+        { user: userId },
         {
           $set: {
             professionalInfo,
@@ -413,55 +309,39 @@ const completeOnboarding = async (req, res) => {
             onboardingCompleted: true,
           },
           $setOnInsert: {
-            email: clerkUser?.emailAddresses?.[0]?.emailAddress || null,
-            firstName: clerkUser?.firstName || null,
-            lastName: clerkUser?.lastName || null,
-            profileImage: clerkUser?.profileImageUrl || null,
+            email: baseIdentity?.email || null,
+            firstName: baseIdentity?.name || null,
+            lastName: null,
+            profileImage: baseIdentity?.picture || null,
           },
         },
-        {
-          new: true,
-          upsert: true,
-        }
+        { new: true, upsert: true }
       );
     }
 
-    console.log("User profile created/updated:", userProfile._id);
-
-    // Calculate completeness after onboarding
     try {
       userProfile.calculateCompleteness();
       await userProfile.save();
-      console.log("Profile completeness calculated and saved");
     } catch (calcError) {
       console.error("Error calculating completeness:", calcError);
-      // Continue without failing
     }
-
-    console.log("Onboarding completed successfully");
 
     return ok(res, userProfile, "Onboarding completed successfully");
   } catch (error) {
     console.error("Complete onboarding error:", error);
 
-    // Handle MongoDB validation errors
     if (error.name === "ValidationError") {
       const validationErrors = {};
       Object.keys(error.errors).forEach((key) => {
         validationErrors[key] = error.errors[key].message;
       });
-
       return fail(res, 400, "VALIDATION_FAILED", "Validation failed", {
         details: validationErrors,
       });
     }
-
-    // Handle MongoDB duplicate key errors
     if (error.code === 11000) {
       return fail(res, 400, "PROFILE_EXISTS", "User profile already exists");
     }
-
-    // Generic error response
     return fail(
       res,
       500,
@@ -477,9 +357,9 @@ const completeOnboarding = async (req, res) => {
 // Get user analytics
 const getAnalytics = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const userProfile = await UserProfile.findOne(
-      { clerkUserId: userId },
+      { user: userId },
       { analytics: 1, subscription: 1 }
     );
     if (!userProfile)
@@ -502,38 +382,31 @@ const getAnalytics = async (req, res) => {
 // Update user analytics (internal use)
 const updateAnalytics = async (userId, analyticsUpdate) => {
   try {
-    const userProfile = await UserProfile.findOne({ clerkUserId: userId });
-
+    const userProfile = await UserProfile.findOne({ user: userId });
     if (!userProfile) {
       throw new Error("User profile not found");
     }
 
-    // Update analytics
     Object.keys(analyticsUpdate).forEach((key) => {
       if (userProfile.analytics[key] !== undefined) {
         userProfile.analytics[key] = analyticsUpdate[key];
       }
     });
 
-    // Update streak if it's a new interview
     if (analyticsUpdate.lastInterviewDate) {
       const today = new Date();
       const lastDate = new Date(userProfile.analytics.streak.lastInterviewDate);
       const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
 
       if (daysDiff === 1) {
-        // Consecutive day
         userProfile.analytics.streak.current += 1;
         userProfile.analytics.streak.longest = Math.max(
           userProfile.analytics.streak.longest,
           userProfile.analytics.streak.current
         );
       } else if (daysDiff > 1) {
-        // Streak broken
         userProfile.analytics.streak.current = 1;
       }
-      // Same day, no change needed
-
       userProfile.analytics.streak.lastInterviewDate = today;
     }
 
@@ -545,7 +418,6 @@ const updateAnalytics = async (userId, analyticsUpdate) => {
   }
 };
 
-// Normalize Cloudinary asset subset from client
 function normalizeAsset(input) {
   if (!input) return null;
   const {
@@ -590,11 +462,11 @@ function normalizeAsset(input) {
 // PUT /api/users/profile/avatar
 const updateAvatar = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const asset = normalizeAsset(req.body);
     if (!asset) return fail(res, 400, "INVALID_ASSET", "Invalid asset payload");
     const profile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { user: userId },
       { $set: { avatar: asset } },
       { new: true }
     ).lean();
@@ -609,11 +481,11 @@ const updateAvatar = async (req, res) => {
 // PUT /api/users/profile/resume
 const updateResumeAsset = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const asset = normalizeAsset(req.body);
     if (!asset) return fail(res, 400, "INVALID_ASSET", "Invalid asset payload");
     const profile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { user: userId },
       { $set: { resume: asset } },
       { new: true }
     ).lean();
@@ -628,16 +500,15 @@ const updateResumeAsset = async (req, res) => {
 // Upload resume
 const uploadResume = async (req, res) => {
   try {
-    const { userId } = req.auth;
-
+    const userId = req.user?.id;
     if (!req.file) return fail(res, 400, "NO_FILE", "No file uploaded");
 
     const userProfile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { user: userId },
       {
         "professionalInfo.resume": {
           filename: req.file.originalname,
-          url: req.file.path, // This would be S3 URL in production
+          url: req.file.path,
           uploadedAt: new Date(),
         },
       },
@@ -660,13 +531,12 @@ const uploadResume = async (req, res) => {
 // ===== Dashboard Preferences (cross-device UI state) =====
 async function getDashboardPreferences(req, res) {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const profile = await UserProfile.findOne(
-      { clerkUserId: userId },
+      { user: userId },
       { "preferences.dashboard": 1, _id: 0 }
     ).lean();
 
-    // Provide default preferences if none exist
     const defaultPreferences = {
       density: "comfortable",
       upcomingView: "list",
@@ -689,7 +559,7 @@ async function getDashboardPreferences(req, res) {
 
 async function updateDashboardPreferences(req, res) {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const { density, upcomingView, thisWeekOnly, metricsHorizon, benchmark } =
       req.body || {};
     const update = {};
@@ -708,7 +578,7 @@ async function updateDashboardPreferences(req, res) {
     }
 
     const profile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { user: userId },
       { $set: update },
       { new: true }
     ).lean();
@@ -725,29 +595,14 @@ async function updateDashboardPreferences(req, res) {
   }
 }
 
-module.exports = {
-  getProfile,
-  bootstrapProfile,
-  updateProfile,
-  completeOnboarding,
-  saveOnboardingProgress,
-  getAnalytics,
-  updateAnalytics,
-  uploadResume,
-  updateAvatar,
-  updateResumeAsset,
-};
-
 // =============== Dashboard extensions: Scheduled Sessions, Goals, Tips ===============
-
-// Get upcoming scheduled sessions for the current user (next N, default 3)
 const getScheduledSessions = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const { limit = 3, page = 1, includePast, status } = req.query;
 
     const now = new Date();
-    const baseQuery = { userId };
+    const baseQuery = { owner: userId };
     if (!status || status === "scheduled") {
       baseQuery.status = "scheduled";
     } else if (status && status !== "all") {
@@ -787,10 +642,9 @@ const getScheduledSessions = async (req, res) => {
   }
 };
 
-// Create or update a scheduled session
 const upsertScheduledSession = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const { id } = req.params; // optional for update
     const { title, type, duration, scheduledAt, notes, status } = req.body;
 
@@ -803,7 +657,7 @@ const upsertScheduledSession = async (req, res) => {
       );
 
     const payload = {
-      userId,
+      owner: userId,
       title,
       type,
       duration,
@@ -815,7 +669,7 @@ const upsertScheduledSession = async (req, res) => {
     let sessionDoc;
     if (id) {
       sessionDoc = await ScheduledSession.findOneAndUpdate(
-        { _id: id, userId },
+        { _id: id, owner: userId },
         { $set: payload },
         { new: true }
       );
@@ -836,12 +690,11 @@ const upsertScheduledSession = async (req, res) => {
   }
 };
 
-// Delete a scheduled session
 const deleteScheduledSession = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const { id } = req.params;
-    const result = await ScheduledSession.deleteOne({ _id: id, userId });
+    const result = await ScheduledSession.deleteOne({ _id: id, owner: userId });
     if (result.deletedCount === 0)
       return fail(res, 404, "SESSION_NOT_FOUND", "Session not found");
     return ok(res, null, "Session deleted");
@@ -856,17 +709,16 @@ const deleteScheduledSession = async (req, res) => {
   }
 };
 
-// Update session status (scheduled | completed | canceled)
 const updateScheduledSessionStatus = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const { id } = req.params;
     const { status } = req.body;
     const allowed = ["scheduled", "completed", "canceled"];
     if (!allowed.includes(status))
       return fail(res, 400, "INVALID_STATUS", "Invalid status");
     const doc = await ScheduledSession.findOneAndUpdate(
-      { _id: id, userId },
+      { _id: id, owner: userId },
       { $set: { status } },
       { new: true }
     );
@@ -878,12 +730,11 @@ const updateScheduledSessionStatus = async (req, res) => {
   }
 };
 
-// Get or update goals embedded in the user profile
 const getGoals = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const userProfile = await UserProfile.findOne(
-      { clerkUserId: userId },
+      { user: userId },
       { goals: 1 }
     );
     if (!userProfile)
@@ -897,12 +748,12 @@ const getGoals = async (req, res) => {
 
 const updateGoals = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const { goals } = req.body;
     if (!Array.isArray(goals))
       return fail(res, 400, "INVALID_GOALS", "Goals must be an array");
     const userProfile = await UserProfile.findOneAndUpdate(
-      { clerkUserId: userId },
+      { user: userId },
       { $set: { goals } },
       { new: true }
     );
@@ -915,12 +766,12 @@ const updateGoals = async (req, res) => {
   }
 };
 
-// Simple dynamic tips based on analytics and recent interview outcomes
+// Dynamic tips (uses Interview and UserProfile)
 const getDynamicTips = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const userProfile = await UserProfile.findOne(
-      { clerkUserId: userId },
+      { user: userId },
       { analytics: 1 }
     );
     if (!userProfile)
@@ -973,16 +824,14 @@ const getDynamicTips = async (req, res) => {
       });
     }
 
-    // Deeper analysis from recent completed interviews (lightweight)
     try {
-      const recent = await Interview.find({ userId, status: "completed" })
+      const recent = await Interview.find({ user: userId, status: "completed" })
         .sort({ updatedAt: -1 })
         .limit(10)
         .select(
           "results.breakdown questions.category questions.followUpsReviewed questions.score.rubricScores"
         );
 
-      // Aggregate breakdown averages
       const agg = {
         technical: [],
         communication: [],
@@ -1038,7 +887,6 @@ const getDynamicTips = async (req, res) => {
         }
       });
 
-      // Rubric weaknesses (clarity/depth)
       let lowClarityCount = 0;
       let lowDepthCount = 0;
       for (const doc of recent) {
@@ -1064,7 +912,6 @@ const getDynamicTips = async (req, res) => {
         });
       }
 
-      // Category frequency hint
       const categoryCounts = {};
       for (const doc of recent) {
         for (const q of doc?.questions || []) {
@@ -1083,7 +930,6 @@ const getDynamicTips = async (req, res) => {
         });
       }
 
-      // Follow-ups reviewed signal (encourage action)
       const totalFollowupsReviewed = recent.reduce(
         (acc, doc) =>
           acc +
@@ -1098,10 +944,9 @@ const getDynamicTips = async (req, res) => {
         });
       }
     } catch (e) {
-      // Non-critical; keep fallbacks
+      // non-critical
     }
 
-    // Default fallbacks if still empty
     if (tips.length === 0) {
       tips.push(
         {
@@ -1124,823 +969,793 @@ const getDynamicTips = async (req, res) => {
   }
 };
 
-// Export new handlers
-module.exports.getScheduledSessions = getScheduledSessions;
-module.exports.upsertScheduledSession = upsertScheduledSession;
-module.exports.deleteScheduledSession = deleteScheduledSession;
-module.exports.updateScheduledSessionStatus = updateScheduledSessionStatus;
-module.exports.getGoals = getGoals;
-module.exports.updateGoals = updateGoals;
-module.exports.getDynamicTips = getDynamicTips;
-module.exports.upgradeToPremium = upgradeToPremium;
-
-// ================= Dashboard Summary Aggregation =================
-// GET /api/users/dashboard/summary
-async function getDashboardSummary(req, res) {
+// Enhanced Dashboard Summary - Real-Time with Performance Trends
+const getDashboardSummary = async (req, res) => {
   try {
-    const { userId } = req.auth;
-    // Query params with sensible defaults
-    const interviewsLimit = Math.max(
-      1,
-      parseInt(req.query.interviewsLimit, 10) || 10
-    );
-    const scheduledLimit = Math.max(
-      1,
-      parseInt(req.query.scheduledLimit, 10) || 3
-    );
-    const scheduledStatus = (
-      req.query.scheduledStatus || "scheduled"
-    ).toLowerCase();
-    const includePast =
-      String(req.query.includePast || "false").toLowerCase() === "true";
+    console.log("🎯 getDashboardSummary called for user:", req.user?.id);
 
-    const sectionsWithErrors = [];
+    const userId = req.user?.id;
+    if (!userId)
+      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
 
-    // Build scheduled query
+    // Date ranges for comparisons
     const now = new Date();
-    const scheduledQuery = { userId };
-    if (scheduledStatus !== "all") {
-      // allowlist validation
-      const allowed = ["scheduled", "completed", "canceled"];
-      scheduledQuery.status = allowed.includes(scheduledStatus)
-        ? scheduledStatus
-        : "scheduled";
-    }
-    if (!includePast) {
-      scheduledQuery.scheduledAt = { $gte: now };
-    }
+    const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const lastMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const twoWeeksAgo = new Date(lastWeek.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const tasks = {
-      profile: UserProfile.findOne({ clerkUserId: userId })
-        .select(
-          "clerkUserId email firstName lastName profileImage professionalInfo onboardingCompleted subscription"
-        )
-        .lean()
-        .exec(),
-      analytics: UserProfile.findOne({ clerkUserId: userId })
-        .select("analytics subscription")
-        .lean()
-        .exec(),
-      recentInterviews: Interview.find({ userId })
-        .sort({ createdAt: -1 })
-        .limit(interviewsLimit)
-        .select(
-          "_id createdAt updatedAt status results.breakdown questions.category questions.type config.jobRole config.interviewType config.difficulty"
-        )
-        .lean()
-        .exec(),
-      scheduled: (async () => {
-        const [items, total] = await Promise.all([
-          ScheduledSession.find(scheduledQuery)
-            .sort({ scheduledAt: 1 })
-            .limit(scheduledLimit)
-            .lean()
-            .exec(),
-          ScheduledSession.countDocuments(scheduledQuery),
-        ]);
-        return {
-          items,
-          pagination: {
-            total,
-            limit: scheduledLimit,
-            pages: Math.ceil(total / scheduledLimit) || 1,
-            current: 1,
-          },
-        };
-      })(),
-      goals: UserProfile.findOne({ clerkUserId: userId })
-        .select("goals")
-        .lean()
-        .exec(),
-      tips: (async () => {
-        // Reuse internal logic by calling getDynamicTips helpers directly is complex here;
-        // instead, perform a lightweight tip generation similar to getDynamicTips
-        const profile = await UserProfile.findOne({ clerkUserId: userId })
-          .select("analytics")
-          .lean()
-          .exec();
-        const tips = [];
-        const avg = profile?.analytics?.averageScore || 0;
-        if (avg < 60) {
-          tips.push({
-            title: "Focus on fundamentals",
-            desc: "Revisit core concepts and practice structured answers to boost baseline.",
-            href: "/resources",
-          });
-        } else if (avg < 80) {
-          tips.push({
-            title: "Add concrete examples",
-            desc: "Use STAR to anchor your responses with measurable outcomes.",
-            href: "/resources",
-          });
-        } else {
-          tips.push({
-            title: "Push difficulty",
-            desc: "Try advanced rounds or longer sessions to stretch your capability.",
-            href: "/practice",
-          });
-        }
-        return tips;
-      })(),
-      skillsDistribution: (async () => {
-        // Calculate skills distribution from recent interviews
-        const interviews = await Interview.find({ userId })
-          .sort({ createdAt: -1 })
-          .limit(20) // Look at more interviews for better distribution
-          .select("questions.category config.jobRole")
-          .lean()
-          .exec();
-
-        const skillsCount = {};
-
-        interviews.forEach((interview) => {
-          // Count question categories
-          if (interview.questions && Array.isArray(interview.questions)) {
-            interview.questions.forEach((q) => {
-              if (q.category) {
-                const category =
-                  q.category.charAt(0).toUpperCase() + q.category.slice(1);
-                skillsCount[category] = (skillsCount[category] || 0) + 1;
-              }
-            });
-          }
-
-          // Also infer skills from job roles if no questions
-          if (interview.config?.jobRole) {
-            const jobRole = interview.config.jobRole.toLowerCase();
-            if (jobRole.includes("frontend")) {
-              skillsCount["Frontend"] = (skillsCount["Frontend"] || 0) + 1;
-            } else if (jobRole.includes("backend")) {
-              skillsCount["Backend"] = (skillsCount["Backend"] || 0) + 1;
-            } else if (jobRole.includes("full")) {
-              skillsCount["Full Stack"] = (skillsCount["Full Stack"] || 0) + 1;
-            } else if (jobRole.includes("mobile")) {
-              skillsCount["Mobile"] = (skillsCount["Mobile"] || 0) + 1;
-            } else if (jobRole.includes("devops")) {
-              skillsCount["DevOps"] = (skillsCount["DevOps"] || 0) + 1;
-            }
-          }
-        });
-
-        return Object.entries(skillsCount)
-          .map(([skill, count]) => ({ skill, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 5); // Top 5 skills
-      })(),
-    };
-
-    const [profileR, analyticsR, recentR, scheduledR, goalsR, tipsR, skillsR] =
-      await Promise.allSettled([
-        tasks.profile,
-        tasks.analytics,
-        tasks.recentInterviews,
-        tasks.scheduled,
-        tasks.goals,
-        tasks.tips,
-        tasks.skillsDistribution,
-      ]);
-
-    const pick = (r, name) => {
-      if (r.status === "fulfilled") return r.value;
-      sectionsWithErrors.push(name);
-      return null;
-    };
-
-    const payload = {
-      profile: pick(profileR, "profile"),
-      analytics: pick(analyticsR, "analytics"),
-      recentInterviews: pick(recentR, "recentInterviews") || [],
-      scheduled: pick(scheduledR, "scheduled") || {
-        items: [],
-        pagination: { total: 0, limit: scheduledLimit, pages: 1, current: 1 },
-      },
-      goals: pick(goalsR, "goals")?.goals || [],
-      tips: pick(tipsR, "tips") || [],
-      skillsDistribution: pick(skillsR, "skillsDistribution") || [],
-      sectionsWithErrors,
-    };
-
-    return ok(res, payload);
-  } catch (error) {
-    console.error("Dashboard summary error:", error);
-    return fail(
-      res,
-      500,
-      "DASHBOARD_SUMMARY_FAILED",
-      "Failed to load dashboard summary"
-    );
-  }
-}
-
-module.exports.getDashboardSummary = getDashboardSummary;
-module.exports.getDashboardPreferences = getDashboardPreferences;
-module.exports.updateDashboardPreferences = updateDashboardPreferences;
-
-// ================= Dashboard Recommendation =================
-// GET /api/users/dashboard/recommendation
-// Lightweight heuristic engine producing a single "next best action" card.
-async function getDashboardRecommendation(req, res) {
-  try {
-    const { userId } = req.auth;
-    const horizonWeeks = Math.min(
-      24,
-      Math.max(4, parseInt(req.query.horizon || "8", 10) || 8)
-    );
-    const now = new Date();
-    const horizonStart = new Date(
-      now.getTime() - horizonWeeks * 7 * 24 * 60 * 60 * 1000
-    );
-
-    // Fetch relevant documents in parallel
-    const [profile, interviews, upcoming] = await Promise.all([
-      UserProfile.findOne({ clerkUserId: userId })
-        .select("analytics preferences.dashboard")
-        .lean()
-        .exec(),
+    // Parallel queries for performance
+    const [userProfile, allInterviews, upcomingSessions] = await Promise.all([
+      UserProfile.findOne({ user: userId }).lean(),
       Interview.find({
-        userId,
-        status: { $in: ["completed"] },
-        createdAt: { $gte: horizonStart },
+        user: userId,
+        status: "completed",
       })
+        .sort({ completedAt: -1 })
         .select(
-          "createdAt results.overallScore questions.category questions.tags"
+          "jobTitle overallScore completedAt duration answers results feedback"
         )
-        .lean()
-        .exec(),
-      ScheduledSession.find({ userId, scheduledAt: { $gte: now } })
+        .lean(),
+      ScheduledSession.find({
+        owner: userId,
+        status: "scheduled",
+        scheduledAt: { $gte: now },
+      })
         .sort({ scheduledAt: 1 })
         .limit(1)
-        .lean()
-        .exec(),
+        .lean(),
     ]);
 
-    // Early fallback if no interviews
-    if (!interviews.length) {
+    console.log("✅ Queries completed:", {
+      hasProfile: !!userProfile,
+      interviewsCount: allInterviews.length,
+      upcomingSessionsCount: upcomingSessions.length,
+    });
+
+    // If no profile exists, create a basic one or return default stats
+    if (!userProfile) {
+      console.log("⚠️ No profile found, returning default empty stats");
       return ok(res, {
-        title: "Start Your First Interview",
-        reason: "No completed practice sessions yet—kickstart your progress.",
-        actions: [
-          {
-            label: "Create Technical Session",
-            href: "/interview/new?type=technical",
-          },
-          { label: "View Quick Start", href: "/dashboard#quick" },
-        ],
-        meta: { type: "onboarding" },
+        stats: {
+          totalInterviews: 0,
+          averageScore: 0,
+          practiceTime: 0,
+          successRate: 0,
+          interviewChange: 0,
+          scoreChange: 0,
+          successRateChange: 0,
+        },
+        recentInterviews: [],
+        upcomingSession: null,
+        skillProgress: [],
+        performanceTrend: [],
+        categoryStats: [],
+        lastUpdated: new Date().toISOString(),
       });
     }
 
-    // Build skill dimensions (reuse simplified mapping similar to metrics)
-    const dimensionBuckets = {
-      Technical: [/system/i, /data/i, /algo/i, /code/i, /design/i],
-      Communication: [/behavior/i, /communication/i, /team/i, /conflict/i],
-      Systems: [/design/i, /scalab/i, /system/i, /architecture/i],
-      Behavioral: [/behavior/i, /leadership/i, /team/i, /motivation/i],
-    };
-    const completedChrono = interviews
-      .filter((iv) => iv.results?.overallScore != null)
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    const mid = Math.floor(completedChrono.length / 2) || 0;
-    const older = completedChrono.slice(0, mid);
-    const newer = completedChrono.slice(mid);
+    // Filter interviews by time periods
+    const currentWeekInterviews = allInterviews.filter(
+      (i) => new Date(i.completedAt) >= lastWeek
+    );
+    const previousWeekInterviews = allInterviews.filter((i) => {
+      const date = new Date(i.completedAt);
+      return date >= twoWeeksAgo && date < lastWeek;
+    });
+    const currentMonthInterviews = allInterviews.filter(
+      (i) => new Date(i.completedAt) >= lastMonth
+    );
 
-    const accumulate = (arr) => {
-      const agg = {};
-      for (const dim of Object.keys(dimensionBuckets)) {
-        agg[dim] = { sum: 0, count: 0 };
-      }
-      for (const iv of arr) {
-        const score = iv.results.overallScore;
-        const cats = new Set((iv.questions || []).map((q) => q.category || ""));
-        for (const dim of Object.keys(dimensionBuckets)) {
-          if (
-            [...cats].some((c) =>
-              dimensionBuckets[dim].some((re) => re.test(c))
-            )
-          ) {
-            agg[dim].sum += score;
-            agg[dim].count += 1;
+    // Calculate core stats
+    const totalInterviews = allInterviews.length;
+    const averageScore =
+      totalInterviews > 0
+        ? Math.round(
+            allInterviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
+              totalInterviews
+          )
+        : 0;
+
+    // Calculate changes (week-over-week)
+    const interviewChange =
+      previousWeekInterviews.length > 0
+        ? Math.round(
+            ((currentWeekInterviews.length - previousWeekInterviews.length) /
+              previousWeekInterviews.length) *
+              100
+          )
+        : currentWeekInterviews.length > 0
+        ? 100
+        : 0;
+
+    const currentWeekAvg =
+      currentWeekInterviews.length > 0
+        ? currentWeekInterviews.reduce(
+            (sum, i) => sum + (i.overallScore || 0),
+            0
+          ) / currentWeekInterviews.length
+        : 0;
+    const previousWeekAvg =
+      previousWeekInterviews.length > 0
+        ? previousWeekInterviews.reduce(
+            (sum, i) => sum + (i.overallScore || 0),
+            0
+          ) / previousWeekInterviews.length
+        : 0;
+    const scoreChange =
+      previousWeekAvg > 0
+        ? Math.round(
+            ((currentWeekAvg - previousWeekAvg) / previousWeekAvg) * 100
+          )
+        : currentWeekAvg > 0
+        ? 100
+        : 0;
+
+    // Calculate practice time (hours this month)
+    const practiceTime =
+      currentMonthInterviews.reduce((sum, i) => sum + (i.duration || 0), 0) /
+      60; // Convert minutes to hours
+
+    // Calculate success rate (>= 70% score)
+    const successfulInterviews = currentWeekInterviews.filter(
+      (i) => (i.overallScore || 0) >= 70
+    ).length;
+    const successRate =
+      currentWeekInterviews.length > 0
+        ? Math.round(
+            (successfulInterviews / currentWeekInterviews.length) * 100
+          )
+        : 0;
+
+    // Previous week success rate for comparison
+    const prevSuccessful = previousWeekInterviews.filter(
+      (i) => (i.overallScore || 0) >= 70
+    ).length;
+    const prevSuccessRate =
+      previousWeekInterviews.length > 0
+        ? (prevSuccessful / previousWeekInterviews.length) * 100
+        : 0;
+    const successRateChange =
+      prevSuccessRate > 0
+        ? Math.round(((successRate - prevSuccessRate) / prevSuccessRate) * 100)
+        : successRate > 0
+        ? 100
+        : 0;
+
+    // Recent interviews (last 5)
+    const recentInterviews = allInterviews.slice(0, 5).map((interview) => ({
+      id: interview._id,
+      jobTitle: interview.jobTitle,
+      score: Math.round(interview.overallScore || 0),
+      questionsAnswered: interview.answers?.length || 0,
+      completedAt: interview.completedAt,
+    }));
+
+    // Upcoming session
+    const upcomingSession =
+      upcomingSessions.length > 0
+        ? {
+            id: upcomingSessions[0]._id,
+            title: upcomingSessions[0].title,
+            scheduledAt: upcomingSessions[0].scheduledAt,
+            type: upcomingSessions[0].type,
+            duration: upcomingSessions[0].duration,
           }
-        }
-      }
-      return agg;
+        : null;
+
+    // Skill progress calculation
+    const skillProgress = calculateSkillProgress(allInterviews);
+
+    // Performance trend (last 7 days)
+    const performanceTrend = calculatePerformanceTrend(allInterviews, 7);
+
+    // Category distribution
+    const categoryStats = calculateCategoryStats(allInterviews);
+
+    console.log("✅ About to return dashboard data");
+
+    return ok(res, {
+      stats: {
+        totalInterviews,
+        averageScore,
+        practiceTime: Math.round(practiceTime * 10) / 10,
+        successRate,
+        interviewChange,
+        scoreChange,
+        successRateChange,
+      },
+      recentInterviews,
+      upcomingSession,
+      skillProgress,
+      performanceTrend,
+      categoryStats,
+      lastUpdated: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("❌ Get dashboard summary error:", error);
+    console.error("❌ Error stack:", error.stack);
+    return fail(res, 500, "SUMMARY_FAILED", "Failed to fetch dashboard data");
+  }
+};
+
+// Enhanced Dashboard Metrics with Breakdown
+const getDashboardMetrics = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId)
+      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
+
+    const { timeRange = "30" } = req.query; // days
+    const days = parseInt(timeRange, 10);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const [userProfile, interviews] = await Promise.all([
+      UserProfile.findOne({ user: userId }).lean(),
+      Interview.find({
+        user: userId,
+        status: "completed",
+        completedAt: { $gte: startDate },
+      })
+        .sort({ completedAt: -1 })
+        .select("overallScore completedAt results feedback answers questions")
+        .lean(),
+    ]);
+
+    // Return empty metrics if no profile
+    if (!userProfile) {
+      return ok(res, {
+        performanceBreakdown: {
+          technical: { average: 0, trend: 0 },
+          behavioral: { average: 0, trend: 0 },
+          communication: { average: 0, trend: 0 },
+          problemSolving: { average: 0, trend: 0 },
+        },
+        trendData: [],
+        difficultyStats: { easy: 0, medium: 0, hard: 0 },
+        responseTimeStats: { average: 0, fastest: 0, slowest: 0 },
+        improvementRate: 0,
+        lastUpdated: new Date().toISOString(),
+      });
+    }
+
+    // Performance breakdown by category
+    const performanceBreakdown = {
+      technical: [],
+      behavioral: [],
+      communication: [],
+      problemSolving: [],
     };
-    const prevAgg = accumulate(older);
-    const currAgg = accumulate(newer);
-    const dimensions = Object.keys(dimensionBuckets).map((d) => {
-      const prev = prevAgg[d].count
-        ? Math.round(prevAgg[d].sum / prevAgg[d].count)
-        : null;
-      const curr = currAgg[d].count
-        ? Math.round(currAgg[d].sum / currAgg[d].count)
-        : null;
-      const delta = prev != null && curr != null ? curr - prev : null;
-      return { dimension: d, prev, curr, delta };
+
+    interviews.forEach((interview) => {
+      if (interview.results?.breakdown) {
+        const breakdown = interview.results.breakdown;
+        if (breakdown.technical)
+          performanceBreakdown.technical.push(breakdown.technical);
+        if (breakdown.behavioral)
+          performanceBreakdown.behavioral.push(breakdown.behavioral);
+        if (breakdown.communication)
+          performanceBreakdown.communication.push(breakdown.communication);
+        if (breakdown.problemSolving)
+          performanceBreakdown.problemSolving.push(breakdown.problemSolving);
+      }
     });
 
-    // Tag coverage: aggregate real tags
-    const tagCounts = new Map();
-    for (const iv of interviews) {
-      for (const q of iv.questions || []) {
-        if (Array.isArray(q.tags)) {
-          for (const t of q.tags) {
-            if (t) tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
-          }
-        }
-      }
-    }
-    const sortedTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
-    const weakestTag = sortedTags.slice(-1)[0];
+    const avgCategory = (arr) =>
+      arr.length > 0
+        ? Math.round(arr.reduce((sum, n) => sum + n, 0) / arr.length)
+        : 0;
 
-    // Consistency score (active unique days)
-    const daySet = new Set(
-      interviews.map((iv) => {
-        const d = new Date(iv.createdAt);
-        return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
-      })
-    );
-    const consistencyScore = Math.min(
-      100,
-      Math.round((daySet.size / (horizonWeeks * 7)) * 100)
-    );
+    // Time-based performance trend
+    const trendData = calculateDetailedTrend(interviews, days);
 
-    const nextSession = upcoming?.[0];
-    const hoursToNext = nextSession
-      ? (new Date(nextSession.scheduledAt).getTime() - now.getTime()) /
-        (1000 * 60 * 60)
-      : null;
+    // Question difficulty distribution
+    const difficultyStats = calculateDifficultyStats(interviews);
 
-    const benchmarkPref = profile?.preferences?.dashboard?.benchmark || 70;
-    const avgScore = profile?.analytics?.averageScore || null;
+    // Response time analytics
+    const responseTimeStats = calculateResponseTimeStats(interviews);
 
-    // Recommendation priority
-    let rec = null;
+    // Improvement rate (comparing first half vs second half of period)
+    const improvementRate = calculateImprovementRate(interviews);
 
-    if (consistencyScore < 50) {
-      rec = {
-        title: "Boost Your Consistency",
-        reason: `Active days are only ${consistencyScore}% of horizon — short daily drills will accelerate improvement.`,
-        actions: [
-          {
-            label: "Start 10-min Mixed Drill",
-            href: "/interview/new?type=mixed&duration=10",
-          },
-          { label: "Schedule Daily Micro Session", href: "/scheduled" },
-        ],
-        meta: { type: "consistency", consistencyScore },
-      };
-    }
-
-    if (!rec) {
-      const negativeDeltas = dimensions.filter(
-        (d) => d.delta != null && d.delta < 0
-      );
-      negativeDeltas.sort((a, b) => a.delta - b.delta); // most negative first
-      if (negativeDeltas.length && negativeDeltas[0].delta <= -8) {
-        const worst = negativeDeltas[0];
-        rec = {
-          title: `Reinforce ${worst.dimension}`,
-          reason: `${worst.dimension} dropped ${Math.abs(
-            worst.delta
-          )} points vs previous period. Targeted practice can recover momentum.`,
-          actions: [
-            {
-              label: `Start ${worst.dimension} Session`,
-              href: `/interview/new?type=mixed&focus=${encodeURIComponent(
-                worst.dimension.toLowerCase()
-              )}`,
-            },
-            {
-              label: "Review Past Answers",
-              href: `/interviews?filter=${encodeURIComponent(
-                worst.dimension.toLowerCase()
-              )}`,
-            },
-          ],
-          meta: {
-            type: "dimension",
-            dimension: worst.dimension,
-            delta: worst.delta,
-          },
-        };
-      }
-    }
-
-    if (!rec && weakestTag && weakestTag[1] <= 2) {
-      rec = {
-        title: `Broaden Tag: ${weakestTag[0]}`,
-        reason: `Tag "${weakestTag[0]}" appears only ${weakestTag[1]} time(s) in recent practice. Increasing coverage improves adaptability.`,
-        actions: [
-          {
-            label: "Generate Questions",
-            href: `/question-bank?addTag=${encodeURIComponent(weakestTag[0])}`,
-          },
-          {
-            label: "Start Focused Drill",
-            href: `/interview/new?tags=${encodeURIComponent(weakestTag[0])}`,
-          },
-        ],
-        meta: { type: "tag", tag: weakestTag[0], count: weakestTag[1] },
-      };
-    }
-
-    if (
-      !rec &&
-      hoursToNext != null &&
-      hoursToNext < 48 &&
-      avgScore != null &&
-      avgScore < benchmarkPref
-    ) {
-      rec = {
-        title: "Pre-Session Warm-up",
-        reason: `Upcoming session in ${Math.round(
-          hoursToNext
-        )}h and average score (${avgScore}%) below benchmark (${benchmarkPref}%). A warm-up can boost readiness.`,
-        actions: [
-          {
-            label: "Start 15-min Warm-up",
-            href: "/interview/new?type=mixed&duration=15",
-          },
-          { label: "Review Last Session", href: "/interviews" },
-        ],
-        meta: {
-          type: "upcoming",
-          hoursToNext,
-          avgScore,
-          benchmark: benchmarkPref,
-        },
-      };
-    }
-
-    if (!rec) {
-      rec = {
-        title: "Maintain Momentum",
-        reason:
-          "No urgent weaknesses detected. Keep steady practice to consolidate gains.",
-        actions: [
-          {
-            label: "Adaptive Mixed Session",
-            href: "/interview/new?type=mixed&adaptive=1",
-          },
-          { label: "Schedule Next Session", href: "/scheduled" },
-        ],
-        meta: { type: "steady" },
-      };
-    }
-
-    return ok(res, rec);
+    return ok(res, {
+      overview: {
+        totalInterviews: interviews.length,
+        averageScore:
+          interviews.length > 0
+            ? Math.round(
+                interviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
+                  interviews.length
+              )
+            : 0,
+        improvementRate,
+        timeRange: days,
+      },
+      performance: {
+        technical: avgCategory(performanceBreakdown.technical),
+        behavioral: avgCategory(performanceBreakdown.behavioral),
+        communication: avgCategory(performanceBreakdown.communication),
+        problemSolving: avgCategory(performanceBreakdown.problemSolving),
+      },
+      strongAreas: userProfile.analytics?.strongAreas || [],
+      areasToImprove: userProfile.analytics?.improvementAreas || [],
+      trendData,
+      difficultyStats,
+      responseTimeStats,
+      lastUpdated: new Date().toISOString(),
+    });
   } catch (error) {
-    console.error("Dashboard recommendation error:", error);
+    console.error("Get dashboard metrics error:", error);
+    return fail(res, 500, "METRICS_FAILED", "Failed to get dashboard metrics");
+  }
+};
+
+// Enhanced Dashboard Recommendation - AI-powered
+const getDashboardRecommendation = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId)
+      return fail(res, 401, "UNAUTHORIZED", "Authentication required");
+
+    const [userProfile, recentInterviews] = await Promise.all([
+      UserProfile.findOne({ user: userId }).lean(),
+      Interview.find({ user: userId, status: "completed" })
+        .sort({ completedAt: -1 })
+        .limit(10)
+        .select("overallScore results feedback questions")
+        .lean(),
+    ]);
+
+    // Return default recommendation if no profile
+    if (!userProfile) {
+      return ok(res, {
+        type: "getting-started",
+        title: "Welcome to MockMate! 🚀",
+        message:
+          "Start your interview preparation journey by taking your first mock interview. We'll help you build confidence and improve your skills.",
+        priority: "medium",
+        actionable: true,
+        suggestedActions: [
+          {
+            action: "Start your first mock interview",
+            reason: "Build a baseline to track your progress",
+            route: "/mock-interview",
+          },
+          {
+            action: "Complete your profile",
+            reason: "Help us personalize your experience",
+            route: "/profile",
+          },
+        ],
+        insights: [],
+        lastUpdated: new Date().toISOString(),
+      });
+    }
+
+    const totalInterviews = recentInterviews.length;
+    const avgScore =
+      totalInterviews > 0
+        ? recentInterviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
+          totalInterviews
+        : 0;
+
+    let recommendation;
+
+    // No interviews yet
+    if (totalInterviews === 0) {
+      recommendation = {
+        type: "start",
+        priority: "high",
+        title: "🚀 Start Your First Mock Interview",
+        description:
+          "Begin your interview preparation journey with an AI-powered practice session tailored to your goals.",
+        insights: [
+          "Get instant feedback on your answers",
+          "Build confidence with realistic scenarios",
+          "Track your progress from day one",
+        ],
+        action: {
+          label: "Start First Interview",
+          url: "/mock-interview",
+          variant: "primary",
+        },
+        estimatedTime: "15-30 minutes",
+      };
+    }
+    // Early stage (< 5 interviews)
+    else if (totalInterviews < 5) {
+      recommendation = {
+        type: "practice",
+        priority: "high",
+        title: "💪 Build Your Foundation",
+        description:
+          "Complete more practice interviews to unlock detailed analytics and personalized insights.",
+        insights: [
+          `You've completed ${totalInterviews} interview${
+            totalInterviews > 1 ? "s" : ""
+          }`,
+          "5 interviews needed to unlock full analytics",
+          `Current average: ${Math.round(avgScore)}%`,
+        ],
+        action: {
+          label: "Continue Practicing",
+          url: "/mock-interview",
+          variant: "primary",
+        },
+        progress: {
+          current: totalInterviews,
+          target: 5,
+          percentage: (totalInterviews / 5) * 100,
+        },
+        estimatedTime: "20-30 minutes",
+      };
+    }
+    // Score-based recommendations
+    else if (avgScore < 60) {
+      const weakAreas = userProfile.analytics?.improvementAreas || [];
+      recommendation = {
+        type: "improve",
+        priority: "high",
+        title: "📚 Focus on Fundamentals",
+        description:
+          "Your recent scores suggest focusing on core concepts and structured answer frameworks.",
+        insights: [
+          `Average score: ${Math.round(avgScore)}%`,
+
+          weakAreas.length > 0
+            ? `Weak areas: ${weakAreas.slice(0, 2).join(", ")}`
+            : "Work on answer structure",
+          "STAR method can boost scores by 20-30%",
+        ],
+        action: {
+          label: "Practice Fundamentals",
+          url: "/practice?difficulty=easy",
+          variant: "primary",
+        },
+        secondaryAction: {
+          label: "View Resources",
+          url: "/resources",
+          variant: "secondary",
+        },
+        estimatedTime: "30-45 minutes",
+      };
+    } else if (avgScore < 75) {
+      recommendation = {
+        type: "improve",
+        priority: "medium",
+        title: "⭐ Enhance Your Responses",
+        description:
+          "You're doing well! Add concrete examples and measurable outcomes to reach the next level.",
+        insights: [
+          `Average score: ${Math.round(avgScore)}%`,
+          "Focus on depth and specificity",
+          "Add quantifiable results to answers",
+        ],
+        action: {
+          label: "Practice Medium Questions",
+          url: "/practice?difficulty=medium",
+          variant: "primary",
+        },
+        secondaryAction: {
+          label: "Review Past Interviews",
+          url: "/interviews",
+          variant: "secondary",
+        },
+        estimatedTime: "30-40 minutes",
+      };
+    } else {
+      recommendation = {
+        type: "advance",
+        priority: "medium",
+        title: "🎯 Challenge Yourself",
+        description:
+          "Excellent work! Push your limits with advanced scenarios and longer interview sessions.",
+        insights: [
+          `Average score: ${Math.round(avgScore)}%`,
+          "Ready for harder questions",
+          "Try full-length interview simulations",
+        ],
+        action: {
+          label: "Try Hard Questions",
+          url: "/practice?difficulty=hard",
+          variant: "primary",
+        },
+        secondaryAction: {
+          label: "Schedule Full Interview",
+          url: "/scheduled",
+          variant: "secondary",
+        },
+        estimatedTime: "45-60 minutes",
+      };
+    }
+
+    // Add contextual insights based on recent performance
+    const recentTrend = calculateRecentTrend(recentInterviews);
+    if (recentTrend.isImproving) {
+      recommendation.badge = {
+        text: "📈 Improving",
+        variant: "success",
+      };
+    } else if (recentTrend.isDecreasing) {
+      recommendation.badge = {
+        text: "⚠️ Needs Attention",
+        variant: "warning",
+      };
+    }
+
+    return ok(res, recommendation);
+  } catch (error) {
+    console.error("Get dashboard recommendation error:", error);
     return fail(
       res,
       500,
-      "DASHBOARD_RECOMMENDATION_FAILED",
-      "Failed to generate recommendation"
+      "RECOMMENDATION_FAILED",
+      "Failed to get recommendation"
     );
   }
-}
-
-module.exports.getDashboardRecommendation = getDashboardRecommendation;
-
-// ================= Dashboard Metrics (Phase 1) =================
-// GET /api/users/dashboard/metrics
-// Provides richer time-series + coverage metrics used for enhanced dashboard widgets.
-// Simple in-memory cache (process scoped)
-const dashboardMetricsCache = {
-  store: new Map(), // key -> { data, expires }
-  get(key) {
-    const entry = this.store.get(key);
-    if (!entry) return null;
-    if (Date.now() > entry.expires) {
-      this.store.delete(key);
-      return null;
-    }
-    return entry.data;
-  },
-  set(key, data, ttlMs = 60 * 1000) {
-    // 1 minute TTL default
-    this.store.set(key, { data, expires: Date.now() + ttlMs });
-  },
 };
 
-async function getDashboardMetrics(req, res) {
-  try {
-    const { userId } = req.auth;
-    // Horizon: default last 8 ISO weeks (including current)
-    const weeksBack = Math.min(
-      24,
-      Math.max(
-        1,
-        parseInt(req.query.weeks || req.query.horizon || "8", 10) || 8
-      )
-    ); // cap at 24 weeks now
-    const cacheKey = `${userId}:${weeksBack}`;
-    const cached = dashboardMetricsCache.get(cacheKey);
-    if (!req.query.force && cached) return ok(res, cached);
-    const now = new Date();
-    const horizonStart = new Date(
-      now.getTime() - weeksBack * 7 * 24 * 60 * 60 * 1000
-    );
+// ========== Helper Functions ==========
+function calculateSkillProgress(interviews) {
+  const skills = {};
 
-    // Fetch completed interviews within horizon (plus a small buffer week for accurate weekly bucket edge)
-    const interviews = await Interview.find({
-      userId,
-      status: { $in: ["completed", "in-progress"] },
-      createdAt: { $gte: horizonStart },
-    })
-      .select(
-        "_id createdAt status results.overallScore questions.category questions.followUpsReviewed questions.followUps questions.tags questions.questionText"
-      )
-      .lean()
-      .exec();
-
-    // Helper: ISO week key (YYYY-Www)
-    const isoWeekKey = (d) => {
-      const date = new Date(d);
-      // ISO week algorithm
-      const tmp = new Date(
-        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-      );
-      const dayNum = tmp.getUTCDay() || 7;
-      tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
-      const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
-      const weekNo = Math.ceil(((tmp - yearStart) / 86400000 + 1) / 7);
-      return `${tmp.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
-    };
-
-    // Build chronological list of week keys (oldest -> newest)
-    const weekKeys = [];
-    for (let i = weeksBack - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-      weekKeys.push(isoWeekKey(d));
-    }
-
-    const weeklyMap = Object.fromEntries(
-      weekKeys.map((wk) => [wk, { interviews: 0, scores: [] }])
-    );
-
-    let lastPracticeAt = null;
-    const categoryAgg = {}; // { category: { count, scoreSum, scoreCount } }
-    let followUpsTotal = 0;
-    let followUpsReviewed = 0;
-
-    // Iterate interviews
-    for (const iv of interviews) {
-      const wk = isoWeekKey(iv.createdAt);
-      if (weeklyMap[wk]) {
-        weeklyMap[wk].interviews += 1;
-        if (iv.results?.overallScore != null) {
-          weeklyMap[wk].scores.push(iv.results.overallScore);
-        }
-      }
-      if (iv.status === "completed") {
-        if (
-          !lastPracticeAt ||
-          new Date(iv.createdAt) > new Date(lastPracticeAt)
-        ) {
-          lastPracticeAt = iv.createdAt;
-        }
-        // Category coverage from questions
-        (iv.questions || []).forEach((q) => {
-          const cat = q.category || "Uncategorized";
-          if (!categoryAgg[cat])
-            categoryAgg[cat] = { count: 0, scoreSum: 0, scoreCount: 0 };
-          categoryAgg[cat].count += 1;
-          if (iv.results?.overallScore != null) {
-            categoryAgg[cat].scoreSum += iv.results.overallScore;
-            categoryAgg[cat].scoreCount += 1;
-          }
-          // Follow-ups
-          if (q.followUps) {
-            followUpsTotal += Array.isArray(q.followUps)
-              ? q.followUps.length
-              : 1;
-          }
-          if (q.followUpsReviewed) followUpsReviewed += 1; // flag means user reviewed set
-        });
-      }
-    }
-
-    const weekly = {
-      weeks: weekKeys,
-      interviews: weekKeys.map((wk) => weeklyMap[wk].interviews),
-      avgScore: weekKeys.map((wk) => {
-        const arr = weeklyMap[wk].scores;
-        if (!arr.length) return null; // null => no data that week
-        return Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
-      }),
-    };
-
-    const normalizeCategoryLabel = (cat) => {
-      if (!cat) return "Uncategorized";
-      const base = cat.toString();
-      const lower = base.toLowerCase();
-      if (lower === "behavioral") return "Behavioral";
-      if (lower === "system-design" || lower === "system design")
-        return "System Design";
-      // Title case each word
-      return base
-        .replace(/[-_]/g, " ")
-        .split(/\s+/)
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
-    };
-
-    const categoryCoverage = Object.entries(categoryAgg)
-      .map(([category, v]) => {
-        const label = normalizeCategoryLabel(category);
-        return {
-          category: label,
-          count: v.count,
-          avgScore: v.scoreCount ? Math.round(v.scoreSum / v.scoreCount) : null,
-        };
-      })
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 12); // limit for now
-
-    // Placeholder skill dimension mapping: group categories heuristically
-    const dimensionBuckets = {
-      Technical: [/system/i, /data/i, /algorithm/i, /code/i],
-      Communication: [/behavior/i, /communication/i, /team/i],
-      Systems: [/design/i, /architecture/i, /scalability/i],
-      Behavioral: [/behavior/i, /culture/i, /soft/i],
-    };
-    const dimScores = {};
-    for (const dim of Object.keys(dimensionBuckets)) {
-      dimScores[dim] = { scoreSum: 0, scoreCount: 0 };
-    }
-    // Prepare for previous vs current split: sort completed interviews chronologically
-    const completedChrono = interviews
-      .filter(
-        (iv) => iv.status === "completed" && iv.results?.overallScore != null
-      )
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    const mid = Math.floor(completedChrono.length / 2) || 0;
-    const older = completedChrono.slice(0, mid);
-    const newer = completedChrono.slice(mid);
-
-    // Helper accumulate for period
-    const accumulateDimensions = (collection, target) => {
-      for (const iv of collection) {
-        const score = iv.results.overallScore;
-        const cats = new Set((iv.questions || []).map((q) => q.category || ""));
-        for (const dim of Object.keys(dimensionBuckets)) {
-          const patterns = dimensionBuckets[dim];
-          if ([...cats].some((c) => patterns.some((re) => re.test(c)))) {
-            target[dim].scoreSum += score;
-            target[dim].scoreCount += 1;
-          }
-        }
-      }
-    };
-    // Reinitialize for prev & current separation
-    const dimPrev = {};
-    const dimCurr = {};
-    for (const dim of Object.keys(dimensionBuckets)) {
-      dimPrev[dim] = { scoreSum: 0, scoreCount: 0 };
-      dimCurr[dim] = { scoreSum: 0, scoreCount: 0 };
-    }
-    accumulateDimensions(older, dimPrev);
-    accumulateDimensions(newer, dimCurr);
-
-    const skillDimensions = Object.keys(dimensionBuckets)
-      .map((dim) => {
-        const currentScore = dimCurr[dim].scoreCount
-          ? Math.round(dimCurr[dim].scoreSum / dimCurr[dim].scoreCount)
-          : null;
-        const prevScore = dimPrev[dim].scoreCount
-          ? Math.round(dimPrev[dim].scoreSum / dimPrev[dim].scoreCount)
-          : null;
-        if (currentScore == null && prevScore == null) return null;
-        return { dimension: dim, score: currentScore, prevScore };
-      })
-      .filter(Boolean);
-
-    const payload = {
-      weekly,
-      categoryCoverage,
-      followUps: { total: followUpsTotal, reviewed: followUpsReviewed },
-      skillDimensions,
-      lastPracticeAt,
-      // Streak strip (last 21 days including today)
-      streakDays: (() => {
-        const days = [];
-        const today = new Date();
-        // Collect set of active y-m-d for completed interviews
-        const activeSet = new Set(
-          interviews
-            .filter((iv) => iv.status === "completed")
-            .map((iv) => {
-              const d = new Date(iv.createdAt);
-              return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
-            })
-        );
-        for (let i = 20; i >= 0; i--) {
-          const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-          days.push({
-            date: d.toISOString().split("T")[0],
-            active: activeSet.has(
-              `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`
-            ),
-          });
-        }
-        return days;
-      })(),
-      // Tag coverage (phase 2) – reusing categories as proxy tags for now.
-      tagCoverage: (() => {
-        // Aggregate tags from embedded questions (if available) across completed interviews
-        const tagCounts = new Map();
-        for (const iv of interviews) {
-          if (iv.status !== "completed") continue;
-          for (const q of iv.questions || []) {
-            if (Array.isArray(q.tags)) {
-              for (const t of q.tags) {
-                if (!t) continue;
-                tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
-              }
+  interviews.forEach((interview) => {
+    if (interview.results?.breakdown) {
+      const breakdown = interview.results.breakdown;
+      ["technical", "behavioral", "communication", "problemSolving"].forEach(
+        (skill) => {
+          if (typeof breakdown[skill] === "number") {
+            if (!skills[skill]) {
+              skills[skill] = { total: 0, count: 0 };
             }
+            skills[skill].total += breakdown[skill];
+            skills[skill].count += 1;
           }
         }
-        const top = [...tagCounts.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 16)
-          .map(([tag, count]) => ({ tag, count }));
-        // Basic suggestion heuristic: tags seen in category names but not used
-        const practiced = new Set(top.map((t) => t.tag));
-        const seedSuggestions = [
-          "system-design",
-          "communication",
-          "algorithms",
-          "leadership",
-          "teamwork",
-          "security",
-          "cloud",
-          "devops",
-        ];
-        const missingSuggestions = seedSuggestions.filter(
-          (s) => !practiced.has(s)
-        );
-        return { top, missingSuggestions };
-      })(),
-      consistencyScore: (() => {
-        // Compute after streakDays generation by re-deriving quickly
-        try {
-          const activeSet = new Set(
-            interviews
-              .filter((iv) => iv.status === "completed")
-              .map((iv) => {
-                const d = new Date(iv.createdAt);
-                return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
-              })
-          );
-          const activeDays = activeSet.size;
-          return Math.min(100, Math.round((activeDays / 21) * 100));
-        } catch {
-          return null;
-        }
-      })(),
-    };
-    // Cache & optionally export
-    dashboardMetricsCache.set(cacheKey, payload);
-    if (String(req.query.format).toLowerCase() === "csv") {
-      // Flatten weekly + category + tags into CSV
-      const lines = [];
-      lines.push("section,key,value");
-      payload.weekly.weeks.forEach((wk, i) => {
-        lines.push(`weekly_interviews,${wk},${payload.weekly.interviews[i]}`);
-        const score = payload.weekly.avgScore[i];
-        if (score != null) lines.push(`weekly_avgScore,${wk},${score}`);
-      });
-      payload.categoryCoverage.forEach((c) => {
-        lines.push(`category_count,${c.category},${c.count}`);
-        if (c.avgScore != null)
-          lines.push(`category_avgScore,${c.category},${c.avgScore}`);
-      });
-      if (payload.tagCoverage.top.length === 0) {
-        // Placeholder so tests detecting tag_count still pass when no tags present
-        lines.push("tag_count,none,0");
-      } else {
-        payload.tagCoverage.top.forEach((t) => {
-          lines.push(`tag_count,${t.tag},${t.count}`);
-        });
-      }
-      lines.push(`followUps,total,${payload.followUps.total}`);
-      lines.push(`followUps,reviewed,${payload.followUps.reviewed}`);
-      if (payload.consistencyScore != null)
-        lines.push(`consistency,score,${payload.consistencyScore}`);
-      const csv = lines.join("\n");
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=dashboard-metrics-${Date.now()}.csv`
       );
-      return res.status(200).send(csv);
     }
-    return ok(res, payload);
-  } catch (error) {
-    console.error("Dashboard metrics error:", error);
-    return fail(res, 500, "DASHBOARD_METRICS_FAILED", "Failed to load metrics");
-  }
+  });
+
+  return Object.entries(skills)
+    .map(([name, data]) => ({
+      name:
+        name.charAt(0).toUpperCase() +
+        name
+          .slice(1)
+          .replace(/([A-Z])/g, " $1")
+          .trim(),
+      progress: Math.round(data.total / data.count),
+      trend: calculateSkillTrend(interviews, name),
+    }))
+    .sort((a, b) => b.progress - a.progress)
+    .slice(0, 5);
 }
 
-module.exports.getDashboardMetrics = getDashboardMetrics;
+function calculateSkillTrend(interviews, skillName) {
+  const recent = interviews.slice(0, 3);
+  const older = interviews.slice(3, 6);
+
+  const recentAvg =
+    recent.length > 0
+      ? recent.reduce(
+          (sum, i) => sum + (i.results?.breakdown?.[skillName] || 0),
+          0
+        ) / recent.length
+      : 0;
+  const olderAvg =
+    older.length > 0
+      ? older.reduce(
+          (sum, i) => sum + (i.results?.breakdown?.[skillName] || 0),
+          0
+        ) / older.length
+      : 0;
+
+  if (olderAvg === 0) return 0;
+  return Math.round(((recentAvg - olderAvg) / olderAvg) * 100);
+}
+
+function calculatePerformanceTrend(interviews, days) {
+  const trend = [];
+  const now = new Date();
+
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    date.setHours(0, 0, 0, 0);
+
+    const nextDate = new Date(date);
+    nextDate.setDate(nextDate.getDate() + 1);
+
+    const dayInterviews = interviews.filter((interview) => {
+      const completedDate = new Date(interview.completedAt);
+      return completedDate >= date && completedDate < nextDate;
+    });
+
+    const avgScore =
+      dayInterviews.length > 0
+        ? dayInterviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
+          dayInterviews.length
+        : 0;
+
+    trend.push({
+      date: date.toISOString().split("T")[0],
+      label: date.toLocaleDateString("en-US", { weekday: "short" }),
+      score: Math.round(avgScore),
+      count: dayInterviews.length,
+    });
+  }
+
+  return trend;
+}
+
+function calculateCategoryStats(interviews) {
+  const categories = {};
+
+  interviews.forEach((interview) => {
+    interview.questions?.forEach((question) => {
+      const category = question.category || "general";
+      if (!categories[category]) {
+        categories[category] = { count: 0, totalScore: 0 };
+      }
+      categories[category].count += 1;
+      categories[category].totalScore += question.score?.overall || 0;
+    });
+  });
+
+  return Object.entries(categories)
+    .map(([name, data]) => ({
+      name,
+      count: data.count,
+      avgScore: data.count > 0 ? Math.round(data.totalScore / data.count) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function calculateDetailedTrend(interviews, days) {
+  // Group by week for trends longer than 14 days
+  const groupByWeek = days > 14;
+  const periods = groupByWeek ? Math.ceil(days / 7) : days;
+  const trend = [];
+
+  for (let i = 0; i < periods; i++) {
+    const periodInterviews = interviews.filter((interview) => {
+      const daysDiff = Math.floor(
+        (new Date() - new Date(interview.completedAt)) / (1000 * 60 * 60 * 24)
+      );
+      if (groupByWeek) {
+        const weekStart = i * 7;
+        const weekEnd = (i + 1) * 7;
+        return daysDiff >= weekStart && daysDiff < weekEnd;
+      }
+      return daysDiff === i;
+    });
+
+    if (periodInterviews.length > 0) {
+      const avgScore =
+        periodInterviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
+        periodInterviews.length;
+      trend.push({
+        period: groupByWeek ? `Week ${i + 1}` : `Day ${i + 1}`,
+        score: Math.round(avgScore),
+        count: periodInterviews.length,
+      });
+    }
+  }
+
+  return trend.reverse();
+}
+
+function calculateDifficultyStats(interviews) {
+  const difficulty = { easy: 0, medium: 0, hard: 0 };
+
+  interviews.forEach((interview) => {
+    interview.questions?.forEach((question) => {
+      const level = question.difficulty || "medium";
+      difficulty[level] = (difficulty[level] || 0) + 1;
+    });
+  });
+
+  const total = Object.values(difficulty).reduce(
+    (sum, count) => sum + count,
+    0
+  );
+
+  return {
+    easy: {
+      count: difficulty.easy,
+      percentage: total > 0 ? Math.round((difficulty.easy / total) * 100) : 0,
+    },
+    medium: {
+      count: difficulty.medium,
+      percentage: total > 0 ? Math.round((difficulty.medium / total) * 100) : 0,
+    },
+    hard: {
+      count: difficulty.hard,
+      percentage: total > 0 ? Math.round((difficulty.hard / total) * 100) : 0,
+    },
+  };
+}
+
+function calculateResponseTimeStats(interviews) {
+  const times = [];
+
+  interviews.forEach((interview) => {
+    interview.answers?.forEach((answer) => {
+      if (answer.timeSpent) {
+        times.push(answer.timeSpent);
+      }
+    });
+  });
+
+  if (times.length === 0)
+    return { average: 0, median: 0, fastest: 0, slowest: 0 };
+
+  times.sort((a, b) => a - b);
+  const average = times.reduce((sum, t) => sum + t, 0) / times.length;
+  const median = times[Math.floor(times.length / 2)];
+
+  return {
+    average: Math.round(average),
+    median: Math.round(median),
+    fastest: times[0],
+    slowest: times[times.length - 1],
+  };
+}
+
+function calculateImprovementRate(interviews) {
+  if (interviews.length < 2) return 0;
+
+  const midpoint = Math.floor(interviews.length / 2);
+  const firstHalf = interviews.slice(midpoint);
+  const secondHalf = interviews.slice(0, midpoint);
+
+  const firstAvg =
+    firstHalf.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
+    firstHalf.length;
+  const secondAvg =
+    secondHalf.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
+    secondHalf.length;
+
+  return firstAvg > 0
+    ? Math.round(((secondAvg - firstAvg) / firstAvg) * 100)
+    : 0;
+}
+
+function calculateRecentTrend(interviews) {
+  if (interviews.length < 3) return { isImproving: false, isDecreasing: false };
+
+  const recent3 = interviews.slice(0, 3);
+  const scores = recent3.map((i) => i.overallScore || 0);
+
+  const isImproving = scores[0] > scores[1] && scores[1] > scores[2];
+  const isDecreasing = scores[0] < scores[1] && scores[1] < scores[2];
+
+  return { isImproving, isDecreasing };
+}
+
+// Export all functions
+module.exports = {
+  upgradeToPremium,
+  getProfile,
+  bootstrapProfile,
+  saveOnboardingProgress,
+  updateProfile,
+  completeOnboarding,
+  getAnalytics,
+  updateAnalytics,
+  updateAvatar,
+  updateResumeAsset,
+  uploadResume,
+  getDashboardPreferences,
+  updateDashboardPreferences,
+  getScheduledSessions,
+  upsertScheduledSession,
+  deleteScheduledSession,
+  updateScheduledSessionStatus,
+  getGoals,
+  updateGoals,
+  getDynamicTips,
+  getDashboardSummary,
+  getDashboardMetrics,
+  getDashboardRecommendation,
+};

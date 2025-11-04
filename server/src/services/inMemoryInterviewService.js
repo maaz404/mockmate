@@ -50,7 +50,7 @@ const buildInterview = (userId, config) => {
 };
 
 const createInterview = async (req, res) => {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const config = req.body?.config || req.body || {};
   if (!userId)
     return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -71,7 +71,7 @@ const createInterview = async (req, res) => {
 };
 
 const startInterview = async (req, res) => {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const interviewId = req.params.interviewId || req.params.id;
   const list = ensureUser(userId);
   const interview = list.find((i) => i._id === interviewId);
@@ -95,7 +95,7 @@ const startInterview = async (req, res) => {
 };
 
 const getUserInterviews = async (req, res) => {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const list = ensureUser(userId);
   const page = Number(req.query.page || 1);
   const limit = Number(req.query.limit || 10);
@@ -116,7 +116,7 @@ const getUserInterviews = async (req, res) => {
 };
 
 const getInterviewDetails = async (req, res) => {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const interviewId = req.params.interviewId || req.params.id;
   const list = ensureUser(userId);
   const interview = list.find((i) => i._id === interviewId);
@@ -140,7 +140,7 @@ const getInterviewDetails = async (req, res) => {
 };
 
 const submitAnswer = async (req, res) => {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const interviewId = req.params.interviewId || req.params.id;
   const { questionIndex } = req.params;
   const { answer, timeSpent, notes, skip } = req.body || {};
@@ -198,7 +198,7 @@ const submitAnswer = async (req, res) => {
 };
 
 const generateFollowUp = async (req, res) => {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const interviewId = req.params.interviewId || req.params.id;
   const { questionIndex } = req.params;
   const list = ensureUser(userId);
@@ -232,7 +232,7 @@ const generateFollowUp = async (req, res) => {
 };
 
 const getAdaptiveQuestion = async (req, res) => {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const interviewId = req.params.interviewId || req.params.id;
   const list = ensureUser(userId);
   const interview = list.find((i) => i._id === interviewId);
@@ -251,7 +251,7 @@ const getAdaptiveQuestion = async (req, res) => {
 };
 
 const completeInterview = async (req, res) => {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const interviewId = req.params.interviewId || req.params.id;
   const list = ensureUser(userId);
   const interview = list.find((i) => i._id === interviewId);
@@ -282,7 +282,7 @@ const completeInterview = async (req, res) => {
 };
 
 const markFollowUpsReviewed = async (req, res) => {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const interviewId = req.params.interviewId || req.params.id;
   const { questionIndex } = req.params;
   const list = ensureUser(userId);
@@ -320,7 +320,7 @@ module.exports = {
 };
 
 async function getInterviewResults(req, res) {
-  const { userId } = req.auth || {};
+  const userId = req.user?.id; // ✅ CHANGED
   const { interviewId } = req.params;
   const list = ensureUser(userId);
   const interview = list.find((i) => i._id === interviewId);

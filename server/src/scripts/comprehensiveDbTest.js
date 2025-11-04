@@ -78,9 +78,11 @@ async function comprehensiveDbTest() {
 
     // Create a test user profile
     const testProfile = new UserProfile({
-      clerkUserId: "test_user_123",
-      email: "test@example.com",
-      name: "Test User",
+      user: "test_user_123",
+      personalInfo: {
+        email: "test@example.com",
+        name: "Test User",
+      },
       professionalInfo: {
         jobTitle: "Software Engineer",
         company: "Test Company",
@@ -95,7 +97,7 @@ async function comprehensiveDbTest() {
 
       // Read
       const foundProfile = await UserProfile.findOne({
-        clerkUserId: "test_user_123",
+        user: "test_user_123",
       });
       console.log(
         `  ✅ READ: User profile found: ${foundProfile ? "YES" : "NO"}`
@@ -109,7 +111,7 @@ async function comprehensiveDbTest() {
       }
 
       // Delete
-      await UserProfile.deleteOne({ clerkUserId: "test_user_123" });
+      await UserProfile.deleteOne({ user: "test_user_123" });
       console.log("  ✅ DELETE: User profile deleted successfully");
     } catch (crudError) {
       console.log(`  ❌ CRUD Error: ${crudError.message}`);

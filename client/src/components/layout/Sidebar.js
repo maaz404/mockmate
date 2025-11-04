@@ -6,10 +6,9 @@ import DarkModeToggle from "../ui/DarkModeToggle";
 import BrandLogo from "../ui/BrandLogo";
 import { navigationConfig } from "../../config/navigation";
 
-// Clean rebuilt Sidebar component (sign-out button removed; Clerk UserButton handles sign out)
+// Sidebar component with sign out button
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { subscription } = useSubscription();
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [tooltip, setTooltip] = useState({
     visible: false,
     text: "",
@@ -17,7 +16,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     left: 0,
   });
   const location = useLocation();
-  const { user } = useAuthContext();
+  const { user, logout } = useAuthContext();
 
   const showTooltip = (e, text) => {
     if (!isCollapsed) return;
@@ -50,7 +49,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     >
       <Link
         to={item.path}
-        onClick={() => setIsMobileOpen(false)}
         className={`${
           isCollapsed
             ? "w-full h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-surface-100 dark:hover:bg-surface-800"
@@ -79,43 +77,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
   return (
     <>
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-surface-900 bg-opacity-75 lg:hidden"
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
-
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-2 rounded-lg bg-surface-100 dark:bg-surface-800 shadow-md border border-surface-300 dark:border-surface-700 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white backdrop-blur-sm"
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {isMobileOpen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            )}
-          </svg>
-        </button>
-      </div>
-
+      {/* Tooltip for collapsed sidebar */}
       {isCollapsed && tooltip.visible && (
         <div
           className="fixed pointer-events-none z-[9999] -translate-y-1/2 transition-all duration-150 ease-out animate-tooltip-pop"
@@ -130,11 +92,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         </div>
       )}
 
+      {/* Sidebar - Always visible */}
       <div
-        className={`fixed top-0 left-0 z-50 h-full bg-[#F6FAFD] dark:bg-surface-900 transition-all duration-300 shadow-none border-r border-surface-200 dark:border-surface-800 flex flex-col overflow-hidden ${
+        className={`fixed top-0 left-0 z-50 h-full bg-[#F6FAFD] dark:bg-surface-900 transition-all duration-300 shadow-md border-r border-surface-200 dark:border-surface-800 flex flex-col overflow-hidden ${
           isCollapsed ? "w-16" : "w-52"
-        } ${
-          isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="flex items-center h-12 px-2 border-b border-surface-300/60 dark:border-surface-700/60 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.02)]">
@@ -219,18 +180,49 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           }`}
         >
           {isCollapsed ? (
-            <div
-              className="flex items-center justify-center"
-              onMouseEnter={(e) => showTooltip(e, "Toggle theme")}
-              onMouseMove={(e) => showTooltip(e, "Toggle theme")}
-              onMouseLeave={hideTooltip}
-              onFocus={(e) => showTooltip(e, "Toggle theme")}
-              onBlur={hideTooltip}
-            >
-              <div className="w-full h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-surface-100 dark:hover:bg-surface-800">
-                <DarkModeToggle className="p-0 bg-transparent hover:bg-transparent focus:ring-0" />
+            <>
+              <div
+                className="flex items-center justify-center"
+                onMouseEnter={(e) => showTooltip(e, "Toggle theme")}
+                onMouseMove={(e) => showTooltip(e, "Toggle theme")}
+                onMouseLeave={hideTooltip}
+                onFocus={(e) => showTooltip(e, "Toggle theme")}
+                onBlur={hideTooltip}
+              >
+                <div className="w-full h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-surface-100 dark:hover:bg-surface-800">
+                  <DarkModeToggle className="p-0 bg-transparent hover:bg-transparent focus:ring-0" />
+                </div>
               </div>
-            </div>
+              {user && (
+                <div
+                  className="flex items-center justify-center"
+                  onMouseEnter={(e) => showTooltip(e, "Sign Out")}
+                  onMouseMove={(e) => showTooltip(e, "Sign Out")}
+                  onMouseLeave={hideTooltip}
+                  onFocus={(e) => showTooltip(e, "Sign Out")}
+                  onBlur={hideTooltip}
+                >
+                  <button
+                    onClick={logout}
+                    className="w-full h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex items-center justify-between px-2">
               <span className="text-xs text-surface-500 dark:text-surface-400 font-medium">
@@ -271,12 +263,37 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                   </div>
                 )}
               </div>
-              {!isCollapsed && subscription.isFree && (
-                <div className="px-2">
-                  <button className="w-full text-left px-3 py-2 text-xs text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium">
-                    Upgrade to Pro
-                  </button>
-                </div>
+              {!isCollapsed && (
+                <>
+                  <div className="px-2 mt-2">
+                    <button
+                      onClick={logout}
+                      className="w-full text-left px-3 py-2 text-xs text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white border border-surface-300 dark:border-surface-600 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors font-medium flex items-center justify-center gap-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        />
+                      </svg>
+                      Sign Out
+                    </button>
+                  </div>
+                  {subscription.isFree && (
+                    <div className="px-2 mt-2">
+                      <button className="w-full text-left px-3 py-2 text-xs text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium">
+                        Upgrade to Pro
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

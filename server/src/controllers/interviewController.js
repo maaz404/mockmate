@@ -4,7 +4,6 @@ const Question = require("../models/Question");
 const mongoose = require("mongoose");
 const aiQuestionService = require("../services/aiQuestionService");
 const hybridQuestionService = require("../services/hybridQuestionService");
-const { updateAnalytics } = require("./userController");
 const { destroyByPrefix } = require("./uploadController");
 const C = require("../utils/constants");
 const Logger = require("../utils/logger");
@@ -14,14 +13,12 @@ const { mapDifficulty } = require("../utils/questionNormalization");
 
 // Create new interview session
 const createInterview = async (req, res) => {
-  const { userId } = req.auth;
+  const userId = req.user?.id; // Keep this one
   const config = { ...(req.body?.config || req.body) };
   const userProfile = req.userProfile;
   Logger.info("[createInterview] config received:", config);
   Logger.info("[createInterview] userProfile:", userProfile);
   try {
-    const { userId } = req.auth;
-    const config = { ...(req.body?.config || req.body) };
     // Provide tolerant defaults in non-production test/dev to avoid schema failures
     if (!config.duration) {
       // eslint-disable-next-line no-magic-numbers
@@ -62,6 +59,9 @@ const createInterview = async (req, res) => {
       );
     }
 
+    // ... rest of createInterview stays the same (no more req.auth references)
+    // Just keep existing code for questions generation and interview creation
+
     let questions;
     const explicitQuestionIds = Array.isArray(req.body?.questionIds)
       ? req.body.questionIds.filter(Boolean)
@@ -71,14 +71,12 @@ const createInterview = async (req, res) => {
       : [];
 
     if (explicitQuestionIds.length > 0) {
-      // If explicit IDs provided, fetch those. Allow a parallel raw questions array with matching length for fallback text.
       const found = await Question.find({ _id: { $in: explicitQuestionIds } });
       const foundMap = new Map(found.map((q) => [q._id.toString(), q]));
       questions = explicitQuestionIds
         .map((id, idx) => {
           const doc = foundMap.get(String(id));
           if (doc) return doc;
-          // Fallback: construct ephemeral from provided raw questions (if any)
           const raw = explicitQuestions[idx];
           return raw
             ? {
@@ -106,7 +104,6 @@ const createInterview = async (req, res) => {
         );
       }
     } else if (explicitQuestions.length > 0) {
-      // Accept provided raw questions directly (ephemeral) even without IDs for reproducible session
       questions = explicitQuestions.map((raw, idx) => ({
         _id: new mongoose.Types.ObjectId(),
         text: raw.text || raw.questionText || `Question ${idx + 1}`,
@@ -131,7 +128,6 @@ const createInterview = async (req, res) => {
     } else {
       questions = await getQuestionsForInterview(config, userProfile);
       if (questions.length === 0) {
-        // Emergency minimal fallback (ensures session can still start in dev)
         if (process.env.NODE_ENV !== "production") {
           questions = [
             new Question({
@@ -156,8 +152,6 @@ const createInterview = async (req, res) => {
       }
     }
 
-    // Ensure we never violate Interview schema min questionCount (5) even if generation returned fewer
-    // eslint-disable-next-line no-magic-numbers
     const MIN_SCHEMA_QUESTION_COUNT = 5;
     if (questions.length > 0 && questions.length < MIN_SCHEMA_QUESTION_COUNT) {
       const base = [...questions];
@@ -190,16 +184,15 @@ const createInterview = async (req, res) => {
       }
     }
 
+    // CHANGED: userId → user in Interview creation
     const interview = new Interview({
-      userId,
+      user: userId, // CHANGED from: userId: userId
       userProfile: userProfile._id,
       config: {
         ...config,
         questionCount: config.adaptiveDifficulty?.enabled
           ? config.questionCount || C.DEFAULT_QUESTION_COUNT
-          : // Cap upper bound by questions length but enforce lower bound of schema min (5)
-            Math.max(
-              // eslint-disable-next-line no-magic-numbers
+          : Math.max(
               5,
               Math.min(
                 config.questionCount || C.DEFAULT_QUESTION_COUNT,
@@ -257,26 +250,24 @@ const createInterview = async (req, res) => {
 // Start interview session
 const startInterview = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id; // CHANGED
     const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId, // CHANGED from: userId: userId
     });
 
     if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
     if (interview.status !== "scheduled")
       return fail(res, 400, "INVALID_STATE", "Interview cannot be started");
 
-    // Update interview status and timing (ensure timing object exists)
     interview.status = "in-progress";
     if (!interview.timing) interview.timing = {};
     interview.timing.startedAt = new Date();
 
     await interview.save();
 
-    // Decrement quota (idempotent utility)
     await consumeFreeInterview(userId, interview._id.toString());
 
     return ok(res, interview, "Interview started successfully");
@@ -289,14 +280,12 @@ const startInterview = async (req, res) => {
 // Submit answer to question
 const submitAnswer = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id; // CHANGED
     const interviewId = req.params.interviewId || req.params.id;
     const { questionIndex } = req.params;
     const { answer, timeSpent, notes, facialMetrics, skip } = req.body;
 
-    // If explicitly skipping, bypass answer validation (skip requires truthy boolean and no meaningful answer text)
     if (skip === true) {
-      // proceed, but ensure no non-trivial answer is being smuggled with skip
       if (answer && answer.trim().length > 0) {
         return fail(
           res,
@@ -306,7 +295,6 @@ const submitAnswer = async (req, res) => {
         );
       }
     } else {
-      // Basic validation – ensure non-empty textual answer when not skipping
       if (typeof answer !== "string" || !answer.trim()) {
         return fail(
           res,
@@ -315,7 +303,6 @@ const submitAnswer = async (req, res) => {
           "Answer cannot be empty. Provide a response before submitting or use skip."
         );
       }
-      // Optional minimal length heuristic (can be relaxed via future flag)
       if (answer.trim().length < 3) {
         return fail(
           res,
@@ -326,9 +313,10 @@ const submitAnswer = async (req, res) => {
       }
     }
 
+    // CHANGED: userId → user
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
     if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
@@ -353,7 +341,6 @@ const submitAnswer = async (req, res) => {
       status: interview.status,
     });
 
-    // If skipping: record skip metadata and do not evaluate or generate follow-ups
     if (skip === true) {
       interview.questions[qIndex].skipped = true;
       interview.questions[qIndex].skippedAt = new Date();
@@ -365,7 +352,6 @@ const submitAnswer = async (req, res) => {
         "Question skipped"
       );
     } else {
-      // Update question response & optional facial metrics snapshot for this question
       interview.questions[qIndex].response = {
         text: answer,
         notes: notes || "",
@@ -385,12 +371,10 @@ const submitAnswer = async (req, res) => {
       }
     }
 
-    // AI-powered scoring with enhanced feedback (already returned if skip)
     let evaluation;
     try {
       Logger.info("Evaluating answer with AI for question:", qIndex);
 
-      // Create question object with necessary fields for AI evaluation
       const questionObj = {
         text: interview.questions[qIndex].questionText,
         category: interview.questions[qIndex].category,
@@ -415,7 +399,6 @@ const submitAnswer = async (req, res) => {
       evaluation = aiQuestionService.getBasicEvaluation(questionObj, answer);
     }
 
-    // Update question with enhanced scoring and feedback
     interview.questions[qIndex].score = {
       overall: evaluation.score,
       rubricScores: evaluation.rubricScores || {},
@@ -429,17 +412,14 @@ const submitAnswer = async (req, res) => {
       modelAnswer: evaluation.modelAnswer || "",
     };
 
-    // Track score for adaptive difficulty if enabled
     if (interview.config.adaptiveDifficulty?.enabled) {
       const currentDifficulty =
         interview.questions[qIndex].difficulty || interview.config.difficulty;
 
-      // Add to difficulty history for tracking
       if (!interview.config.adaptiveDifficulty.difficultyHistory) {
         interview.config.adaptiveDifficulty.difficultyHistory = [];
       }
 
-      // Update or add current question's score tracking
       const existingEntryIndex =
         interview.config.adaptiveDifficulty.difficultyHistory.findIndex(
           (entry) => entry.questionIndex === qIndex
@@ -465,7 +445,6 @@ const submitAnswer = async (req, res) => {
 
     await interview.save();
 
-    // Generate follow-up questions automatically after scoring
     let followUpQuestions = null;
     try {
       Logger.info("Generating follow-up questions for question:", qIndex);
@@ -485,17 +464,14 @@ const submitAnswer = async (req, res) => {
       }
     } catch (error) {
       Logger.warn("Follow-up generation failed:", error);
-      // Continue without follow-ups - non-critical feature
     }
 
-    // Prepare response data
     const responseData = {
       questionIndex: qIndex,
       score: interview.questions[qIndex].score?.overall || evaluation.score,
       followUpQuestions,
     };
 
-    // Add adaptive difficulty info if enabled
     if (interview.config.adaptiveDifficulty?.enabled) {
       const nextDifficulty = getNextDifficultyLevel(
         responseData.score,
@@ -528,13 +504,14 @@ const submitAnswer = async (req, res) => {
 // Generate follow-up question based on answer
 const generateFollowUp = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id; // CHANGED
     const interviewId = req.params.interviewId || req.params.id;
     const { questionIndex } = req.params;
 
+    // CHANGED: userId → user
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
     if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
@@ -552,7 +529,6 @@ const generateFollowUp = async (req, res) => {
         "No answer provided for this question"
       );
 
-    // Check if follow-up questions already exist
     if (question.followUpQuestions && question.followUpQuestions.length > 0) {
       return ok(
         res,
@@ -573,7 +549,6 @@ const generateFollowUp = async (req, res) => {
         interview.config
       );
 
-      // Save the generated follow-ups to the interview
       if (followUpQuestions && followUpQuestions.length > 0) {
         interview.questions[qIndex].followUpQuestions = followUpQuestions;
         await interview.save();
@@ -607,1209 +582,584 @@ const generateFollowUp = async (req, res) => {
     }
   } catch (error) {
     Logger.error("Generate follow-up error:", error);
-    return fail(
-      res,
-      500,
-      "FOLLOWUP_FAILED",
-      "Failed to generate follow-up question"
-    );
+    return fail(res, 500, "FOLLOWUP_ERROR", "Failed to generate follow-up");
   }
 };
 
-// Complete interview
-const completeInterview = async (req, res) => {
+// Get interview status
+const getStatus = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const interviewId = req.params.interviewId || req.params.id;
-    Logger.info("[completeInterview] invoked", { interviewId, userId });
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
-    }).populate("userProfile");
+      user: userId,
+    });
 
-    if (!interview) {
-      Logger.warn("[completeInterview] interview not found", { interviewId });
-      return fail(res, 404, "NOT_FOUND", "Interview not found");
-    }
-    if (interview.status !== "in-progress") {
-      Logger.warn("[completeInterview] invalid state", {
-        status: interview.status,
-      });
-      return fail(res, 400, "INVALID_STATE", "Interview is not in progress");
-    }
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
-    // Ensure nested containers exist
-    interview.results = interview.results || {};
-
-    // Update timing
-    if (!interview.timing) {
-      interview.timing = {};
-    }
-    interview.timing.completedAt = new Date();
-    if (!interview.timing.startedAt) {
-      // Fallback: if start timestamp missing, approximate using question answer times
-      const anyAnswerTs = (interview.questions || [])
-        .map((q) => q?.response?.submittedAt)
-        .filter(Boolean)
-        .sort();
-      if (anyAnswerTs.length) {
-        interview.timing.startedAt = anyAnswerTs[0];
-      } else {
-        // fallback to completion minus configured duration (minutes)
-        const durMin = interview.config?.duration || 30; // eslint-disable-line no-magic-numbers
-        interview.timing.startedAt = new Date(
-          interview.timing.completedAt.getTime() - durMin * 60 * 1000
-        );
-      }
-    }
-    interview.timing.totalDuration = Math.max(
-      0,
-      Math.round(
-        (interview.timing.completedAt - interview.timing.startedAt) /
-          C.MINUTE_IN_MS
-      )
-    );
-
-    // Calculate overall results
-    if (typeof interview.calculateOverallScore === "function") {
-      try {
-        interview.calculateOverallScore();
-      } catch (e) {
-        Logger.warn("calculateOverallScore failed", e.message);
-      }
-    } else {
-      // Fallback basic overall score (percentage of answered questions with any response)
-      const answered = (interview.questions || []).filter(
-        (q) => q.response && q.response.text
-      ).length;
-      // eslint-disable-next-line no-magic-numbers
-      const pct =
-        (answered / Math.max(1, (interview.questions || []).length)) * 100;
-      interview.results = interview.results || {};
-      interview.results.overallScore = Math.round(pct);
-    }
-    if (interview.results) {
-      if (typeof interview.getPerformanceLevel === "function") {
-        try {
-          interview.results.performance = interview.getPerformanceLevel();
-        } catch (e) {
-          Logger.warn("getPerformanceLevel failed", e.message);
-        }
-      } else if (!interview.results.performance) {
-        const s = interview.results.overallScore || 0;
-        interview.results.performance =
-          s > 80
-            ? "excellent"
-            : s > 60
-            ? "good"
-            : s > 40
-            ? "average"
-            : "needs-improvement";
-      }
-    }
-    interview.status = "completed";
-
-    // Merge facial metrics snapshot if provided by client
-    if (
-      req.body &&
-      req.body.facialMetrics &&
-      typeof req.body.facialMetrics === "object"
-    ) {
-      const fm = req.body.facialMetrics;
-      interview.metrics = interview.metrics || {};
-      const mapNum = (k, targetKey) => {
-        if (
-          fm[k] != null &&
-          typeof fm[k] === "number" &&
-          !Number.isNaN(fm[k])
-        ) {
-          interview.metrics[targetKey] = fm[k];
-        }
-      };
-      mapNum("eyeContact", "eyeContactScore");
-      mapNum("blinkRate", "blinkRate");
-      mapNum("smilePercentage", "smilePercentage");
-      mapNum("headSteadiness", "headSteadiness");
-      mapNum("offScreenPercentage", "offScreenPercentage");
-      mapNum("environmentQuality", "environmentQuality");
-      mapNum("confidenceScore", "confidenceScore");
-    }
-
-    // Compute metrics (core interview stats)
-    const totalQuestions = (interview.questions || []).length;
-    const validScores = (interview.questions || [])
-      .map((q) => q?.score?.overall)
-      .filter((n) => typeof n === "number");
-    const avgScore =
-      validScores.length > 0
-        ? Math.round(
-            validScores.reduce((s, n) => s + n, 0) / validScores.length
-          )
-        : 0;
-    const times = (interview.questions || [])
-      .map((q) => q?.timeSpent)
-      .filter((n) => typeof n === "number");
-    const avgAnswerDurationMs =
-      times.length > 0
-        ? Math.round((times.reduce((s, n) => s + n, 0) / times.length) * 1000)
-        : 0;
-    const totalDurationMs =
-      typeof interview.timing?.totalDuration === "number"
-        ? interview.timing.totalDuration * 60 * 1000
-        : 0;
-    // Preserve previously merged facial metrics if present
-    const existingMetrics = interview.metrics || {};
-    interview.metrics = {
-      ...existingMetrics,
-      totalQuestions,
-      avgScore,
-      avgAnswerDurationMs,
-      totalDurationMs,
-    };
-
-    try {
-      await interview.save();
-    } catch (persistErr) {
-      Logger.error("[completeInterview] save failed", persistErr);
-      return fail(
-        res,
-        500,
-        "SAVE_FAILED",
-        "Failed to persist interview completion"
-      );
-    }
-
-    // Update user analytics
-    const userProfile = interview.userProfile;
-    const analytics = userProfile?.analytics || {};
-    const prevCount = analytics.totalInterviews || 0;
-    const prevAvg = analytics.averageScore || 0;
-    const newTotalInterviews = prevCount + 1;
-    const newAverageScore = Math.round(
-      (prevAvg * prevCount + (interview.results.overallScore || 0)) /
-        (newTotalInterviews || 1)
-    );
-
-    try {
-      await updateAnalytics(userId, {
-        totalInterviews: newTotalInterviews,
-        averageScore: newAverageScore,
-        lastInterviewDate: new Date(),
-      });
-    } catch (analyticsErr) {
-      Logger.warn(
-        "[completeInterview] analytics update failed (non-fatal)",
-        analyticsErr?.message
-      );
-    }
-
-    return ok(res, interview, "Interview completed successfully");
+    return ok(res, interview, "Interview status retrieved");
   } catch (error) {
-    Logger.error("Complete interview error:", error);
+    Logger.error("Get interview status error:", error);
     return fail(
       res,
       500,
-      "COMPLETE_FAILED",
-      "Failed to complete interview",
-      process.env.NODE_ENV !== "production"
-        ? {
-            detail: error.message,
-            stack: error.stack?.split("\n").slice(0, 5).join("\n"),
-          }
-        : undefined
+      "STATUS_FETCH_FAILED",
+      "Failed to fetch interview status"
     );
   }
 };
 
-// Get user's interviews
+// Resume interview session
+const resumeInterview = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const interviewId = req.params.interviewId || req.params.id;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
+    });
+
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+    if (interview.status !== "paused")
+      return fail(res, 400, "INVALID_STATE", "Interview is not paused");
+
+    interview.status = "in-progress";
+    interview.timing.resumedAt = new Date();
+
+    await interview.save();
+
+    return ok(res, interview, "Interview resumed successfully");
+  } catch (error) {
+    Logger.error("Resume interview error:", error);
+    return fail(res, 500, "RESUME_FAILED", "Failed to resume interview");
+  }
+};
+
+// End interview session
+const endInterview = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const interviewId = req.params.interviewId || req.params.id;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
+    });
+
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+    if (interview.status === "completed")
+      return fail(res, 400, "INVALID_STATE", "Interview already completed");
+
+    interview.status = "completed";
+    interview.timing.endedAt = new Date();
+
+    await interview.save();
+
+    return ok(res, interview, "Interview ended successfully");
+  } catch (error) {
+    Logger.error("End interview error:", error);
+    return fail(res, 500, "END_FAILED", "Failed to end interview");
+  }
+};
+
+// Delete interview session
+const deleteInterview = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const interviewId = req.params.interviewId || req.params.id;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
+    });
+
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+
+    // Clean up associated video files from Cloudinary
+    try {
+      await destroyByPrefix(`interviews/${interviewId}`);
+    } catch (cleanupError) {
+      Logger.warn("Failed to cleanup video files:", cleanupError);
+      // Continue with deletion even if cleanup fails
+    }
+
+    await interview.deleteOne();
+
+    return ok(res, null, "Interview deleted successfully");
+  } catch (error) {
+    Logger.error("Delete interview error:", error);
+    return fail(res, 500, "DELETE_FAILED", "Failed to delete interview");
+  }
+};
+
+// Get all user interviews
 const getUserInterviews = async (req, res) => {
   try {
-    const { userId } = req.auth;
-    const { page = 1, limit = 10, status, type } = req.query;
+    const userId = req.user?.id;
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      sortBy = "createdAt",
+      order = "desc",
+    } = req.query;
 
-    const query = { userId };
-    if (status) query.status = status;
-    if (type) query["config.interviewType"] = type;
+    const filter = { user: userId };
+    if (status) filter.status = status;
 
-    const interviews = await Interview.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .select("-questions.questionText -questions.response.text"); // Exclude large text fields
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const sortOrder = order === "asc" ? 1 : -1;
 
-    const totalCount = await Interview.countDocuments(query);
+    const [interviews, total] = await Promise.all([
+      Interview.find(filter)
+        .sort({ [sortBy]: sortOrder })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .select("-questions.response -questions.feedback"),
+      Interview.countDocuments(filter),
+    ]);
 
     return ok(res, {
       interviews,
       pagination: {
-        current: page,
-        pages: Math.ceil(totalCount / limit),
-        total: totalCount,
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / parseInt(limit)),
+        total,
+        hasNextPage: parseInt(page) < Math.ceil(total / parseInt(limit)),
+        hasPrevPage: parseInt(page) > 1,
       },
     });
   } catch (error) {
-    Logger.error("Get interviews error:", error);
-    return fail(
-      res,
-      500,
-      "INTERVIEWS_FETCH_FAILED",
-      "Failed to fetch interviews"
-    );
+    Logger.error("Get user interviews error:", error);
+    return fail(res, 500, "FETCH_FAILED", "Failed to fetch interviews");
   }
 };
 
 // Get interview details
 const getInterviewDetails = async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
+    }).populate("userProfile");
+
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+
+    return ok(res, interview, "Interview details retrieved");
+  } catch (error) {
+    Logger.error("Get interview details error:", error);
+    return fail(res, 500, "FETCH_FAILED", "Failed to fetch interview details");
+  }
+};
+
+// Complete interview
+const completeInterview = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const interviewId = req.params.interviewId || req.params.id;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
+    });
+
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+    if (interview.status === "completed")
+      return fail(res, 400, "ALREADY_COMPLETED", "Interview already completed");
+
+    interview.status = "completed";
+    if (!interview.timing) interview.timing = {};
+    interview.timing.completedAt = new Date();
+    interview.timing.totalDuration = Math.round(
+      (interview.timing.completedAt - interview.timing.startedAt) / 1000
+    );
+
+    // Calculate overall results
+    const answeredQuestions = interview.questions.filter(
+      (q) => q.response?.text || q.skipped
+    );
+    const totalQuestions = interview.questions.length;
+    const completionRate = (answeredQuestions.length / totalQuestions) * 100;
+
+    const scores = interview.questions
+      .filter((q) => q.score?.overall)
+      .map((q) => q.score.overall);
+    const averageScore =
+      scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+
+    interview.results = {
+      overallScore: Math.round(averageScore),
+      completionRate: Math.round(completionRate),
+      questionsAnswered: answeredQuestions.length,
+      questionsSkipped: interview.questions.filter((q) => q.skipped).length,
+      totalQuestions,
+      breakdown: {
+        technical: calculateCategoryAverage(interview, "technical"),
+        communication: calculateCategoryAverage(interview, "communication"),
+        problemSolving: calculateCategoryAverage(interview, "problemSolving"),
+        behavioral: calculateCategoryAverage(interview, "behavioral"),
+      },
+    };
+
+    await interview.save();
+
+    return ok(res, interview, "Interview completed successfully");
+  } catch (error) {
+    Logger.error("Complete interview error:", error);
+    return fail(res, 500, "COMPLETE_FAILED", "Failed to complete interview");
+  }
+};
+
+// Get adaptive question
+const getAdaptiveQuestion = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const interviewId = req.params.interviewId || req.params.id;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
+    });
+
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+    if (!interview.config.adaptiveDifficulty?.enabled)
+      return fail(res, 400, "NOT_ADAPTIVE", "Interview is not adaptive");
+
+    // Determine next difficulty based on history
+    const history = interview.config.adaptiveDifficulty.difficultyHistory || [];
+    const currentDifficulty =
+      interview.config.adaptiveDifficulty.currentDifficulty;
+
+    let nextDifficulty = currentDifficulty;
+    if (history.length > 0) {
+      const recentScores = history.slice(-3).map((h) => h.score);
+      const avgRecentScore =
+        recentScores.reduce((a, b) => a + b, 0) / recentScores.length;
+      nextDifficulty = getNextDifficultyLevel(
+        avgRecentScore,
+        currentDifficulty
+      );
+    }
+
+    // Generate new question with appropriate difficulty
+    const questionConfig = {
+      ...interview.config,
+      difficulty: nextDifficulty,
+      count: 1,
+    };
+
+    const newQuestions = await hybridQuestionService.generateQuestions(
+      questionConfig,
+      userId
+    );
+
+    if (!newQuestions.success || newQuestions.questions.length === 0) {
+      return fail(
+        res,
+        500,
+        "GENERATION_FAILED",
+        "Failed to generate adaptive question"
+      );
+    }
+
+    const newQuestion = newQuestions.questions[0];
+
+    interview.questions.push({
+      questionId: newQuestion._id,
+      questionText: newQuestion.text,
+      category: newQuestion.category,
+      difficulty: nextDifficulty,
+      timeAllocated: newQuestion.estimatedTime || 120,
+      hasVideo: false,
+    });
+
+    interview.config.adaptiveDifficulty.currentDifficulty = nextDifficulty;
+    await interview.save();
+
+    return ok(
+      res,
+      {
+        question: newQuestion,
+        questionIndex: interview.questions.length - 1,
+        difficulty: nextDifficulty,
+        previousDifficulty: currentDifficulty,
+      },
+      "Adaptive question generated"
+    );
+  } catch (error) {
+    Logger.error("Get adaptive question error:", error);
+    return fail(res, 500, "ADAPTIVE_FAILED", "Failed to get adaptive question");
+  }
+};
+
+// Get interview results
+const getInterviewResults = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const interviewId = req.params.interviewId || req.params.id;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
+    });
+
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+    if (interview.status !== "completed")
+      return fail(res, 400, "NOT_COMPLETED", "Interview not completed");
+
+    return ok(
+      res,
+      {
+        results: interview.results,
+        timing: interview.timing,
+        questions: interview.questions.map((q) => ({
+          questionText: q.questionText,
+          category: q.category,
+          difficulty: q.difficulty,
+          score: q.score,
+          feedback: q.feedback,
+          timeSpent: q.timeSpent,
+          skipped: q.skipped,
+        })),
+      },
+      "Interview results retrieved"
+    );
+  } catch (error) {
+    Logger.error("Get interview results error:", error);
+    return fail(res, 500, "RESULTS_FAILED", "Failed to fetch results");
+  }
+};
+
+// Mark follow-ups as reviewed
+const markFollowUpsReviewed = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const interviewId = req.params.interviewId || req.params.id;
+    const { questionIndex } = req.params;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
     });
 
     if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
-    // Provide a client-friendly shape while preserving original document
-    const interviewObj = interview.toObject();
-    const clientQuestions = (interviewObj.questions || []).map((q) => ({
-      ...q,
-      text: q.questionText, // align with frontend usage
-      // Infer a simple type for styling; default to technical
-      type:
-        q.type ||
-        (q.category && q.category.includes("behavior")
-          ? "behavioral"
-          : "technical"),
-    }));
+    const qIndex = parseInt(questionIndex);
+    if (qIndex >= interview.questions.length)
+      return fail(res, 400, "BAD_INDEX", "Invalid question index");
 
-    const responsePayload = {
-      ...interviewObj,
-      jobRole: interviewObj.config?.jobRole,
-      duration: interviewObj.config?.duration, // minutes
-      questions: clientQuestions,
-    };
+    interview.questions[qIndex].followUpsReviewed = true;
+    interview.questions[qIndex].followUpsReviewedAt = new Date();
 
-    return ok(res, responsePayload);
+    await interview.save();
+
+    return ok(res, null, "Follow-ups marked as reviewed");
   } catch (error) {
-    Logger.error("Get interview details error:", error);
-    return fail(
-      res,
-      500,
-      "INTERVIEW_FETCH_FAILED",
-      "Failed to fetch interview details"
-    );
+    Logger.error("Mark follow-ups reviewed error:", error);
+    return fail(res, 500, "MARK_FAILED", "Failed to mark follow-ups");
   }
 };
 
-// Helper function to get suitable questions using hybrid approach
-const getQuestionsForInterview = async (config, userProfile) => {
+// Get interview transcripts
+const getInterviewTranscripts = async (req, res) => {
   try {
-    Logger.info("Generating hybrid questions for config:", config);
-
-    // Use hybrid service to generate questions (70% templates, 30% AI)
-    const hybridQuestions = await hybridQuestionService.generateHybridQuestions(
-      config
-    );
-
-    if (hybridQuestions && hybridQuestions.length > 0) {
-      Logger.info(`Generated ${hybridQuestions.length} hybrid questions`);
-
-      // Save questions to database and return the saved documents
-      const savedQuestions = [];
-      const allowedCategories = Question.schema.path("category").enumValues;
-      const sanitizeCategory = (cat, inferredType) => {
-        if (cat && allowedCategories.includes(cat)) return cat;
-        if (inferredType === "behavioral") return "communication";
-        if (inferredType === "system-design") return "system-design";
-        return "web-development"; // safe technical default
-      };
-      for (const question of hybridQuestions) {
-        const inferredType =
-          question.type && question.type !== "mixed"
-            ? question.type
-            : question.category && question.category.includes("behavior")
-            ? "behavioral"
-            : "technical";
-        const safeCategory = sanitizeCategory(question.category, inferredType);
-        const questionDoc = new Question({
-          text: question.text,
-          category: safeCategory,
-          difficulty: mapDifficulty(question.difficulty || config.difficulty),
-          type: inferredType,
-          tags: question.tags || [],
-          experienceLevel: [config.experienceLevel],
-          estimatedTime: Math.max(
-            question.estimatedTime ||
-              (question.timeEstimate
-                ? question.timeEstimate * C.SEC_PER_MIN
-                : C.DEFAULT_TIME_ALLOC_SEC),
-            C.MIN_TIME_ALLOC_SEC
-          ),
-          source: question.source || "hybrid",
-          generatedAt: question.generatedAt || new Date(),
-          isHybridGenerated: true,
-          keywords: question.keywords || [],
-          stats: { timesUsed: 0, avgScore: 0 },
-          status: "active",
-        });
-        try {
-          const savedQuestion = await questionDoc.save();
-          savedQuestions.push(savedQuestion);
-        } catch (e) {
-          Logger.warn("Skipping invalid hybrid question:", e?.message || e);
-        }
-      }
-      return savedQuestions;
-    }
-  } catch (error) {
-    Logger.warn(
-      "Hybrid question generation failed, falling back to AI service:",
-      error
-    );
-  }
-
-  // Fallback to AI service if hybrid fails
-  try {
-    const aiQuestions = await aiQuestionService.generateQuestions({
-      ...config,
-      userProfile,
-      skills:
-        userProfile?.professionalInfo?.skills?.map((s) =>
-          typeof s === "object" ? s.name : s
-        ) || [],
-    });
-
-    if (aiQuestions && aiQuestions.length > 0) {
-      Logger.info(`Generated ${aiQuestions.length} AI fallback questions`);
-
-      // Save AI questions to database
-      const savedQuestions = [];
-      const allowedCategories = Question.schema.path("category").enumValues;
-      for (const question of aiQuestions) {
-        const preferredType =
-          question.type && question.type !== "mixed"
-            ? question.type
-            : question.category &&
-              String(question.category).includes("behavior")
-            ? "behavioral"
-            : "technical";
-        const defaultBehavioral = "communication";
-        const defaultTechnical = "system-design";
-        const rawCat =
-          question.category && typeof question.category === "string"
-            ? question.category
-            : null;
-        let safeCategory = rawCat;
-        if (!safeCategory || !allowedCategories.includes(safeCategory)) {
-          safeCategory =
-            preferredType === "behavioral"
-              ? defaultBehavioral
-              : defaultTechnical;
-        }
-        const questionDoc = new Question({
-          text: question.question || question.text,
-          category: safeCategory,
-          difficulty: mapDifficulty(question.difficulty || config.difficulty),
-          type: preferredType,
-          experienceLevel: [config.experienceLevel],
-          estimatedTime: Math.max(
-            (question.timeLimit ? question.timeLimit * C.SEC_PER_MIN : 0) ||
-              C.DEFAULT_TIME_ALLOC_SEC,
-            C.MIN_TIME_ALLOC_SEC
-          ),
-          isAIGenerated: true,
-          keywords: question.followUpHints || [],
-          stats: { timesUsed: 0, avgScore: 0 },
-          status: "active",
-        });
-        try {
-          const savedQuestion = await questionDoc.save();
-          savedQuestions.push(savedQuestion);
-        } catch (saveErr) {
-          Logger.warn(
-            "Skipping invalid AI fallback question:",
-            saveErr?.message || saveErr
-          );
-        }
-      }
-      return savedQuestions;
-    }
-  } catch (aiError) {
-    Logger.warn(
-      "AI question generation also failed, falling back to database:",
-      aiError
-    );
-  }
-
-  // Final fallback to database questions
-  const query = {
-    status: "active",
-    difficulty: config.difficulty,
-    experienceLevel: { $in: [config.experienceLevel] },
-  };
-
-  // Filter by interview type
-  if (config.interviewType !== "mixed") {
-    query.type = config.interviewType;
-  }
-
-  // Get questions with randomization
-  let questions = [];
-  try {
-    questions = await Question.aggregate([
-      { $match: query },
-      {
-        $sample: {
-          size: Math.max(
-            (config.questionCount || C.DEFAULT_QUESTION_COUNT) *
-              C.SAMPLE_MULTIPLIER,
-            C.SAMPLE_MIN_SIZE
-          ),
-        },
-      }, // Get more than needed for variety
-      { $sort: { "stats.timesUsed": 1 } }, // Prefer less used questions
-    ]);
-  } catch (dbErr) {
-    Logger.warn(
-      "DB aggregate for questions failed, using final fallback:",
-      dbErr
-    );
-    // Reuse final fallback path below by setting empty array to trigger it
-    questions = [];
-  }
-  if (questions && questions.length > 0) {
-    return questions;
-  }
-
-  // Final fallback: sanitize curated fallback questions and persist
-  try {
-    Logger.warn("No DB questions found. Using curated fallback questions.");
-
-    const curated = await aiQuestionService.getFallbackQuestions({
-      ...config,
-    });
-
-    // Allowed enums from schema
-    const allowedCategories = Question.schema.path("category").enumValues;
-    const mapDifficulty = (d) => {
-      const m = {
-        easy: "beginner",
-        medium: "intermediate",
-        hard: "advanced",
-      };
-      return (
-        m[d] ||
-        (d === "beginner" || d === "intermediate" || d === "advanced"
-          ? d
-          : config.difficulty)
-      );
-    };
-    const sanitizeCategory = (cat, type) => {
-      if (cat && allowedCategories.includes(cat)) return cat;
-      if (type === "behavioral") return "communication";
-      if (type === "system-design") return "system-design";
-      return "web-development"; // safe technical default
-    };
-
-    const toSave = curated.map((q) => {
-      const type =
-        q.type && q.type !== "mixed"
-          ? q.type
-          : q.category && String(q.category).includes("behavior")
-          ? "behavioral"
-          : "technical";
-      const category = sanitizeCategory(q.category, type);
-      return new Question({
-        text: q.text || q.question,
-        category,
-        difficulty: mapDifficulty(q.difficulty) || config.difficulty,
-        type,
-        experienceLevel: [config.experienceLevel],
-        estimatedTime: Math.max(
-          (q.timeEstimate ? q.timeEstimate * C.SEC_PER_MIN : 0) ||
-            C.DEFAULT_TIME_ALLOC_SEC,
-          C.MIN_TIME_ALLOC_SEC
-        ),
-        isAIGenerated: true,
-        keywords: [],
-        stats: { timesUsed: 0, avgScore: 0 },
-        status: "active",
-      });
-    });
-
-    const saved = [];
-    for (const doc of toSave) {
-      try {
-        // Save individually to skip any that still fail validation
-        const s = await doc.save();
-        saved.push(s);
-      } catch (e) {
-        Logger.warn("Skipping invalid fallback question:", e?.message || e);
-      }
-    }
-
-    return saved;
-  } catch (fallbackErr) {
-    Logger.error("Final fallback failed:", fallbackErr);
-    // As a last resort, create in-memory pseudo questions so the interview can start
-    try {
-      const pseudo = [
-        {
-          _id: new mongoose.Types.ObjectId(),
-          text: `Tell me about a recent challenge in ${
-            config.jobRole || "your role"
-          } and how you approached it.`,
-          category:
-            (config.interviewType === "behavioral"
-              ? "communication"
-              : "web-development") || "web-development",
-          difficulty: config.difficulty,
-          type:
-            config.interviewType === "behavioral" ? "behavioral" : "technical",
-          estimatedTime: C.DEFAULT_TIME_ALLOC_SEC,
-        },
-      ];
-      Logger.warn("Using in-memory pseudo questions as ultimate fallback");
-      return pseudo;
-    } catch (e2) {
-      Logger.error("Failed to build pseudo questions:", e2);
-      return [];
-    }
-  }
-};
-
-// Enhanced fallback scoring function
-// eslint-disable-next-line no-unused-vars
-const calculateBasicScore = (answer, question) => {
-  const score = {
-    overall: 0,
-    breakdown: {
-      relevance: 0,
-      clarity: 0,
-      completeness: 0,
-      technical: 0,
-    },
-    feedback: "",
-  };
-
-  if (!answer || answer.trim().length === 0) {
-    score.feedback =
-      "No answer provided. Consider providing a response even if you're unsure.";
-    return score;
-  }
-
-  const answerLength = answer.trim().split(" ").length;
-  const answerText = answer.toLowerCase();
-
-  // Enhanced completeness scoring
-  if (answerLength < 10) {
-    score.breakdown.completeness = 20;
-  } else if (answerLength < 30) {
-    score.breakdown.completeness = 50;
-  } else if (answerLength < 100) {
-    score.breakdown.completeness = 80;
-  } else {
-    score.breakdown.completeness = 95;
-  }
-
-  // Enhanced clarity scoring based on structure
-  const hasPunctuation = /[.!?]/.test(answer);
-  const hasStructure = answerLength > 20 && hasPunctuation;
-  score.breakdown.clarity = hasStructure ? 75 : answerLength > 10 ? 60 : 40;
-
-  // Basic keyword relevance check
-  const questionText = question.questionText || question.text || "";
-  const questionKeywords =
-    questionText.toLowerCase().match(/\b\w{4,}\b/g) || [];
-  const matchedKeywords = questionKeywords.filter((keyword) =>
-    answerText.includes(keyword)
-  );
-  score.breakdown.relevance = Math.min(90, 40 + matchedKeywords.length * 10);
-
-  // Technical depth based on category and content
-  const technicalTerms = [
-    "function",
-    "variable",
-    "object",
-    "array",
-    "api",
-    "database",
-    "component",
-    "state",
-    "props",
-    "async",
-    "await",
-    "promise",
-  ];
-  const hasTechnicalTerms = technicalTerms.some((term) =>
-    answerText.includes(term)
-  );
-
-  if (question.category && question.category.includes("technical")) {
-    score.breakdown.technical = hasTechnicalTerms ? 70 : 45;
-  } else {
-    score.breakdown.technical = 80; // Non-technical questions get higher base score
-  }
-
-  // Calculate overall score with weighted average
-  score.overall = Math.round(
-    score.breakdown.completeness * 0.3 +
-      score.breakdown.clarity * 0.25 +
-      score.breakdown.relevance * 0.25 +
-      score.breakdown.technical * 0.2
-  );
-
-  // Generate basic feedback
-  if (score.overall >= 80) {
-    score.feedback =
-      "Excellent response! Your answer demonstrates good understanding and clarity.";
-  } else if (score.overall >= 60) {
-    score.feedback =
-      "Good response. Consider adding more detail or examples to strengthen your answer.";
-  } else if (score.overall >= 40) {
-    score.feedback =
-      "Your answer touches on relevant points but could benefit from more depth and clarity.";
-  } else {
-    score.feedback =
-      "Consider providing a more comprehensive answer with specific examples and clearer structure.";
-  }
-
-  return score;
-};
-
-// Helper function to determine next difficulty level based on score
-const getNextDifficultyLevel = (currentScore, currentDifficulty) => {
-  // Convert 100-point scale to 5-point scale: < 60 = < 3/5, >= 80 = >= 4/5
-  const normalizedScore = currentScore / 20; // Convert to 5-point scale
-
-  const difficulties = ["beginner", "intermediate", "advanced"];
-  const currentIndex = difficulties.indexOf(currentDifficulty);
-
-  if (normalizedScore < 3.0) {
-    // Score < 3/5: make it easier (move down one level if possible)
-    return currentIndex > 0
-      ? difficulties[currentIndex - 1]
-      : currentDifficulty;
-  } else if (normalizedScore >= 4.0) {
-    // Score >= 4/5: make it harder (move up one level if possible)
-    return currentIndex < difficulties.length - 1
-      ? difficulties[currentIndex + 1]
-      : currentDifficulty;
-  } else {
-    // Score 3-4/5: keep same difficulty
-    return currentDifficulty;
-  }
-};
-
-// Get adaptive question for interview
-const getAdaptiveQuestion = async (req, res) => {
-  try {
-    const { userId } = req.auth;
+    const userId = req.user?.id;
     const interviewId = req.params.interviewId || req.params.id;
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
-    if (!interview) {
-      return res.status(404).json({
-        success: false,
-        message: "Interview not found",
-      });
-    }
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
-    if (interview.status !== "in-progress") {
-      return res.status(400).json({
-        success: false,
-        message: "Interview is not in progress",
-      });
-    }
+    const transcripts = interview.questions.map((q, index) => ({
+      questionIndex: index,
+      questionText: q.questionText,
+      response: q.response?.text || null,
+      transcript: q.video?.transcript || null,
+      submittedAt: q.response?.submittedAt,
+    }));
 
-    // Check if adaptive difficulty is enabled
-    if (!interview.config.adaptiveDifficulty?.enabled) {
-      return res.status(400).json({
-        success: false,
-        message: "Adaptive difficulty is not enabled for this interview",
-      });
-    }
-
-    // Check if there are more questions needed
-    const answeredQuestions = interview.questions.filter(
-      (q) => q.response?.text
-    ).length;
-    if (answeredQuestions >= interview.config.questionCount) {
-      return res.status(400).json({
-        success: false,
-        message: "Interview has reached the maximum number of questions",
-      });
-    }
-
-    // Get current difficulty level
-    let currentDifficulty =
-      interview.config.adaptiveDifficulty.currentDifficulty ||
-      interview.config.difficulty;
-
-    // If we have previous answers, check if we need to adjust difficulty
-    if (answeredQuestions > 0) {
-      const lastQuestion = interview.questions[answeredQuestions - 1];
-      if (lastQuestion.score?.overall !== undefined) {
-        const nextDifficulty = getNextDifficultyLevel(
-          lastQuestion.score.overall,
-          currentDifficulty
-        );
-
-        // Update current difficulty if it changed
-        if (nextDifficulty !== currentDifficulty) {
-          currentDifficulty = nextDifficulty;
-          interview.config.adaptiveDifficulty.currentDifficulty =
-            currentDifficulty;
-
-          // Track difficulty change
-          interview.config.adaptiveDifficulty.difficultyHistory.push({
-            questionIndex: answeredQuestions,
-            difficulty: currentDifficulty,
-            score: lastQuestion.score.overall,
-            timestamp: new Date(),
-          });
-        }
-      }
-    }
-
-    // Get a question with the current difficulty level
-    const adaptiveConfig = {
-      ...interview.config,
-      difficulty: currentDifficulty,
-      questionCount: 1, // We only need one question
-    };
-
-    const questions = await getQuestionsForInterview(adaptiveConfig, null);
-
-    if (questions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: `No suitable questions found for difficulty level: ${currentDifficulty}`,
-      });
-    }
-
-    // Select the best question (avoid duplicates if possible)
-    const existingQuestionIds = interview.questions.map(
-      (q) => q.questionId?.toString() || q._id
-    );
-    const availableQuestions = questions.filter(
-      (q) => !existingQuestionIds.includes(q._id?.toString() || q.id)
-    );
-
-    const selectedQuestion =
-      availableQuestions.length > 0 ? availableQuestions[0] : questions[0];
-
-    // Add the new question to the interview
-    const newQuestion = {
-      questionId: selectedQuestion._id,
-      questionText: selectedQuestion.text,
-      category: selectedQuestion.category,
-      difficulty: currentDifficulty,
-      timeAllocated: selectedQuestion.estimatedTime || 300, // Default 5 minutes
-    };
-
-    interview.questions.push(newQuestion);
-    await interview.save();
-
-    res.json({
-      success: true,
-      message: "Adaptive question generated successfully",
-      data: {
-        question: {
-          id: newQuestion.questionId,
-          text: newQuestion.questionText,
-          category: newQuestion.category,
-          difficulty: newQuestion.difficulty,
-          timeAllocated: newQuestion.timeAllocated,
-          index: interview.questions.length - 1,
-        },
-        adaptiveInfo: {
-          currentDifficulty,
-          previousDifficulty:
-            answeredQuestions > 0
-              ? interview.config.adaptiveDifficulty.difficultyHistory[
-                  interview.config.adaptiveDifficulty.difficultyHistory.length -
-                    2
-                ]?.difficulty || interview.config.difficulty
-              : interview.config.difficulty,
-          difficultyChanged:
-            answeredQuestions > 0 &&
-            interview.config.adaptiveDifficulty.difficultyHistory.length > 0 &&
-            interview.config.adaptiveDifficulty.difficultyHistory[
-              interview.config.adaptiveDifficulty.difficultyHistory.length - 1
-            ]?.questionIndex === answeredQuestions,
-        },
-      },
-    });
+    return ok(res, { transcripts }, "Transcripts retrieved");
   } catch (error) {
-    Logger.error("Get adaptive question error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to generate adaptive question",
-    });
+    Logger.error("Get transcripts error:", error);
+    return fail(res, 500, "TRANSCRIPTS_FAILED", "Failed to fetch transcripts");
   }
 };
 
+// Update adaptive difficulty
+const updateAdaptiveDifficulty = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const interviewId = req.params.interviewId || req.params.id;
+    const { difficulty } = req.body;
+
+    if (!["easy", "intermediate", "hard", "expert"].includes(difficulty)) {
+      return fail(res, 400, "INVALID_DIFFICULTY", "Invalid difficulty level");
+    }
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
+    });
+
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+    if (!interview.config.adaptiveDifficulty?.enabled)
+      return fail(res, 400, "NOT_ADAPTIVE", "Interview is not adaptive");
+
+    interview.config.adaptiveDifficulty.currentDifficulty = difficulty;
+    await interview.save();
+
+    return ok(res, { difficulty }, "Difficulty updated");
+  } catch (error) {
+    Logger.error("Update adaptive difficulty error:", error);
+    return fail(res, 500, "UPDATE_FAILED", "Failed to update difficulty");
+  }
+};
+
+// Export interview metrics
+const exportInterviewMetrics = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const interviewId = req.params.interviewId || req.params.id;
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
+    });
+
+    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
+
+    // Generate CSV
+    const csvRows = [
+      [
+        "Question Index",
+        "Category",
+        "Difficulty",
+        "Score",
+        "Time Spent",
+        "Skipped",
+      ],
+    ];
+
+    interview.questions.forEach((q, index) => {
+      csvRows.push([
+        index,
+        q.category,
+        q.difficulty,
+        q.score?.overall || "N/A",
+        q.timeSpent || 0,
+        q.skipped ? "Yes" : "No",
+      ]);
+    });
+
+    const csv = csvRows.map((row) => row.join(",")).join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="interview-${interviewId}-metrics.csv"`
+    );
+    return res.send(csv);
+  } catch (error) {
+    Logger.error("Export metrics error:", error);
+    return fail(res, 500, "EXPORT_FAILED", "Failed to export metrics");
+  }
+};
+
+// Helper function to get questions for interview
+async function getQuestionsForInterview(config, userProfile) {
+  try {
+    Logger.info(
+      "[getQuestionsForInterview] Generating questions with config:",
+      config
+    );
+
+    const questionConfig = {
+      jobRole: config.jobRole,
+      experienceLevel: config.experienceLevel,
+      interviewType: config.interviewType,
+      difficulty: config.difficulty || "intermediate",
+      count: config.questionCount || C.DEFAULT_QUESTION_COUNT,
+      focusAreas: config.focusAreas || [],
+      skillsToImprove: userProfile?.professionalInfo?.skillsToImprove || [],
+    };
+
+    const result = await hybridQuestionService.generateQuestions(
+      questionConfig
+    );
+
+    if (result.success && result.questions.length > 0) {
+      Logger.info(
+        `[getQuestionsForInterview] Generated ${result.questions.length} questions`
+      );
+      return result.questions;
+    }
+
+    Logger.warn(
+      "[getQuestionsForInterview] Hybrid service failed, returning empty array"
+    );
+    return [];
+  } catch (error) {
+    Logger.error("[getQuestionsForInterview] Error:", error);
+    return [];
+  }
+}
+
+// Helper function to determine next difficulty level
+function getNextDifficultyLevel(score, currentDifficulty) {
+  const difficulties = ["easy", "intermediate", "hard", "expert"];
+  const currentIndex = difficulties.indexOf(currentDifficulty);
+
+  if (score < C.SCORE_EASIER_DOWN_THRESHOLD && currentIndex > 0) {
+    return difficulties[currentIndex - 1];
+  }
+
+  if (
+    score >= C.SCORE_HARDER_UP_THRESHOLD &&
+    currentIndex < difficulties.length - 1
+  ) {
+    return difficulties[currentIndex + 1];
+  }
+
+  return currentDifficulty;
+}
+
+// Helper to calculate category average
+function calculateCategoryAverage(interview, category) {
+  const categoryQuestions = interview.questions.filter(
+    (q) => q.category === category && q.score?.overall
+  );
+
+  if (categoryQuestions.length === 0) return 0;
+
+  const sum = categoryQuestions.reduce((acc, q) => acc + q.score.overall, 0);
+  return Math.round(sum / categoryQuestions.length);
+}
+
 module.exports = {
   createInterview,
+  getUserInterviews,
+  getInterviewDetails,
   startInterview,
   submitAnswer,
   generateFollowUp,
   completeInterview,
-  getUserInterviews,
-  getInterviewDetails,
   getAdaptiveQuestion,
+  getInterviewResults,
+  markFollowUpsReviewed,
+  deleteInterview,
+  getInterviewTranscripts,
+  updateAdaptiveDifficulty,
+  exportInterviewMetrics,
+  getStatus,
+  resumeInterview,
+  endInterview,
 };
-
-// Lightweight transcript status retrieval for polling.
-// Returns per-question transcript metadata (status, text length) without large text bodies unless requested.
-async function getInterviewTranscripts(req, res) {
-  try {
-    const { userId } = req.auth;
-    const interviewId = req.params.interviewId || req.params.id;
-    const full = req.query.full === "1" || req.query.full === "true"; // allow full text expansion
-
-    const interview = await Interview.findOne({
-      _id: interviewId,
-      userId,
-    }).lean();
-    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
-
-    const transcripts = (interview.questions || []).map((q, idx) => {
-      const vt = q?.video?.transcript;
-      if (!vt) {
-        return {
-          questionIndex: idx,
-          status: "not_started",
-          text: null,
-        };
-      }
-      return {
-        questionIndex: idx,
-        status: vt.status || (vt.text ? "completed" : "pending"),
-        text: full ? vt.text : null,
-        length: vt.text ? vt.text.length : 0,
-        generatedAt: vt.generatedAt || null,
-        language: vt.language || null,
-        segments: full ? vt.segments || [] : undefined,
-        error: vt.error || null,
-      };
-    });
-    return ok(res, { interviewId, transcripts });
-  } catch (e) {
-    return fail(
-      res,
-      500,
-      "TRANSCRIPTS_FETCH_FAILED",
-      "Failed to fetch transcripts"
-    );
-  }
-}
-
-module.exports.getInterviewTranscripts = getInterviewTranscripts;
-
-// Compose interview results payload for frontend consumption
-const composeResultsPayload = (interviewDoc) => {
-  const interview = {
-    jobRole: interviewDoc?.config?.jobRole || "",
-    interviewType: interviewDoc?.config?.interviewType || "",
-    duration: (interviewDoc?.timing?.totalDuration || 0) * 60, // seconds
-    questions: interviewDoc?.questions || [],
-    completedAt: interviewDoc?.timing?.completedAt || interviewDoc?.updatedAt,
-    // Include full config so clients can access adaptiveDifficulty history
-    config: interviewDoc?.config || {},
-    metrics: interviewDoc?.metrics || {},
-  };
-
-  const breakdown = interviewDoc?.results?.breakdown || {};
-  const analysis = {
-    overallScore: interviewDoc?.results?.overallScore || 0,
-    technicalScore: breakdown.technical ?? 0,
-    communicationScore: breakdown.communication ?? 0,
-    problemSolvingScore: breakdown.problemSolving ?? 0,
-    questionAnalysis: (interviewDoc?.questions || []).map((q) => ({
-      question: q.questionText || "",
-      type: q.category?.includes("behavior") ? "behavioral" : "technical",
-      difficulty: q.difficulty || interviewDoc?.config?.difficulty || "",
-      userAnswer: q.response?.text || "",
-      userNotes: q.response?.notes || "",
-      followUpsReviewed: !!q.followUpsReviewed,
-      timeSpent: q.timeSpent || 0,
-      score: q.score
-        ? {
-            overall: q.score.overall ?? 0,
-            rubricScores: q.score.rubricScores || {},
-          }
-        : 0,
-      feedback: {
-        strengths: q.feedback?.strengths || [],
-        improvements: q.feedback?.improvements || [],
-        modelAnswer: q.feedback?.modelAnswer || "",
-      },
-      followUpQuestions: (q.followUpQuestions || []).map((f) => f.text || f),
-    })),
-    recommendations:
-      interviewDoc?.results?.feedback?.recommendations &&
-      interviewDoc.results.feedback.recommendations.length > 0
-        ? interviewDoc.results.feedback.recommendations
-        : [
-            "Practice articulating your thought process more clearly",
-            "Incorporate concrete examples from past projects",
-            "Balance depth with breadth when answering technical questions",
-          ],
-    focusAreas: [
-      { skill: "communication", priority: "high", currentLevel: "developing" },
-      {
-        skill: "problem-solving",
-        priority: "medium",
-        currentLevel: "intermediate",
-      },
-    ],
-  };
-
-  return { interview, analysis };
-};
-
-// Get interview results formatted for the results page
-const getInterviewResults = async (req, res) => {
-  try {
-    const { userId } = req.auth;
-    const { interviewId } = req.params;
-
-    const interview = await Interview.findOne({ _id: interviewId, userId });
-    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
-
-    // Ensure results are computed if missing
-    if (!interview.results?.overallScore) {
-      interview.calculateOverallScore();
-      await interview.save();
-    }
-
-    const payload = composeResultsPayload(interview);
-    return ok(res, payload);
-  } catch (error) {
-    Logger.error("Get interview results error:", error);
-    return fail(
-      res,
-      500,
-      "RESULTS_FETCH_FAILED",
-      "Failed to fetch interview results"
-    );
-  }
-};
-
-module.exports.getInterviewResults = getInterviewResults;
-
-// Mark follow-ups reviewed for a specific question
-const markFollowUpsReviewed = async (req, res) => {
-  try {
-    const { userId } = req.auth;
-    const interviewId = req.params.interviewId || req.params.id;
-    const { questionIndex } = req.params;
-
-    const interview = await Interview.findOne({ _id: interviewId, userId });
-    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
-
-    const qIndex = parseInt(questionIndex);
-    if (
-      Number.isNaN(qIndex) ||
-      qIndex < 0 ||
-      qIndex >= interview.questions.length
-    ) {
-      return fail(res, 400, "BAD_INDEX", "Invalid question index");
-    }
-
-    interview.questions[qIndex].followUpsReviewed = true;
-    interview.questions[qIndex].followUpsReviewedAt = new Date();
-    await interview.save();
-
-    return ok(res, { questionIndex: qIndex, followUpsReviewed: true });
-  } catch (error) {
-    Logger.error("Mark follow-ups reviewed error:", error);
-    return fail(
-      res,
-      500,
-      "FOLLOWUPS_REVIEW_FAILED",
-      "Failed to update follow-ups reviewed status"
-    );
-  }
-};
-
-module.exports.markFollowUpsReviewed = markFollowUpsReviewed;
-
-// Delete interview with Cloudinary cleanup by prefix
-const deleteInterview = async (req, res) => {
-  try {
-    const { userId } = req.auth;
-    const { id } = req.params;
-    const doc = await Interview.findOne({ _id: id, userId }).lean();
-    if (!doc) return fail(res, 404, "NOT_FOUND", "Interview not found");
-
-    const prefix = `mockmate/dev/users/${userId}/sessions/${id}`;
-    // Clean up all resource types
-    try {
-      await destroyByPrefix(prefix, "image");
-      await destroyByPrefix(prefix, "video");
-      await destroyByPrefix(prefix, "raw");
-    } catch (_e) {
-      // Best-effort cleanup
-    }
-
-    await Interview.deleteOne({ _id: id, userId });
-    return ok(res, null, "Interview deleted");
-  } catch (error) {
-    return fail(res, 500, "DELETE_FAILED", "Failed to delete interview");
-  }
-};
-
-module.exports.deleteInterview = deleteInterview;
-
-// Explicitly update current adaptive difficulty (user accepted suggestion)
-async function updateAdaptiveDifficulty(req, res) {
-  try {
-    const { userId } = req.auth;
-    const interviewId = req.params.interviewId || req.params.id;
-    const { difficulty } = req.body || {};
-    if (
-      !difficulty ||
-      !["beginner", "intermediate", "advanced"].includes(difficulty)
-    ) {
-      return fail(res, 400, "BAD_DIFFICULTY", "Invalid difficulty value");
-    }
-    const interview = await Interview.findOne({ _id: interviewId, userId });
-    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
-    if (!interview.config?.adaptiveDifficulty?.enabled) {
-      return fail(
-        res,
-        400,
-        "ADAPTIVE_DISABLED",
-        "Adaptive difficulty not enabled for this interview"
-      );
-    }
-    interview.config.adaptiveDifficulty.currentDifficulty = difficulty;
-    // Append history marker (no score) for transparency
-    interview.config.adaptiveDifficulty.difficultyHistory.push({
-      questionIndex: interview.questions.length - 1,
-      difficulty,
-      score: null,
-      timestamp: new Date(),
-    });
-    await interview.save();
-    return ok(res, {
-      currentDifficulty: difficulty,
-      historyLength:
-        interview.config.adaptiveDifficulty.difficultyHistory.length,
-    });
-  } catch (e) {
-    return fail(
-      res,
-      500,
-      "ADAPTIVE_UPDATE_FAILED",
-      "Failed to update adaptive difficulty"
-    );
-  }
-}
-module.exports.updateAdaptiveDifficulty = updateAdaptiveDifficulty;
-
-// Export metrics CSV
-async function exportInterviewMetrics(req, res) {
-  try {
-    const { userId } = req.auth;
-    const interviewId = req.params.interviewId || req.params.id;
-    const interview = await Interview.findOne({ _id: interviewId, userId });
-    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
-    const format = (req.query.format || "csv").toLowerCase();
-    const headers = [
-      "questionIndex",
-      "category",
-      "difficulty",
-      "score",
-      "timeSpent",
-      "eyeContact",
-      "blinkRate",
-      "smilePercentage",
-      "headSteadiness",
-      "offScreen",
-      "confidence",
-    ];
-    if (format === "pdf") {
-      const PDFDocument = require("pdfkit");
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=interview_${interviewId}_metrics.pdf`
-      );
-      const doc = new PDFDocument({ margin: 40 });
-      doc.pipe(res);
-      doc.fontSize(16).text("Interview Metrics Report", { underline: true });
-      doc.moveDown();
-      doc.fontSize(10).text(`Interview ID: ${interviewId}`);
-      doc.text(`User ID: ${userId}`);
-      doc.text(`Questions: ${(interview.questions || []).length}`);
-      doc.moveDown();
-      // Table header
-      doc.font("Helvetica-Bold");
-      doc.text(headers.join(" | "));
-      doc.font("Helvetica");
-      (interview.questions || []).forEach((q, idx) => {
-        const fm = q.facial || {};
-        const row = [
-          idx,
-          q.category || "",
-          q.difficulty || "",
-          q.score?.overall ?? "",
-          q.timeSpent ?? "",
-          fm.eyeContact ?? "",
-          fm.blinkRate ?? "",
-          fm.smilePercentage ?? "",
-          fm.headSteadiness ?? "",
-          fm.offScreenPercentage ?? "",
-          fm.confidenceScore ?? "",
-        ].join(" | ");
-        doc.text(row);
-      });
-      doc.end();
-      res.on("close", () => {
-        /* stream closed */
-      });
-      return; // stream response completed
-    }
-    // default CSV
-    const rows = [headers.join(",")];
-    (interview.questions || []).forEach((q, idx) => {
-      const fm = q.facial || {};
-      rows.push(
-        [
-          idx,
-          JSON.stringify(q.category || ""),
-          q.difficulty || "",
-          q.score && q.score.overall != null ? q.score.overall : "",
-          q.timeSpent || "",
-          fm.eyeContact != null ? fm.eyeContact : "",
-          fm.blinkRate != null ? fm.blinkRate : "",
-          fm.smilePercentage != null ? fm.smilePercentage : "",
-          fm.headSteadiness != null ? fm.headSteadiness : "",
-          fm.offScreenPercentage != null ? fm.offScreenPercentage : "",
-          fm.confidenceScore != null ? fm.confidenceScore : "",
-        ].join(",")
-      );
-    });
-    const csv = rows.join("\n");
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=interview_${interviewId}_metrics.csv`
-    );
-    return res.status(200).send(csv);
-  } catch (e) {
-    return fail(res, 500, "METRICS_EXPORT_FAILED", "Failed to export metrics");
-  }
-}
-module.exports.exportInterviewMetrics = exportInterviewMetrics;

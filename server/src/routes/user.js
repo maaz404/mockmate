@@ -1,18 +1,20 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const requireAuth = require("../middleware/auth");
 const ensureUserProfile = require("../middleware/ensureUserProfile");
 const {
   upgradeToPremium,
   getProfile,
-  updateProfile,
-  getAnalytics,
-  completeOnboarding,
+  bootstrapProfile,
   saveOnboardingProgress,
+  updateProfile,
+  completeOnboarding,
+  getAnalytics,
   uploadResume,
   updateAvatar,
   updateResumeAsset,
+  getDashboardPreferences,
+  updateDashboardPreferences,
   getScheduledSessions,
   upsertScheduledSession,
   deleteScheduledSession,
@@ -21,83 +23,32 @@ const {
   updateGoals,
   getDynamicTips,
   getDashboardSummary,
-  getDashboardPreferences,
-  updateDashboardPreferences,
-  getDashboardMetrics,
   getDashboardRecommendation,
-  bootstrapProfile,
+  getDashboardMetrics,
 } = require("../controllers/userController");
 
-// Upgrade to premium endpoint
-router.post(
-  "/upgrade/premium",
-  requireAuth,
-  ensureUserProfile,
-  upgradeToPremium
-);
+// ============================================
+// CORE PROFILE ROUTES
+// ============================================
 
-// Multer storage for resume uploads
-/* eslint-disable no-magic-numbers */
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/resumes"),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(
-      Math.random() * 1000000000
-    )}`;
-    const ext = file.originalname.split(".").pop();
-    cb(null, `${file.fieldname}-${uniqueSuffix}.${ext}`);
-  },
-});
-/* eslint-enable no-magic-numbers */
-
-const upload = multer({
-  storage,
-  // eslint-disable-next-line no-magic-numbers
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype === "application/pdf" ||
-      file.mimetype.startsWith("image/")
-    )
-      return cb(null, true);
-    return cb(new Error("Only PDF files and images are allowed"));
-  },
-});
-
-// Profile (idempotent create via POST)
+// Get user profile
 router.get("/profile", requireAuth, ensureUserProfile, getProfile);
-router.post("/profile", requireAuth, ensureUserProfile, getProfile);
-router.put("/profile", requireAuth, ensureUserProfile, updateProfile);
-// Bootstrap endpoint - creates profile if needed
-router.post("/bootstrap", requireAuth, bootstrapProfile);
 
-// Analytics / stats
-router.get("/stats", requireAuth, ensureUserProfile, getAnalytics);
-router.get("/analytics", requireAuth, ensureUserProfile, getAnalytics);
-
-// Onboarding flows
+// Bootstrap profile (get all initial data)
 router.post(
-  "/onboarding/complete",
+  "/profile/bootstrap",
   requireAuth,
   ensureUserProfile,
-  completeOnboarding
-);
-router.post(
-  "/onboarding/save-progress",
-  requireAuth,
-  ensureUserProfile,
-  saveOnboardingProgress
+  bootstrapProfile
 );
 
-// Resume + profile media
-router.post(
-  "/resume",
-  requireAuth,
-  ensureUserProfile,
-  upload.single("resume"),
-  uploadResume
-);
+// Update profile
+router.patch("/profile", requireAuth, ensureUserProfile, updateProfile);
+
+// Update avatar
 router.put("/profile/avatar", requireAuth, ensureUserProfile, updateAvatar);
+
+// Update resume
 router.put(
   "/profile/resume",
   requireAuth,
@@ -105,79 +56,109 @@ router.put(
   updateResumeAsset
 );
 
-// Scheduled sessions CRUD
-router.get(
-  "/scheduled-sessions",
-  requireAuth,
-  ensureUserProfile,
-  getScheduledSessions
-);
+// ============================================
+// ONBOARDING ROUTES
+// ============================================
+
+// Save onboarding progress
 router.post(
-  "/scheduled-sessions",
+  "/onboarding/progress",
   requireAuth,
   ensureUserProfile,
-  upsertScheduledSession
-);
-router.put(
-  "/scheduled-sessions/:id",
-  requireAuth,
-  ensureUserProfile,
-  upsertScheduledSession
-);
-router.delete(
-  "/scheduled-sessions/:id",
-  requireAuth,
-  ensureUserProfile,
-  deleteScheduledSession
-);
-router.patch(
-  "/scheduled-sessions/:id/status",
-  requireAuth,
-  ensureUserProfile,
-  updateScheduledSessionStatus
+  saveOnboardingProgress
 );
 
-// Goals
-router.get("/goals", requireAuth, ensureUserProfile, getGoals);
-router.put("/goals", requireAuth, ensureUserProfile, updateGoals);
-
-// Dynamic tips
-router.get("/tips", requireAuth, ensureUserProfile, getDynamicTips);
-
-// Dashboard aggregation + preferences
-router.get(
-  "/dashboard/summary",
+// Complete onboarding
+router.post(
+  "/onboarding/complete",
   requireAuth,
   ensureUserProfile,
-  getDashboardSummary
-);
-router.get(
-  "/dashboard/preferences",
-  requireAuth,
-  ensureUserProfile,
-  getDashboardPreferences
-);
-router.put(
-  "/dashboard/preferences",
-  requireAuth,
-  ensureUserProfile,
-  updateDashboardPreferences
+  completeOnboarding
 );
 
-// Enhanced metrics (Phase 1)
-router.get(
-  "/dashboard/metrics",
+// ============================================
+// ANALYTICS ROUTES
+// ============================================
+
+// Get user analytics
+router.get("/analytics", requireAuth, ensureUserProfile, getAnalytics);
+
+// ============================================
+// SUBSCRIPTION ROUTES
+// ============================================
+
+// Upgrade to premium
+router.post(
+  "/upgrade/premium",
   requireAuth,
   ensureUserProfile,
-  getDashboardMetrics
+  upgradeToPremium
 );
 
-// Next best action recommendation (Phase 3 Option A)
+// ============================================
+// DASHBOARD ROUTES (Phase 1 - Stubs)
+// ============================================
+
+// Dashboard preferences (cross-device sync)
+router.get("/dashboard/preferences", requireAuth, getDashboardPreferences);
+router.patch("/dashboard/preferences", requireAuth, updateDashboardPreferences);
+
+// Dashboard summary (all-in-one)
+router.get("/dashboard/summary", requireAuth, getDashboardSummary);
+
+// Dashboard recommendation
 router.get(
   "/dashboard/recommendation",
   requireAuth,
-  ensureUserProfile,
   getDashboardRecommendation
 );
+
+// Dashboard metrics (Phase 1)
+router.get("/dashboard/metrics", requireAuth, getDashboardMetrics);
+
+// ============================================
+// SCHEDULED SESSIONS ROUTES (Phase 1 - Stubs)
+// ============================================
+
+// Get all scheduled sessions
+router.get("/scheduled", requireAuth, getScheduledSessions);
+
+// Create new scheduled session
+router.post("/scheduled", requireAuth, upsertScheduledSession);
+
+// Update scheduled session
+router.put("/scheduled/:id", requireAuth, upsertScheduledSession);
+
+// Delete scheduled session
+router.delete("/scheduled/:id", requireAuth, deleteScheduledSession);
+
+// Update session status
+router.patch(
+  "/scheduled/:id/status",
+  requireAuth,
+  updateScheduledSessionStatus
+);
+
+// ============================================
+// GOALS ROUTES (Phase 1 - Stubs)
+// ============================================
+
+// Get user goals
+router.get("/goals", requireAuth, getGoals);
+
+// Update user goals
+router.put("/goals", requireAuth, updateGoals);
+
+// ============================================
+// TIPS ROUTES (Phase 1 - Stubs)
+// ============================================
+
+// Get dynamic tips
+router.get("/tips", requireAuth, getDynamicTips);
+
+// TEST ROUTE - for debugging
+router.get("/test", (req, res) => {
+  res.json({ message: "User routes working!" });
+});
 
 module.exports = router;

@@ -9,7 +9,7 @@ class SessionSummaryService {
     try {
       const interview = await Interview.findOne({
         _id: interviewId,
-        userId,
+        user: userId, // ✅ CORRECT - matches Interview model
       }).populate("userProfile");
 
       if (!interview) {

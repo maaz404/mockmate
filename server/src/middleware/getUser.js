@@ -1,55 +1,21 @@
-const { clerkClient } = require("@clerk/clerk-sdk-node");
-const UserProfile = require("../models/UserProfile");
+const { verifyAccess } = require("../utils/jwt");
+const User = require("../models/User");
 
-/**
- * Middleware to get current user information
- * Attaches user profile to req.user for use in routes
- */
-const getUser = async (req, res, next) => {
+module.exports = async function getUser(req, _res, next) {
   try {
-    if (!req.auth?.userId) {
-      return next();
-    }
-
-    const { userId } = req.auth;
-
-    // Get user profile from database
-    let userProfile = await UserProfile.findOne({ clerkUserId: userId });
-
-    // If no profile exists, create one from Clerk data
-    if (!userProfile) {
-      try {
-        const clerkUser = await clerkClient.users.getUser(userId);
-
-        userProfile = new UserProfile({
-          clerkUserId: userId,
-          email: clerkUser.emailAddresses[0]?.emailAddress || "",
-          firstName: clerkUser.firstName || "",
-          lastName: clerkUser.lastName || "",
-          profileImage: clerkUser.profileImageUrl || "",
-          lastLoginAt: new Date(),
-        });
-
-        await userProfile.save();
-      } catch (clerkError) {
-        // Log error but continue without user profile
-        req.user = null;
-        return next();
-      }
-    } else {
-      // Update last login time
-      userProfile.lastLoginAt = new Date();
-      await userProfile.save();
-    }
-
-    // Attach user to request
-    req.user = userProfile;
+    const header = req.get("authorization");
+    const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) return next();
+    const payload = verifyAccess(token);
+    const user = await User.findById(payload.sub).lean();
+    if (user)
+      req.user = {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+      };
     next();
-  } catch (error) {
-    // Log error but continue
-    req.user = null;
+  } catch {
     next();
   }
 };
-
-module.exports = getUser;

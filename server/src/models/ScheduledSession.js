@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
 
-// Scheduled practice/interview session for a user
 const scheduledSessionSchema = new mongoose.Schema(
   {
-    userId: {
-      type: String,
+    // CHANGED: userId: String → user: ObjectId
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
       index: true,
     },
@@ -42,12 +43,19 @@ const scheduledSessionSchema = new mongoose.Schema(
       default: "scheduled",
       index: true,
     },
+    // Link to actual interview if session was started
+    interview: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Interview",
+    },
   },
   {
     timestamps: true,
   }
 );
 
-scheduledSessionSchema.index({ userId: 1, scheduledAt: 1 });
+// CHANGED: Indexes
+scheduledSessionSchema.index({ user: 1, scheduledAt: 1 });
+scheduledSessionSchema.index({ user: 1, status: 1 });
 
 module.exports = mongoose.model("ScheduledSession", scheduledSessionSchema);

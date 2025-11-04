@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const requireAuth = require("../middleware/auth");
 const chatbotController = require("../controllers/chatbotController");
-const auth = require("../middleware/auth");
 
 /**
  * Chatbot Routes
@@ -11,12 +11,23 @@ const auth = require("../middleware/auth");
 // Public health check
 router.get("/health", chatbotController.health);
 
-// Protected chat endpoints (allow unauthenticated access in development to enable dev fallback)
-const requireAuth =
-  process.env.NODE_ENV === "production" ? auth : (req, res, next) => next();
-
+// Protected routes
 router.post("/chat", requireAuth, chatbotController.chat);
-router.get("/suggestions", requireAuth, chatbotController.getChatSuggestions);
-router.post("/stream", requireAuth, chatbotController.stream);
+router.get(
+  "/history/:interviewId",
+  requireAuth,
+  chatbotController.getChatHistory
+);
+router.delete(
+  "/history/:interviewId",
+  requireAuth,
+  chatbotController.clearChatHistory
+);
+router.post("/context", requireAuth, chatbotController.updateContext);
+router.get(
+  "/suggestions/:interviewId",
+  requireAuth,
+  chatbotController.getSuggestions
+);
 
 module.exports = router;

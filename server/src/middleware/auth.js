@@ -1,43 +1,47 @@
-const { ClerkExpressRequireAuth } = require("@clerk/clerk-sdk-node");
+const { verifyToken } = require("../config/jwt");
+const User = require("../models/User");
 const Logger = require("../utils/logger");
 
-/**
- * Middleware to require authentication for protected routes
- * Uses Clerk Express middleware to verify JWT tokens
- */
-const requireAuth = (req, res, next) => {
-  // In development, allow fallback if explicitly enabled
-  if (
-    process.env.NODE_ENV !== "production" &&
-    process.env.MOCK_AUTH_FALLBACK === "true"
-  ) {
-    if (!req.auth || !(req.auth.userId || req.auth.id)) {
-      req.auth = { userId: "test-user-123", id: "test-user-123" };
+const requireAuth = async (req, res, next) => {
+  try {
+    const header = req.get("authorization");
+    const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+
+    // Dev fallback (optional)
+    if (
+      !token &&
+      process.env.NODE_ENV !== "production" &&
+      process.env.MOCK_AUTH_FALLBACK === "true"
+    ) {
+      req.user = {
+        id: "000000000000000000000001",
+        email: "dev@example.com",
+        role: "user",
+      };
+      return next();
     }
+
+    if (!token) {
+      return res
+        .status(401)
+        .json({ code: "UNAUTHENTICATED", message: "Missing token" });
+    }
+
+    const payload = verifyToken(token);
+    const user = await User.findById(payload.id).lean();
+    if (!user)
+      return res
+        .status(401)
+        .json({ code: "UNAUTHENTICATED", message: "User not found" });
+
+    req.user = { id: user._id.toString(), email: user.email, role: user.role };
     return next();
+  } catch (err) {
+    Logger?.error?.("Authentication error", { message: err.message });
+    return res
+      .status(401)
+      .json({ code: "UNAUTHENTICATED", message: "Invalid or expired token" });
   }
-
-  // In production, use Clerk authentication
-  const clerkAuth = ClerkExpressRequireAuth({
-    onError: (error, req, res, _next) => {
-      Logger.error("Authentication error", {
-        message: error.message,
-        status: error.status || 401,
-        path: req.path,
-        method: req.method,
-      });
-
-      // Send proper JSON response
-      return res.status(401).json({
-        success: false,
-        error: "Authentication required",
-        message: "Please provide a valid authentication token",
-        statusCode: 401,
-      });
-    },
-  });
-
-  return clerkAuth(req, res, next);
 };
 
 module.exports = requireAuth;

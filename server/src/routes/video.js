@@ -9,15 +9,13 @@ const Logger = require("../utils/logger");
 const MC = require("../utils/mediaConstants");
 let cloudinary = null;
 try {
-  // Lazy require so environments without credentials don't break
   cloudinary = require("../config/cloudinary");
 } catch (e) {
-  cloudinary = null; // Cloudinary optional
+  cloudinary = null;
 }
 
 const router = express.Router();
 
-// Configure multer for video uploads
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const uploadDir = path.join(__dirname, "../../uploads/videos");
@@ -29,7 +27,8 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${req.auth.userId}_${Date.now()}_${Math.round(
+    // CHANGED: req.auth.userId -> req.user.id
+    const uniqueName = `${req.user.id}_${Date.now()}_${Math.round(
       Math.random() * MC.RECORDING_RANDOM_MAX
     )}.webm`;
     cb(null, uniqueName);
@@ -55,7 +54,8 @@ const upload = multer({
 // @access  Private
 router.post("/start/:interviewId", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED: const { userId } = req.auth; -> const userId = req.user?.id;
+    const userId = req.user?.id;
     const { interviewId } = req.params;
 
     // Validate interviewId format early to avoid CastError noise
@@ -68,7 +68,11 @@ router.post("/start/:interviewId", requireAuth, async (req, res) => {
       });
     }
 
-    const interview = await Interview.findOne({ _id: interviewId, userId });
+    // CHANGED: query by user field instead of userId
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      user: userId,
+    });
 
     if (!interview) {
       return res.status(404).json({
@@ -108,7 +112,6 @@ router.post("/start/:interviewId", requireAuth, async (req, res) => {
       message: "Failed to start video recording",
     });
   }
-  return null;
 });
 
 // @desc    Upload video recording
@@ -120,7 +123,8 @@ router.post(
   upload.single("video"),
   async (req, res) => {
     try {
-      const { userId } = req.auth;
+      // CHANGED: const { userId } = req.auth; -> const userId = req.user?.id;
+      const userId = req.user?.id;
       const { interviewId, questionIndex } = req.params;
 
       if (!req.file) {
@@ -130,22 +134,23 @@ router.post(
         });
       }
 
+      // CHANGED: query by user field
       const interview = await Interview.findOne({
         _id: interviewId,
-        userId,
+        user: userId,
       });
-      // Guard: interview must be in-progress to accept uploads
-      if (interview.status !== "in-progress") {
-        return res.status(400).json({
-          success: false,
-          message: "Interview is not active for recording",
-        });
-      }
 
       if (!interview) {
         return res.status(404).json({
           success: false,
           message: "Interview not found",
+        });
+      }
+
+      if (interview.status !== "in-progress") {
+        return res.status(400).json({
+          success: false,
+          message: "Interview is not active for recording",
         });
       }
 
@@ -157,7 +162,6 @@ router.post(
         });
       }
 
-      // Store video information (local initially; may be replaced by Cloudinary)
       const videoData = {
         questionIndex: qIndex,
         filename: req.file.filename,
@@ -169,7 +173,6 @@ router.post(
         mimeType: req.file.mimetype,
       };
 
-      // Parse facial analysis data if provided
       let facialAnalysisData = null;
       if (req.body.facialAnalysis) {
         try {
@@ -179,7 +182,6 @@ router.post(
         }
       }
 
-      // Initialize video session if not exists
       if (!interview.videoSession) {
         interview.videoSession = {
           isRecording: true,
@@ -188,10 +190,8 @@ router.post(
         };
       }
 
-      // Add recording to the session
       interview.videoSession.recordings.push(videoData);
 
-      // Attempt Cloudinary upload if configured
       let cloudinaryAsset = null;
       if (
         cloudinary &&
@@ -217,12 +217,9 @@ router.post(
             duration: uploadResult.duration,
             folder,
           };
-          // Optionally delete local file to save space
           try {
             await fs.unlink(req.file.path);
-          } catch (_) {
-            /* ignore */
-          }
+          } catch (_) {}
         } catch (cloudErr) {
           Logger.warn(
             "Cloudinary upload failed, continuing with local file:",
@@ -231,7 +228,6 @@ router.post(
         }
       }
 
-      // Add video reference to the specific question (augment with cloudinary if available)
       const videoQuestion = {
         filename: req.file.filename,
         path: req.file.path,
@@ -245,7 +241,6 @@ router.post(
         cloudinary: cloudinaryAsset || undefined,
       };
 
-      // Add facial analysis data if provided
       if (facialAnalysisData) {
         videoQuestion.facialAnalysis = {
           enabled: true,
@@ -260,7 +255,6 @@ router.post(
 
       await interview.save();
 
-      // Start transcription process asynchronously (don't await to not block response)
       transcriptionService
         .processVideoTranscription(
           interview,
@@ -289,7 +283,6 @@ router.post(
     } catch (error) {
       Logger.error("Video upload error:", error);
 
-      // Clean up uploaded file if there was an error
       if (req.file && req.file.path) {
         try {
           await fs.unlink(req.file.path);
@@ -303,7 +296,6 @@ router.post(
         message: "Failed to upload video",
       });
     }
-    return null;
   }
 );
 
@@ -312,12 +304,13 @@ router.post(
 // @access  Private
 router.post("/stop/:interviewId", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED
+    const userId = req.user?.id;
     const { interviewId } = req.params;
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
     if (!interview) {
@@ -338,10 +331,8 @@ router.post("/stop/:interviewId", requireAuth, async (req, res) => {
     interview.videoSession.isRecording = false;
     interview.videoSession.endedAt = new Date();
     interview.videoSession.totalDuration = Math.round(
-      Math.round(
-        (interview.videoSession.endedAt - interview.videoSession.startedAt) /
-          MC.MS_PER_SEC
-      )
+      (interview.videoSession.endedAt - interview.videoSession.startedAt) /
+        MC.MS_PER_SEC
     );
 
     await interview.save();
@@ -362,7 +353,6 @@ router.post("/stop/:interviewId", requireAuth, async (req, res) => {
       message: "Failed to stop video recording",
     });
   }
-  return null;
 });
 
 // @desc    Get video playback URL
@@ -373,12 +363,13 @@ router.get(
   requireAuth,
   async (req, res) => {
     try {
-      const { userId } = req.auth;
+      // CHANGED
+      const userId = req.user?.id;
       const { interviewId, questionIndex } = req.params;
 
       const interview = await Interview.findOne({
         _id: interviewId,
-        userId,
+        user: userId,
       });
 
       if (!interview) {
@@ -450,7 +441,6 @@ router.get(
         message: "Failed to get video playback information",
       });
     }
-    return null;
   }
 );
 
@@ -460,11 +450,11 @@ router.get(
 router.get("/stream/:filename", requireAuth, async (req, res) => {
   try {
     const { filename } = req.params;
-    const { userId } = req.auth;
+    // CHANGED
+    const userId = req.user?.id;
 
-    // Security: Check if the user owns this video
     const interview = await Interview.findOne({
-      userId,
+      user: userId,
       "videoSession.recordings.filename": filename,
     });
 
@@ -525,7 +515,6 @@ router.get("/stream/:filename", requireAuth, async (req, res) => {
       message: "Failed to stream video",
     });
   }
-  return null;
 });
 
 // @desc    Delete video recording
@@ -533,12 +522,13 @@ router.get("/stream/:filename", requireAuth, async (req, res) => {
 // @access  Private
 router.delete("/:interviewId/:questionIndex", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED
+    const userId = req.user?.id;
     const { interviewId, questionIndex } = req.params;
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
     if (!interview) {
@@ -600,7 +590,6 @@ router.delete("/:interviewId/:questionIndex", requireAuth, async (req, res) => {
       message: "Failed to delete video",
     });
   }
-  return null;
 });
 
 // @desc    Get interview video summary
@@ -608,12 +597,13 @@ router.delete("/:interviewId/:questionIndex", requireAuth, async (req, res) => {
 // @access  Private
 router.get("/summary/:interviewId", requireAuth, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    // CHANGED
+    const userId = req.user?.id;
     const { interviewId } = req.params;
 
     const interview = await Interview.findOne({
       _id: interviewId,
-      userId,
+      user: userId,
     });
 
     if (!interview) {
@@ -666,7 +656,6 @@ router.get("/summary/:interviewId", requireAuth, async (req, res) => {
       message: "Failed to get video summary",
     });
   }
-  return null;
 });
 
 // @desc    Get transcription for a specific video
@@ -677,12 +666,13 @@ router.get(
   requireAuth,
   async (req, res) => {
     try {
-      const { userId } = req.auth;
+      // CHANGED
+      const userId = req.user?.id;
       const { interviewId, questionIndex } = req.params;
 
       const interview = await Interview.findOne({
         _id: interviewId,
-        userId,
+        user: userId,
       });
 
       if (!interview) {
@@ -732,7 +722,6 @@ router.get(
         message: "Failed to get transcription",
       });
     }
-    return null;
   }
 );
 
@@ -744,11 +733,15 @@ router.post(
   requireAuth,
   async (req, res) => {
     try {
-      const { userId } = req.auth;
+      // CHANGED
+      const userId = req.user?.id;
       const { interviewId, questionIndex } = req.params;
       const qIndex = parseInt(questionIndex);
 
-      const interview = await Interview.findOne({ _id: interviewId, userId });
+      const interview = await Interview.findOne({
+        _id: interviewId,
+        user: userId,
+      });
       if (!interview)
         return res
           .status(404)
@@ -801,7 +794,6 @@ router.post(
         .status(500)
         .json({ success: false, message: "Failed to retry transcription" });
     }
-    return null;
   }
 );
 

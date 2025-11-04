@@ -1,17 +1,18 @@
 const mongoose = require("mongoose");
 const AssetSchema = require("./common/Asset");
 
-// User Profile Schema (extends Clerk user data)
 const userProfileSchema = new mongoose.Schema(
   {
-    // Clerk user ID for linking
-    clerkUserId: {
-      type: String,
+    // Local user reference (replaces Clerk user ID)
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
       unique: true,
+      index: true,
     },
 
-    // Basic Information (synced from Clerk)
+    // Basic Information
     email: {
       type: String,
       required: true,
@@ -39,12 +40,7 @@ const userProfileSchema = new mongoose.Schema(
       skills: [
         {
           name: String,
-          confidence: {
-            type: Number,
-            min: 1,
-            max: 5,
-            default: 3,
-          },
+          confidence: { type: Number, min: 1, max: 5, default: 3 },
           category: {
             type: String,
             enum: ["programming", "framework", "tool", "soft-skill", "domain"],
@@ -94,10 +90,7 @@ const userProfileSchema = new mongoose.Schema(
 
     // Interview Preferences
     preferences: {
-      preferredLanguages: {
-        type: [String],
-        default: ["English"],
-      },
+      preferredLanguages: { type: [String], default: ["English"] },
       interviewTypes: {
         type: [String],
         enum: [
@@ -127,70 +120,29 @@ const userProfileSchema = new mongoose.Schema(
         ],
         default: [],
       },
-      sessionDuration: {
-        type: Number,
-        default: 30, // minutes
-        min: 15,
-        max: 120,
-      },
+      sessionDuration: { type: Number, default: 30, min: 15, max: 120 },
       notifications: {
-        email: {
-          type: Boolean,
-          default: true,
-        },
-        push: {
-          type: Boolean,
-          default: true,
-        },
-        interviews: {
-          type: Boolean,
-          default: true,
-        },
-        progress: {
-          type: Boolean,
-          default: true,
-        },
+        email: { type: Boolean, default: true },
+        push: { type: Boolean, default: true },
+        interviews: { type: Boolean, default: true },
+        progress: { type: Boolean, default: true },
       },
-      // Dashboard UI Preferences (for cross-device consistency)
       dashboard: {
         density: {
           type: String,
           enum: ["comfortable", "compact"],
           default: "comfortable",
         },
-        upcomingView: {
-          type: String,
-          enum: ["list", "week"],
-          default: "list",
-        },
-        thisWeekOnly: {
-          type: Boolean,
-          default: false,
-        },
+        upcomingView: { type: String, enum: ["list", "week"], default: "list" },
+        thisWeekOnly: { type: Boolean, default: false },
       },
-      // Facial Expression Analysis Settings
       facialAnalysis: {
-        enabled: {
-          type: Boolean,
-          default: false,
-        },
-        consentGiven: {
-          type: Boolean,
-          default: false,
-        },
+        enabled: { type: Boolean, default: false },
+        consentGiven: { type: Boolean, default: false },
         consentDate: Date,
-        autoCalibration: {
-          type: Boolean,
-          default: true,
-        },
-        showConfidenceMeter: {
-          type: Boolean,
-          default: true,
-        },
-        showRealtimeFeedback: {
-          type: Boolean,
-          default: true,
-        },
+        autoCalibration: { type: Boolean, default: true },
+        showConfidenceMeter: { type: Boolean, default: true },
+        showRealtimeFeedback: { type: Boolean, default: true },
         feedbackFrequency: {
           type: String,
           enum: ["low", "medium", "high"],
@@ -201,27 +153,13 @@ const userProfileSchema = new mongoose.Schema(
 
     // Analytics & Progress
     analytics: {
-      totalInterviews: {
-        type: Number,
-        default: 0,
-      },
-      averageScore: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 100,
-      },
+      totalInterviews: { type: Number, default: 0 },
+      averageScore: { type: Number, default: 0, min: 0, max: 100 },
       strongAreas: [String],
       improvementAreas: [String],
       streak: {
-        current: {
-          type: Number,
-          default: 0,
-        },
-        longest: {
-          type: Number,
-          default: 0,
-        },
+        current: { type: Number, default: 0 },
+        longest: { type: Number, default: 0 },
         lastInterviewDate: Date,
       },
     },
@@ -230,13 +168,15 @@ const userProfileSchema = new mongoose.Schema(
     subscription: {
       plan: {
         type: String,
-        enum: ["free", "premium", "enterprise"],
+        enum: ["free", "premium"], // Must match User model
         default: "free",
       },
-      interviewsRemaining: {
-        type: Number,
-        default: 10, // free plan limit (updated from 5)
+      status: {
+        type: String,
+        enum: ["active", "inactive", "cancelled"],
+        default: "active",
       },
+      interviewsRemaining: { type: Number, default: 10 },
       nextResetDate: Date,
     },
 
@@ -249,17 +189,8 @@ const userProfileSchema = new mongoose.Schema(
       },
     ],
 
-    // Profile Completion
-    onboardingCompleted: {
-      type: Boolean,
-      default: false,
-    },
-    profileCompleteness: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
+    onboardingCompleted: { type: Boolean, default: false },
+    profileCompleteness: { type: Number, default: 0, min: 0, max: 100 },
     profileCompletenessPercentage: {
       type: Number,
       default: 0,
@@ -267,21 +198,16 @@ const userProfileSchema = new mongoose.Schema(
       max: 100,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Indexes for performance (clerkUserId and email already have unique: true)
+// Useful indexes
 userProfileSchema.index({ "professionalInfo.industry": 1 });
 userProfileSchema.index({ "analytics.totalInterviews": -1 });
 
-// Calculate profile completeness
 userProfileSchema.methods.calculateCompleteness = function () {
   const MAX_COMPLETENESS = 100;
   let completeness = 0;
-
-  // Only use onboarding fields for completeness
   const fields = [
     this.professionalInfo?.currentRole,
     this.professionalInfo?.experience,
@@ -289,13 +215,11 @@ userProfileSchema.methods.calculateCompleteness = function () {
     this.professionalInfo?.skills?.length > 0,
     this.preferences?.interviewTypes?.length > 0,
   ];
-
   fields.forEach((field) => {
     if (field) completeness += MAX_COMPLETENESS / fields.length;
   });
-
   this.profileCompleteness = Math.round(completeness);
-  this.profileCompletenessPercentage = this.profileCompleteness; // For frontend compatibility
+  this.profileCompletenessPercentage = this.profileCompleteness;
   return this.profileCompleteness;
 };
 
