@@ -1,4 +1,5 @@
 /* eslint-disable consistent-return, no-magic-numbers */
+const aiProviderManager = require("../services/aiProviders");
 const grokChatbotService = require("../services/grokChatbotService");
 const UserProfile = require("../models/UserProfile");
 const Logger = require("../utils/logger");
@@ -100,41 +101,21 @@ exports.chat = async (req, res) => {
       context
     );
 
-    // Get response from Grok
+    // Get response using AI provider manager (Groq for chatbot)
     try {
-      const response = await grokChatbotService.chat(messages, enhancedContext);
+      const response = await aiProviderManager.chat(messages, enhancedContext);
       return ok(res, {
-        message: response.message,
-        provider: "grok",
-        model: response.model,
+        message: response,
+        provider: "groq",
         timestamp: new Date().toISOString(),
         requestId: req.requestId,
       });
     } catch (primaryErr) {
       Logger.warn(
-        "Primary Grok chat failed, attempting OpenAI fallback:",
+        "Primary AI provider chat failed, attempting fallback:",
         primaryErr.message
       );
-      try {
-        const fb = await grokChatbotService.openAIFallback(
-          messages,
-          enhancedContext
-        );
-        return ok(res, {
-          message: fb.message,
-          provider: fb.provider,
-          model: fb.model,
-          timestamp: new Date().toISOString(),
-          fallback: true,
-          requestId: req.requestId,
-        });
-      } catch (fbErr) {
-        Logger.warn(
-          "OpenAI fallback also failed, reverting to dev fallback response:",
-          fbErr.message
-        );
-        throw primaryErr; // triggers lower dev fallback section
-      }
+      throw primaryErr; // triggers lower dev fallback section
     }
   } catch (error) {
     Logger.error("Chat controller error:", error);
@@ -440,98 +421,46 @@ exports.stream = async (req, res) => {
       context
     );
 
-    // Try Grok streaming first
-    if (grokChatbotService.isConfigured()) {
+    // Try streaming with AI provider manager (Groq for chatbot)
+    try {
+      startHeartbeat();
+
+      await aiProviderManager.streamChat(
+        messages,
+        (chunk) => {
+          send("chunk", { text: chunk, source: "groq", provider: "groq" });
+        },
+        enhancedContext
+      );
+
+      send("done", {
+        timestamp: new Date().toISOString(),
+        provider: "groq",
+      });
+      clearInterval(heartbeatInterval);
+      res.end();
+      return;
+    } catch (err) {
+      Logger.warn(
+        "Streaming failed, using non-streaming response:",
+        err.message
+      );
       try {
-        const stream = await grokChatbotService.streamChat(
-          messages,
-          enhancedContext
-        );
-        startHeartbeat();
-        let buffer = "";
-        stream.on("data", (chunk) => {
-          const piece = chunk.toString();
-          buffer += piece;
-          const parts = buffer.split(/\n/);
-          buffer = parts.pop();
-          for (const part of parts) {
-            const trimmed = part.trim();
-            if (!trimmed) continue;
-            try {
-              const maybe = JSON.parse(trimmed);
-              const text =
-                maybe.choices?.[0]?.delta?.content || maybe.text || "";
-              if (text)
-                send("chunk", { text, source: "grok", provider: "grok" });
-            } catch {
-              send("chunk", {
-                text: trimmed,
-                source: "grok-raw",
-                provider: "grok",
-              });
-            }
-          }
+        const result = await aiProviderManager.chat(messages, enhancedContext);
+        send("chunk", {
+          text: result,
+          source: "fallback",
+          provider: "groq",
+          fallback: true,
         });
-        stream.on("end", () => {
-          if (buffer.trim())
-            send("chunk", {
-              text: buffer.trim(),
-              source: "grok-tail",
-              provider: "grok",
-            });
-          send("done", {
-            timestamp: new Date().toISOString(),
-            provider: "grok",
-          });
-          clearInterval(heartbeatInterval);
-          res.end();
+        send("done", {
+          timestamp: new Date().toISOString(),
+          provider: "groq",
+          fallback: true,
         });
-        stream.on("error", (err) => {
-          send("error", { error: err.message, code: "CHAT_STREAM_ERROR" });
-          clearInterval(heartbeatInterval);
-          res.end();
-        });
-        return;
-      } catch (err) {
-        try {
-          const result = await grokChatbotService.chat(
-            messages,
-            enhancedContext
-          );
-          send("chunk", {
-            text: result.message,
-            source: "grok-fallback",
-            provider: "grok",
-            fallback: true,
-          });
-          send("done", {
-            timestamp: new Date().toISOString(),
-            provider: "grok",
-            fallback: true,
-          });
-          return res.end();
-        } catch (inner) {
-          try {
-            const alt = await grokChatbotService.openAIFallback(
-              messages,
-              enhancedContext
-            );
-            send("chunk", {
-              text: alt.message,
-              source: "openai-fallback",
-              provider: alt.provider || "openai-fallback",
-              fallback: true,
-            });
-            send("done", {
-              timestamp: new Date().toISOString(),
-              provider: alt.provider,
-              fallback: true,
-            });
-            return res.end();
-          } catch (altErr) {
-            send("notice", { note: "Using development fallback response" });
-          }
-        }
+        return res.end();
+      } catch (inner) {
+        send("notice", { note: "Using development fallback response" });
       }
     }
 

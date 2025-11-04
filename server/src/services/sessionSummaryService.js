@@ -7,9 +7,10 @@ class SessionSummaryService {
    */
   async generateSessionSummary(interviewId, userId) {
     try {
+      // ✅ FIXED: Use 'user' field instead of 'userId'
       const interview = await Interview.findOne({
         _id: interviewId,
-        user: userId, // ✅ CORRECT - matches Interview model
+        user: userId, // CORRECT field name
       }).populate("userProfile");
 
       if (!interview) {

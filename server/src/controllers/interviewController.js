@@ -4,12 +4,15 @@ const Question = require("../models/Question");
 const mongoose = require("mongoose");
 const aiQuestionService = require("../services/aiQuestionService");
 const hybridQuestionService = require("../services/hybridQuestionService");
+const evaluationService = require("../services/evaluationService");
+const aiProviderManager = require("../services/aiProviders");
 const { destroyByPrefix } = require("./uploadController");
 const C = require("../utils/constants");
 const Logger = require("../utils/logger");
 const { ok, fail, created } = require("../utils/responder");
 const { consumeFreeInterview } = require("../utils/subscription");
 const { mapDifficulty } = require("../utils/questionNormalization");
+const FEATURES = require("../config/features");
 
 // Create new interview session
 const createInterview = async (req, res) => {
@@ -377,26 +380,85 @@ const submitAnswer = async (req, res) => {
 
       const questionObj = {
         text: interview.questions[qIndex].questionText,
+        questionText: interview.questions[qIndex].questionText,
         category: interview.questions[qIndex].category,
         type: interview.questions[qIndex].type || "general",
         difficulty: interview.questions[qIndex].difficulty,
+        tags: interview.questions[qIndex].tags || [],
       };
 
-      evaluation = await aiQuestionService.evaluateAnswer(
-        questionObj,
-        answer,
-        interview.config
-      );
-      Logger.info("AI evaluation completed:", evaluation);
+      const answerObj = {
+        text: answer,
+        answerText: answer,
+      };
+
+      // Try AI evaluation first (new AI provider manager)
+      if (FEATURES.AI_QUESTIONS) {
+        evaluation = await aiProviderManager.evaluateAnswer(
+          questionObj,
+          answer,
+          interview.config
+        );
+        Logger.info("AI evaluation completed:", evaluation);
+      } else {
+        // Use simplified keyword-based evaluation
+        Logger.info("Using simplified evaluation (AI disabled)");
+        const simpleEval = await evaluationService.evaluateAnswer(
+          questionObj,
+          answerObj
+        );
+
+        // Convert to expected format
+        evaluation = {
+          score: simpleEval.score,
+          rubricScores: {
+            relevance: Math.ceil((simpleEval.score / 100) * 5),
+            clarity: Math.ceil((simpleEval.score / 100) * 5),
+            depth: Math.ceil((simpleEval.score / 100) * 5),
+            structure: Math.ceil((simpleEval.score / 100) * 5),
+          },
+          breakdown: simpleEval.breakdown || {},
+          strengths: simpleEval.feedback?.strengths || [],
+          improvements: simpleEval.feedback?.improvements || [],
+          feedback: simpleEval.feedback?.overall || "",
+          modelAnswer: "",
+        };
+      }
     } catch (error) {
-      Logger.warn("AI evaluation failed, using basic scoring:", error);
+      Logger.warn("Evaluation failed, using simplified scoring:", error);
       const questionObj = {
+        questionText: interview.questions[qIndex].questionText,
         text: interview.questions[qIndex].questionText,
         category: interview.questions[qIndex].category,
         type: interview.questions[qIndex].type || "general",
         difficulty: interview.questions[qIndex].difficulty,
+        tags: interview.questions[qIndex].tags || [],
       };
-      evaluation = aiQuestionService.getBasicEvaluation(questionObj, answer);
+      const answerObj = {
+        text: answer,
+        answerText: answer,
+      };
+
+      // Use our simplified evaluation service as fallback
+      const simpleEval = await evaluationService.evaluateAnswer(
+        questionObj,
+        answerObj
+      );
+
+      evaluation = {
+        score: simpleEval.score,
+        rubricScores: {
+          relevance: Math.ceil((simpleEval.score / 100) * 5),
+          clarity: Math.ceil((simpleEval.score / 100) * 5),
+          depth: Math.ceil((simpleEval.score / 100) * 5),
+          structure: Math.ceil((simpleEval.score / 100) * 5),
+        },
+        breakdown: simpleEval.breakdown || {},
+        strengths: simpleEval.feedback?.strengths || [],
+        improvements: simpleEval.feedback?.improvements || [],
+        feedback: simpleEval.feedback?.overall || "",
+        modelAnswer: "",
+      };
     }
 
     interview.questions[qIndex].score = {

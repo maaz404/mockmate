@@ -1,6 +1,5 @@
 const axios = require("axios");
 const Logger = require("../utils/logger");
-let OpenAI = null; // lazy-loaded to avoid cost if not needed
 
 /**
  * Grok Chatbot Service
@@ -24,10 +23,6 @@ class GrokChatbotService {
     this.HTTP_TOO_MANY_REQUESTS = 429;
     // Misc constants
     this.VALIDATION_TIMEOUT_MS = 8000;
-    this.enableOpenAIFallback =
-      (process.env.GROK_ENABLE_OPENAI_FALLBACK || "true").toLowerCase() ===
-      "true"; // default true for resilience
-    this.openAIModel = process.env.OPENAI_FALLBACK_MODEL || "gpt-4o-mini"; // can be overridden
   }
 
   /**
@@ -96,43 +91,6 @@ class GrokChatbotService {
       }
 
       throw new Error("Failed to get response from Grok. Please try again.");
-    }
-  }
-
-  /**
-   * Attempt OpenAI fallback when Grok fails (non-streaming)
-   */
-  async openAIFallback(messages, context = {}) {
-    if (!this.enableOpenAIFallback) {
-      throw new Error("OpenAI fallback disabled");
-    }
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) throw new Error("Missing OPENAI_API_KEY for fallback");
-    try {
-      if (!OpenAI) OpenAI = require("openai");
-      const client = new OpenAI({ apiKey: key });
-      const systemPrompt = this.buildSystemPrompt({
-        ...context,
-        provider: "openai-fallback",
-      });
-      const response = await client.chat.completions.create({
-        model: this.openAIModel,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages.map((m) => ({ role: m.role, content: m.content })),
-        ],
-        max_tokens: this.DEFAULT_MAX_TOKENS,
-        temperature: this.DEFAULT_TEMPERATURE,
-      });
-      const msg = response.choices?.[0]?.message?.content || "";
-      return {
-        message: msg,
-        provider: "openai-fallback",
-        model: this.openAIModel,
-      };
-    } catch (e) {
-      Logger.error("OpenAI fallback error:", e.response?.data || e.message);
-      throw new Error("OpenAI fallback failed");
     }
   }
 

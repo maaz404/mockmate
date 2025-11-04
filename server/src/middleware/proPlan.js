@@ -1,88 +1,77 @@
-const User = require("../models/User");
 const UserProfile = require("../models/UserProfile");
+const Logger = require("../utils/logger");
 
 /**
- * Middleware to check if user has Pro plan access
- * For now, this is a simple implementation that can be extended with actual subscription logic
+ * Middleware to check if user has Pro/Premium plan access
+ * FIXED: Only checks UserProfile.subscription.plan (single source of truth)
  */
 const requireProPlan = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Login required" });
+      return res.status(401).json({
+        success: false,
+        code: "UNAUTHORIZED",
+        message: "Authentication required",
+      });
     }
 
-    // Prefer User.plan; fallback to UserProfile.subscription.plan
-    const user = await User.findById(userId, "plan").lean();
-    let plan = user?.plan;
+    // ✅ FIXED: Only check UserProfile.subscription.plan
+    const userProfile = await UserProfile.findOne(
+      { user: userId },
+      "subscription.plan"
+    ).lean();
 
-    if (!plan) {
-      const userProfile = await UserProfile.findOne(
-        { user: userId },
-        "subscription.plan"
-      ).lean();
-      plan = userProfile?.subscription?.plan || "free";
+    if (!userProfile) {
+      return res.status(404).json({
+        success: false,
+        code: "PROFILE_NOT_FOUND",
+        message: "User profile not found",
+      });
     }
 
-    const hasPro =
-      plan === "premium" || plan === "enterprise" || plan === "pro";
+    const plan = userProfile.subscription?.plan || "free";
+    const hasPro = ["premium", "enterprise"].includes(plan);
+
     if (!hasPro) {
       return res.status(403).json({
         success: false,
-        message: "Pro plan required for this feature",
-        error: "UPGRADE_REQUIRED",
-        upgradeInfo: {
-          feature: "PDF Export",
-          requiredPlan: "Pro",
-          benefits: [
-            "PDF report exports",
-            "Advanced analytics",
-            "Detailed performance insights",
-            "Progress tracking",
-          ],
-        },
+        code: "PREMIUM_REQUIRED",
+        message: "This feature requires a premium subscription",
+        currentPlan: plan,
       });
     }
 
-    req.subscription = { plan: plan || "pro" };
-    next();
+    // Attach plan to request for downstream use
+    req.userPlan = plan;
+    return next();
   } catch (error) {
-    console.error("Pro plan check error:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to verify subscription status",
-      });
+    Logger.error("Pro plan check error:", error);
+    return res.status(500).json({
+      success: false,
+      code: "PLAN_CHECK_FAILED",
+      message: "Failed to verify subscription status",
+    });
   }
 };
 
 /**
- * Check if user has pro plan (without blocking the request)
+ * Check if user has pro plan (non-blocking helper)
+ * FIXED: Only checks UserProfile
  */
 const checkProPlan = async (userId) => {
   try {
-    const user = await User.findById(userId, "plan").lean();
-    if (
-      user?.plan &&
-      (user.plan === "premium" ||
-        user.plan === "enterprise" ||
-        user.plan === "pro")
-    ) {
-      return true;
-    }
-    const profile = await UserProfile.findOne(
+    const userProfile = await UserProfile.findOne(
       { user: userId },
       "subscription.plan"
     ).lean();
-    return (
-      profile?.subscription?.plan === "premium" ||
-      profile?.subscription?.plan === "enterprise"
-    );
+
+    if (!userProfile) return false;
+
+    const plan = userProfile.subscription?.plan || "free";
+    return ["premium", "enterprise"].includes(plan);
   } catch (error) {
-    console.error("Pro plan check error:", error);
+    Logger.error("Pro plan check helper error:", error);
     return false;
   }
 };

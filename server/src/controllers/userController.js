@@ -183,31 +183,26 @@ const saveOnboardingProgress = async (req, res) => {
 // Update user profile
 const updateProfile = async (req, res) => {
   try {
-    if (!req.userProfile)
-      return fail(res, 500, "PROFILE_NOT_ATTACHED", "User profile missing");
     const userId = req.user?.id;
-    const updates = { ...req.body };
+    const updates = req.body;
 
-    ["user", "email", "analytics", "subscription"].forEach(
-      (f) => delete updates[f]
-    );
-
-    const userProfile = await UserProfile.findOneAndUpdate(
-      { user: userId },
-      { ...updates },
-      { new: true }
-    );
-    if (!userProfile)
-      return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
-
-    try {
-      userProfile.calculateCompleteness();
-      await userProfile.save();
-    } catch (calcErr) {
-      console.warn("Completeness calculation failed", calcErr);
+    // Validate nested updates
+    if (updates.professionalInfo) {
+      // ❌ REMOVE: resume from professionalInfo (use top-level resume instead)
+      delete updates.professionalInfo.resume;
     }
 
-    return ok(res, userProfile, "Profile updated");
+    const profile = await UserProfile.findOneAndUpdate(
+      { user: userId },
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
+
+    if (!profile) {
+      return fail(res, 404, "PROFILE_NOT_FOUND", "Profile not found");
+    }
+
+    return ok(res, profile, "Profile updated successfully");
   } catch (error) {
     console.error("Update profile error:", error);
     return fail(res, 500, "PROFILE_UPDATE_FAILED", "Failed to update profile");
@@ -323,7 +318,7 @@ const completeOnboarding = async (req, res) => {
       userProfile.calculateCompleteness();
       await userProfile.save();
     } catch (calcError) {
-      console.error("Error calculating completeness:", calcError);
+      console.warn("Completeness calculation failed", calcError);
     }
 
     return ok(res, userProfile, "Onboarding completed successfully");

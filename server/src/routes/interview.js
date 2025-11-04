@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const requireAuth = require("../middleware/auth");
 const ensureUserProfile = require("../middleware/ensureUserProfile");
+const FEATURES = require("../config/features");
 const {
   createInterview,
   getUserInterviews,
@@ -10,6 +11,7 @@ const {
   submitAnswer,
   generateFollowUp,
   completeInterview,
+  // Advanced features - now enabled
   getAdaptiveQuestion,
   getInterviewResults,
   markFollowUpsReviewed,
@@ -20,7 +22,9 @@ const {
 } = require("../controllers/interviewController");
 const { getRemaining } = require("../utils/subscription");
 const dbReady = require("../middleware/dbReady");
-const inMem = require("../services/inMemoryInterviewService");
+const inMem = FEATURES.IN_MEMORY_FALLBACK
+  ? require("../services/inMemoryInterviewService")
+  : null;
 
 function ok(res, data = {}, meta = {}) {
   return res
@@ -28,15 +32,13 @@ function ok(res, data = {}, meta = {}) {
     .json({ success: true, data, requestId: res.locals.requestId, ...meta });
 }
 function fail(res, code, message, status = 400, extra = {}) {
-  return res
-    .status(status)
-    .json({
-      success: false,
-      code,
-      message,
-      requestId: res.locals.requestId,
-      ...extra,
-    });
+  return res.status(status).json({
+    success: false,
+    code,
+    message,
+    requestId: res.locals.requestId,
+    ...extra,
+  });
 }
 
 function wrap(handler, { transform } = {}) {
@@ -144,7 +146,10 @@ router.post(
       : wrap(generateFollowUp)(req, res)
 );
 
-// @desc    Get next adaptive question
+// ===== ADVANCED FEATURES - DISABLED FOR SIMPLIFICATION =====
+// Advanced Features Routes (Now Enabled)
+
+// @desc    Get next adaptive question (ADAPTIVE_DIFFICULTY feature)
 router.post(
   "/:id/adaptive-question",
   requireAuth,
@@ -156,7 +161,7 @@ router.post(
       : wrap(getAdaptiveQuestion)(req, res)
 );
 
-// @desc    Update adaptive difficulty
+// @desc    Update adaptive difficulty (ADAPTIVE_DIFFICULTY feature)
 router.patch(
   "/:id/adaptive-difficulty",
   requireAuth,
@@ -168,7 +173,7 @@ router.patch(
   }
 );
 
-// @desc    Export metrics CSV
+// @desc    Export metrics CSV (CSV_EXPORT feature)
 router.get(
   "/:id/metrics/export",
   requireAuth,
@@ -180,7 +185,19 @@ router.get(
   }
 );
 
-// @desc    Complete interview
+// @desc    Get transcripts (TRANSCRIPT_POLLING feature)
+router.get(
+  "/:id/transcripts",
+  requireAuth,
+  ensureUserProfile,
+  dbReady,
+  (req, res) => {
+    req.params.interviewId = req.params.id;
+    return wrap(getInterviewTranscripts)(req, res);
+  }
+);
+
+// ===== END ADVANCED FEATURES =====
 router.post(
   "/:id/complete",
   requireAuth,
@@ -220,23 +237,11 @@ router.post(
   }
 );
 
-// @desc    Get transcripts
-router.get(
-  "/:id/transcripts",
-  requireAuth,
-  ensureUserProfile,
-  dbReady,
-  (req, res) => {
-    req.params.interviewId = req.params.id;
-    return wrap(getInterviewTranscripts)(req, res);
-  }
-);
-
 const C = require("../utils/constants");
 
 // @desc    Delete interview
 router.delete("/:id", requireAuth, ensureUserProfile, dbReady, (req, res) => {
-  if (req.useInMemory) {
+  if (req.useInMemory && FEATURES.IN_MEMORY_FALLBACK) {
     return fail(
       res,
       "NOT_IMPLEMENTED_IN_MEMORY",

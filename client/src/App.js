@@ -5,7 +5,9 @@ import { ToastProvider } from "./context/ToastContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import Layout from "./components/layout/Layout";
 import Toast from "./components/ui/Toast";
+import ChatbotWidget from "./components/ui/ChatbotWidget";
 import AppRoutes from "./routes/AppRoutes";
+import { FEATURES } from "./config/features";
 
 function App() {
   return (
@@ -17,6 +19,7 @@ function App() {
             <Layout>
               <AppRoutes />
             </Layout>
+            {FEATURES.chatbot && <ChatbotWidget />}
           </Router>
         </ToastProvider>
       </AuthProvider>

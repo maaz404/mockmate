@@ -18,9 +18,10 @@ class ComprehensiveReportingService {
    */
   async generateDetailedReport(interviewId, userId) {
     try {
+      // ✅ FIXED: Use 'user' field
       const interview = await Interview.findOne({
         _id: interviewId,
-        user: userId, // ✅ CORRECT
+        user: userId, // CORRECT
       }).populate("userProfile");
 
       if (!interview) {
@@ -425,8 +426,9 @@ class ComprehensiveReportingService {
    */
   async generateProgressMetrics(userId, currentInterview) {
     try {
+      // ✅ FIXED: Use 'user' field
       const previousInterviews = await Interview.find({
-        user: userId, // ✅ CORRECT
+        user: userId, // CORRECT
         _id: { $ne: currentInterview._id },
         status: "completed",
       })

@@ -13,6 +13,7 @@ import {
 import { useDesignSystem } from "../context/DesignSystemProvider";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { FEATURES } from "../config/features";
 
 const SettingsPage = () => {
   const { userProfile, refreshProfile } = useAuthContext();
@@ -450,268 +451,272 @@ const SettingsPage = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
-                        Facial Expression Analysis
-                      </h4>
-                      <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
-                        AI-powered analysis of your facial expressions and
-                        delivery during interviews. All processing happens
-                        locally in your browser.
-                      </p>
+                    {/* Facial Expression Analysis - Only show if feature is enabled */}
+                    {FEATURES.facialAnalysis && (
+                      <div>
+                        <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
+                          Facial Expression Analysis
+                        </h4>
+                        <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
+                          AI-powered analysis of your facial expressions and
+                          delivery during interviews. All processing happens
+                          locally in your browser.
+                        </p>
 
-                      <div className="space-y-4">
-                        {/* Main Enable/Disable Toggle */}
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h5 className="font-medium text-surface-800 dark:text-surface-200">
-                              Enable Facial Analysis
-                            </h5>
-                            <p className="text-sm text-surface-600 dark:text-surface-400">
-                              Analyze eye contact, expressions, and delivery for
-                              confidence feedback
-                            </p>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={
-                                preferences.facialAnalysis?.enabled || false
-                              }
-                              onChange={(e) =>
-                                handlePreferenceChange(
-                                  "facialAnalysis",
-                                  "enabled",
-                                  e.target.checked
-                                )
-                              }
-                              className="sr-only"
-                            />
-                            <div
-                              className={`w-11 h-6 rounded-full transition-colors ${
-                                preferences.facialAnalysis?.enabled
-                                  ? "bg-primary-600"
-                                  : "bg-surface-200 dark:bg-surface-700"
-                              }`}
-                            >
-                              <div
-                                className={`w-5 h-5 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
-                                  preferences.facialAnalysis?.enabled
-                                    ? "translate-x-5"
-                                    : "translate-x-0"
-                                }`}
-                              ></div>
-                            </div>
-                          </label>
-                        </div>
-
-                        {preferences.facialAnalysis?.enabled && (
-                          <div className="ml-4 space-y-3 border-l-2 border-primary-100 dark:border-primary-900/30 pl-4">
-                            {/* Auto Calibration */}
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300">
-                                  Auto Calibration
-                                </h6>
-                                <p className="text-xs text-surface-600 dark:text-surface-400">
-                                  Automatically run baseline calibration before
-                                  interviews
-                                </p>
-                              </div>
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={
-                                    preferences.facialAnalysis
-                                      ?.autoCalibration !== false
-                                  }
-                                  onChange={(e) =>
-                                    handlePreferenceChange(
-                                      "facialAnalysis",
-                                      "autoCalibration",
-                                      e.target.checked
-                                    )
-                                  }
-                                  className="sr-only"
-                                />
-                                <div
-                                  className={`w-9 h-5 rounded-full transition-colors ${
-                                    preferences.facialAnalysis
-                                      ?.autoCalibration !== false
-                                      ? "bg-primary-500"
-                                      : "bg-surface-200 dark:bg-surface-700"
-                                  }`}
-                                >
-                                  <div
-                                    className={`w-4 h-4 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
-                                      preferences.facialAnalysis
-                                        ?.autoCalibration !== false
-                                        ? "translate-x-4"
-                                        : "translate-x-0"
-                                    }`}
-                                  ></div>
-                                </div>
-                              </label>
-                            </div>
-
-                            {/* Show Confidence Meter */}
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300">
-                                  Confidence Meter
-                                </h6>
-                                <p className="text-xs text-surface-600 dark:text-surface-400">
-                                  Display real-time confidence score during
-                                  recording
-                                </p>
-                              </div>
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={
-                                    preferences.facialAnalysis
-                                      ?.showConfidenceMeter !== false
-                                  }
-                                  onChange={(e) =>
-                                    handlePreferenceChange(
-                                      "facialAnalysis",
-                                      "showConfidenceMeter",
-                                      e.target.checked
-                                    )
-                                  }
-                                  className="sr-only"
-                                />
-                                <div
-                                  className={`w-9 h-5 rounded-full transition-colors ${
-                                    preferences.facialAnalysis
-                                      ?.showConfidenceMeter !== false
-                                      ? "bg-primary-500"
-                                      : "bg-surface-200 dark:bg-surface-700"
-                                  }`}
-                                >
-                                  <div
-                                    className={`w-4 h-4 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
-                                      preferences.facialAnalysis
-                                        ?.showConfidenceMeter !== false
-                                        ? "translate-x-4"
-                                        : "translate-x-0"
-                                    }`}
-                                  ></div>
-                                </div>
-                              </label>
-                            </div>
-
-                            {/* Real-time Feedback */}
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300">
-                                  Real-time Tips
-                                </h6>
-                                <p className="text-xs text-surface-600 dark:text-surface-400">
-                                  Show delivery improvement tips during
-                                  interviews
-                                </p>
-                              </div>
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={
-                                    preferences.facialAnalysis
-                                      ?.showRealtimeFeedback !== false
-                                  }
-                                  onChange={(e) =>
-                                    handlePreferenceChange(
-                                      "facialAnalysis",
-                                      "showRealtimeFeedback",
-                                      e.target.checked
-                                    )
-                                  }
-                                  className="sr-only"
-                                />
-                                <div
-                                  className={`w-9 h-5 rounded-full transition-colors ${
-                                    preferences.facialAnalysis
-                                      ?.showRealtimeFeedback !== false
-                                      ? "bg-primary-500"
-                                      : "bg-surface-200 dark:bg-surface-700"
-                                  }`}
-                                >
-                                  <div
-                                    className={`w-4 h-4 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
-                                      preferences.facialAnalysis
-                                        ?.showRealtimeFeedback !== false
-                                        ? "translate-x-4"
-                                        : "translate-x-0"
-                                    }`}
-                                  ></div>
-                                </div>
-                              </label>
-                            </div>
-
-                            {/* Feedback Frequency */}
+                        <div className="space-y-4">
+                          {/* Main Enable/Disable Toggle */}
+                          <div className="flex items-center justify-between">
                             <div>
-                              <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-                                Feedback Frequency
-                              </h6>
-                              <select
-                                value={
-                                  preferences.facialAnalysis
-                                    ?.feedbackFrequency || "medium"
+                              <h5 className="font-medium text-surface-800 dark:text-surface-200">
+                                Enable Facial Analysis
+                              </h5>
+                              <p className="text-sm text-surface-600 dark:text-surface-400">
+                                Analyze eye contact, expressions, and delivery
+                                for confidence feedback
+                              </p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  preferences.facialAnalysis?.enabled || false
                                 }
                                 onChange={(e) =>
                                   handlePreferenceChange(
                                     "facialAnalysis",
-                                    "feedbackFrequency",
-                                    e.target.value
+                                    "enabled",
+                                    e.target.checked
                                   )
                                 }
-                                className="form-select"
+                                className="sr-only"
+                              />
+                              <div
+                                className={`w-11 h-6 rounded-full transition-colors ${
+                                  preferences.facialAnalysis?.enabled
+                                    ? "bg-primary-600"
+                                    : "bg-surface-200 dark:bg-surface-700"
+                                }`}
                               >
-                                <option value="low">
-                                  Low (Every 30 seconds)
-                                </option>
-                                <option value="medium">
-                                  Medium (Every 15 seconds)
-                                </option>
-                                <option value="high">
-                                  High (Every 10 seconds)
-                                </option>
-                              </select>
-                            </div>
+                                <div
+                                  className={`w-5 h-5 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
+                                    preferences.facialAnalysis?.enabled
+                                      ? "translate-x-5"
+                                      : "translate-x-0"
+                                  }`}
+                                ></div>
+                              </div>
+                            </label>
                           </div>
-                        )}
 
-                        {/* Privacy Notice */}
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                          <div className="flex items-start space-x-2">
-                            <Shield className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <div className="text-sm text-green-800">
-                              <p className="font-medium">Privacy Protected</p>
-                              <p className="text-xs mt-1">
-                                All facial analysis happens locally in your
-                                browser. No video data is transmitted or stored
-                                on our servers.
-                              </p>
+                          {preferences.facialAnalysis?.enabled && (
+                            <div className="ml-4 space-y-3 border-l-2 border-primary-100 dark:border-primary-900/30 pl-4">
+                              {/* Auto Calibration */}
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300">
+                                    Auto Calibration
+                                  </h6>
+                                  <p className="text-xs text-surface-600 dark:text-surface-400">
+                                    Automatically run baseline calibration
+                                    before interviews
+                                  </p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={
+                                      preferences.facialAnalysis
+                                        ?.autoCalibration !== false
+                                    }
+                                    onChange={(e) =>
+                                      handlePreferenceChange(
+                                        "facialAnalysis",
+                                        "autoCalibration",
+                                        e.target.checked
+                                      )
+                                    }
+                                    className="sr-only"
+                                  />
+                                  <div
+                                    className={`w-9 h-5 rounded-full transition-colors ${
+                                      preferences.facialAnalysis
+                                        ?.autoCalibration !== false
+                                        ? "bg-primary-500"
+                                        : "bg-surface-200 dark:bg-surface-700"
+                                    }`}
+                                  >
+                                    <div
+                                      className={`w-4 h-4 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
+                                        preferences.facialAnalysis
+                                          ?.autoCalibration !== false
+                                          ? "translate-x-4"
+                                          : "translate-x-0"
+                                      }`}
+                                    ></div>
+                                  </div>
+                                </label>
+                              </div>
+
+                              {/* Show Confidence Meter */}
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300">
+                                    Confidence Meter
+                                  </h6>
+                                  <p className="text-xs text-surface-600 dark:text-surface-400">
+                                    Display real-time confidence score during
+                                    recording
+                                  </p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={
+                                      preferences.facialAnalysis
+                                        ?.showConfidenceMeter !== false
+                                    }
+                                    onChange={(e) =>
+                                      handlePreferenceChange(
+                                        "facialAnalysis",
+                                        "showConfidenceMeter",
+                                        e.target.checked
+                                      )
+                                    }
+                                    className="sr-only"
+                                  />
+                                  <div
+                                    className={`w-9 h-5 rounded-full transition-colors ${
+                                      preferences.facialAnalysis
+                                        ?.showConfidenceMeter !== false
+                                        ? "bg-primary-500"
+                                        : "bg-surface-200 dark:bg-surface-700"
+                                    }`}
+                                  >
+                                    <div
+                                      className={`w-4 h-4 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
+                                        preferences.facialAnalysis
+                                          ?.showConfidenceMeter !== false
+                                          ? "translate-x-4"
+                                          : "translate-x-0"
+                                      }`}
+                                    ></div>
+                                  </div>
+                                </label>
+                              </div>
+
+                              {/* Real-time Feedback */}
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300">
+                                    Real-time Tips
+                                  </h6>
+                                  <p className="text-xs text-surface-600 dark:text-surface-400">
+                                    Show delivery improvement tips during
+                                    interviews
+                                  </p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={
+                                      preferences.facialAnalysis
+                                        ?.showRealtimeFeedback !== false
+                                    }
+                                    onChange={(e) =>
+                                      handlePreferenceChange(
+                                        "facialAnalysis",
+                                        "showRealtimeFeedback",
+                                        e.target.checked
+                                      )
+                                    }
+                                    className="sr-only"
+                                  />
+                                  <div
+                                    className={`w-9 h-5 rounded-full transition-colors ${
+                                      preferences.facialAnalysis
+                                        ?.showRealtimeFeedback !== false
+                                        ? "bg-primary-500"
+                                        : "bg-surface-200 dark:bg-surface-700"
+                                    }`}
+                                  >
+                                    <div
+                                      className={`w-4 h-4 bg-white dark:bg-surface-100 rounded-full shadow transform transition-transform ${
+                                        preferences.facialAnalysis
+                                          ?.showRealtimeFeedback !== false
+                                          ? "translate-x-4"
+                                          : "translate-x-0"
+                                      }`}
+                                    ></div>
+                                  </div>
+                                </label>
+                              </div>
+
+                              {/* Feedback Frequency */}
+                              <div>
+                                <h6 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                                  Feedback Frequency
+                                </h6>
+                                <select
+                                  value={
+                                    preferences.facialAnalysis
+                                      ?.feedbackFrequency || "medium"
+                                  }
+                                  onChange={(e) =>
+                                    handlePreferenceChange(
+                                      "facialAnalysis",
+                                      "feedbackFrequency",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="form-select"
+                                >
+                                  <option value="low">
+                                    Low (Every 30 seconds)
+                                  </option>
+                                  <option value="medium">
+                                    Medium (Every 15 seconds)
+                                  </option>
+                                  <option value="high">
+                                    High (Every 10 seconds)
+                                  </option>
+                                </select>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Privacy Notice */}
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div className="flex items-start space-x-2">
+                              <Shield className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                              <div className="text-sm text-green-800">
+                                <p className="font-medium">Privacy Protected</p>
+                                <p className="text-xs mt-1">
+                                  All facial analysis happens locally in your
+                                  browser. No video data is transmitted or
+                                  stored on our servers.
+                                </p>
+                              </div>
                             </div>
                           </div>
+
+                          {/* Consent Status */}
+                          {preferences.facialAnalysis?.consentGiven && (
+                            <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                                <span className="text-sm text-blue-800">
+                                  Consent given on{" "}
+                                  {new Date(
+                                    preferences.facialAnalysis.consentDate
+                                  ).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
-
-                        {/* Consent Status */}
-                        {preferences.facialAnalysis?.consentGiven && (
-                          <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
-                              <span className="text-sm text-blue-800">
-                                Consent given on{" "}
-                                {new Date(
-                                  preferences.facialAnalysis.consentDate
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                        )}
                       </div>
-                    </div>
+                    )}
+                    {/* End Facial Analysis Feature */}
 
                     <div>
                       <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">

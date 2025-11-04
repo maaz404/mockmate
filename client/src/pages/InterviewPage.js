@@ -5,6 +5,7 @@ import VideoPlayback from "../components/VideoPlayback";
 import RecordingUploader from "../components/interview/RecordingUploader";
 import toast from "react-hot-toast";
 import { apiService } from "../services/api";
+import { FEATURES } from "../config/features";
 
 const InterviewPage = () => {
   const { interviewId } = useParams();
@@ -535,7 +536,7 @@ const InterviewPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Video Section */}
           <div className="space-y-4">
-            {settings.videoRecording ? (
+            {settings.videoRecording && FEATURES.videoRecording ? (
               <div className="space-y-4">
                 <div className="card p-0 overflow-hidden">
                   <VideoRecorder

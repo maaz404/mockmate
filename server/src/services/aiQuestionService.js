@@ -1,9 +1,8 @@
-const OpenAI = require("openai");
+const aiProviderManager = require("./aiProviders");
 const Logger = require("../utils/logger");
 
 class AIQuestionService {
   constructor() {
-    this.openai = null;
     // Fallback questions in case API fails
     this.fallbackQuestions = require("./fallbackQuestions");
     // Simple in-memory cache { key: { expires, questions } }
@@ -12,16 +11,6 @@ class AIQuestionService {
     this.failCount = 0;
     this.open = false;
     this.nextAttemptAt = 0;
-  }
-
-  // Lazy initialization of OpenAI client
-  getOpenAIClient() {
-    if (!this.openai) {
-      this.openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-    }
-    return this.openai;
   }
 
   /**
@@ -75,12 +64,15 @@ class AIQuestionService {
         this.cache.delete(key);
       }
 
-      // Validate API key
-      if (
-        !process.env.OPENAI_API_KEY ||
-        process.env.OPENAI_API_KEY === "your_openai_api_key_here"
-      ) {
-        // OpenAI API key not configured, using fallback questions
+      // Validate that AI providers are available
+      const healthStatus = await aiProviderManager.getProvidersHealth();
+      const anyProviderAvailable = Object.values(healthStatus).some(
+        (h) => h.available
+      );
+
+      if (!anyProviderAvailable) {
+        // No AI provider available, using fallback questions
+        Logger.warn("No AI providers available, using fallback questions");
         return this.getFallbackQuestions(params);
       }
 
@@ -95,44 +87,60 @@ class AIQuestionService {
         userProfile,
       });
 
-      Logger.debug("Generating questions with OpenAI...");
+      Logger.debug("Generating questions with AI provider manager...");
 
-      const response = await this.getOpenAIClient().chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an expert technical interviewer and hiring manager with years of experience conducting interviews across various technology roles. Generate realistic, challenging, and relevant interview questions.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
+      // Use AI provider manager for question generation
+      const generatedQuestions = await aiProviderManager.generateQuestions({
+        jobRole,
+        experienceLevel,
+        interviewType,
+        skills,
+        focusAreas,
+        difficulty,
+        questionCount,
+        userProfile,
+        prompt,
       });
 
-      const generatedContent = response.choices[0]?.message?.content;
-      if (!generatedContent) {
-        throw new Error("No content generated from OpenAI");
+      // If provider returns structured questions, use them
+      if (Array.isArray(generatedQuestions) && generatedQuestions.length > 0) {
+        Logger.success(
+          `Generated ${generatedQuestions.length} questions successfully`
+        );
+        // Store in cache (5 min TTL)
+        // eslint-disable-next-line no-magic-numbers
+        const FIVE_MIN_MS = 5 * 60 * 1000; // 5 minutes cache TTL
+        this.cache.set(key, {
+          questions: generatedQuestions,
+          expires: now + FIVE_MIN_MS,
+        });
+        // Reset failure state on success
+        this.failCount = 0;
+        this.open = false;
+        return generatedQuestions;
       }
 
-      // Parse the response and structure the questions
-      const questions = this.parseGeneratedQuestions(generatedContent, params);
+      // If provider returns raw text, parse it
+      if (typeof generatedQuestions === "string") {
+        const questions = this.parseGeneratedQuestions(
+          generatedQuestions,
+          params
+        );
+        Logger.success(`Generated ${questions.length} questions successfully`);
+        // Store in cache (5 min TTL)
+        // eslint-disable-next-line no-magic-numbers
+        const FIVE_MIN_MS = 5 * 60 * 1000; // 5 minutes cache TTL
+        this.cache.set(key, { questions, expires: now + FIVE_MIN_MS });
+        // Reset failure state on success
+        this.failCount = 0;
+        this.open = false;
+        return questions;
+      }
 
-      Logger.success(`Generated ${questions.length} questions successfully`);
-      // Store in cache (5 min TTL)
-      // eslint-disable-next-line no-magic-numbers
-      const FIVE_MIN_MS = 5 * 60 * 1000; // 5 minutes cache TTL
-      this.cache.set(key, { questions, expires: now + FIVE_MIN_MS });
-      // Reset failure state on success
-      this.failCount = 0;
-      this.open = false;
-      return questions;
+      // Fallback if unexpected format
+      throw new Error("Unexpected response format from AI provider");
     } catch (error) {
-      Logger.error("OpenAI API error:", error.message);
+      Logger.error("AI provider error:", error.message);
       this.failCount += 1;
       // eslint-disable-next-line no-magic-numbers
       if (this.failCount >= 3 && !this.open) {
@@ -373,76 +381,14 @@ Requirements:
    * Generate follow-up questions based on user's answer
    */
   async generateFollowUp(originalQuestion, userAnswer, params) {
-    if (!process.env.OPENAI_API_KEY) {
-      return null;
-    }
-
     try {
-      const prompt = `Based on this interview question and the candidate's answer, generate 1-2 short follow-up questions.
-
-Original Question: "${originalQuestion}"
-Candidate's Answer: "${userAnswer}"
-Job Role: ${params.jobRole}
-Experience Level: ${params.experienceLevel}
-
-Generate follow-up questions that:
-1. Probe deeper into their understanding (why/how questions)
-2. Ask for practical examples or applications
-3. Explore edge cases or challenges
-4. Are appropriate for their experience level
-5. Are concise and focused
-
-Return in JSON format:
-{
-  "followUps": [
-    {
-      "text": "Follow-up question 1",
-      "type": "clarification|example|technical|challenge"
-    },
-    {
-      "text": "Follow-up question 2 (optional)",
-      "type": "clarification|example|technical|challenge"
-    }
-  ]
-}`;
-
-      const response = await this.getOpenAIClient().chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an expert interviewer generating insightful follow-up questions. Always return valid JSON.",
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.6,
-        max_tokens: 300,
-      });
-
-      const content = response.choices[0]?.message?.content?.trim();
-
-      // Try to parse JSON response
-      try {
-        const parsed = JSON.parse(content);
-        return parsed.followUps || [];
-      } catch (parseError) {
-        // Fallback: try to extract questions from text
-        const questions = content
-          .split("\n")
-          .filter(
-            (line) =>
-              line.trim() && (line.includes("?") || line.match(/^\d+\./))
-          )
-          // eslint-disable-next-line no-magic-numbers
-          .slice(0, 2)
-          .map((line) => ({
-            text: line.replace(/^\d+\.\s*/, "").trim(),
-            type: "clarification",
-          }));
-
-        return questions; // return array (possibly empty) for graceful handling
-      }
+      // Use AI provider manager for follow-up generation
+      const followUps = await aiProviderManager.generateFollowUpQuestions(
+        originalQuestion,
+        userAnswer,
+        2 // Generate 2 follow-up questions
+      );
+      return followUps || [];
     } catch (error) {
       Logger.error("Follow-up generation error:", error);
       return null;
@@ -453,87 +399,31 @@ Return in JSON format:
    * Evaluate answer using AI with enhanced rubric scoring and model answer
    */
   async evaluateAnswer(question, answer, params) {
-    if (!process.env.OPENAI_API_KEY) {
-      return this.getBasicEvaluation(question, answer);
-    }
-
     try {
-      const prompt = `Evaluate this interview answer and provide comprehensive feedback with rubric scoring and model answer.
+      // Use AI provider manager for evaluation
+      const evaluation = await aiProviderManager.evaluateAnswer(
+        question,
+        answer,
+        params
+      );
 
-Question: "${question.text}"
-Answer: "${answer}"
-Job Role: ${params.jobRole}
-Experience Level: ${params.experienceLevel}
-Question Category: ${question.category || "general"}
-Question Type: ${question.type || "general"}
-
-Please provide evaluation in JSON format:
-{
-  "score": 0-100,
-  "rubricScores": {
-    "relevance": 1-5,
-    "clarity": 1-5,
-    "depth": 1-5,
-    "structure": 1-5
-  },
-  "breakdown": {
-    "technical": 0-100,
-    "communication": 0-100,
-    "problemSolving": 0-100
-  },
-  "strengths": ["strength 1", "strength 2"],
-  "improvements": ["improvement suggestion 1", "improvement suggestion 2"],
-  "feedback": "Detailed feedback paragraph",
-  "modelAnswer": "A concise model answer demonstrating what a strong response would include"
-}
-
-Scoring Guidelines:
-- Relevance (1-5): How well the answer addresses the question
-- Clarity (1-5): How clear and well-articulated the response is
-- Depth (1-5): How thorough and insightful the answer is
-- Structure (1-5): How well-organized and logical the response is
-
-Provide exactly 2 specific, actionable improvement suggestions.`;
-
-      const response = await this.getOpenAIClient().chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an expert interviewer providing constructive feedback. Always provide rubric scores on a 1-5 scale and include a concise model answer.",
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.3,
-        max_tokens: 800,
-      });
-
-      const content = response.choices[0]?.message?.content;
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-
-      if (jsonMatch) {
-        const parsedResult = JSON.parse(jsonMatch[0]);
-
-        // Ensure rubric scores are within 1-5 range
-        if (parsedResult.rubricScores) {
-          Object.keys(parsedResult.rubricScores).forEach((key) => {
-            const score = parsedResult.rubricScores[key];
-            parsedResult.rubricScores[key] = Math.max(
-              1,
-              // eslint-disable-next-line no-magic-numbers
-              Math.min(5, Math.round(score))
-            );
-          });
-        }
-
-        return parsedResult;
+      // Ensure rubric scores are within 1-5 range
+      if (evaluation.rubricScores) {
+        Object.keys(evaluation.rubricScores).forEach((key) => {
+          const score = evaluation.rubricScores[key];
+          evaluation.rubricScores[key] = Math.max(
+            1,
+            // eslint-disable-next-line no-magic-numbers
+            Math.min(5, Math.round(score))
+          );
+        });
       }
+
+      return evaluation;
     } catch (error) {
       Logger.error("Answer evaluation error:", error);
+      return this.getBasicEvaluation(question, answer);
     }
-
-    return this.getBasicEvaluation(question, answer);
   }
 
   /**
