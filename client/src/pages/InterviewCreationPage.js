@@ -177,9 +177,17 @@ const InterviewCreationPage = () => {
         },
       });
 
-      if (response.success) {
-        // Redirect to the interview
-        navigate(`/interview/${response.data._id}/experience`);
+      console.log("Interview creation response:", response); // Debug log
+
+      if (response && response.data && response.data._id) {
+        // Redirect to hardware check lobby first
+        navigate(`/hardware-check-lobby/${response.data._id}`);
+      } else {
+        // Fallback: try to navigate anyway or show error
+        console.error("Unexpected response format:", response);
+        alert(
+          "Interview created but navigation failed. Check console for details."
+        );
       }
     } catch (error) {
       // Surface server message if available for easier debugging

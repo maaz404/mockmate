@@ -43,7 +43,9 @@ function DashboardPage() {
         apiService.get("/users/dashboard/recommendation"),
       ]);
 
+      // eslint-disable-next-line no-console
       console.log("Summary Response:", summaryRes);
+      // eslint-disable-next-line no-console
       console.log("Recommendation Response:", recommendationRes);
 
       setDashboardData(summaryRes.data.data);
@@ -52,7 +54,9 @@ function DashboardPage() {
       setError(null);
       setLoading(false);
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error("Dashboard fetch error:", err);
+      // eslint-disable-next-line no-console
       console.error("Error response:", err.response?.data);
       setError(
         err.response?.data?.message ||
@@ -222,7 +226,7 @@ function DashboardPage() {
               </div>
               <div className="flex flex-col gap-2">
                 <button
-                  onClick={() => navigate(recommendation.action.url)}
+                  onClick={() => navigate("/interview/create")}
                   className="px-6 py-3 bg-white text-primary-600 font-semibold rounded-lg hover:bg-primary-50 transition-colors whitespace-nowrap"
                 >
                   {recommendation.action.label}
@@ -445,7 +449,7 @@ function DashboardPage() {
             </h2>
             <div className="space-y-3">
               <button
-                onClick={() => navigate("/mock-interview")}
+                onClick={() => navigate("/interview/create")}
                 className="w-full flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors group"
               >
                 <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -566,7 +570,7 @@ function DashboardPage() {
                   <button
                     key={interview.id}
                     onClick={() =>
-                      navigate(`/interviews/${interview.id}/results`)
+                      navigate(`/interview/${interview.id}/results`)
                     }
                     className="w-full p-4 bg-surface-50 dark:bg-surface-700/50 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors text-left"
                   >
@@ -601,7 +605,7 @@ function DashboardPage() {
                   <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p>No interviews yet</p>
                   <button
-                    onClick={() => navigate("/mock-interview")}
+                    onClick={() => navigate("/interview/create")}
                     className="text-sm text-primary-600 hover:text-primary-700 mt-2 inline-block"
                   >
                     Start your first interview

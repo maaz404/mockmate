@@ -128,18 +128,41 @@ exports.completeCodingSession = async (req, res) => {
 
 exports.runCode = async (req, res) => {
   try {
+    // Session-bound run (for future expansion)
     const userId = req.user?.id;
     const { id } = req.params;
     const { code, language, testCases } = req.body;
+    void userId; // not used now
+    void id;
 
-    // TODO: Implement code execution with Judge0 or similar service
-    return ok(res, {
-      status: "queued",
-      message: "Code execution not yet implemented",
-    });
+    const judge0 = require("../services/judge0");
+    const result = await judge0.runWithTestCases({ code, language, testCases });
+    return ok(res, result, "Run completed");
   } catch (error) {
     Logger.error("Run code error:", error);
-    return fail(res, 500, "CODE_RUN_FAILED", "Failed to run code");
+    return fail(
+      res,
+      error.status || 500,
+      error.code || "CODE_RUN_FAILED",
+      error.message || "Failed to run code"
+    );
+  }
+};
+
+exports.runAdhoc = async (req, res) => {
+  try {
+    const { code, language, testCases } = req.body;
+    const judge0 = require("../services/judge0");
+    const result = await judge0.runWithTestCases({ code, language, testCases });
+    return ok(res, result, "Run completed");
+  } catch (error) {
+    Logger.error("Run adhoc code error:", error);
+    return fail(
+      res,
+      error.status || 500,
+      error.code || "CODE_RUN_FAILED",
+      error.message || "Failed to run code"
+    );
   }
 };
 

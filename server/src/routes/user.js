@@ -48,6 +48,7 @@ router.post(
 
 // Update profile
 router.patch("/profile", requireAuth, ensureUserProfile, updateProfile);
+router.put("/profile", requireAuth, ensureUserProfile, updateProfile); // Also accept PUT for client compatibility
 
 // Update avatar (with validation and rate limiting)
 router.put(

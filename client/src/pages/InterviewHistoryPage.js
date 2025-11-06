@@ -131,32 +131,52 @@ const InterviewHistoryPage = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
+                          {i.status === "in-progress" && (
+                            <button
+                              className="btn-primary text-sm"
+                              onClick={() =>
+                                navigate(`/interview/${i._id}/experience`)
+                              }
+                            >
+                              Resume
+                            </button>
+                          )}
+                          {i.status === "completed" && (
+                            <>
+                              <button
+                                className="btn-ghost"
+                                onClick={() =>
+                                  navigate(`/interview/${i._id}/results`)
+                                }
+                              >
+                                Results
+                              </button>
+                              <button
+                                className="btn-ghost"
+                                onClick={() =>
+                                  navigate(`/session-summary/${i._id}`)
+                                }
+                              >
+                                Summary
+                              </button>
+                            </>
+                          )}
+                          {i.status === "scheduled" && (
+                            <button
+                              className="btn-primary text-sm"
+                              onClick={() =>
+                                navigate(`/interview/${i._id}/experience`)
+                              }
+                            >
+                              Start
+                            </button>
+                          )}
                           <button
-                            className="btn-ghost"
+                            className="btn-ghost text-sm"
                             onClick={() => navigate(`/interview/${i._id}`)}
                           >
-                            Open
+                            View
                           </button>
-                          {i.status === "completed" && (
-                            <button
-                              className="btn-ghost"
-                              onClick={() =>
-                                navigate(`/interview/${i._id}/results`)
-                              }
-                            >
-                              Results
-                            </button>
-                          )}
-                          {i.status === "completed" && (
-                            <button
-                              className="btn-ghost"
-                              onClick={() =>
-                                navigate(`/session-summary/${i._id}`)
-                              }
-                            >
-                              Summary
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>

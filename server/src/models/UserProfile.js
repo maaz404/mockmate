@@ -262,7 +262,7 @@ const UserProfileSchema = new mongoose.Schema(
 // INDEXES
 // ============================================
 UserProfileSchema.index({ user: 1 }, { unique: true });
-UserProfileSchema.index({ email: 1 });
+UserProfileSchema.index({ email: 1 }); // Non-unique index for lookups
 UserProfileSchema.index({ "subscription.plan": 1 });
 UserProfileSchema.index({ "subscription.stripeCustomerId": 1 });
 UserProfileSchema.index({ lastLoginAt: -1 });

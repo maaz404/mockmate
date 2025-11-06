@@ -29,6 +29,19 @@ const SettingsPage = () => {
     }
   }, [userProfile]);
 
+  // Ensure profile is loaded when visiting settings directly or after refresh
+  useEffect(() => {
+    if (!userProfile) {
+      (async () => {
+        try {
+          await refreshProfile();
+        } catch (_) {
+          // Silent fail; UI will keep showing loading state
+        }
+      })();
+    }
+  }, [userProfile, refreshProfile]);
+
   const handlePreferenceChange = async (section, field, value) => {
     if (!preferences) return;
 

@@ -1,14 +1,96 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import VideoRecorder from "../components/VideoRecorder";
-import VideoPlayback from "../components/VideoPlayback";
-import RecordingUploader from "../components/interview/RecordingUploader";
 import toast from "react-hot-toast";
 import { apiService } from "../services/api";
-import { FEATURES } from "../config/features";
+import SpokenQuestionUI from "../components/interview/SpokenQuestionUI";
+import CodingQuestionUI from "../components/interview/CodingQuestionUI";
+
+// Simple language templates for empty editors
+const CODE_TEMPLATES = {
+  javascript: `// Write your solution here\nfunction solve() {\n  // TODO\n  return null;\n}\n\nconsole.log(solve());\n`,
+  typescript: `// Write your solution here\nfunction solve(): any {\n  // TODO\n  return null;\n}\n\nconsole.log(solve());\n`,
+  python: `# Write your solution here\ndef solve():\n    # TODO\n    return None\n\nprint(solve())\n`,
+  java: `// Write your solution here\nclass Main {\n  static Object solve() {\n    // TODO\n    return null;\n  }\n  public static void main(String[] args) {\n    System.out.println(solve());\n  }\n}\n`,
+  cpp: `// Write your solution here\n#include <bits/stdc++.h>\nusing namespace std;\nint main(){\n  // TODO\n  cout << "Hello" << endl;\n  return 0;\n}\n`,
+  c: `// Write your solution here\n#include <stdio.h>\nint main(){\n  // TODO\n  printf("Hello\\n");\n  return 0;\n}\n`,
+  csharp: `// Write your solution here\nusing System;\nclass Program {\n  static object Solve() {\n    // TODO\n    return null;\n  }\n  static void Main(){\n    Console.WriteLine(Solve());\n  }\n}\n`,
+};
+
+// Build a starter template augmented with category/difficulty header
+function getCommentPrefix(language) {
+  if (language === "python") return "#";
+  // default to // for C-style languages and JS/TS
+  return "//";
+}
+
+function getStarterTemplate(language, question) {
+  const base = CODE_TEMPLATES[language] || CODE_TEMPLATES.javascript;
+  const difficulty = (question?.difficulty || "-").toString();
+  const category = (question?.category || "-").toString();
+  const prefix = getCommentPrefix(language);
+  const header = `${prefix} Category: ${category}  |  Difficulty: ${difficulty}\n`;
+
+  // Add a tiny language-aware scaffold based on category/difficulty and examples
+  const scaffold = buildScaffold(language, question, prefix);
+  return `${header}${scaffold}${base}`;
+}
+
+// Create a small guiding scaffold that doesn't interfere with the base template
+function buildScaffold(language, question, prefix) {
+  try {
+    const cat = (question?.category || "").toLowerCase();
+    const diff = (question?.difficulty || "").toLowerCase();
+    const ex =
+      Array.isArray(question?.examples) && question.examples.length
+        ? question.examples[0]
+        : null;
+    const exIn = typeof ex?.input !== "undefined" ? String(ex.input) : null;
+    const exOut = typeof ex?.output !== "undefined" ? String(ex.output) : null;
+
+    const exampleLines = ex
+      ? `${prefix} Example Input: ${exIn}\n${prefix} Example Output: ${exOut}\n`
+      : "";
+
+    // Provide a minimal function signature suggestion for scripting langs
+    if (language === "javascript") {
+      const hintName = cat.includes("array")
+        ? "processArray"
+        : cat.includes("string")
+        ? "processString"
+        : "solve";
+      return `${prefix} Suggested signature (edit as needed):\n${prefix} function ${hintName}(input) {\n${prefix}   // TODO: implement\n${prefix}   return null;\n${prefix} }\n${exampleLines}`;
+    }
+    if (language === "typescript") {
+      const hintName = cat.includes("array")
+        ? "processArray"
+        : cat.includes("string")
+        ? "processString"
+        : "solve";
+      return `${prefix} Suggested signature (edit as needed):\n${prefix} function ${hintName}(input: any): any {\n${prefix}   // TODO: implement\n${prefix}   return null;\n${prefix} }\n${exampleLines}`;
+    }
+    if (language === "python") {
+      const hintName = cat.includes("array")
+        ? "process_array"
+        : cat.includes("string")
+        ? "process_string"
+        : "solve";
+      return `${prefix} Suggested signature (edit as needed):\n${prefix} def ${hintName}(input):\n${prefix}     # TODO: implement\n${prefix}     return None\n${exampleLines}`;
+    }
+
+    // For compiled langs, keep guidance in comments only
+    const advNote =
+      diff === "advanced"
+        ? `${prefix} Hint: focus on complexity (time/space); write clean I/O.\n`
+        : "";
+    return `${prefix} Guidance: implement core logic inside main/entry and print results.\n${advNote}${exampleLines}`;
+  } catch (_) {
+    return "";
+  }
+}
 
 const InterviewPage = () => {
-  const { interviewId } = useParams();
+  // Route is defined as /interview/:id, normalize param name
+  const { id: interviewId } = useParams();
   const navigate = useNavigate();
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,6 +101,10 @@ const InterviewPage = () => {
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState({});
+  const [codeSnippets, setCodeSnippets] = useState({});
+  const [codeLanguages, setCodeLanguages] = useState({}); // per-question language memory
+  const [isRunning, setIsRunning] = useState(false);
+  const [runState, setRunState] = useState({}); // { [index]: { output, error, results, hasRun, lastRunAt, durationMs } }
   const [timeRemaining, setTimeRemaining] = useState(900); // 15 minutes total
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [settings, setSettings] = useState({
@@ -32,12 +118,26 @@ const InterviewPage = () => {
   const [followUpsAck, setFollowUpsAck] = useState({});
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [ttsFlash, setTtsFlash] = useState(false);
+  const [questionType, setQuestionType] = useState("spoken"); // 'spoken' or 'coding'
+
+  // Session-level enrichment data
+  const [sessionTranscript, setSessionTranscript] = useState("");
+  const [sessionFacialMetrics, setSessionFacialMetrics] = useState([]);
 
   // Submit current answer helper
   const submitCurrentAnswer = useCallback(async () => {
     if (!interview || !interview.questions || !interview.questions.length)
       return 0;
-    const answerText = responses[currentQuestionIndex] || "";
+    const baseText = responses[currentQuestionIndex] || "";
+    const codeText = codeSnippets[currentQuestionIndex] || "";
+    const currentCodeLanguage =
+      codeLanguages[currentQuestionIndex] || "javascript";
+    const answerText =
+      codeText &&
+      (interview?.config?.coding ||
+        interview?.questions?.[currentQuestionIndex]?.category === "coding")
+        ? `${baseText}\n\n\u0060\u0060\u0060${currentCodeLanguage}\n${codeText}\n\u0060\u0060\u0060`
+        : baseText;
     try {
       setSubmittingAnswer(true);
       setValidationError(null);
@@ -49,8 +149,9 @@ const InterviewPage = () => {
         `/interviews/${interviewId}/answer/${currentQuestionIndex}`,
         { answer: answerText, notes: answerText, timeSpent: timeSpentSec }
       );
+      toast.success("Answer submitted");
       // Request follow-ups if available from response or fetch explicitly
-      const generated = res?.data?.data?.followUpQuestions;
+      const generated = res?.data?.followUpQuestions;
       if (generated && Array.isArray(generated) && generated.length) {
         setFollowUps((prev) => ({
           ...prev,
@@ -63,7 +164,7 @@ const InterviewPage = () => {
           const fu = await apiService.post(
             `/interviews/${interviewId}/followup/${currentQuestionIndex}`
           );
-          const arr = fu?.data?.data?.followUpQuestions || [];
+          const arr = fu?.data?.followUpQuestions || [];
           if (arr.length) {
             setFollowUps((prev) => ({ ...prev, [currentQuestionIndex]: arr }));
             return arr.length;
@@ -96,19 +197,40 @@ const InterviewPage = () => {
     currentQuestionIndex,
     questionStartTime,
     responses,
+    codeSnippets,
+    codeLanguages,
   ]);
 
   // End interview: submit current answer, complete on server, then navigate
   const handleEndInterview = useCallback(async () => {
     try {
       await submitCurrentAnswer();
-      await apiService.post(`/interviews/${interviewId}/complete`);
+
+      // Persist enrichment data (transcript + facial metrics) if available
+      const enrichmentPayload = {};
+      if (sessionTranscript && sessionTranscript.trim()) {
+        enrichmentPayload.transcript = sessionTranscript;
+      }
+      if (sessionFacialMetrics && sessionFacialMetrics.length > 0) {
+        enrichmentPayload.facialMetrics = sessionFacialMetrics;
+      }
+
+      await apiService.post(
+        `/interviews/${interviewId}/complete`,
+        enrichmentPayload
+      );
       toast.success("Interview completed!");
       navigate(`/interview/${interviewId}/results`);
     } catch (e) {
       toast.error("Failed to complete interview. Please try again.");
     }
-  }, [navigate, interviewId, submitCurrentAnswer]);
+  }, [
+    navigate,
+    interviewId,
+    submitCurrentAnswer,
+    sessionTranscript,
+    sessionFacialMetrics,
+  ]);
 
   // Fetch interview data on component mount
   useEffect(() => {
@@ -118,14 +240,35 @@ const InterviewPage = () => {
         const response = await apiService.get(`/interviews/${interviewId}`);
 
         if (response.success) {
-          setInterview(response.data);
-          // Set initial time remaining based on interview duration (convert minutes to seconds)
-          const minutes =
-            response.data?.duration || response.data?.config?.duration || 30;
-          setTimeRemaining((minutes || 30) * 60);
+          const interviewData = response.data;
+          setInterview(interviewData);
+
+          // Initialize timer from server's remaining time if available
+          // Otherwise fall back to config duration
+          if (interviewData.timing?.remainingSeconds != null) {
+            setTimeRemaining(interviewData.timing.remainingSeconds);
+          } else {
+            const minutes =
+              interviewData?.duration || interviewData?.config?.duration || 30;
+            setTimeRemaining(minutes * 60);
+          }
+
+          // Check if interview is already completed
+          if (interviewData.status === "completed") {
+            toast(
+              "This interview has been completed. Redirecting to results...",
+              {
+                icon: "ℹ️",
+              }
+            );
+            setTimeout(() => {
+              navigate(`/interview/${interviewId}/results`);
+            }, 2000);
+            return;
+          }
 
           // Start interview if scheduled
-          const status = response.data?.status || response.data?.config?.status;
+          const status = interviewData?.status || interviewData?.config?.status;
           if (status === "scheduled") {
             try {
               await apiService.put(`/interviews/${interviewId}/start`);
@@ -146,13 +289,28 @@ const InterviewPage = () => {
     if (interviewId) {
       fetchInterview();
     }
-  }, [interviewId]);
+  }, [interviewId, navigate]);
 
-  // Timer effect
+  // Update questionType when currentQuestionIndex changes
   useEffect(() => {
+    if (interview?.questions?.[currentQuestionIndex]) {
+      const question = interview.questions[currentQuestionIndex];
+      const type = question.type || question.category || "spoken";
+      setQuestionType(type.toLowerCase() === "coding" ? "coding" : "spoken");
+    }
+  }, [currentQuestionIndex, interview]);
+
+  // Timer effect - only auto-complete if user is actively on the page
+  useEffect(() => {
+    // Don't run timer if interview is completed or not loaded
+    if (!interview || interview.status === "completed") {
+      return;
+    }
+
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
+          // Only auto-complete if user is still on the page and actively working
           handleEndInterview();
           return 0;
         }
@@ -161,7 +319,38 @@ const InterviewPage = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [handleEndInterview]);
+  }, [handleEndInterview, interview]);
+
+  // Periodic sync with server to get updated remaining time (every 30 seconds)
+  useEffect(() => {
+    if (!interview || interview.status === "completed") {
+      return;
+    }
+
+    const syncTimer = setInterval(async () => {
+      try {
+        const response = await apiService.get(`/interviews/${interviewId}`);
+        if (
+          response.success &&
+          response.data.timing?.remainingSeconds != null
+        ) {
+          setTimeRemaining(response.data.timing.remainingSeconds);
+
+          // If server says interview is completed, end locally
+          if (response.data.status === "completed") {
+            toast("Interview time has expired", { icon: "⏱️" });
+            navigate(`/interview/${interviewId}/results`);
+          }
+        }
+      } catch (e) {
+        // Non-blocking, continue with local timer
+        // eslint-disable-next-line no-console
+        console.warn("Failed to sync time with server:", e);
+      }
+    }, 30000); // Sync every 30 seconds
+
+    return () => clearInterval(syncTimer);
+  }, [interview, interviewId, navigate]);
 
   // Format time as MM:SS
   const formatTime = (seconds) => {
@@ -189,6 +378,22 @@ const InterviewPage = () => {
       ...prev,
       [currentQuestionIndex]: value,
     }));
+  };
+
+  // Handle follow-up acknowledgment
+  const handleFollowUpAck = async (questionIndex) => {
+    setFollowUpsAck((prev) => ({
+      ...prev,
+      [questionIndex]: true,
+    }));
+    try {
+      await apiService.post(
+        `/interviews/${interviewId}/followups-reviewed/${questionIndex}`
+      );
+    } catch (_) {
+      // ignore
+    }
+    toast.success("Marked reviewed. You can proceed.");
   };
 
   // Navigate to previous question
@@ -226,8 +431,16 @@ const InterviewPage = () => {
         const resp = await apiService.post(
           `/interviews/${interviewId}/adaptive-question`
         );
-        const newQ = resp?.data?.data?.question;
-        const adaptiveInfo = resp?.data?.data?.adaptiveInfo;
+        const adaptiveData = resp?.data;
+        const newQ = adaptiveData?.question;
+        const adaptiveInfo = adaptiveData
+          ? {
+              currentDifficulty: adaptiveData.difficulty,
+              previousDifficulty: adaptiveData.previousDifficulty,
+              difficultyChanged:
+                adaptiveData.difficulty !== adaptiveData.previousDifficulty,
+            }
+          : undefined;
         if (newQ) {
           // Normalize to client shape
           const normalized = {
@@ -307,6 +520,111 @@ const InterviewPage = () => {
       setIsSpeaking(false);
     }
   }, []);
+
+  // Run code for current coding question using backend
+  const handleRunCode = useCallback(
+    async (customCase) => {
+      try {
+        const code = codeSnippets[currentQuestionIndex] || "";
+        const currentCodeLanguage =
+          codeLanguages[currentQuestionIndex] || "javascript";
+        setRunState((prev) => ({
+          ...prev,
+          [currentQuestionIndex]: {
+            output: "",
+            error: "",
+            results: null,
+            hasRun: false,
+          },
+        }));
+        if (!code) {
+          toast("Nothing to run. Add some code first.", { icon: "ℹ️" });
+          return;
+        }
+        setIsRunning(true);
+        const started = Date.now();
+        // Derive test cases from examples when available
+        const examples = interview?.questions?.[currentQuestionIndex]?.examples;
+        let testCases = Array.isArray(examples)
+          ? examples
+              .map((ex) => ({
+                input:
+                  typeof ex?.input === "string"
+                    ? ex.input
+                    : typeof ex?.input !== "undefined"
+                    ? String(ex.input)
+                    : "",
+                expectedOutput:
+                  typeof ex?.output === "string"
+                    ? ex.output
+                    : typeof ex?.output !== "undefined"
+                    ? String(ex.output)
+                    : undefined,
+              }))
+              .filter((t) => typeof t.input === "string")
+          : [];
+        if (
+          customCase &&
+          (customCase.input || typeof customCase.expectedOutput !== "undefined")
+        ) {
+          testCases = [...testCases, customCase];
+        }
+        const res = await apiService.post("/coding/run", {
+          code,
+          language: currentCodeLanguage,
+          ...(testCases.length ? { testCases } : {}),
+        });
+        const results = res?.data?.results;
+        if (Array.isArray(results) && results.length) {
+          const firstErr = results.find((r) => r.compile_output || r.stderr);
+          setRunState((prev) => ({
+            ...prev,
+            [currentQuestionIndex]: {
+              output: firstErr
+                ? ""
+                : results.map((r) => r.output || r.stdout || "").join("\n"),
+              error: firstErr?.compile_output || firstErr?.stderr || "",
+              results,
+              hasRun: true,
+              lastRunAt: new Date().toISOString(),
+              durationMs: Date.now() - started,
+            },
+          }));
+        } else {
+          // Fallback: old single response shape
+          const first = res?.data?.result || res?.data || {};
+          setRunState((prev) => ({
+            ...prev,
+            [currentQuestionIndex]: {
+              output:
+                first.compile_output || first.stderr
+                  ? ""
+                  : first.output || first.stdout || "No output",
+              error: first.compile_output || first.stderr || "",
+              results: null,
+              hasRun: true,
+              lastRunAt: new Date().toISOString(),
+              durationMs: Date.now() - started,
+            },
+          }));
+        }
+      } catch (e) {
+        const msg = e?.message || "Failed to run code";
+        setRunState((prev) => ({
+          ...prev,
+          [currentQuestionIndex]: {
+            output: "",
+            error: msg,
+            results: null,
+            hasRun: false,
+          },
+        }));
+      } finally {
+        setIsRunning(false);
+      }
+    },
+    [codeLanguages, codeSnippets, currentQuestionIndex, interview?.questions]
+  );
 
   const speakQuestion = useCallback(
     (text) => {
@@ -411,6 +729,11 @@ const InterviewPage = () => {
   const currentQuestion = interview.questions[currentQuestionIndex] || {};
   const targetCount =
     interview?.config?.questionCount || interview.questions.length;
+  const isAdaptive = !!interview?.config?.adaptiveDifficulty?.enabled;
+  const isLastQuestion = !isAdaptive
+    ? currentQuestionIndex >= interview.questions.length - 1
+    : currentQuestionIndex >=
+      Math.min(interview.questions.length - 1, Math.max(0, targetCount - 1));
   const progress = ((currentQuestionIndex + 1) / targetCount) * 100;
 
   return (
@@ -502,6 +825,28 @@ const InterviewPage = () => {
                   ? "Video saved"
                   : "No upload"}
               </span>
+              {/* Run indicator chip (coding) */}
+              {questionType === "coding" &&
+                runState[currentQuestionIndex]?.hasRun && (
+                  <span
+                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700"
+                    title={`Code executed • ${
+                      runState[currentQuestionIndex]?.durationMs || 0
+                    }ms`}
+                  >
+                    {(() => {
+                      const rs = runState[currentQuestionIndex];
+                      const t = rs?.lastRunAt
+                        ? new Date(rs.lastRunAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })
+                        : "";
+                      return `✅ Run${t ? ` ${t}` : ""}`;
+                    })()}
+                  </span>
+                )}
               {/* TTS replay/stop */}
               <button
                 className="btn-ghost !py-1 !px-2"
@@ -532,301 +877,90 @@ const InterviewPage = () => {
           </div>
         </div>
 
-        {/* Interview Interface */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Video Section */}
-          <div className="space-y-4">
-            {settings.videoRecording && FEATURES.videoRecording ? (
-              <div className="space-y-4">
-                <div className="card p-0 overflow-hidden">
-                  <VideoRecorder
-                    interviewId={interview._id}
-                    currentQuestionIndex={currentQuestionIndex}
-                    onVideoUploaded={handleVideoUploaded}
-                    onRecordingChange={setIsRecording}
-                    onPermissionChange={setPermission}
-                    audioEnabled={settings.audioRecording}
-                  />
-                </div>
-                {/* Playback of saved answer for this question (if exists) */}
-                {interview?.questions?.[currentQuestionIndex]?.hasVideo && (
-                  <div className="card p-0 overflow-hidden">
-                    <VideoPlayback
-                      interviewId={interview._id}
-                      questionIndex={currentQuestionIndex}
-                    />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="card aspect-video flex items-center justify-center">
-                <div className="text-center">
-                  <svg
-                    className="w-16 h-16 text-surface-400 mx-auto mb-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <p className="text-surface-600 dark:text-surface-400">
-                    Video recording is disabled
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Session Recording Uploader */}
-            <div className="card p-4">
-              <h3 className="text-lg font-semibold mb-2">
-                Upload session recording
-              </h3>
-              <p className="text-sm text-surface-600 dark:text-surface-400 mb-3">
-                If you recorded externally, attach your full session video here.
-              </p>
-              <RecordingUploader sessionId={interview?._id || interviewId} />
-            </div>
-
-            {/* Video Status */}
-            {currentQuestion.hasVideo && (
-              <div className="rounded-lg p-3 text-center bg-green-50 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
-                <svg
-                  className="w-5 h-5 text-green-600 dark:text-green-300 mx-auto mb-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <p className="text-sm">Video recorded for this question</p>
-              </div>
-            )}
-          </div>
-
-          {/* Question Section */}
-          <div className="space-y-6">
-            <div
-              className={`card ${ttsFlash ? "ring-2 ring-primary-500" : ""}`}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-lg font-semibold text-primary-600 dark:text-primary-400">
-                  Current Question
-                </h2>
-                <div className="text-right text-sm">
-                  <span className="text-surface-600 dark:text-surface-400">
-                    Category:{" "}
-                  </span>
-                  <span className="text-primary-700 dark:text-primary-300">
-                    {currentQuestion.category || "-"}
-                  </span>
-                  <br />
-                  <span className="text-surface-600 dark:text-surface-400">
-                    Difficulty:{" "}
-                  </span>
-                  <span className="text-yellow-700 dark:text-yellow-300">
-                    {currentQuestion.difficulty || "-"}
-                  </span>
-                </div>
-              </div>
-              <p className="text-lg leading-relaxed text-surface-900 dark:text-surface-50">
-                {currentQuestion.questionText || currentQuestion.text || ""}
-              </p>
-            </div>
-
-            {/* Inline Follow-up Questions */}
-            {followUps[currentQuestionIndex] &&
-              followUps[currentQuestionIndex].length > 0 && (
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-3">
-                    AI Follow-up Questions
-                  </h3>
-                  <ul className="list-disc list-inside space-y-1 text-surface-700 dark:text-surface-300">
-                    {followUps[currentQuestionIndex].map((fq, i) => (
-                      <li key={i}>{fq.text || fq}</li>
-                    ))}
-                  </ul>
-                  {!followUpsAck[currentQuestionIndex] && (
-                    <div className="mt-4">
-                      <button
-                        className="btn-secondary"
-                        onClick={async () => {
-                          setFollowUpsAck((prev) => ({
-                            ...prev,
-                            [currentQuestionIndex]: true,
-                          }));
-                          try {
-                            await apiService.post(
-                              `/interviews/${interviewId}/followups-reviewed/${currentQuestionIndex}`
-                            );
-                          } catch (_) {}
-                          toast.success("Marked reviewed. You can proceed.");
-                        }}
-                      >
-                        ✓ Mark follow-ups reviewed
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-            {/* Response Area */}
-            <div className="card">
-              <h3 className="text-lg font-semibold mb-4 text-blue-700 dark:text-blue-300">
-                Your Response Notes
-              </h3>
-              <textarea
-                value={responses[currentQuestionIndex] || ""}
-                onChange={(e) => handleResponseChange(e.target.value)}
-                className="form-input-dark h-32"
-                placeholder="Take notes or outline your response here..."
-              />
-              {validationError && (
-                <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                  {validationError}
-                </div>
-              )}
-              <p className="text-sm text-surface-600 dark:text-surface-400 mt-2">
-                These notes are saved with your answer for scoring and
-                follow-ups.
-              </p>
-              {followUps[currentQuestionIndex] &&
-                followUpsAck[currentQuestionIndex] && (
-                  <div className="mt-3 text-xs text-surface-500 dark:text-surface-400">
-                    You can continue after reviewing the generated follow-up
-                    questions below.
-                  </div>
-                )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex space-x-4">
-              <button
-                onClick={handlePrevious}
-                disabled={currentQuestionIndex === 0}
-                className="flex-1 btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={handleSkip}
-                disabled={
-                  skipping ||
-                  currentQuestionIndex ===
-                    (interview?.questions?.length || 1) - 1
-                }
-                className={`flex-1 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 transition-colors ${
-                  currentQuestionIndex ===
-                  (interview?.questions?.length || 1) - 1
-                    ? "bg-surface-300 text-surface-500 cursor-not-allowed dark:bg-surface-600 dark:text-surface-400"
-                    : skipping
-                    ? "bg-amber-400 text-white cursor-wait"
-                    : "bg-amber-500 text-white hover:bg-amber-600"
-                }`}
-              >
-                {currentQuestionIndex ===
-                (interview?.questions?.length || 1) - 1
-                  ? "Skip (N/A)"
-                  : skipping
-                  ? "Skipping..."
-                  : "Skip"}
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={submittingAnswer}
-                className={`flex-1 btn-primary ${
-                  submittingAnswer ? "opacity-70 cursor-wait" : ""
-                }`}
-              >
-                {submittingAnswer
-                  ? "Submitting..."
-                  : currentQuestionIndex >= targetCount - 1
-                  ? "Finish Interview"
-                  : "Next Question"}
-              </button>
-            </div>
-
-            {/* Interview Settings */}
-            <div className="card p-4">
-              <h4 className="font-medium mb-3">Interview Settings</h4>
-              <div className="space-y-2">
-                {/* Permission hints */}
-                {!permission.camera || permission.error ? (
-                  <div className="p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200 dark:border-yellow-700 text-sm">
-                    <div className="font-medium mb-1">
-                      Camera/Mic permissions needed
-                    </div>
-                    <div>
-                      Allow camera and microphone access in your browser to
-                      record answers.
-                    </div>
-                  </div>
-                ) : null}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Video Recording</span>
-                  <button
-                    onClick={() => toggleSetting("videoRecording")}
-                    className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      settings.videoRecording
-                        ? "bg-primary-600"
-                        : "bg-surface-600"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white dark:bg-surface-100 w-4 h-4 rounded-full transition-transform ${
-                        settings.videoRecording ? "transform translate-x-6" : ""
-                      }`}
-                    ></div>
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Audio Recording</span>
-                  <button
-                    onClick={() => toggleSetting("audioRecording")}
-                    className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      settings.audioRecording
-                        ? "bg-primary-600"
-                        : "bg-surface-600"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white dark:bg-surface-100 w-4 h-4 rounded-full transition-transform ${
-                        settings.audioRecording ? "transform translate-x-6" : ""
-                      }`}
-                    ></div>
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Question Audio</span>
-                  <button
-                    onClick={() => toggleSetting("questionAudio")}
-                    className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                      settings.questionAudio
-                        ? "bg-primary-600"
-                        : "bg-surface-600"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white dark:bg-surface-100 w-4 h-4 rounded-full transition-transform ${
-                        settings.questionAudio ? "transform translate-x-6" : ""
-                      }`}
-                    ></div>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Interview Interface - Adaptive Layout */}
+        {questionType === "spoken" ? (
+          <SpokenQuestionUI
+            interview={interview}
+            currentQuestion={currentQuestion}
+            currentQuestionIndex={currentQuestionIndex}
+            responses={responses}
+            onResponseChange={handleResponseChange}
+            validationError={validationError}
+            settings={settings}
+            permission={permission}
+            isRecording={isRecording}
+            followUps={followUps}
+            followUpsAck={followUpsAck}
+            ttsFlash={ttsFlash}
+            isSpeaking={isSpeaking}
+            onVideoUploaded={handleVideoUploaded}
+            onRecordingChange={setIsRecording}
+            onPermissionChange={setPermission}
+            onPrevious={handlePrevious}
+            onSkip={handleSkip}
+            onNext={handleNext}
+            onEndInterview={handleEndInterview}
+            onToggleSetting={toggleSetting}
+            onFollowUpAck={handleFollowUpAck}
+            onSpeakQuestion={speakQuestion}
+            onStopSpeech={stopSpeech}
+            submittingAnswer={submittingAnswer}
+            skipping={skipping}
+            targetCount={targetCount}
+            interviewId={interviewId}
+            isLastQuestion={isLastQuestion}
+            onTranscriptUpdate={(text) =>
+              setSessionTranscript((prev) => (prev ? `${prev}\n${text}` : text))
+            }
+            onFacialMetricsUpdate={(metrics) =>
+              setSessionFacialMetrics((prev) => [
+                ...prev,
+                { timestamp: Date.now(), ...metrics },
+              ])
+            }
+          />
+        ) : (
+          <CodingQuestionUI
+            currentQuestion={currentQuestion}
+            currentQuestionIndex={currentQuestionIndex}
+            code={
+              codeSnippets[currentQuestionIndex] ??
+              getStarterTemplate(
+                codeLanguages[currentQuestionIndex] || "javascript",
+                currentQuestion
+              )
+            }
+            onChangeCode={(val) =>
+              setCodeSnippets((prev) => ({
+                ...prev,
+                [currentQuestionIndex]: val,
+              }))
+            }
+            language={codeLanguages[currentQuestionIndex] || "javascript"}
+            onChangeLanguage={(lang) =>
+              setCodeLanguages((prev) => ({
+                ...prev,
+                [currentQuestionIndex]: lang,
+              }))
+            }
+            isRunning={isRunning}
+            runOutput={runState[currentQuestionIndex]?.output || ""}
+            runError={runState[currentQuestionIndex]?.error || ""}
+            runResults={runState[currentQuestionIndex]?.results || null}
+            runMeta={runState[currentQuestionIndex] || null}
+            disableSubmit={!runState[currentQuestionIndex]?.hasRun}
+            onRunCode={handleRunCode}
+            onPrevious={handlePrevious}
+            onSkip={handleSkip}
+            onNext={handleNext}
+            submittingAnswer={submittingAnswer}
+            skipping={skipping}
+            settings={settings}
+            onSpeakQuestion={speakQuestion}
+            onStopSpeech={stopSpeech}
+            isSpeaking={isSpeaking}
+          />
+        )}
 
         {/* Exit Button */}
         <div className="mt-8 text-center">

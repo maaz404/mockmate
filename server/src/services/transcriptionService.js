@@ -1,6 +1,22 @@
+/* eslint-disable no-console */
 const OpenAI = require("openai");
 const fs = require("fs");
+const fsp = require("fs").promises;
 const path = require("path");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegPath = require("ffmpeg-static");
+const MC = require("../utils/mediaConstants");
+
+const WHISPER_MAX_FILE_MB = 25;
+const TO_FIXED_2 = 2;
+const MP3_BITRATE_KBPS = 128;
+const HTTP_429 = 429;
+
+if (ffmpegPath) {
+  try {
+    ffmpeg.setFfmpegPath(ffmpegPath);
+  } catch (_) {}
+}
 
 class TranscriptionService {
   constructor() {
@@ -42,13 +58,13 @@ class TranscriptionService {
 
       // Get file stats to check size (Whisper has a 25MB limit)
       const stats = fs.statSync(videoFilePath);
-      const fileSizeInMB = stats.size / (1024 * 1024);
+      const fileSizeInMB = stats.size / MC.BYTES_PER_MB;
 
-      if (fileSizeInMB > 25) {
+      if (fileSizeInMB > WHISPER_MAX_FILE_MB) {
         console.warn(
           `File ${filename} is ${fileSizeInMB.toFixed(
-            2
-          )}MB, exceeding Whisper's 25MB limit`
+            TO_FIXED_2
+          )}MB, exceeding Whisper's ${WHISPER_MAX_FILE_MB}MB limit`
         );
         return {
           success: false,
@@ -58,20 +74,68 @@ class TranscriptionService {
       }
 
       console.log(
-        `Starting transcription for ${filename} (${fileSizeInMB.toFixed(2)}MB)`
+        `Starting transcription for ${filename} (${fileSizeInMB.toFixed(
+          TO_FIXED_2
+        )}MB)`
       );
 
-      // Create a readable stream for the video file
-      const audioFile = fs.createReadStream(videoFilePath);
+      // First attempt: try original file
+      const attemptTranscription = async (filePathForApi) => {
+        const audioFile = fs.createReadStream(filePathForApi);
+        return await this.openai.audio.transcriptions.create({
+          file: audioFile,
+          model: "whisper-1",
+          language: "en",
+          response_format: "verbose_json",
+          temperature: 0.2,
+        });
+      };
 
-      // Call OpenAI Whisper API
-      const transcription = await this.openai.audio.transcriptions.create({
-        file: audioFile,
-        model: "whisper-1",
-        language: "en", // Assuming English for now, could be made configurable
-        response_format: "verbose_json", // Get detailed response with timestamps
-        temperature: 0.2, // Lower temperature for more consistent transcription
-      });
+      let transcription;
+      try {
+        transcription = await attemptTranscription(videoFilePath);
+      } catch (primaryErr) {
+        // If format not accepted, try to transcode to MP3 and retry
+        const msg = (primaryErr?.message || "").toLowerCase();
+        const status = primaryErr?.status || 0;
+        const ext = path.extname(filename || videoFilePath).toLowerCase();
+        const shouldTranscode =
+          status === 400 ||
+          msg.includes("invalid file format") ||
+          [".webm", ".mkv", ".mov"].includes(ext);
+
+        if (shouldTranscode && ffmpegPath) {
+          const tmpDir = path.join(path.dirname(videoFilePath), "tmp");
+          try {
+            await fsp.mkdir(tmpDir, { recursive: true });
+          } catch (_) {}
+          const mp3Path = path.join(
+            tmpDir,
+            `${path.basename(videoFilePath, path.extname(videoFilePath))}.mp3`
+          );
+
+          await new Promise((resolve, reject) => {
+            ffmpeg(videoFilePath)
+              .audioCodec("libmp3lame")
+              .audioBitrate(MP3_BITRATE_KBPS)
+              .toFormat("mp3")
+              .on("error", reject)
+              .on("end", resolve)
+              .save(mp3Path);
+          });
+
+          try {
+            transcription = await attemptTranscription(mp3Path);
+          } finally {
+            // Cleanup converted file
+            try {
+              await fsp.unlink(mp3Path);
+            } catch (_) {}
+          }
+        } else {
+          throw primaryErr;
+        }
+      }
 
       console.log(`Transcription completed for ${filename}`);
 
@@ -95,7 +159,7 @@ class TranscriptionService {
           error: "Invalid file format or file too large",
           transcript: null,
         };
-      } else if (error.status === 429) {
+      } else if (error.status === HTTP_429) {
         return {
           success: false,
           error: "Rate limit exceeded, please try again later",

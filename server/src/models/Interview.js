@@ -283,6 +283,8 @@ const interviewSchema = new mongoose.Schema(
       completedAt: Date,
       totalDuration: Number,
       averageQuestionTime: Number,
+      remainingSeconds: Number, // Tracks time left in interview
+      lastUpdated: Date, // Last time remaining was calculated
     },
     results: {
       overallScore: { type: Number, min: 0, max: 100 },
@@ -305,6 +307,21 @@ const interviewSchema = new mongoose.Schema(
         improvements: [String],
         recommendations: [String],
       },
+    },
+    sessionEnrichment: {
+      transcript: String,
+      facialMetrics: [
+        {
+          timestamp: Date,
+          eyeContact: Number,
+          smilePercentage: Number,
+          headSteadiness: Number,
+          confidenceScore: Number,
+          blinkRate: Number,
+          offScreenPercentage: Number,
+        },
+      ],
+      enrichedAt: Date,
     },
     videoSession: {
       isRecording: { type: Boolean, default: false },

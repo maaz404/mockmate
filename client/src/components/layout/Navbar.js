@@ -148,7 +148,7 @@ const Navbar = () => {
                 <Link to="/interviews" className="nav-link-dark">
                   Interviews
                 </Link>
-                <Link to="/mock-interview" className="nav-link-dark">
+                <Link to="/interview/create" className="nav-link-dark">
                   Practice
                 </Link>
               </>
@@ -358,7 +358,7 @@ const Navbar = () => {
                       Interviews
                     </Link>
                     <Link
-                      to="/mock-interview"
+                      to="/interview/create"
                       className="block nav-link-dark"
                       onClick={() => setIsMobileMenuOpen(false)}
                       role="menuitem"

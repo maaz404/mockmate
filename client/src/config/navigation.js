@@ -25,7 +25,7 @@ export const navigationConfig = [
       },
       {
         name: "Mock Interview",
-        path: "/mock-interview",
+        path: "/interview/create",
         icon: icon("M12 17v-6m0 0l-3 3m3-3l3 3M6 7h12"),
       },
       {

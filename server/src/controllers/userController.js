@@ -34,22 +34,17 @@ const upgradeToPremium = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     if (!req.userProfile) {
-      return fail(
-        res,
-        500,
-        "PROFILE_NOT_ATTACHED",
-        "User profile not available on request"
-      );
+      return res.status(404).json({ message: "Profile not found" });
     }
-    return ok(res, req.userProfile);
+
+    // Convert Mongoose document to plain object to avoid circular references
+    const profileData = req.userProfile.toObject();
+    return ok(res, profileData);
   } catch (error) {
-    console.error("Get profile error:", error);
-    return fail(
-      res,
-      500,
-      "PROFILE_FETCH_FAILED",
-      "Failed to fetch user profile"
-    );
+    console.error("[getProfile] Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Error retrieving profile", error: error.message });
   }
 };
 
@@ -155,7 +150,9 @@ const saveOnboardingProgress = async (req, res) => {
     // Calculate completeness but don't save yet (progress save)
     userProfile.calculateCompleteness();
 
-    return ok(res, userProfile, "Onboarding progress saved successfully");
+    // Convert to plain object
+    const profileData = userProfile.toObject();
+    return ok(res, profileData, "Onboarding progress saved successfully");
   } catch (error) {
     console.error("Save onboarding progress error:", error);
 
@@ -183,29 +180,23 @@ const saveOnboardingProgress = async (req, res) => {
 // Update user profile
 const updateProfile = async (req, res) => {
   try {
-    const userId = req.user?.id;
     const updates = req.body;
-
-    // Validate nested updates
-    if (updates.professionalInfo) {
-      // ❌ REMOVE: resume from professionalInfo (use top-level resume instead)
-      delete updates.professionalInfo.resume;
-    }
-
-    const profile = await UserProfile.findOneAndUpdate(
-      { user: userId },
+    const profile = await UserProfile.findByIdAndUpdate(
+      req.userProfile._id,
       { $set: updates },
       { new: true, runValidators: true }
     );
 
     if (!profile) {
-      return fail(res, 404, "PROFILE_NOT_FOUND", "Profile not found");
+      return res.status(404).json({ message: "Profile not found" });
     }
 
-    return ok(res, profile, "Profile updated successfully");
+    // Convert to plain object before sending
+    const profileData = profile.toObject();
+    return ok(res, profileData, "Profile updated successfully");
   } catch (error) {
-    console.error("Update profile error:", error);
-    return fail(res, 500, "PROFILE_UPDATE_FAILED", "Failed to update profile");
+    console.error("[updateProfile] Error:", error);
+    return res.status(400).json({ message: error.message });
   }
 };
 
@@ -321,7 +312,9 @@ const completeOnboarding = async (req, res) => {
       console.warn("Completeness calculation failed", calcError);
     }
 
-    return ok(res, userProfile, "Onboarding completed successfully");
+    // Convert to plain object
+    const profileData = userProfile.toObject();
+    return ok(res, profileData, "Onboarding completed successfully");
   } catch (error) {
     console.error("Complete onboarding error:", error);
 

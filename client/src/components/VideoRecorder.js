@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import Webcam from "react-webcam";
 import { useVideoRecording } from "../hooks/useVideoRecording";
+import toast from "react-hot-toast";
 
 const VideoRecorder = ({
   interviewId,
@@ -8,6 +9,8 @@ const VideoRecorder = ({
   onVideoUploaded,
   onRecordingChange,
   onPermissionChange,
+  onWebcamReady,
+  onTranscriptUpdate,
   audioEnabled = true,
   className = "",
   maxDuration = 180, // seconds (auto-stop)
@@ -40,12 +43,14 @@ const VideoRecorder = ({
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const {
     isRecording,
     hasRecorded,
     isUploading,
     recordingDuration,
+    canUpload,
     error,
     sessionStarted,
     demoMode,
@@ -60,20 +65,50 @@ const VideoRecorder = ({
   useEffect(() => {
     const checkCamera = async () => {
       try {
+        // Check if getUserMedia is supported
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setCameraError("Camera API not supported in this browser");
+          return;
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
         });
         setHasCamera(true);
+        // eslint-disable-next-line no-console
+        console.log("[VideoRecorder] Camera access granted");
         // Stop the stream immediately as webcam component will handle it
         stream.getTracks().forEach((track) => track.stop());
       } catch (err) {
-        setCameraError("Camera access denied or not available");
+        // eslint-disable-next-line no-console
+        console.error("[VideoRecorder] Camera access error:", err);
+        const errorMsg =
+          err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
+            ? "Camera/microphone permission denied. Click the lock icon in your browser's address bar to allow access."
+            : err.name === "NotFoundError" ||
+              err.name === "DevicesNotFoundError"
+            ? "No camera or microphone found. Please connect a device and refresh."
+            : err.name === "NotReadableError"
+            ? "Camera is already in use by another application."
+            : "Camera access denied or not available";
+        setCameraError(errorMsg);
       }
     };
 
     checkCamera();
   }, []);
+
+  // Expose underlying webcam video element to parent when ready
+  useEffect(() => {
+    if (typeof onWebcamReady !== "function") return;
+    const vid = webcamRef.current?.video || null;
+    if (vid) {
+      try {
+        onWebcamReady(vid);
+      } catch (_) {}
+    }
+  }, [onWebcamReady, webcamRef.current?.video]);
 
   // Enumerate devices and preselect defaults
   useEffect(() => {
@@ -109,9 +144,14 @@ const VideoRecorder = ({
   // Start recording session when component mounts
   useEffect(() => {
     if (hasCamera && !sessionStarted) {
+      // eslint-disable-next-line no-console
+      console.log(
+        "[VideoRecorder] Starting recording session for interview:",
+        interviewId
+      );
       startSession();
     }
-  }, [hasCamera, sessionStarted, startSession]);
+  }, [hasCamera, sessionStarted, startSession, interviewId]);
 
   // Handle start recording
   const beginRecording = useCallback(async () => {
@@ -262,41 +302,135 @@ const VideoRecorder = ({
         speechRecognitionRef.current = null;
       }
       setInterimTranscript("");
+      setIsListening(false);
       return;
     }
+
+    // Auto-show transcript when recording starts
+    setShowTranscript(true);
+
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return; // not supported
+    if (!SpeechRecognition) {
+      // eslint-disable-next-line no-console
+      console.warn("[VideoRecorder] Speech Recognition API not supported");
+      toast.error(
+        "Speech recognition not supported in this browser. Use Chrome or Edge."
+      );
+      return;
+    }
     try {
       const rec = new SpeechRecognition();
       rec.continuous = true;
       rec.interimResults = true;
       rec.lang = "en-US";
+      rec.maxAlternatives = 1;
+
       rec.onresult = (event) => {
         let interim = "";
         const finalAdditions = [];
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const res = event.results[i];
-          if (res.isFinal) finalAdditions.push(res[0].transcript.trim());
-          else interim += res[0].transcript;
+          if (res.isFinal) {
+            const text = res[0].transcript.trim();
+            if (text) finalAdditions.push(text);
+          } else {
+            interim += res[0].transcript;
+          }
         }
-        if (finalAdditions.length)
-          setTranscript((t) => (t ? `${t} ` : "") + finalAdditions.join(" "));
+        if (finalAdditions.length) {
+          setTranscript((t) => {
+            const newText = finalAdditions.join(" ");
+            return t ? `${t} ${newText}` : newText;
+          });
+        }
         setInterimTranscript(interim);
       };
-      rec.onerror = () => {};
-      rec.onend = () => {
-        // Auto-restart while recording
-        if (isRecording) {
-          try {
-            rec.start();
-          } catch (_) {}
+
+      rec.onerror = (event) => {
+        // eslint-disable-next-line no-console
+        console.warn("[VideoRecorder] Speech recognition error:", event.error);
+
+        if (
+          event.error === "not-allowed" ||
+          event.error === "service-not-allowed"
+        ) {
+          toast.error(
+            "Microphone permission denied. Please allow microphone access."
+          );
+          setIsListening(false);
+        } else if (event.error === "no-speech") {
+          // This is normal, just means pause in speech - don't show error
+        } else if (event.error === "audio-capture") {
+          toast.error("No microphone detected. Please connect a microphone.");
+          setIsListening(false);
+        } else if (event.error === "network") {
+          // eslint-disable-next-line no-console
+          console.log(
+            "[VideoRecorder] Network error in speech recognition, will auto-restart"
+          );
         }
       };
+
+      rec.onstart = () => {
+        // eslint-disable-next-line no-console
+        console.log("[VideoRecorder] Speech recognition started");
+        setIsListening(true);
+      };
+
+      rec.onend = () => {
+        // eslint-disable-next-line no-console
+        console.log(
+          "[VideoRecorder] Speech recognition ended, isRecording:",
+          isRecording
+        );
+        setIsListening(false);
+
+        // Auto-restart while recording
+        if (isRecording && speechRecognitionRef.current === rec) {
+          try {
+            // eslint-disable-next-line no-console
+            console.log("[VideoRecorder] Restarting speech recognition");
+            setTimeout(() => {
+              try {
+                rec.start();
+              } catch (restartErr) {
+                // eslint-disable-next-line no-console
+                console.error("[VideoRecorder] Restart failed:", restartErr);
+              }
+            }, 100); // Small delay before restart
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error(
+              "[VideoRecorder] Failed to restart speech recognition:",
+              err
+            );
+          }
+        }
+      };
+
       speechRecognitionRef.current = rec;
+      // eslint-disable-next-line no-console
+      console.log("[VideoRecorder] Starting speech recognition");
       rec.start();
-    } catch (_) {}
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        "[VideoRecorder] Failed to initialize speech recognition:",
+        err
+      );
+      toast.error("Failed to start speech recognition");
+    }
   }, [isRecording, enableTranscript]);
+
+  // Notify parent of transcript updates (both interim and final)
+  useEffect(() => {
+    if (typeof onTranscriptUpdate === "function") {
+      try {
+        onTranscriptUpdate({ transcript, interim: interimTranscript });
+      } catch (_) {}
+    }
+  }, [transcript, interimTranscript, onTranscriptUpdate]);
 
   // Auto stop by maxDuration
   useEffect(() => {
@@ -330,9 +464,19 @@ const VideoRecorder = ({
 
   // Handle upload video
   const handleUploadVideo = async () => {
+    // eslint-disable-next-line no-console
+    console.log(
+      "[VideoRecorder] Upload clicked for question:",
+      currentQuestionIndex
+    );
     const success = await uploadVideo(currentQuestionIndex);
-    if (success && onVideoUploaded) {
-      onVideoUploaded(currentQuestionIndex);
+    if (success) {
+      toast.success("Video uploaded successfully");
+      if (onVideoUploaded) {
+        onVideoUploaded(currentQuestionIndex);
+      }
+    } else {
+      toast.error("Failed to upload video. Please try again.");
     }
   };
 
@@ -432,6 +576,15 @@ const VideoRecorder = ({
 
         {/* Overlays */}
         <div className="absolute inset-0 pointer-events-none">
+          {/* Uploading overlay */}
+          {isUploading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-surface-900/70 backdrop-blur-sm z-10">
+              <div className="flex flex-col items-center gap-3 text-white">
+                <LargeSpinner />
+                <div className="text-sm opacity-90">Uploading your video…</div>
+              </div>
+            </div>
+          )}
           {/* Countdown */}
           {preparing && countdown != null && (
             <div className="absolute inset-0 flex items-center justify-center bg-surface-900/70 backdrop-blur-sm">
@@ -539,7 +692,7 @@ const VideoRecorder = ({
                   color="green"
                   label={isUploading ? "Uploading" : "Upload"}
                   onClick={handleUploadVideo}
-                  disabled={isUploading}
+                  disabled={isUploading || !canUpload}
                   icon={isUploading ? <Spinner /> : <UploadIcon />}
                 />
                 <ControlButton
@@ -553,7 +706,9 @@ const VideoRecorder = ({
             )}
             {enableTranscript && (
               <ControlButton
-                color={showTranscript ? "amber" : "slate"}
+                color={
+                  isListening ? "green" : showTranscript ? "amber" : "slate"
+                }
                 label={showTranscript ? "Hide Text" : "Transcript"}
                 onClick={() => setShowTranscript((v) => !v)}
                 icon={<TranscriptIcon />}
@@ -601,15 +756,28 @@ const VideoRecorder = ({
           {enableTranscript && showTranscript && (
             <div className="bg-surface-900/70 border border-surface-700 rounded-md p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] uppercase tracking-wide text-surface-400">
-                  Live Transcript
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] uppercase tracking-wide text-surface-400">
+                    Live Transcript
+                  </span>
+                  {isListening && (
+                    <span className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="text-[9px] text-green-400 uppercase tracking-wide">
+                        Listening
+                      </span>
+                    </span>
+                  )}
+                </div>
                 {!(
                   "SpeechRecognition" in window ||
                   "webkitSpeechRecognition" in window
                 ) && (
                   <span className="text-[10px] text-red-400">
-                    Not Supported
+                    Not Supported - Use Chrome/Edge
                   </span>
                 )}
               </div>
@@ -618,14 +786,16 @@ const VideoRecorder = ({
                   <>
                     <span className="text-surface-200">{transcript}</span>{" "}
                     {interimTranscript && (
-                      <span className="text-surface-500 italic">
+                      <span className="text-surface-400 italic">
                         {interimTranscript}
                       </span>
                     )}
                   </>
                 ) : (
                   <span className="text-surface-500 text-xs">
-                    Transcript will build as you speak (English).
+                    {isListening
+                      ? "Listening... Start speaking in English."
+                      : "Transcript will appear as you speak (English)."}
                   </span>
                 )}
               </div>
@@ -691,6 +861,15 @@ const VideoRecorder = ({
       {error && (
         <div className="bg-red-900/50 border border-red-700 rounded-lg p-3 text-red-400 text-sm text-center">
           {error}
+        </div>
+      )}
+
+      {/* Too-short recording warning */}
+      {hasRecorded && !isRecording && recordingDuration < 1 && (
+        <div className="bg-amber-900/40 border border-amber-700 rounded-md p-2 text-amber-300 text-xs text-center">
+          Recording was shorter than 1 second. Some browsers may show 00:00 or
+          create empty files. Please record for at least a full second before
+          stopping.
         </div>
       )}
 
@@ -819,6 +998,33 @@ const Spinner = () => (
       strokeLinejoin="round"
       strokeWidth="2"
       d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+    />
+  </svg>
+);
+
+const LargeSpinner = () => (
+  <svg
+    className="w-10 h-10 animate-spin"
+    viewBox="0 0 50 50"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle
+      cx="25"
+      cy="25"
+      r="20"
+      stroke="rgba(255,255,255,0.4)"
+      strokeWidth="5"
+      fill="none"
+    />
+    <circle
+      cx="25"
+      cy="25"
+      r="20"
+      stroke="#ffffff"
+      strokeWidth="5"
+      strokeLinecap="round"
+      fill="none"
+      strokeDasharray="31.4 62.8"
     />
   </svg>
 );

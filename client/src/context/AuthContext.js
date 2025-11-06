@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useRef,
-} from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import api, { setAuthToken } from "../services/api";
 
 const AuthContext = createContext();
@@ -218,7 +212,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem("oauth_redirect");
 
         // Determine redirect path
-        let redirectPath = "/dashboard"; // Default
+        let redirectPath = "/"; // Default to landing page
 
         if (needsOnboarding) {
           redirectPath = "/onboarding";
@@ -230,15 +224,19 @@ export const AuthProvider = ({ children }) => {
           redirectPath = savedRedirect;
         }
 
+        // eslint-disable-next-line no-console
         console.log("🔄 Redirecting to:", redirectPath);
         window.location.href = redirectPath;
       } else {
+        // eslint-disable-next-line no-console
         console.error("❌ No user data in bootstrap response");
         clearTokens();
         window.location.href = "/login?error=no_user_data";
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("❌ Failed to load user after OAuth:", error);
+      // eslint-disable-next-line no-console
       console.error("Error details:", error.response?.data);
       clearTokens();
       window.location.href = "/login?error=bootstrap_failed";

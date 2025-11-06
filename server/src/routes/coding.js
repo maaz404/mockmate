@@ -137,6 +137,32 @@ router.post(
   codingController.runCode
 );
 
+// @desc    Run code ad-hoc (no session)
+// @route   POST /api/coding/run
+// @access  Private
+router.post(
+  "/run",
+  requireAuth,
+  ensureUserProfile,
+  [
+    body("code").isString().notEmpty().withMessage("Code is required"),
+    body("language")
+      .isIn([
+        "javascript",
+        "typescript",
+        "python",
+        "java",
+        "cpp",
+        "c",
+        "csharp",
+      ])
+      .withMessage("Invalid language"),
+    body("testCases").optional().isArray(),
+  ],
+  handleValidationErrors,
+  codingController.runAdhoc
+);
+
 // @desc    Get coding statistics
 // @route   GET /api/coding/stats
 // @access  Private

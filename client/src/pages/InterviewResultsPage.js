@@ -24,12 +24,20 @@ const InterviewResultsPage = () => {
   const fetchResults = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiService.get(
-        `/interviews/${interviewId}/results`
-      );
-      if (response?.success) setResults(response.data);
-      else throw new Error("Failed");
+      const res = await apiService.get(`/interviews/${interviewId}/results`);
+      // Normalize payload shapes from API
+      const payload =
+        res?.data?.interview || res?.data?.analysis
+          ? res.data
+          : res?.interview || res?.analysis
+          ? res
+          : res?.success && res?.data
+          ? res.data
+          : null;
+      if (payload) setResults(payload);
+      else throw new Error("Results payload malformed");
     } catch (e) {
+      // eslint-disable-next-line no-alert
       alert("Failed to load results. Redirecting to dashboard.");
       navigate("/dashboard");
     } finally {
@@ -82,8 +90,8 @@ const InterviewResultsPage = () => {
       </div>
     );
 
-  const { interview, analysis } = results;
-  const facialMetrics = interview.metrics || {};
+  const { interview, analysis } = results || {};
+  const facialMetrics = interview?.metrics || {};
   const hasFacial = Object.keys(facialMetrics).some(
     (k) =>
       [
@@ -146,18 +154,22 @@ const InterviewResultsPage = () => {
                   Interview Complete!
                 </h1>
                 <p className="text-surface-600 dark:text-surface-400 mt-2">
-                  {interview.jobRole} • {interview.interviewType} interview
+                  {interview?.jobRole || interview?.config?.jobRole || ""} •{" "}
+                  {interview?.interviewType ||
+                    interview?.config?.interviewType ||
+                    ""}{" "}
+                  interview
                 </p>
               </div>
             </div>
             <div
               className={`inline-flex items-center gap-3 px-6 py-3 rounded-full text-2xl font-bold shadow-inner border score-chip-glow ${getScoreBgColor(
-                analysis.overallScore
-              )} ${getScoreColor(analysis.overallScore)}`}
+                analysis?.overallScore ?? 0
+              )} ${getScoreColor(analysis?.overallScore ?? 0)}`}
             >
-              <span>{analysis.overallScore}%</span>
+              <span>{analysis?.overallScore ?? 0}%</span>
               <span className="hidden sm:inline text-base font-semibold px-3 py-1 rounded-full bg-white/60 dark:bg-surface-900/40 border border-surface-200 dark:border-surface-700 text-surface-800 dark:text-surface-200">
-                {scoreLabel(analysis.overallScore)}
+                {scoreLabel(analysis?.overallScore ?? 0)}
               </span>
             </div>
           </div>
@@ -246,14 +258,17 @@ const InterviewResultsPage = () => {
             >
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                  { label: "Technical Skills", value: analysis.technicalScore },
+                  {
+                    label: "Technical Skills",
+                    value: analysis?.technicalScore ?? 0,
+                  },
                   {
                     label: "Communication",
-                    value: analysis.communicationScore,
+                    value: analysis?.communicationScore ?? 0,
                   },
                   {
                     label: "Problem Solving",
-                    value: analysis.problemSolvingScore,
+                    value: analysis?.problemSolvingScore ?? 0,
                   },
                 ].map((item) => (
                   <div key={item.label} className="text-center">
@@ -332,7 +347,7 @@ const InterviewResultsPage = () => {
 
             <Collapsible title={"🧩 Question Analysis"} defaultOpen={false}>
               <div className="space-y-6">
-                {analysis.questionAnalysis.map((qa, index) => {
+                {(analysis?.questionAnalysis || []).map((qa, index) => {
                   const raw = (qa.difficulty || "").toLowerCase();
                   const norm =
                     raw === "easy" || raw === "beginner"
@@ -391,7 +406,7 @@ const InterviewResultsPage = () => {
                             {scoreVal}%
                           </div>
                           <div className="text-xs text-surface-500 dark:text-surface-400">
-                            {qa.timeSpent}s
+                            {qa.timeSpent ?? 0}s
                           </div>
                         </div>
                       </div>
@@ -569,22 +584,35 @@ const InterviewResultsPage = () => {
 
             <Collapsible title={"🧾 Interview Stats"} defaultOpen={defaultOpen}>
               <div className="space-y-4">
-                <StatRow
-                  label="Duration"
-                  value={`${Math.floor(interview.duration / 60)}m ${
-                    interview.duration % 60
-                  }s`}
-                />
-                <StatRow label="Questions" value={interview.questions.length} />
-                <StatRow
-                  label="Completed"
-                  value={new Date(interview.completedAt).toLocaleDateString()}
-                />
+                {(() => {
+                  const durationSec = Number(interview?.duration) || 0;
+                  const mins = Math.floor(durationSec / 60);
+                  const secs = durationSec % 60;
+                  return (
+                    <>
+                      <StatRow label="Duration" value={`${mins}m ${secs}s`} />
+                      <StatRow
+                        label="Questions"
+                        value={interview?.questions?.length ?? 0}
+                      />
+                      <StatRow
+                        label="Completed"
+                        value={
+                          interview?.completedAt
+                            ? new Date(
+                                interview.completedAt
+                              ).toLocaleDateString()
+                            : "—"
+                        }
+                      />
+                    </>
+                  );
+                })()}
                 <StatRow
                   label="Type"
                   value={
                     <span className="capitalize">
-                      {interview.interviewType}
+                      {interview?.interviewType ?? "—"}
                     </span>
                   }
                 />
@@ -627,7 +655,7 @@ const InterviewResultsPage = () => {
               defaultOpen={defaultOpen}
             >
               <div className="space-y-3">
-                {analysis.recommendations.map((rec, index) => (
+                {(analysis?.recommendations || []).map((rec, index) => (
                   <div key={index} className="flex items-start space-x-3">
                     <div className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
                       {index + 1}
@@ -642,7 +670,7 @@ const InterviewResultsPage = () => {
 
             <Collapsible title={"🎯 Focus Areas"} defaultOpen={false}>
               <div className="space-y-3">
-                {analysis.focusAreas.map((area, index) => (
+                {(analysis?.focusAreas || []).map((area, index) => (
                   <div
                     key={index}
                     className="flex justify-between items-center p-3 bg-surface-50 dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700"

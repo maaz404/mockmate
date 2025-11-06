@@ -56,27 +56,40 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     try {
       const end = process.hrtime.bigint();
-      const ms = Number(end - start) / 1e6;
-      // Skip noisy health & metrics high-frequency endpoints logging at info
+      const NANOS_PER_MS = 1_000_000; // 1e6
+      const durationMsNum = Number(end - start) / NANOS_PER_MS;
+      const HUNDRED = 100;
+      const durationMs = Number.isFinite(durationMsNum)
+        ? Math.round(durationMsNum * HUNDRED) / HUNDRED // two decimals
+        : null;
       const skip =
         /\/api\/(health|bootstrap)/.test(req.path) && res.statusCode < 400;
-      if (!skip) {
-        console.log(
-          JSON.stringify({
-            ts: new Date().toISOString(),
-            level:
-              res.statusCode >= 500
-                ? "error"
-                : res.statusCode >= 400
-                ? "warn"
-                : "info",
-            requestId: req.requestId,
-            method: req.method,
-            path: req.path,
-            status: res.statusCode,
-            durationMs: ms.toFixed(2),
-          })
-        );
+      if (!skip && process.env.REQUEST_LOGS !== "off") {
+        const payload = {
+          ts: new Date().toISOString(),
+          level:
+            res.statusCode >= 500
+              ? "error"
+              : res.statusCode >= 400
+              ? "warn"
+              : "info",
+          requestId: req.requestId,
+          method: req.method,
+          path: req.path,
+          status: res.statusCode,
+          durationMs,
+        };
+        if (process.env.REQUEST_LOGS === "json") {
+          Logger.info(JSON.stringify(payload));
+        } else if (process.env.REQUEST_LOGS === "minimal") {
+          Logger.info(
+            `${payload.method} ${payload.path} ${payload.status} ${durationMs}ms`()
+          );
+        } else {
+          Logger.info(
+            `${payload.method} ${payload.path} status=${payload.status} duration=${durationMs}ms id=${payload.requestId}`
+          );
+        }
       }
     } catch (_) {
       /* ignore */
@@ -96,8 +109,10 @@ app.use(helmet());
 
 // Rate limiting
 const SECOND_MS = 1000;
-const MINUTE_MS = 60 * SECOND_MS;
-const FIFTEEN_MINUTES_MS = 15 * MINUTE_MS;
+const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_FIFTEEN = 15;
+const MINUTE_MS = SECONDS_PER_MINUTE * SECOND_MS;
+const FIFTEEN_MINUTES_MS = MINUTES_PER_FIFTEEN * MINUTE_MS;
 const DEFAULT_MAX_REQUESTS = 100;
 
 const limiter = rateLimit({
@@ -125,14 +140,20 @@ const CORE_ALLOWED_HEADERS = [
   "x-request-id",
 ];
 
-if (!global.__CORS_LOGGED) {
-  console.log("CORS base allowlist (env):", Array.from(allowedSet));
-  console.log(
-    `CORS dev patterns: localhost/loopback always allowed${
-      allowLan ? ", plus private LAN ranges" : ""
-    }`
+if (!global.__CORS_LOGGED && process.env.CORS_LOGS !== "off") {
+  Logger.info(
+    `CORS allowlist: ${Array.from(allowedSet).join(", ")} (${
+      allowLan ? "LAN enabled" : "LAN disabled"
+    })`
   );
-  console.log("CORS allowed headers:", CORE_ALLOWED_HEADERS);
+  if (process.env.CORS_LOGS === "verbose") {
+    Logger.info(
+      `CORS dev patterns: localhost/loopback always allowed${
+        allowLan ? ", plus private LAN ranges" : ""
+      }`
+    );
+    Logger.info(`CORS allowed headers: ${CORE_ALLOWED_HEADERS.join(", ")}`);
+  }
   global.__CORS_LOGGED = true;
 }
 
@@ -146,9 +167,9 @@ app.use(
       const isLanDev =
         ENV.NODE_ENV !== "production" && allowLan && LAN_REGEX.test(origin);
       if (isExplicit || isLocalDev || isLanDev) return cb(null, true);
-      console.warn("CORS blocked origin:", origin, {
-        hint: "Add to CORS_ORIGINS env or set ALLOW_LAN_CORS=true for private network in dev",
-      });
+      Logger.warn(
+        `CORS blocked origin: ${origin} (hint: add to CORS_ORIGINS or set ALLOW_LAN_CORS=true)`
+      );
       return cb(new Error("CORS_NOT_ALLOWED"));
     },
     credentials: true,
@@ -190,13 +211,21 @@ app.use(
 );
 
 // Logging
-const morganFormat =
-  process.env.NODE_ENV === "development" ? "dev" : "combined";
-app.use(
-  morgan(morganFormat, {
-    stream: { write: (str) => process.stdout.write(str) },
-  })
-);
+// Conditional HTTP request logging (morgan); allow disabling or minimal mode
+const morganSetting = process.env.HTTP_LOGS; // 'off' | 'minimal' | undefined
+if (morganSetting !== "off") {
+  const morganFormat =
+    morganSetting === "minimal"
+      ? "tiny"
+      : process.env.NODE_ENV === "development"
+      ? "dev"
+      : "combined";
+  app.use(
+    morgan(morganFormat, {
+      stream: { write: (str) => process.stdout.write(str) },
+    })
+  );
+}
 
 // Body parser middleware
 app.use(express.json({ limit: "10mb" }));
@@ -304,7 +333,7 @@ app.get("/*.json", (req, res) => {
 // ===================================================================
 app.get("/api/bootstrap", async (req, res) => {
   try {
-    const { ok, fail } = require("./utils/responder");
+    const { ok } = require("./utils/responder");
 
     // Try to get user from token (optional - might not be present)
     let userId = null;
@@ -312,13 +341,16 @@ app.get("/api/bootstrap", async (req, res) => {
 
     if (authHeader && authHeader.startsWith("Bearer ")) {
       try {
-        const token = authHeader.substring(7);
+        const BEARER_PREFIX_LENGTH = 7;
+        const token = authHeader.substring(BEARER_PREFIX_LENGTH);
         const jwt = require("jsonwebtoken");
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         userId = decoded.id;
       } catch (tokenErr) {
         // Invalid token - treat as unauthenticated
-        console.log("Bootstrap: Invalid token, treating as unauthenticated");
+        if (process.env.REQUEST_LOGS === "verbose") {
+          Logger.debug("Bootstrap: Invalid token, treating as unauthenticated");
+        }
       }
     }
 
@@ -451,7 +483,17 @@ app.post("/api/dev/upgrade-self", requireAuth, async (req, res) => {
     }
 
     const { getPlan, isUnlimited } = require("./config/plans");
-    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    const DAYS_IN_MONTH_APPROX = 30;
+    const HOURS_PER_DAY = 24;
+    const MINUTES_PER_HOUR = 60;
+    const SECONDS_PER_MINUTE_CONST = 60;
+    const MS_PER_SECOND = 1000;
+    const THIRTY_DAYS_MS =
+      DAYS_IN_MONTH_APPROX *
+      HOURS_PER_DAY *
+      MINUTES_PER_HOUR *
+      SECONDS_PER_MINUTE_CONST *
+      MS_PER_SECOND;
     const premium = getPlan("premium");
 
     profile.subscription = {

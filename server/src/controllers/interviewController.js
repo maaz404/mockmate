@@ -210,6 +210,8 @@ const createInterview = async (req, res) => {
               difficultyHistory: [],
             }
           : { enabled: false },
+        // Flag to explicitly request at least one coding question in the session
+        coding: Boolean(config.coding) || undefined,
       },
       questions: questions
         .slice(
@@ -228,6 +230,45 @@ const createInterview = async (req, res) => {
         })),
       status: "scheduled",
     });
+
+    // --- Auto-inject a lightweight coding question when requested ---
+    // Reason: Current hybrid generation does not produce 'coding' category items.
+    // We add a single coding challenge to enable CodingAnswerUI in mixed/coding-enabled sessions.
+    const wantsCoding =
+      Boolean(config.coding) || config.interviewType === "mixed";
+    const hasCodingAlready = interview.questions.some(
+      (q) =>
+        (q.category || "").toLowerCase() === "coding" ||
+        (q.type || "").toLowerCase() === "coding"
+    );
+    if (wantsCoding && !hasCodingAlready && FEATURES.codingChallenges) {
+      try {
+        const codingDifficulty = mapDifficulty(
+          config.difficulty || "intermediate"
+        );
+        interview.questions.push({
+          questionId: new mongoose.Types.ObjectId(),
+          questionText: "Implement a function that reverses a string.",
+          category: "coding", // signals frontend to render coding UI
+          difficulty: codingDifficulty,
+          timeAllocated: 600, // 10 minutes
+          hasVideo: false,
+          // Optional inline examples used by CodingAnswerUI to form test cases
+          examples: [
+            { input: "hello", output: "olleh" },
+            { input: "Interview", output: "weivretnI" },
+          ],
+        });
+        Logger.info(
+          "[createInterview] Injected coding question stub for session"
+        );
+      } catch (injectErr) {
+        Logger.warn(
+          "[createInterview] Failed to inject coding question:",
+          injectErr
+        );
+      }
+    }
 
     await interview.save();
     return created(res, interview, "Interview created successfully");
@@ -269,6 +310,12 @@ const startInterview = async (req, res) => {
     if (!interview.timing) interview.timing = {};
     interview.timing.startedAt = new Date();
 
+    // Initialize remaining time based on interview duration (minutes -> seconds)
+    const durationMinutes =
+      interview.config?.duration || interview.duration || 30;
+    interview.timing.remainingSeconds = durationMinutes * 60;
+    interview.timing.lastUpdated = new Date();
+
     await interview.save();
 
     await consumeFreeInterview(userId, interview._id.toString());
@@ -286,7 +333,7 @@ const submitAnswer = async (req, res) => {
     const userId = req.user?.id; // CHANGED
     const interviewId = req.params.interviewId || req.params.id;
     const { questionIndex } = req.params;
-    const { answer, timeSpent, notes, facialMetrics, skip } = req.body;
+    const { answer, timeSpent, notes, facialMetrics, skip, code } = req.body;
 
     if (skip === true) {
       if (answer && answer.trim().length > 0) {
@@ -348,6 +395,13 @@ const submitAnswer = async (req, res) => {
       interview.questions[qIndex].skipped = true;
       interview.questions[qIndex].skippedAt = new Date();
       interview.questions[qIndex].timeSpent = timeSpent || 0;
+      if (code && typeof code === "object") {
+        interview.questions[qIndex].code = {
+          language: code.language,
+          snippet: code.snippet || code.text || code.code || "",
+          updatedAt: new Date(),
+        };
+      }
       await interview.save();
       return ok(
         res,
@@ -505,6 +559,30 @@ const submitAnswer = async (req, res) => {
       }
     }
 
+    // Update remaining time based on elapsed time since last update
+    if (interview.timing && interview.timing.remainingSeconds != null) {
+      const now = new Date();
+      const lastUpdated =
+        interview.timing.lastUpdated || interview.timing.startedAt;
+      if (lastUpdated) {
+        const elapsedSeconds = Math.floor((now - lastUpdated) / 1000);
+        interview.timing.remainingSeconds = Math.max(
+          0,
+          interview.timing.remainingSeconds - elapsedSeconds
+        );
+        interview.timing.lastUpdated = now;
+
+        // Auto-complete if time has run out
+        if (interview.timing.remainingSeconds <= 0) {
+          interview.status = "completed";
+          interview.timing.completedAt = now;
+          interview.timing.totalDuration = Math.round(
+            (now - interview.timing.startedAt) / 1000
+          );
+        }
+      }
+    }
+
     await interview.save();
 
     let followUpQuestions = null;
@@ -532,6 +610,34 @@ const submitAnswer = async (req, res) => {
       questionIndex: qIndex,
       score: interview.questions[qIndex].score?.overall || evaluation.score,
       followUpQuestions,
+      evaluation: {
+        score: interview.questions[qIndex].score?.overall || evaluation.score,
+        rubricScores:
+          interview.questions[qIndex].score?.rubricScores ||
+          evaluation.rubicScores ||
+          evaluation.rubricScores ||
+          {},
+        breakdown:
+          interview.questions[qIndex].score?.breakdown ||
+          evaluation.breakdown ||
+          {},
+        strengths:
+          interview.questions[qIndex].feedback?.strengths ||
+          evaluation.strengths ||
+          [],
+        improvements:
+          interview.questions[qIndex].feedback?.improvements ||
+          evaluation.improvements ||
+          [],
+        feedback:
+          interview.questions[qIndex].feedback?.suggestions ||
+          evaluation.feedback ||
+          "",
+        modelAnswer:
+          interview.questions[qIndex].feedback?.modelAnswer ||
+          evaluation.modelAnswer ||
+          "",
+      },
     };
 
     if (interview.config.adaptiveDifficulty?.enabled) {
@@ -813,6 +919,32 @@ const getInterviewDetails = async (req, res) => {
 
     if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
+    // Calculate current remaining time if interview is in-progress
+    if (interview.status === "in-progress" && interview.timing) {
+      const now = new Date();
+      const lastUpdated =
+        interview.timing.lastUpdated || interview.timing.startedAt;
+      const elapsedSinceUpdate = Math.floor((now - lastUpdated) / 1000);
+      const currentRemaining = Math.max(
+        0,
+        (interview.timing.remainingSeconds || 0) - elapsedSinceUpdate
+      );
+
+      // Update the interview object (not saving to DB yet, just for response)
+      interview.timing.remainingSeconds = currentRemaining;
+      interview.timing.lastUpdated = now;
+
+      // Auto-complete if time has run out
+      if (currentRemaining <= 0 && interview.status === "in-progress") {
+        interview.status = "completed";
+        interview.timing.completedAt = now;
+        interview.timing.totalDuration = Math.round(
+          (now - interview.timing.startedAt) / 1000
+        );
+        await interview.save();
+      }
+    }
+
     return ok(res, interview, "Interview details retrieved");
   } catch (error) {
     Logger.error("Get interview details error:", error);
@@ -825,6 +957,7 @@ const completeInterview = async (req, res) => {
   try {
     const userId = req.user?.id;
     const interviewId = req.params.interviewId || req.params.id;
+    const { transcript, facialMetrics } = req.body;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -841,6 +974,15 @@ const completeInterview = async (req, res) => {
     interview.timing.totalDuration = Math.round(
       (interview.timing.completedAt - interview.timing.startedAt) / 1000
     );
+
+    // Store session enrichment data if provided
+    if (transcript || facialMetrics) {
+      interview.sessionEnrichment = {
+        transcript: transcript || undefined,
+        facialMetrics: facialMetrics || undefined,
+        enrichedAt: new Date(),
+      };
+    }
 
     // Calculate overall results
     const answeredQuestions = interview.questions.filter(

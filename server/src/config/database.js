@@ -6,11 +6,19 @@ let connectTries = 0;
 
 // Optional verbose mongoose debug
 if (process.env.DB_DEBUG_LOGS === "true") {
+  // Verbose per-operation logging (indexes, queries) - enable only when diagnosing issues
   mongoose.set("debug", (collectionName, method, query) => {
     try {
       const q = JSON.stringify(query);
       Logger.debug(`Mongoose: ${collectionName}.${method} ${q}`);
     } catch (_) {
+      Logger.debug(`Mongoose: ${collectionName}.${method}`);
+    }
+  });
+} else if (process.env.DB_DEBUG_LOGS === "minimal") {
+  // Minimal logging: only index creation events
+  mongoose.set("debug", (collectionName, method) => {
+    if (method === "createIndex") {
       Logger.debug(`Mongoose: ${collectionName}.${method}`);
     }
   });

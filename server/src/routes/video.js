@@ -7,6 +7,7 @@ const Interview = require("../models/Interview");
 const transcriptionService = require("../services/transcriptionService");
 const Logger = require("../utils/logger");
 const MC = require("../utils/mediaConstants");
+const { consumeFreeInterview } = require("../utils/subscription");
 let cloudinary = null;
 try {
   cloudinary = require("../config/cloudinary");
@@ -58,9 +59,12 @@ router.post("/start/:interviewId", requireAuth, async (req, res) => {
     const userId = req.user?.id;
     const { interviewId } = req.params;
 
+    Logger.info("[video/start] Request received:", { userId, interviewId });
+
     // Validate interviewId format early to avoid CastError noise
     const mongoose = require("mongoose");
     if (!mongoose.Types.ObjectId.isValid(interviewId)) {
+      Logger.warn("[video/start] Invalid interview ID format:", interviewId);
       return res.status(400).json({
         success: false,
         message: "Invalid interview id format",
@@ -75,17 +79,55 @@ router.post("/start/:interviewId", requireAuth, async (req, res) => {
     });
 
     if (!interview) {
+      Logger.warn("[video/start] Interview not found:", {
+        interviewId,
+        userId,
+      });
       return res.status(404).json({
         success: false,
         message: "Interview not found",
       });
     }
 
-    if (interview.status !== "in-progress") {
+    Logger.info("[video/start] Interview found:", {
+      interviewId,
+      status: interview.status,
+      hasVideoSession: !!interview.videoSession,
+    });
+
+    // Allow video recording for both scheduled and in-progress interviews
+    if (
+      interview.status !== "in-progress" &&
+      interview.status !== "scheduled"
+    ) {
+      Logger.warn("[video/start] Invalid interview status:", interview.status);
+
+      // Provide specific error messages based on status
+      let errorMessage =
+        "Interview must be scheduled or in progress to start video recording";
+      if (interview.status === "completed") {
+        errorMessage =
+          "This interview has already been completed. Please start a new interview to record video.";
+      } else if (interview.status === "cancelled") {
+        errorMessage =
+          "This interview has been cancelled. Please start a new interview to record video.";
+      }
+
       return res.status(400).json({
         success: false,
-        message: "Interview must be in progress to start video recording",
+        message: errorMessage,
+        currentStatus: interview.status,
       });
+    }
+
+    // Update status to in-progress if starting video for the first time
+    if (interview.status === "scheduled") {
+      interview.status = "in-progress";
+      if (!interview.timing) interview.timing = {};
+      interview.timing.startedAt = new Date();
+
+      // Consume free interview when starting
+      await consumeFreeInterview(userId, interviewId);
     }
 
     // Initialize video session
@@ -217,9 +259,9 @@ router.post(
             duration: uploadResult.duration,
             folder,
           };
-          try {
-            await fs.unlink(req.file.path);
-          } catch (_) {}
+          // NOTE: Do not delete the local file here; transcription and
+          // local playback/retry may depend on it. Cleanup can be handled
+          // later by a job or after successful transcription if desired.
         } catch (cloudErr) {
           Logger.warn(
             "Cloudinary upload failed, continuing with local file:",
@@ -497,10 +539,12 @@ router.get("/stream/:filename", requireAuth, async (req, res) => {
         const fs = require("fs");
         const stream = fs.createReadStream(videoPath, { start, end });
         stream.pipe(res);
+        return null; // satisfy lint: explicit return after piping
       } else {
         const fs = require("fs");
         const stream = fs.createReadStream(videoPath);
         stream.pipe(res);
+        return null; // satisfy lint: explicit return after piping
       }
     } catch (error) {
       return res.status(404).json({

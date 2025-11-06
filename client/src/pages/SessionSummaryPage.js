@@ -28,13 +28,38 @@ const SessionSummaryPage = () => {
   const fetchSessionSummary = useCallback(async () => {
     try {
       setLoading(true);
-      const envelope = await apiService.get(
-        `/reports/${interviewId}/session-summary`
+
+      // Source of truth: build summary from actual interview results
+      const resultsRes = await apiService.get(
+        `/interviews/${interviewId}/results`
       );
-      if (envelope.success) {
-        setSummary(envelope.data.summary);
-        setHasProAccess(envelope.data.hasProAccess);
-      } else toast.error(envelope.message || "Failed to load session summary");
+      const payload =
+        resultsRes?.data?.interview || resultsRes?.data?.analysis
+          ? resultsRes.data
+          : resultsRes?.success && resultsRes?.data
+          ? resultsRes.data
+          : resultsRes;
+
+      if (!payload || (!payload.interview && !payload.analysis)) {
+        throw new Error("Results not available");
+      }
+
+      const built = buildSummaryFromResults(payload);
+      setSummary(built);
+
+      // Optional: fetch pro flag from server summary endpoint if available
+      try {
+        const envelope = await apiService.get(
+          `/reports/${interviewId}/session-summary`
+        );
+        if (envelope?.success && envelope?.data) {
+          if (typeof envelope.data.hasProAccess !== "undefined") {
+            setHasProAccess(!!envelope.data.hasProAccess);
+          }
+        }
+      } catch (_) {
+        // Ignore optional pro flag errors
+      }
     } catch (err) {
       toast.error(err.message || "Failed to load session summary");
     } finally {
@@ -107,6 +132,154 @@ const SessionSummaryPage = () => {
         return "text-surface-600 bg-surface-100 dark:text-surface-300 dark:bg-surface-700/50";
     }
   };
+
+  // Derive a consistent summary object from interview results
+  function buildSummaryFromResults(results) {
+    const interview = results?.interview || {};
+    const analysis = results?.analysis || {};
+    const qaList = Array.isArray(analysis.questionAnalysis)
+      ? analysis.questionAnalysis
+      : [];
+
+    // Helpers
+    const toScore = (s) =>
+      typeof s === "object" && s !== null
+        ? Number(s.overall || 0)
+        : Number(s || 0);
+    const band = (score) => {
+      if (score >= 85) return "excellent";
+      if (score >= 70) return "good";
+      if (score >= 50) return "average";
+      return "poor";
+    };
+    const perfTag = (score) => {
+      if (score >= 85) return "excellent";
+      if (score >= 70) return "good";
+      if (score >= 50) return "average";
+      return "needs-improvement";
+    };
+
+    const totalQuestions = Number(
+      interview?.questions?.length || qaList.length || 0
+    );
+    const answeredQuestions = qaList.length;
+    const completionRate = totalQuestions
+      ? Math.round((answeredQuestions / totalQuestions) * 100)
+      : 0;
+
+    const scores = qaList.map((q) => toScore(q.score));
+    const times = qaList.map((q) => Number(q.timeSpent || 0));
+    const overallScore = Number(analysis?.overallScore || 0);
+    const sessionRating = Math.max(
+      1,
+      Math.min(5, Math.round(overallScore / 20))
+    );
+    const avgTime = times.length
+      ? Math.round(times.reduce((a, b) => a + b, 0) / times.length)
+      : 0;
+    const fastestIdx = times.length ? times.indexOf(Math.min(...times)) : -1;
+    const slowestIdx = times.length ? times.indexOf(Math.max(...times)) : -1;
+
+    // Score distribution
+    const distribution = { excellent: 0, good: 0, average: 0, poor: 0 };
+    scores.forEach((s) => {
+      distribution[band(s)] += 1;
+    });
+
+    // Category performance
+    const byCat = new Map();
+    qaList.forEach((qa) => {
+      const cat = (qa.type || qa.category || "general").toLowerCase();
+      const s = toScore(qa.score);
+      const cur = byCat.get(cat) || { sum: 0, count: 0 };
+      cur.sum += s;
+      cur.count += 1;
+      byCat.set(cat, cur);
+    });
+    const categoryScores = Array.from(byCat.entries()).map(([category, v]) => {
+      const avg = v.count ? Math.round(v.sum / v.count) : 0;
+      return {
+        category,
+        questionsCount: v.count,
+        averageScore: avg,
+        performance: perfTag(avg),
+      };
+    });
+
+    // Best/worst answers
+    const withMeta = qaList.map((qa) => ({
+      question: qa.question,
+      score: toScore(qa.score),
+      timeSpent: Number(qa.timeSpent || 0),
+      category: (qa.type || qa.category || "general").toLowerCase(),
+    }));
+    const bestAnswers = [...withMeta]
+      .sort((a, b) => b.score - a.score || a.timeSpent - b.timeSpent)
+      .slice(0, 3);
+    const worstAnswers = [...withMeta]
+      .sort((a, b) => a.score - b.score || b.timeSpent - a.timeSpent)
+      .slice(0, 3);
+
+    // Improvement opportunities from focusAreas if present
+    const improvementOpportunities = Array.isArray(analysis?.focusAreas)
+      ? analysis.focusAreas.map((fa) => ({
+          area: fa.skill,
+          suggestion: `Practice ${fa.skill} to reach ${fa.priority} priority goals.`,
+          priority: fa.priority || "medium",
+        }))
+      : [];
+
+    const readinessLevel = perfTag(overallScore);
+    const recommendation =
+      Array.isArray(analysis?.recommendations) &&
+      analysis.recommendations.length
+        ? analysis.recommendations[0]
+        : overallScore >= 70
+        ? "Solid performance. Keep refining your strengths."
+        : overallScore >= 50
+        ? "Decent foundation. Practice more to boost confidence."
+        : "Focus on fundamentals and practice with more mock sessions.";
+
+    return {
+      sessionInfo: {
+        jobRole: interview?.jobRole || interview?.config?.jobRole || "",
+        interviewType:
+          interview?.interviewType || interview?.config?.interviewType || "",
+        totalDuration: Math.round(Number(interview?.duration || 0) / 60),
+      },
+      overallAssessment: {
+        overallScore,
+        sessionRating,
+        readinessLevel,
+        recommendation,
+      },
+      aggregateMetrics: {
+        answeredQuestions,
+        totalQuestions,
+        completionRate,
+        scoreDistribution: distribution,
+      },
+      categoryScores,
+      performanceHighlights: {
+        bestAnswers,
+        worstAnswers,
+        improvementOpportunities,
+      },
+      timeAnalysis: {
+        averageTime: avgTime,
+        timeEfficiency:
+          avgTime <= 25 ? "fast" : avgTime <= 60 ? "average" : "slow",
+        fastestAnswer:
+          fastestIdx >= 0
+            ? { time: times[fastestIdx], score: scores[fastestIdx] }
+            : null,
+        slowestAnswer:
+          slowestIdx >= 0
+            ? { time: times[slowestIdx], score: scores[slowestIdx] }
+            : null,
+      },
+    };
+  }
 
   const getScoreColor = (score) => {
     if (score >= 85) return "text-green-600";
