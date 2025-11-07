@@ -155,37 +155,8 @@ const createInterview = async (req, res) => {
       }
     }
 
-    const MIN_SCHEMA_QUESTION_COUNT = 5;
-    if (questions.length > 0 && questions.length < MIN_SCHEMA_QUESTION_COUNT) {
-      const base = [...questions];
-      let dupIdx = 0;
-      while (questions.length < MIN_SCHEMA_QUESTION_COUNT) {
-        const src = base[dupIdx % base.length];
-        const baseObj =
-          src && typeof src.toObject === "function" ? src.toObject() : src;
-        const safeCategory =
-          baseObj.category ||
-          (config.interviewType === "behavioral"
-            ? "communication"
-            : config.interviewType === "system-design"
-            ? "system-design"
-            : "web-development");
-        const safeEstimated =
-          baseObj.estimatedTime ||
-          (baseObj.timeEstimate ? baseObj.timeEstimate * C.SEC_PER_MIN : 120);
-        questions.push({
-          ...baseObj,
-          category: safeCategory,
-          estimatedTime: safeEstimated,
-          _id: new mongoose.Types.ObjectId(),
-          source: `${baseObj.source || "template"}`,
-          text: `${baseObj.text} (variant ${Math.floor(
-            questions.length - base.length + 1
-          )})`,
-        });
-        dupIdx += 1;
-      }
-    }
+    // Remove the duplicate question logic - hybridQuestionService handles this
+    // Questions are now properly generated with the right count
 
     // CHANGED: userId → user in Interview creation
     const interview = new Interview({

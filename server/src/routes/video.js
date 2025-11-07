@@ -28,8 +28,12 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    // CHANGED: req.auth.userId -> req.user.id
-    const uniqueName = `${req.user.id}_${Date.now()}_${Math.round(
+    // Safely derive user id (multer runs before route handler)
+    const userId =
+      (req.user && (req.user.id || req.user._id)) ||
+      (req.auth && (req.auth.userId || req.auth.id)) ||
+      "anonymous";
+    const uniqueName = `${userId}_${Date.now()}_${Math.round(
       Math.random() * MC.RECORDING_RANDOM_MAX
     )}.webm`;
     cb(null, uniqueName);
@@ -162,7 +166,21 @@ router.post("/start/:interviewId", requireAuth, async (req, res) => {
 router.post(
   "/upload/:interviewId/:questionIndex",
   requireAuth,
-  upload.single("video"),
+  // Wrap multer to surface clear errors (e.g., boundary issues, file too large)
+  (req, res, next) => {
+    upload.single("video")(req, res, (err) => {
+      if (err) {
+        Logger.error("Multer error on video upload:", err);
+        const code = err.code || "UPLOAD_ERROR";
+        let message = err.message || "Failed to process upload";
+        if (code === "LIMIT_FILE_SIZE") {
+          message = `File too large. Max ${MC.VIDEO_MAX_FILE_MB}MB`;
+        }
+        return res.status(400).json({ success: false, code, message });
+      }
+      return next();
+    });
+  },
   async (req, res) => {
     try {
       // CHANGED: const { userId } = req.auth; -> const userId = req.user?.id;

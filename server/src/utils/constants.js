@@ -1,7 +1,7 @@
 // Centralized constants to reduce magic numbers
 module.exports = {
   DEFAULT_QUESTION_COUNT: 10,
-  ADAPTIVE_SEED_COUNT: 1,
+  ADAPTIVE_SEED_COUNT: 3, // Start with 3 questions for better UX, then generate more adaptively
   HTTP_STATUS_CREATED: 201,
   HTTP_STATUS_NOT_IMPLEMENTED: 501,
   HTTP_STATUS_SERVICE_UNAVAILABLE: 503,

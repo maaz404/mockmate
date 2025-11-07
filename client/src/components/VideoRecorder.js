@@ -17,6 +17,7 @@ const VideoRecorder = ({
   enableCountdown = true,
   enableWaveform = true,
   enableTranscript = true,
+  hideControls = false,
 }) => {
   const webcamRef = useRef(null);
   const [hasCamera, setHasCamera] = useState(false);
@@ -44,6 +45,7 @@ const VideoRecorder = ({
   const [interimTranscript, setInterimTranscript] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const autoStartedRef = useRef(false);
 
   const {
     isRecording,
@@ -290,6 +292,35 @@ const VideoRecorder = ({
     return () => window.removeEventListener("resize", resize);
   }, [enableWaveform]);
 
+  // Auto-start recording when controls are hidden (navigation-only UI)
+  useEffect(() => {
+    if (
+      hideControls &&
+      hasCamera &&
+      sessionStarted &&
+      !isRecording &&
+      !preparing &&
+      !autoStartedRef.current
+    ) {
+      autoStartedRef.current = true;
+      try {
+        // Begin recording with existing countdown logic
+        handleStartRecording();
+      } catch (_) {}
+    }
+  }, [hideControls, hasCamera, sessionStarted, isRecording, preparing]);
+
+  // Ensure we stop recording on unmount if controls are hidden
+  useEffect(() => {
+    return () => {
+      if (hideControls && isRecording) {
+        try {
+          stopRecording();
+        } catch (_) {}
+      }
+    };
+  }, [hideControls, isRecording, stopRecording]);
+
   // Live transcript via Web Speech API (best-effort)
   useEffect(() => {
     if (!enableTranscript) return;
@@ -323,8 +354,16 @@ const VideoRecorder = ({
       const rec = new SpeechRecognition();
       rec.continuous = true;
       rec.interimResults = true;
-      rec.lang = "en-US";
-      rec.maxAlternatives = 1;
+
+      // Improved settings for better accuracy
+      rec.lang = "en-US"; // You can make this configurable if needed
+      rec.maxAlternatives = 3; // Get top 3 alternatives for better accuracy
+
+      // These are browser-specific optimizations
+      if ("grammars" in rec) {
+        // Grammar hints can improve accuracy for specific vocabulary
+        rec.grammars = null; // Use default grammar
+      }
 
       rec.onresult = (event) => {
         let interim = "";
@@ -332,9 +371,33 @@ const VideoRecorder = ({
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const res = event.results[i];
           if (res.isFinal) {
-            const text = res[0].transcript.trim();
-            if (text) finalAdditions.push(text);
+            // Use the most confident alternative (res[0] is highest confidence)
+            // Check confidence score if available
+            let bestTranscript = res[0].transcript.trim();
+            let bestConfidence = res[0].confidence || 1;
+
+            // Compare with alternatives if confidence is low
+            if (bestConfidence < 0.8 && res.length > 1) {
+              for (let j = 1; j < Math.min(res.length, 3); j++) {
+                if (res[j].confidence > bestConfidence) {
+                  bestTranscript = res[j].transcript.trim();
+                  bestConfidence = res[j].confidence;
+                }
+              }
+            }
+
+            if (bestTranscript) {
+              finalAdditions.push(bestTranscript);
+              // Log confidence for debugging
+              // eslint-disable-next-line no-console
+              console.log(
+                `[Transcript] Confidence: ${(bestConfidence * 100).toFixed(
+                  1
+                )}% - "${bestTranscript}"`
+              );
+            }
           } else {
+            // For interim results, just use the top result
             interim += res[0].transcript;
           }
         }
@@ -546,8 +609,21 @@ const VideoRecorder = ({
             videoConstraints={videoConstraints}
             audioConstraints={
               selectedDevice.audio && selectedDevice.audio !== "default"
-                ? { deviceId: { exact: selectedDevice.audio } }
-                : true
+                ? {
+                    deviceId: { exact: selectedDevice.audio },
+                    // Enhanced audio settings for better speech recognition
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 48000, // Higher sample rate for better quality
+                  }
+                : {
+                    // Default device with enhanced settings
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 48000,
+                  }
             }
             onUserMediaError={() => {
               setCameraError("Failed to access camera");
@@ -651,71 +727,73 @@ const VideoRecorder = ({
           )}
         </div>
         {/* Control Bar */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-4 flex justify-center">
-          <div className="pointer-events-auto flex items-center gap-4 bg-surface-900/70 backdrop-blur-md px-5 py-3 rounded-full border border-surface-700 shadow-lg">
-            {demoMode && (
-              <span className="hidden md:inline text-[10px] tracking-wide px-2 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
-                DEMO
-              </span>
-            )}
-            {!isRecording && !hasRecorded && !preparing && (
-              <ControlButton
-                color="red"
-                label="Start"
-                onClick={handleStartRecording}
-                icon={<RecordIcon />}
-                disabled={!hasCamera || !sessionStarted}
-              />
-            )}
-            {preparing && (
-              <ControlButton
-                color="amber"
-                label="Cancel"
-                onClick={() => {
-                  setPreparing(false);
-                  setCountdown(null);
-                }}
-                icon={<CancelIcon />}
-              />
-            )}
-            {isRecording && (
-              <ControlButton
-                color="slate"
-                label="Stop"
-                onClick={handleStopRecording}
-                icon={<StopIcon />}
-              />
-            )}
-            {hasRecorded && !isRecording && (
-              <>
+        {!hideControls && (
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-4 flex justify-center">
+            <div className="pointer-events-auto flex items-center gap-4 bg-surface-900/70 backdrop-blur-md px-5 py-3 rounded-full border border-surface-700 shadow-lg">
+              {demoMode && (
+                <span className="hidden md:inline text-[10px] tracking-wide px-2 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                  DEMO
+                </span>
+              )}
+              {!isRecording && !hasRecorded && !preparing && (
                 <ControlButton
-                  color="green"
-                  label={isUploading ? "Uploading" : "Upload"}
-                  onClick={handleUploadVideo}
-                  disabled={isUploading || !canUpload}
-                  icon={isUploading ? <Spinner /> : <UploadIcon />}
+                  color="red"
+                  label="Start"
+                  onClick={handleStartRecording}
+                  icon={<RecordIcon />}
+                  disabled={!hasCamera || !sessionStarted}
                 />
+              )}
+              {preparing && (
                 <ControlButton
-                  color="indigo"
-                  label="Retake"
-                  onClick={clearRecording}
-                  icon={<RetakeIcon />}
-                  disabled={isUploading}
+                  color="amber"
+                  label="Cancel"
+                  onClick={() => {
+                    setPreparing(false);
+                    setCountdown(null);
+                  }}
+                  icon={<CancelIcon />}
                 />
-              </>
-            )}
-            {enableTranscript && (
-              <ControlButton
-                color={
-                  isListening ? "green" : showTranscript ? "amber" : "slate"
-                }
-                label={showTranscript ? "Hide Text" : "Transcript"}
-                onClick={() => setShowTranscript((v) => !v)}
-                icon={<TranscriptIcon />}
-              />
-            )}
+              )}
+              {isRecording && (
+                <ControlButton
+                  color="slate"
+                  label="Stop"
+                  onClick={handleStopRecording}
+                  icon={<StopIcon />}
+                />
+              )}
+              {hasRecorded && !isRecording && (
+                <>
+                  <ControlButton
+                    color="green"
+                    label={isUploading ? "Uploading" : "Upload"}
+                    onClick={handleUploadVideo}
+                    disabled={isUploading || !canUpload}
+                    icon={isUploading ? <Spinner /> : <UploadIcon />}
+                  />
+                  <ControlButton
+                    color="indigo"
+                    label="Retake"
+                    onClick={clearRecording}
+                    icon={<RetakeIcon />}
+                    disabled={isUploading}
+                  />
+                </>
+              )}
+              {enableTranscript && (
+                <ControlButton
+                  color={
+                    isListening ? "green" : showTranscript ? "amber" : "slate"
+                  }
+                  label={showTranscript ? "Hide Text" : "Transcript"}
+                  onClick={() => setShowTranscript((v) => !v)}
+                  icon={<TranscriptIcon />}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        )}
         {/* Glow border when recording */}
         {isRecording && (
           <div className="absolute inset-0 ring-4 ring-red-500/40 rounded-lg pointer-events-none animate-pulse" />

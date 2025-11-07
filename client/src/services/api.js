@@ -144,9 +144,11 @@ export const apiService = {
   },
 
   // File upload method
+  // IMPORTANT: Do NOT set Content-Type explicitly so the browser can add the correct multipart boundary
+  // We override the default JSON content-type by setting it to undefined for this request
   upload: async (url, formData, onProgress) => {
     const response = await api.post(url, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": undefined }, // allow axios/browser to set boundary
       onUploadProgress: onProgress,
     });
     return response.data;

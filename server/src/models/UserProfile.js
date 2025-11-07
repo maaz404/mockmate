@@ -236,6 +236,9 @@ const UserProfileSchema = new mongoose.Schema(
       interviewsRemaining: { type: Number, default: 10 },
       interviewsUsedThisMonth: { type: Number, default: 0 },
       lastInterviewReset: { type: Date, default: Date.now },
+      // Added for quota reset + idempotency tracking (tests rely on these)
+      nextResetDate: { type: Date },
+      lastConsumedInterviewId: { type: String },
       periodStart: Date,
       periodEnd: Date,
       cancelAtPeriodEnd: { type: Boolean, default: false },

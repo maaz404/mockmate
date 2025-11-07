@@ -32,10 +32,16 @@ class HybridQuestionService {
       const lower = String(sanitized.experienceLevel || "").toLowerCase();
       sanitized.experienceLevel = difficultyToExperienceMap[lower] || "entry"; // default lowest tier
     }
-    // Ensure difficulty is valid
+    // Ensure difficulty is valid (beginner|intermediate|advanced)
     sanitized.difficulty = mapDifficulty(
       sanitized.difficulty || "intermediate"
     );
+    // Normalize question count for caching schema
+    const countRaw = sanitized.questionCount ?? sanitized.count;
+    const parsed = Number(countRaw);
+    // eslint-disable-next-line no-magic-numbers
+    sanitized.questionCount =
+      Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
     return sanitized;
   }
 
@@ -71,11 +77,16 @@ class HybridQuestionService {
       if (cachedQuestions) {
         Logger.debug("Using cached questions for interview");
         await cachedQuestions.markUsed();
+        // Sanitize any legacy '(variant X)' suffixes from cache
+        const sanitizedFromCache = [...cachedQuestions.questions].map((q) => ({
+          ...q,
+          text: this.stripVariantSuffix(q.text),
+        }));
         // Ensure padding in case older cache stored fewer than requested
-        const padded = this.ensureQuestionCount(
-          [...cachedQuestions.questions],
+        const padded = await this.ensureQuestionCountAsync(
+          sanitizedFromCache,
           questionCount,
-          config
+          safeConfig
         );
         if (padded.length !== cachedQuestions.questions.length) {
           Logger.warn(
@@ -87,6 +98,11 @@ class HybridQuestionService {
 
       // Generate new hybrid question set
       let questions = await this.generateNewQuestionSet(safeConfig);
+      // Defensive sanitize against legacy suffixes
+      questions = questions.map((q) => ({
+        ...q,
+        text: this.stripVariantSuffix(q.text),
+      }));
       // If explicit category requested, filter down before padding
       if (category) {
         const norm = String(category).toLowerCase();
@@ -101,7 +117,7 @@ class HybridQuestionService {
           return true;
         });
       }
-      questions = this.ensureQuestionCount(
+      questions = await this.ensureQuestionCountAsync(
         questions,
         questionCount,
         safeConfig
@@ -121,7 +137,14 @@ class HybridQuestionService {
       Logger.error("Error generating hybrid questions:", error);
       // Fallback to AI service
       const aiFallback = await aiQuestionService.generateQuestions(safeConfig);
-      return this.ensureQuestionCount(aiFallback, questionCount, safeConfig);
+      return await this.ensureQuestionCountAsync(
+        aiFallback.map((q) => ({
+          ...q,
+          text: this.stripVariantSuffix(q.text || q.question),
+        })),
+        questionCount,
+        safeConfig
+      );
     }
   }
 
@@ -167,7 +190,7 @@ class HybridQuestionService {
     questions = this.shuffleArray(questions);
 
     const sliced = questions.slice(0, questionCount);
-    return this.ensureQuestionCount(sliced, questionCount, config);
+    return this.ensureQuestionCountAsync(sliced, questionCount, config);
   }
 
   /**
@@ -180,52 +203,8 @@ class HybridQuestionService {
     // eslint-disable-next-line no-magic-numbers
     const SECONDS_PER_FIVE_MIN = 300;
     const ESTIMATED_TIME_SEC = SECONDS_PER_FIVE_MIN;
-    const PARAPHRASE_ENABLED =
-      (process.env.VARIANT_PARAPHRASE_ENABLED || "").toLowerCase() === "true";
+    // (paraphrase disabled in sync method; async method handles uniqueness)
 
-    // Lightweight synonym pools (deterministic selection)
-    const SYNONYMS = {
-      describe: ["Explain", "Walk me through", "Outline", "Detail"],
-      challenge: ["problem", "issue", "obstacle", "difficulty"],
-      approach: ["method", "strategy", "solution path", "tactic"],
-      improve: ["optimize", "enhance", "refine", "strengthen"],
-      experience: ["background", "exposure", "history", "track record"],
-    };
-
-    function paraphrase(text, vIdx) {
-      if (!PARAPHRASE_ENABLED) return text;
-      let out = text;
-      const lower = out.toLowerCase();
-      const replaceKeys = [];
-      Object.keys(SYNONYMS).forEach((k) => {
-        if (lower.includes(k)) replaceKeys.push(k);
-      });
-      if (replaceKeys.length === 0) return out;
-      replaceKeys.forEach((key) => {
-        const pool = SYNONYMS[key];
-        const hash = [...key].reduce((a, c) => a + c.charCodeAt(0), 0);
-        const pick = pool[(hash + vIdx) % pool.length];
-        const regex = new RegExp(key, "ig");
-        out = out.replace(regex, (m) => {
-          const cap = m[0] === m[0].toUpperCase();
-          return cap
-            ? pick.charAt(0).toUpperCase() + pick.slice(1)
-            : pick.toLowerCase();
-        });
-      });
-      // eslint-disable-next-line no-magic-numbers
-      const EVEN_MODULUS = 2;
-      if (vIdx % EVEN_MODULUS === 0) {
-        const QUALIFIERS = [
-          " Give specifics.",
-          " Focus on trade-offs.",
-          " Highlight key decisions.",
-          " Include metrics if possible.",
-        ];
-        out = out.replace(/\.?$/, "") + QUALIFIERS[vIdx % QUALIFIERS.length];
-      }
-      return out;
-    }
     if (result.length === 0) {
       // Seed at least one generic question to duplicate from
       result.push({
@@ -245,55 +224,193 @@ class HybridQuestionService {
         id: `synthetic_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       });
     }
-    const baseLen = result.length;
-    let variantIdx = 1;
-    while (result.length < targetCount) {
-      const base = result[result.length % baseLen];
-      const duplicated = {
-        ...base,
-        text: (() => {
-          const core = base.text
-            .replace(/\(variant.*\)$/i, "")
-            .replace(
-              /\s+Give specifics\.|\s+Focus on trade-offs\.|\s+Highlight key decisions\.|\s+Include metrics if possible\.$/,
-              ""
-            )
-            .trim();
-          const paraphrased = paraphrase(core, variantIdx);
-          return `${paraphrased} (variant ${variantIdx})`;
-        })(),
-        source:
-          base.source && base.source.startsWith("ai_")
-            ? base.source
-            : base.source === "ai_generated" || base.source === "ai_paraphrased"
-            ? base.source
-            : "template",
-        // eslint-disable-next-line no-magic-numbers
-        id: (() => {
-          // eslint-disable-next-line no-magic-numbers
-          const RADIX = 36;
-          // eslint-disable-next-line no-magic-numbers
-          const START = 2;
-          // eslint-disable-next-line no-magic-numbers
-          const END = 6;
-          return `dup_${Date.now()}_${result.length}_${Math.random()
-            .toString(RADIX)
-            .slice(START, END)}`;
-        })(),
-        generatedAt: new Date(),
-      };
-      // Ensure valid type (no 'mixed')
-      if (duplicated.type === "mixed") {
-        duplicated.type =
-          duplicated.category && duplicated.category.includes("behavior")
-            ? "behavioral"
-            : "technical";
-      }
-      result.push(duplicated);
-      variantIdx += 1;
+    // NOTE: legacy variant suffix logic removed. This synchronous method now only returns existing questions or a single seed.
+    // Async topping-up with genuine AI/template questions happens in ensureQuestionCountAsync.
+    if (result.length < targetCount) {
+      Logger.warn(
+        `ensureQuestionCount (sync) called with insufficient questions (${result.length}/${targetCount}); async top-up will handle.`
+      );
     }
     // If somehow over (shouldn't happen) trim.
     return result.slice(0, targetCount);
+  }
+
+  /**
+   * Async padding logic: attempts real generation (AI + templates) before falling back to light paraphrasing.
+   * Eliminates '(variant X)' duplicates that confused users.
+   * @param {Array} questions
+   * @param {Number} targetCount
+   * @param {Object} config
+   * @returns {Promise<Array>} exactly targetCount questions (best-effort unique)
+   */
+  async ensureQuestionCountAsync(questions, targetCount, config) {
+    const out = [...questions];
+    const SECONDS_PER_FIVE_MIN = 300; // 5 minutes
+    const RADIX_36 = 36;
+    const SLICE_START = 2;
+    const SLICE_LEN = 9;
+    const SAFETY_MULTIPLIER = 3;
+    const TEMPLATE_OVERSAMPLE = 2;
+    const seen = new Set(out.map((q) => q.text.trim().toLowerCase()));
+    let aiAdded = 0;
+    let templateAdded = 0;
+    let paraphraseAdded = 0;
+
+    // If zero, seed once (same as sync version)
+    if (out.length === 0) {
+      const seedText = `Describe a challenge related to ${config.jobRole}.`;
+      out.push({
+        text: seedText,
+        category: config.jobRole || "general",
+        tags: ["General"],
+        difficulty: config.difficulty || "intermediate",
+        estimatedTime: SECONDS_PER_FIVE_MIN,
+        type:
+          config.interviewType === "behavioral"
+            ? "behavioral"
+            : config.interviewType === "system-design"
+            ? "system-design"
+            : "technical",
+        source: "template",
+        id: `seed_${Date.now()}_${Math.random()
+          .toString(RADIX_36)
+          .slice(SLICE_START, SLICE_LEN)}`,
+        generatedAt: new Date(),
+      });
+      seen.add(seedText.trim().toLowerCase());
+    }
+
+    let safety = 0; // guard against infinite loops
+    while (
+      out.length < targetCount &&
+      safety < targetCount * SAFETY_MULTIPLIER
+    ) {
+      const remaining = targetCount - out.length;
+      try {
+        // Try AI first for remaining
+        const aiBatch = await this.generateAIQuestions(config, remaining);
+        for (const q of aiBatch) {
+          const normalizedText = this.stripVariantSuffix(q.text);
+          const key = normalizedText.trim().toLowerCase();
+          if (!seen.has(key) && out.length < targetCount) {
+            out.push({ ...q, text: normalizedText });
+            seen.add(key);
+            aiAdded += 1;
+          }
+        }
+      } catch (e) {
+        Logger.error("ensureQuestionCountAsync AI batch error:", e);
+      }
+
+      // If still short, pull more templates
+      if (out.length < targetCount) {
+        try {
+          const templateNeeded = targetCount - out.length;
+          const templates = await this.getTemplateQuestions(
+            config,
+            templateNeeded * TEMPLATE_OVERSAMPLE // oversample to find uniques
+          );
+          for (const t of templates) {
+            const normalizedText = this.stripVariantSuffix(t.text);
+            const key = normalizedText.trim().toLowerCase();
+            if (!seen.has(key) && out.length < targetCount) {
+              out.push({ ...t, text: normalizedText });
+              seen.add(key);
+              templateAdded += 1;
+            }
+          }
+        } catch (e) {
+          Logger.error("ensureQuestionCountAsync template top-up error:", e);
+        }
+      }
+
+      // Final fallback: lightweight paraphrase (without '(variant X)') if still short
+      if (out.length < targetCount) {
+        const base = out[out.length % out.length];
+        const idx = out.length; // variant index proxy
+        const core = base.text.replace(/\(variant.*\)$/i, "").trim();
+        // Force paraphrase attempt regardless of env flag by temporarily setting VARIANT_PARAPHRASE_ENABLED
+        const prevFlag = process.env.VARIANT_PARAPHRASE_ENABLED;
+        process.env.VARIANT_PARAPHRASE_ENABLED = "true";
+        const paraphrased = (() => {
+          try {
+            // reuse sync paraphrase logic via internal function style duplication
+            const SYNONYMS = {
+              describe: ["Explain", "Walk me through", "Outline", "Detail"],
+              challenge: ["problem", "issue", "obstacle", "difficulty"],
+              approach: ["method", "strategy", "solution path", "tactic"],
+              improve: ["optimize", "enhance", "refine", "strengthen"],
+              experience: ["background", "exposure", "history", "track record"],
+            };
+            let text = core;
+            Object.keys(SYNONYMS).forEach((k) => {
+              if (text.toLowerCase().includes(k)) {
+                const pool = SYNONYMS[k];
+                const hash = [...k].reduce((a, c) => a + c.charCodeAt(0), 0);
+                const pick = pool[(hash + idx) % pool.length];
+                const regex = new RegExp(k, "ig");
+                text = text.replace(regex, (m) => {
+                  const cap = m[0] === m[0].toUpperCase();
+                  return cap
+                    ? pick.charAt(0).toUpperCase() + pick.slice(1)
+                    : pick.toLowerCase();
+                });
+              }
+            });
+            return text;
+          } catch (e) {
+            return core;
+          } finally {
+            process.env.VARIANT_PARAPHRASE_ENABLED = prevFlag;
+          }
+        })();
+        const key = paraphrased.trim().toLowerCase();
+        if (!seen.has(key)) {
+          out.push({
+            ...base,
+            text: paraphrased,
+            source: "ai_paraphrased",
+            id: `paraphrase_${Date.now()}_${Math.random()
+              .toString(RADIX_36)
+              .slice(SLICE_START, SLICE_LEN)}`,
+            generatedAt: new Date(),
+          });
+          seen.add(key);
+          paraphraseAdded += 1;
+        } else {
+          // break to avoid infinite loop of identical paraphrases
+          break;
+        }
+      }
+      safety += 1;
+    }
+
+    if (out.length < targetCount) {
+      Logger.warn(
+        `ensureQuestionCountAsync could not reach target (${out.length}/${targetCount}); returning best-effort set.`
+      );
+    }
+    const final = out.slice(0, targetCount);
+    Logger.info(
+      `[ensureQuestionCountAsync] Completed padding: start=${questions.length}, final=${final.length}, aiAdded=${aiAdded}, templateAdded=${templateAdded}, paraphraseAdded=${paraphraseAdded}`
+    );
+    return final;
+  }
+
+  /**
+   * Strip legacy '(variant N)' suffixes and trailing guidance qualifiers.
+   * @param {string} text
+   * @returns {string}
+   */
+  stripVariantSuffix(text) {
+    if (!text || typeof text !== "string") return text;
+    return text
+      .replace(/\(variant\s*\d+\)\s*$/i, "")
+      .replace(
+        /\s+(Give specifics\.|Focus on trade-offs\.|Highlight key decisions\.|Include metrics if possible\.)$/,
+        ""
+      )
+      .trim();
   }
 
   /**
@@ -305,9 +422,12 @@ class HybridQuestionService {
   async getTemplateQuestions(config, count) {
     await this.loadTemplates();
     const { jobRole, interviewType, difficulty } = config;
-    const roleKey = (jobRole || "software-engineer").toLowerCase();
-    const roleTemplates =
-      this.templates?.[roleKey] || this.templates?.["software-engineer"] || {};
+    const requestedRole = (jobRole || "software-engineer").toLowerCase();
+    const normalized = this.normalizeRole(requestedRole);
+    const roleKey = this.templates?.[normalized]
+      ? normalized
+      : this.classifyUnknownRole(normalized);
+    const roleTemplates = this.templates?.[roleKey] || {};
     const levelTemplates =
       roleTemplates?.[mapDifficulty(difficulty)] ||
       roleTemplates?.["intermediate"] ||
@@ -353,6 +473,120 @@ class HybridQuestionService {
         .substr(START, LEN)}`,
       generatedAt: new Date(),
     }));
+  }
+
+  /**
+   * Normalize role names to known keys; handle common synonyms.
+   */
+  normalizeRole(roleKey) {
+    const aliases = {
+      "software tester": "software-tester",
+      tester: "software-tester",
+      qa: "qa-engineer",
+      "qa tester": "software-tester",
+      "quality assurance": "qa-engineer",
+      // SRE specific aliases now map to dedicated site-reliability-engineer role
+      sre: "site-reliability-engineer",
+      "site reliability": "site-reliability-engineer",
+      "site reliability engineer": "site-reliability-engineer",
+      "full stack": "full-stack-developer",
+      fullstack: "full-stack-developer",
+      mobile: "mobile-developer",
+      ios: "mobile-developer",
+      android: "mobile-developer",
+      cloud: "cloud-architect",
+      "cloud engineer": "cloud-architect",
+      "data scientist": "data-analyst",
+      "data analysis": "data-analyst",
+      "data engineering": "data-engineer",
+      "system admin": "system-administrator",
+      sysadmin: "system-administrator",
+      "it support": "it-support-specialist",
+      helpdesk: "it-support-specialist",
+      "cyber security": "cybersecurity-analyst",
+      "security analyst": "cybersecurity-analyst",
+      "security engineer": "cybersecurity-analyst",
+      // Product / Agile / Design / ML / Network aliases
+      "product manager": "product-manager",
+      "product owner": "product-manager",
+      "scrum master": "scrum-master",
+      "agile coach": "scrum-master",
+      "ui designer": "ui-ux-designer",
+      "ux designer": "ui-ux-designer",
+      "ui ux designer": "ui-ux-designer",
+      "machine learning engineer": "machine-learning-engineer",
+      "ml engineer": "machine-learning-engineer",
+      "network engineer": "network-engineer",
+      networking: "network-engineer",
+    };
+    return aliases[roleKey] || roleKey;
+  }
+
+  /**
+   * Classify an unknown role into a closest existing template cluster using keyword heuristics.
+   * Prevents everything defaulting to software-engineer which reduces variety.
+   * @param {string} roleKey lower-cased incoming role key
+   * @returns {string} canonical template key fallback
+   */
+  classifyUnknownRole(roleKey) {
+    if (!this.templates) return "software-engineer";
+    if (this.templates[roleKey]) return roleKey; // already known
+    const keywordMap = [
+      {
+        keywords: ["devops", "reliab", "sre", "ops"],
+        target: "site-reliability-engineer",
+      },
+      { keywords: ["cloud", "aws", "azure", "gcp"], target: "cloud-architect" },
+      {
+        keywords: ["frontend", "ui", "react", "css"],
+        target: "frontend-developer",
+      },
+      {
+        keywords: ["backend", "api", "server", "microservice"],
+        target: "backend-developer",
+      },
+      { keywords: ["data", "etl", "pipeline"], target: "data-engineer" },
+      {
+        keywords: ["analysis", "analytics", "insight"],
+        target: "data-analyst",
+      },
+      {
+        keywords: ["security", "cyber", "threat"],
+        target: "cybersecurity-analyst",
+      },
+      {
+        keywords: ["support", "helpdesk", "ticket"],
+        target: "it-support-specialist",
+      },
+      {
+        keywords: ["system admin", "sysadmin"],
+        target: "system-administrator",
+      },
+      { keywords: ["mobile", "android", "ios"], target: "mobile-developer" },
+      {
+        keywords: ["product", "roadmap", "stakeholder"],
+        target: "product-manager",
+      },
+      { keywords: ["scrum", "agile", "ceremony"], target: "scrum-master" },
+      {
+        keywords: ["design", "ux", "ui", "wireframe"],
+        target: "ui-ux-designer",
+      },
+      {
+        keywords: ["machine learning", "ml", "model", "training"],
+        target: "machine-learning-engineer",
+      },
+      {
+        keywords: ["network", "routing", "switch"],
+        target: "network-engineer",
+      },
+    ];
+    for (const { keywords, target } of keywordMap) {
+      if (keywords.some((k) => roleKey.includes(k))) {
+        return target in this.templates ? target : "software-engineer";
+      }
+    }
+    return "software-engineer"; // final fallback
   }
 
   /**
@@ -778,6 +1012,28 @@ Paraphrased Question:`;
       }
     } catch (error) {
       Logger.error("Error clearing expired cache:", error);
+    }
+  }
+
+  /**
+   * Public API: Generate questions for interview
+   * @param {Object} config - Interview configuration
+   * @returns {Promise<Object>} { success: boolean, questions: Array }
+   */
+  async generateQuestions(config) {
+    try {
+      const questions = await this.generateHybridQuestions(config);
+      return {
+        success: true,
+        questions: questions || [],
+      };
+    } catch (error) {
+      Logger.error("[HybridQuestionService] generateQuestions error:", error);
+      return {
+        success: false,
+        questions: [],
+        error: error.message,
+      };
     }
   }
 

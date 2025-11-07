@@ -2,172 +2,39 @@
   "software-engineer": {
     "beginner": {
       "technical": [
-        {
-          "text": "Explain the difference between let, const, and var in JavaScript.",
-          "category": "javascript",
-          "tags": ["DSA", "Programming Fundamentals"],
-          "difficulty": "beginner",
-          "estimatedTime": 180,
-          "type": "technical"
-        },
-        {
-          "text": "What is the difference between == and === in JavaScript?",
-          "category": "javascript", 
-          "tags": ["Programming Fundamentals"],
-          "difficulty": "beginner",
-          "estimatedTime": 120,
-          "type": "technical"
-        },
-        {
-          "text": "Explain what a REST API is and its main principles.",
-          "category": "web-development",
-          "tags": ["System Design", "API"],
-          "difficulty": "beginner",
-          "estimatedTime": 240,
-          "type": "technical"
-        },
-        {
-          "text": "What is the difference between SQL and NoSQL databases?",
-          "category": "database",
-          "tags": ["DB", "System Design"],
-          "difficulty": "beginner", 
-          "estimatedTime": 200,
-          "type": "technical"
-        }
+        {"text": "Explain the difference between let, const, and var in JavaScript.", "category": "javascript", "tags": ["DSA", "Programming Fundamentals"], "difficulty": "beginner", "estimatedTime": 180, "type": "technical"},
+        {"text": "What is the difference between == and === in JavaScript?", "category": "javascript", "tags": ["Programming Fundamentals"], "difficulty": "beginner", "estimatedTime": 120, "type": "technical"},
+        {"text": "Explain what a REST API is and its main principles.", "category": "web-development", "tags": ["System Design", "API"], "difficulty": "beginner", "estimatedTime": 240, "type": "technical"},
+        {"text": "What is the difference between SQL and NoSQL databases?", "category": "database", "tags": ["DB", "System Design"], "difficulty": "beginner", "estimatedTime": 200, "type": "technical"}
       ],
       "behavioral": [
-        {
-          "text": "Tell me about a challenging project you worked on. How did you overcome the obstacles?",
-          "category": "problem-solving",
-          "tags": ["Behavioral", "Problem Solving"],
-          "difficulty": "beginner",
-          "estimatedTime": 300,
-          "type": "behavioral"
-        },
-        {
-          "text": "Describe a time when you had to learn a new technology quickly. How did you approach it?",
-          "category": "adaptability",
-          "tags": ["Behavioral", "Learning"],
-          "difficulty": "beginner",
-          "estimatedTime": 240,
-          "type": "behavioral"
-        }
+        {"text": "Tell me about a challenging project you worked on. How did you overcome the obstacles?", "category": "problem-solving", "tags": ["Behavioral", "Problem Solving"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"},
+        {"text": "Describe a time when you had to learn a new technology quickly. How did you approach it?", "category": "adaptability", "tags": ["Behavioral", "Learning"], "difficulty": "beginner", "estimatedTime": 240, "type": "behavioral"}
       ]
     },
     "intermediate": {
       "technical": [
-        {
-          "text": "Explain how JavaScript closures work and provide a practical example.",
-          "category": "javascript",
-          "tags": ["DSA", "Programming Fundamentals"],
-          "difficulty": "intermediate",
-          "estimatedTime": 300,
-          "type": "technical"
-        },
-        {
-          "text": "What are React Hooks and why were they introduced? Explain useState and useEffect.",
-          "category": "react",
-          "tags": ["Frontend", "React"],
-          "difficulty": "intermediate",
-          "estimatedTime": 360,
-          "type": "technical"
-        },
-        {
-          "text": "Describe the differences between synchronous and asynchronous programming in JavaScript.",
-          "category": "javascript",
-          "tags": ["DSA", "Programming Fundamentals"],
-          "difficulty": "intermediate",
-          "estimatedTime": 300,
-          "type": "technical"
-        },
-        {
-          "text": "Explain database indexing and how it improves query performance.",
-          "category": "database",
-          "tags": ["DB", "Performance"],
-          "difficulty": "intermediate",
-          "estimatedTime": 320,
-          "type": "technical"
-        },
-        {
-          "text": "Design a basic URL shortener service like bit.ly. What components would you need?",
-          "category": "system-design",
-          "tags": ["System Design", "Architecture"],
-          "difficulty": "intermediate", 
-          "estimatedTime": 600,
-          "type": "technical"
-        }
+        {"text": "Explain how JavaScript closures work and provide a practical example.", "category": "javascript", "tags": ["DSA", "Programming Fundamentals"], "difficulty": "intermediate", "estimatedTime": 300, "type": "technical"},
+        {"text": "What are React Hooks and why were they introduced? Explain useState and useEffect.", "category": "react", "tags": ["Frontend", "React"], "difficulty": "intermediate", "estimatedTime": 360, "type": "technical"},
+        {"text": "Describe the differences between synchronous and asynchronous programming in JavaScript.", "category": "javascript", "tags": ["DSA", "Programming Fundamentals"], "difficulty": "intermediate", "estimatedTime": 300, "type": "technical"},
+        {"text": "Explain database indexing and how it improves query performance.", "category": "database", "tags": ["DB", "Performance"], "difficulty": "intermediate", "estimatedTime": 320, "type": "technical"},
+        {"text": "Design a basic URL shortener service like bit.ly. What components would you need?", "category": "system-design", "tags": ["System Design", "Architecture"], "difficulty": "intermediate", "estimatedTime": 600, "type": "technical"}
       ],
       "behavioral": [
-        {
-          "text": "Tell me about a time when you had to work with a difficult team member. How did you handle the situation?",
-          "category": "teamwork",
-          "tags": ["Behavioral", "Teamwork"],
-          "difficulty": "intermediate",
-          "estimatedTime": 300,
-          "type": "behavioral"
-        },
-        {
-          "text": "Describe a situation where you had to make a decision with incomplete information.",
-          "category": "decision-making",
-          "tags": ["Behavioral", "Leadership"],
-          "difficulty": "intermediate",
-          "estimatedTime": 280,
-          "type": "behavioral"
-        }
+        {"text": "Tell me about a time when you had to work with a difficult team member. How did you handle the situation?", "category": "teamwork", "tags": ["Behavioral", "Teamwork"], "difficulty": "intermediate", "estimatedTime": 300, "type": "behavioral"},
+        {"text": "Describe a situation where you had to make a decision with incomplete information.", "category": "decision-making", "tags": ["Behavioral", "Leadership"], "difficulty": "intermediate", "estimatedTime": 280, "type": "behavioral"}
       ]
     },
     "advanced": {
       "technical": [
-        {
-          "text": "Explain the event loop in JavaScript and how it handles asynchronous operations.",
-          "category": "javascript",
-          "tags": ["DSA", "Performance", "Programming Fundamentals"],
-          "difficulty": "advanced",
-          "estimatedTime": 420,
-          "type": "technical"
-        },
-        {
-          "text": "Design a distributed caching system. How would you handle cache invalidation and consistency?",
-          "category": "system-design",
-          "tags": ["System Design", "Architecture", "Performance"],
-          "difficulty": "advanced",
-          "estimatedTime": 900,
-          "type": "technical"
-        },
-        {
-          "text": "Implement a rate limiter for an API. What algorithms would you consider?",
-          "category": "algorithms",
-          "tags": ["DSA", "System Design", "Algorithms"],
-          "difficulty": "advanced",
-          "estimatedTime": 600,
-          "type": "technical"
-        },
-        {
-          "text": "Explain database sharding strategies and their trade-offs.",
-          "category": "database",
-          "tags": ["DB", "System Design", "Scalability"],
-          "difficulty": "advanced",
-          "estimatedTime": 480,
-          "type": "technical"
-        }
+        {"text": "Explain the event loop in JavaScript and how it handles asynchronous operations.", "category": "javascript", "tags": ["DSA", "Performance", "Programming Fundamentals"], "difficulty": "advanced", "estimatedTime": 420, "type": "technical"},
+        {"text": "Design a distributed caching system. How would you handle cache invalidation and consistency?", "category": "system-design", "tags": ["System Design", "Architecture", "Performance"], "difficulty": "advanced", "estimatedTime": 900, "type": "technical"},
+        {"text": "Implement a rate limiter for an API. What algorithms would you consider?", "category": "algorithms", "tags": ["DSA", "System Design", "Algorithms"], "difficulty": "advanced", "estimatedTime": 600, "type": "technical"},
+        {"text": "Explain database sharding strategies and their trade-offs.", "category": "database", "tags": ["DB", "System Design", "Scalability"], "difficulty": "advanced", "estimatedTime": 480, "type": "technical"}
       ],
       "behavioral": [
-        {
-          "text": "Tell me about a time when you had to lead a technical decision that was controversial within your team.",
-          "category": "leadership",
-          "tags": ["Behavioral", "Leadership", "Technical Leadership"],
-          "difficulty": "advanced",
-          "estimatedTime": 360,
-          "type": "behavioral"
-        },
-        {
-          "text": "Describe a situation where you had to balance technical debt with feature delivery pressure.",
-          "category": "technical-leadership",
-          "tags": ["Behavioral", "Technical Leadership", "Decision Making"],
-          "difficulty": "advanced",
-          "estimatedTime": 400,
-          "type": "behavioral"
-        }
+        {"text": "Tell me about a time when you had to lead a technical decision that was controversial within your team.", "category": "leadership", "tags": ["Behavioral", "Leadership", "Technical Leadership"], "difficulty": "advanced", "estimatedTime": 360, "type": "behavioral"},
+        {"text": "Describe a situation where you had to balance technical debt with feature delivery pressure.", "category": "technical-leadership", "tags": ["Behavioral", "Technical Leadership", "Decision Making"], "difficulty": "advanced", "estimatedTime": 400, "type": "behavioral"}
       ]
     }
   },
@@ -274,6 +141,614 @@
           "tags": ["Behavioral", "Frontend", "Architecture", "Leadership"],
           "difficulty": "advanced",
           "estimatedTime": 350,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "software-tester": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "Explain the difference between manual testing and automated testing.",
+          "category": "testing",
+          "tags": ["Testing", "Quality Assurance", "Programming Fundamentals"],
+          "difficulty": "beginner",
+          "estimatedTime": 240,
+          "type": "technical"
+        },
+        {
+          "text": "What is a test case and what are its essential components?",
+          "category": "testing",
+          "tags": ["Testing", "Quality Assurance"],
+          "difficulty": "beginner",
+          "estimatedTime": 200,
+          "type": "technical"
+        },
+        {
+          "text": "Describe the purpose of regression testing.",
+          "category": "testing",
+          "tags": ["Testing", "Quality Assurance"],
+          "difficulty": "beginner",
+          "estimatedTime": 180,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about a time you found a critical bug close to release.",
+          "category": "problem-solving",
+          "tags": ["Behavioral", "Testing", "Risk"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "Explain the difference between functional, integration, and system testing.",
+          "category": "testing",
+          "tags": ["Testing", "Quality Assurance", "System Design"],
+          "difficulty": "intermediate",
+          "estimatedTime": 320,
+          "type": "technical"
+        },
+        {
+          "text": "How would you design a smoke test suite for a web application?",
+          "category": "testing",
+          "tags": ["Testing", "Quality Assurance", "Architecture"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "technical"
+        },
+        {
+          "text": "Describe strategies to minimize flaky automated tests.",
+          "category": "automation",
+          "tags": ["Testing", "Quality Assurance", "Performance"],
+          "difficulty": "intermediate",
+          "estimatedTime": 300,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe a situation where development pushed back on a bug you reported.",
+          "category": "communication",
+          "tags": ["Behavioral", "Testing", "Communication"],
+          "difficulty": "intermediate",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Design an automated test architecture for a microservices platform (tooling, layers, isolation).",
+          "category": "automation",
+          "tags": ["Testing", "Architecture", "System Design"],
+          "difficulty": "advanced",
+          "estimatedTime": 720,
+          "type": "technical"
+        },
+        {
+          "text": "Explain approaches to shift-left testing and its impact on release cycles.",
+          "category": "process",
+          "tags": ["Testing", "Quality Assurance", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 480,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about leading improvements to testing maturity in an organization.",
+          "category": "leadership",
+          "tags": ["Behavioral", "Testing", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 420,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "qa-engineer": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "What is the difference between severity and priority in bug reporting?",
+          "category": "testing",
+          "tags": ["Testing", "Quality Assurance"],
+          "difficulty": "beginner",
+          "estimatedTime": 200,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe how you collaborate with developers to resolve defects.",
+          "category": "communication",
+          "tags": ["Behavioral", "Testing", "Teamwork"],
+          "difficulty": "beginner",
+          "estimatedTime": 280,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "Explain boundary value analysis and equivalence partitioning with examples.",
+          "category": "testing",
+          "tags": ["Testing", "Quality Assurance", "Programming Fundamentals"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about mediating a disagreement on test scope or coverage.",
+          "category": "conflict-resolution",
+          "tags": ["Behavioral", "Testing", "Leadership"],
+          "difficulty": "intermediate",
+          "estimatedTime": 320,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "How would you implement risk-based testing prioritization in a large release?",
+          "category": "process",
+          "tags": ["Testing", "Quality Assurance", "Architecture"],
+          "difficulty": "advanced",
+          "estimatedTime": 600,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe leading a shift from manual to automation at scale.",
+          "category": "leadership",
+          "tags": ["Behavioral", "Testing", "Automation", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 450,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "devops-engineer": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "Explain the purpose of CI/CD.",
+          "category": "devops",
+          "tags": ["System Design", "Performance", "Backend"],
+          "difficulty": "beginner",
+          "estimatedTime": 240,
+          "type": "technical"
+        },
+        {
+          "text": "What is infrastructure as code (IaC)?",
+          "category": "devops",
+          "tags": ["System Design", "Architecture"],
+          "difficulty": "beginner",
+          "estimatedTime": 240,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe how you handled an unexpected production incident as a junior.",
+          "category": "incident-management",
+          "tags": ["Behavioral", "DevOps", "Problem Solving"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "Compare blue-green and rolling deployments.",
+          "category": "deployment",
+          "tags": ["System Design", "Performance", "DevOps"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "technical"
+        },
+        {
+          "text": "Explain observability pillars and key metrics for microservices.",
+          "category": "monitoring",
+          "tags": ["System Design", "Performance", "Architecture"],
+          "difficulty": "intermediate",
+          "estimatedTime": 420,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about reducing deployment friction or pipeline time.",
+          "category": "process-improvement",
+          "tags": ["Behavioral", "DevOps", "Leadership"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Design a multi-region disaster recovery strategy (RPO/RTO, tooling).",
+          "category": "architecture",
+          "tags": ["System Design", "Architecture", "DevOps"],
+          "difficulty": "advanced",
+          "estimatedTime": 900,
+          "type": "technical"
+        },
+        {
+          "text": "Discuss trade-offs between container orchestration platforms (Kubernetes vs Nomad vs ECS).",
+          "category": "orchestration",
+          "tags": ["System Design", "Performance", "Architecture"],
+          "difficulty": "advanced",
+          "estimatedTime": 600,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe leading an incident postmortem culture transformation.",
+          "category": "leadership",
+          "tags": ["Behavioral", "DevOps", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 420,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "data-analyst": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "Explain the difference between correlation and causation.",
+          "category": "data",
+          "tags": ["Programming Fundamentals", "DB"],
+          "difficulty": "beginner",
+          "estimatedTime": 240,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe presenting analysis to a non-technical audience.",
+          "category": "communication",
+          "tags": ["Behavioral", "Data", "Communication"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "How do you handle missing data in a dataset?",
+          "category": "data-cleaning",
+          "tags": ["DB", "Programming Fundamentals"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about prioritizing conflicting stakeholder reporting requests.",
+          "category": "stakeholder-management",
+          "tags": ["Behavioral", "Data", "Leadership"],
+          "difficulty": "intermediate",
+          "estimatedTime": 320,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Explain designing a KPI framework for a product launch.",
+          "category": "analytics",
+          "tags": ["System Design", "Performance", "Data"],
+          "difficulty": "advanced",
+          "estimatedTime": 540,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe driving data adoption across a resistant organization.",
+          "category": "leadership",
+          "tags": ["Behavioral", "Data", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 420,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "data-engineer": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "Explain the difference between OLTP and OLAP systems.",
+          "category": "database",
+          "tags": ["DB", "System Design"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe collaborating with analysts on data model changes.",
+          "category": "communication",
+          "tags": ["Behavioral", "Data", "Teamwork"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "How would you design an ETL pipeline for incremental loads?",
+          "category": "system-design",
+          "tags": ["System Design", "Data", "Performance"],
+          "difficulty": "intermediate",
+          "estimatedTime": 480,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe handling a data quality incident affecting dashboards.",
+          "category": "incident-management",
+          "tags": ["Behavioral", "Data", "Problem Solving"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Design a real-time streaming architecture (ingest, processing, storage).",
+          "category": "system-design",
+          "tags": ["System Design", "Data", "Performance"],
+          "difficulty": "advanced",
+          "estimatedTime": 900,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about advocating for a data platform refactor.",
+          "category": "leadership",
+          "tags": ["Behavioral", "Data", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 420,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "system-administrator": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "What is DNS and why is it important?",
+          "category": "networking",
+          "tags": ["System Design", "Performance"],
+          "difficulty": "beginner",
+          "estimatedTime": 240,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe responding to a basic outage notification.",
+          "category": "incident-management",
+          "tags": ["Behavioral", "System Design", "Leadership"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "Explain configuration management vs orchestration (examples).",
+          "category": "devops",
+          "tags": ["System Design", "Architecture"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about coordinating with security during a patch cycle.",
+          "category": "security",
+          "tags": ["Behavioral", "System Design", "Leadership"],
+          "difficulty": "intermediate",
+          "estimatedTime": 320,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Design hardening standards for a Linux server fleet.",
+          "category": "security",
+          "tags": ["System Design", "Architecture", "Performance"],
+          "difficulty": "advanced",
+          "estimatedTime": 600,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe leading post-incident remediation planning.",
+          "category": "leadership",
+          "tags": ["Behavioral", "System Design", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 420,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "it-support-specialist": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "Explain the steps to troubleshoot a user's network connectivity issue.",
+          "category": "support",
+          "tags": ["Programming Fundamentals", "System Design"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe handling a frustrated end-user interaction.",
+          "category": "communication",
+          "tags": ["Behavioral", "Support", "Communication"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "How would you triage a widespread login failure impacting multiple departments?",
+          "category": "incident-management",
+          "tags": ["System Design", "Support", "Performance"],
+          "difficulty": "intermediate",
+          "estimatedTime": 420,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about improving a recurring support process bottleneck.",
+          "category": "process-improvement",
+          "tags": ["Behavioral", "Support", "Leadership"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Design a self-service knowledge base strategy (taxonomy, tooling, success metrics).",
+          "category": "support",
+          "tags": ["System Design", "Architecture", "Support"],
+          "difficulty": "advanced",
+          "estimatedTime": 600,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe scaling an IT support operation during rapid headcount growth.",
+          "category": "leadership",
+          "tags": ["Behavioral", "Support", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 420,
+          "type": "behavioral"
+        }
+      ]
+    }
+  },
+  "cybersecurity-analyst": {
+    "beginner": {
+      "technical": [
+        {
+          "text": "What is the principle of least privilege?",
+          "category": "security",
+          "tags": ["Security", "Programming Fundamentals"],
+          "difficulty": "beginner",
+          "estimatedTime": 240,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe how you stay current with emerging security threats.",
+          "category": "learning",
+          "tags": ["Behavioral", "Security", "Learning"],
+          "difficulty": "beginner",
+          "estimatedTime": 300,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {
+          "text": "Explain the difference between IDS and IPS.",
+          "category": "security",
+          "tags": ["Security", "System Design"],
+          "difficulty": "intermediate",
+          "estimatedTime": 360,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Tell me about coordinating with engineering to remediate a vulnerability.",
+          "category": "communication",
+          "tags": ["Behavioral", "Security", "Leadership"],
+          "difficulty": "intermediate",
+          "estimatedTime": 320,
+          "type": "behavioral"
+        }
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {
+          "text": "Design a security monitoring and incident response workflow (tools, escalation).",
+          "category": "security",
+          "tags": ["Security", "System Design", "Architecture"],
+          "difficulty": "advanced",
+          "estimatedTime": 840,
+          "type": "technical"
+        }
+      ],
+      "behavioral": [
+        {
+          "text": "Describe leading a security awareness initiative across the company.",
+          "category": "leadership",
+          "tags": ["Behavioral", "Security", "Leadership"],
+          "difficulty": "advanced",
+          "estimatedTime": 420,
           "type": "behavioral"
         }
       ]
@@ -386,5 +861,95 @@
         }
       ]
     }
+  },
+  "full-stack-developer": {
+    "beginner": {"technical": [{"text": "What are the key differences between client-side and server-side rendering?", "category": "web-development", "tags": ["Frontend", "Backend", "System Design"], "difficulty": "beginner", "estimatedTime": 300, "type": "technical"}], "behavioral": [{"text": "Describe how you collaborate across frontend and backend to deliver a feature.", "category": "teamwork", "tags": ["Behavioral", "Teamwork", "Architecture"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}]},
+    "intermediate": {"technical": [{"text": "Design a MERN stack feature end-to-end (routing, data model, component).", "category": "architecture", "tags": ["Frontend", "Backend", "System Design"], "difficulty": "intermediate", "estimatedTime": 600, "type": "technical"}], "behavioral": [{"text": "Tell me about handling shared contracts between services and UI.", "category": "communication", "tags": ["Behavioral", "Architecture", "Teamwork"], "difficulty": "intermediate", "estimatedTime": 360, "type": "behavioral"}]},
+    "advanced": {"technical": [{"text": "Discuss trade-offs of GraphQL vs REST in a large-scale product.", "category": "architecture", "tags": ["System Design", "Performance", "Frontend", "Backend"], "difficulty": "advanced", "estimatedTime": 540, "type": "technical"}], "behavioral": [{"text": "Describe leading a cross-functional initiative to modernize a legacy stack.", "category": "leadership", "tags": ["Behavioral", "Architecture", "Leadership"], "difficulty": "advanced", "estimatedTime": 480, "type": "behavioral"}]}
+  },
+  "mobile-developer": {
+    "beginner": {"technical": [{"text": "Explain differences between native, hybrid, and cross-platform mobile apps.", "category": "mobile", "tags": ["Frontend", "Architecture", "Performance"], "difficulty": "beginner", "estimatedTime": 300, "type": "technical"}], "behavioral": [{"text": "Tell me about debugging a device-specific production issue.", "category": "problem-solving", "tags": ["Behavioral", "Mobile", "Debugging"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}]},
+    "intermediate": {"technical": [{"text": "How would you architect offline-first data sync for a mobile app?", "category": "architecture", "tags": ["Mobile", "System Design", "Performance"], "difficulty": "intermediate", "estimatedTime": 540, "type": "technical"}], "behavioral": [{"text": "Describe collaborating with design on platform consistency.", "category": "communication", "tags": ["Behavioral", "Mobile", "UI/UX"], "difficulty": "intermediate", "estimatedTime": 320, "type": "behavioral"}]},
+    "advanced": {"technical": [{"text": "Design push notification infrastructure (APNs/FCM, topics, rate limits).", "category": "system-design", "tags": ["System Design", "Performance", "Mobile"], "difficulty": "advanced", "estimatedTime": 720, "type": "technical"}], "behavioral": [{"text": "Describe leading a performance optimization initiative across iOS and Android.", "category": "leadership", "tags": ["Behavioral", "Mobile", "Leadership"], "difficulty": "advanced", "estimatedTime": 420, "type": "behavioral"}]}
+  },
+  "cloud-architect": {
+    "beginner": {"technical": [{"text": "What are the key differences between IaaS, PaaS, and SaaS?", "category": "cloud", "tags": ["System Design", "Architecture"], "difficulty": "beginner", "estimatedTime": 300, "type": "technical"}], "behavioral": [{"text": "Describe balancing cost vs performance in a cloud decision.", "category": "trade-offs", "tags": ["Behavioral", "Architecture", "Leadership"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}]},
+    "intermediate": {"technical": [{"text": "Design a multi-account cloud landing zone (networking, IAM, guardrails).", "category": "architecture", "tags": ["System Design", "Security", "Performance"], "difficulty": "intermediate", "estimatedTime": 900, "type": "technical"}], "behavioral": [{"text": "Tell me about driving a cloud migration roadmap.", "category": "leadership", "tags": ["Behavioral", "Architecture", "Leadership"], "difficulty": "intermediate", "estimatedTime": 420, "type": "behavioral"}]},
+    "advanced": {"technical": [{"text": "Discuss patterns for multi-region active-active architectures (state, data, routing).", "category": "system-design", "tags": ["System Design", "Performance", "Architecture"], "difficulty": "advanced", "estimatedTime": 900, "type": "technical"}], "behavioral": [{"text": "Describe setting governance for cloud cost optimization.", "category": "governance", "tags": ["Behavioral", "Architecture", "Leadership"], "difficulty": "advanced", "estimatedTime": 420, "type": "behavioral"}]}
+  },
+  "site-reliability-engineer": {
+    "beginner": {
+      "technical": [
+        {"text": "What is an SLO and how does it relate to SLIs and SLAs?", "category": "reliability", "tags": ["System Design", "Performance", "DevOps"], "difficulty": "beginner", "estimatedTime": 300, "type": "technical"},
+        {"text": "Write a Bash script to rotate logs larger than 100MB.", "category": "coding", "tags": ["Backend", "Scripting", "DevOps"], "difficulty": "beginner", "estimatedTime": 420, "type": "technical"}
+      ],
+      "behavioral": [
+        {"text": "Tell me about a time you participated in an on-call rotation and handled an incident.", "category": "incident-management", "tags": ["Behavioral", "DevOps", "Leadership"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {"text": "Design a blue/green rollout strategy with automated rollback using health checks.", "category": "deployment", "tags": ["System Design", "DevOps", "Performance"], "difficulty": "intermediate", "estimatedTime": 540, "type": "technical"},
+        {"text": "Implement a Python script that tails a log and alerts on 5xx spikes.", "category": "coding", "tags": ["Backend", "Scripting", "Monitoring"], "difficulty": "intermediate", "estimatedTime": 480, "type": "technical"}
+      ],
+      "behavioral": [
+        {"text": "Describe driving reliability improvements after a postmortem.", "category": "leadership", "tags": ["Behavioral", "DevOps", "Leadership"], "difficulty": "intermediate", "estimatedTime": 360, "type": "behavioral"}
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {"text": "Architect error budgets and release policies for a critical service portfolio.", "category": "reliability", "tags": ["System Design", "Performance", "DevOps"], "difficulty": "advanced", "estimatedTime": 900, "type": "technical"},
+        {"text": "Design multi-region failover with health checks, DNS, and state considerations.", "category": "system-design", "tags": ["System Design", "Performance", "Architecture"], "difficulty": "advanced", "estimatedTime": 900, "type": "technical"}
+      ],
+      "behavioral": [
+        {"text": "Tell me about leading an incident response during a major outage.", "category": "incident-management", "tags": ["Behavioral", "DevOps", "Leadership"], "difficulty": "advanced", "estimatedTime": 420, "type": "behavioral"}
+      ]
+    }
+  },
+  "product-manager": {
+    "beginner": {
+      "technical": [
+        {"text": "Explain the difference between a product roadmap and a release plan.", "category": "product", "tags": ["System Design", "Leadership"], "difficulty": "beginner", "estimatedTime": 300, "type": "technical"}
+      ],
+      "behavioral": [
+        {"text": "Describe working with engineering to refine scope.", "category": "communication", "tags": ["Behavioral", "Leadership", "Teamwork"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}
+      ]
+    },
+    "intermediate": {
+      "technical": [
+        {"text": "Design a KPI set for evaluating a new feature launch.", "category": "analytics", "tags": ["System Design", "Performance"], "difficulty": "intermediate", "estimatedTime": 480, "type": "technical"}
+      ],
+      "behavioral": [
+        {"text": "Tell me about managing conflicting stakeholder priorities.", "category": "stakeholder-management", "tags": ["Behavioral", "Leadership", "Teamwork"], "difficulty": "intermediate", "estimatedTime": 360, "type": "behavioral"}
+      ]
+    },
+    "advanced": {
+      "technical": [
+        {"text": "Discuss strategies for hypothesis-driven product development.", "category": "product", "tags": ["System Design", "Performance"], "difficulty": "advanced", "estimatedTime": 540, "type": "technical"}
+      ],
+      "behavioral": [
+        {"text": "Describe leading a pivot based on user research findings.", "category": "leadership", "tags": ["Behavioral", "Leadership"], "difficulty": "advanced", "estimatedTime": 420, "type": "behavioral"}
+      ]
+    }
+  },
+  "scrum-master": {
+    "beginner": {"technical": [{"text": "What are the key Scrum events and their purposes?", "category": "agile", "tags": ["Leadership", "Process"], "difficulty": "beginner", "estimatedTime": 300, "type": "technical"}], "behavioral": [{"text": "Describe facilitating a retrospective that led to improvement.", "category": "leadership", "tags": ["Behavioral", "Leadership", "Teamwork"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}]},
+    "intermediate": {"technical": [{"text": "How do you handle scope changes mid-sprint?", "category": "agile", "tags": ["Leadership", "Process"], "difficulty": "intermediate", "estimatedTime": 360, "type": "technical"}], "behavioral": [{"text": "Tell me about resolving a conflict between product and engineering.", "category": "conflict-resolution", "tags": ["Behavioral", "Leadership", "Teamwork"], "difficulty": "intermediate", "estimatedTime": 320, "type": "behavioral"}]},
+    "advanced": {"technical": [{"text": "Design a scaling approach for Scrum across multiple teams (Scrum of Scrums).", "category": "agile", "tags": ["Leadership", "Architecture"], "difficulty": "advanced", "estimatedTime": 540, "type": "technical"}], "behavioral": [{"text": "Describe coaching an organization through agile transformation.", "category": "leadership", "tags": ["Behavioral", "Leadership"], "difficulty": "advanced", "estimatedTime": 420, "type": "behavioral"}]}
+  },
+  "ui-ux-designer": {
+    "beginner": {"technical": [{"text": "What is the difference between UX and UI?", "category": "design", "tags": ["Frontend", "UI/UX"], "difficulty": "beginner", "estimatedTime": 240, "type": "technical"}], "behavioral": [{"text": "Describe receiving feedback on your design work.", "category": "communication", "tags": ["Behavioral", "UI/UX", "Teamwork"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}]},
+    "intermediate": {"technical": [{"text": "How do you approach accessibility (a11y) in design?", "category": "design", "tags": ["Frontend", "UI/UX", "Accessibility"], "difficulty": "intermediate", "estimatedTime": 360, "type": "technical"}], "behavioral": [{"text": "Tell me about influencing product decisions with user research.", "category": "leadership", "tags": ["Behavioral", "UI/UX", "Leadership"], "difficulty": "intermediate", "estimatedTime": 320, "type": "behavioral"}]},
+    "advanced": {"technical": [{"text": "Design a design-system governance process.", "category": "design", "tags": ["Frontend", "UI/UX", "Architecture"], "difficulty": "advanced", "estimatedTime": 540, "type": "technical"}], "behavioral": [{"text": "Describe leading a cross-product design system adoption.", "category": "leadership", "tags": ["Behavioral", "UI/UX", "Leadership"], "difficulty": "advanced", "estimatedTime": 420, "type": "behavioral"}]}
+  },
+  "machine-learning-engineer": {
+    "beginner": {"technical": [{"text": "Explain train/validation/test splits and why they matter.", "category": "ml", "tags": ["Programming Fundamentals", "Data"], "difficulty": "beginner", "estimatedTime": 300, "type": "technical"}], "behavioral": [{"text": "Describe collaborating with data scientists and engineers on a model pipeline.", "category": "teamwork", "tags": ["Behavioral", "Data", "Leadership"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}]},
+    "intermediate": {"technical": [{"text": "How would you productionize a model with monitoring for drift?", "category": "mlops", "tags": ["System Design", "Performance", "Data"], "difficulty": "intermediate", "estimatedTime": 540, "type": "technical"}], "behavioral": [{"text": "Tell me about deciding between a simpler model and a complex one.", "category": "decision-making", "tags": ["Behavioral", "Data", "Leadership"], "difficulty": "intermediate", "estimatedTime": 320, "type": "behavioral"}]},
+    "advanced": {"technical": [{"text": "Design an online learning system with feature store, versioning, and rollback.", "category": "system-design", "tags": ["System Design", "Data", "Performance"], "difficulty": "advanced", "estimatedTime": 900, "type": "technical"}], "behavioral": [{"text": "Describe leading a migration of models to a new platform.", "category": "leadership", "tags": ["Behavioral", "Data", "Leadership"], "difficulty": "advanced", "estimatedTime": 420, "type": "behavioral"}]}
+  },
+  "network-engineer": {
+    "beginner": {"technical": [{"text": "Explain the OSI model at a high level.", "category": "networking", "tags": ["System Design", "Performance"], "difficulty": "beginner", "estimatedTime": 300, "type": "technical"}], "behavioral": [{"text": "Describe documenting a small office network.", "category": "communication", "tags": ["Behavioral", "Networking", "Teamwork"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}]},
+    "intermediate": {"technical": [{"text": "How would you design VLANs and routing for a campus network?", "category": "networking", "tags": ["System Design", "Performance"], "difficulty": "intermediate", "estimatedTime": 540, "type": "technical"}], "behavioral": [{"text": "Tell me about troubleshooting intermittent packet loss.", "category": "problem-solving", "tags": ["Behavioral", "Networking", "Debugging"], "difficulty": "intermediate", "estimatedTime": 320, "type": "behavioral"}]},
+    "advanced": {"technical": [{"text": "Design a globally distributed network with Anycast and DDoS mitigation.", "category": "system-design", "tags": ["System Design", "Performance", "Networking"], "difficulty": "advanced", "estimatedTime": 900, "type": "technical"}], "behavioral": [{"text": "Describe leading a critical network migration with minimal downtime.", "category": "leadership", "tags": ["Behavioral", "Networking", "Leadership"], "difficulty": "advanced", "estimatedTime": 420, "type": "behavioral"}]}
   }
 }

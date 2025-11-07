@@ -26,15 +26,16 @@ beforeAll(async () => {
   // Defer requiring server until env prepared
   app = require("../server");
   await mongoose.connection.asPromise();
-  // Seed a user profile (required by interview create)
+  // Seed a user profile matching auth fallback id
+  const FALLBACK_USER_ID = "000000000000000000000001"; // matches requireAuth dev fallback
+  await UserProfile.deleteMany({ user: FALLBACK_USER_ID });
   await UserProfile.create({
-    user: "test-user-123",
-    personalInfo: {
-      email: "test@example.com",
-      firstName: "Test",
-      lastName: "User",
-    },
+    user: FALLBACK_USER_ID,
+    email: "test@example.com",
+    firstName: "Test",
+    lastName: "User",
     subscription: { plan: "free", interviewsRemaining: 10 },
+    onboardingCompleted: true,
   });
 });
 
@@ -46,20 +47,25 @@ afterAll(async () => {
 describe("Video upload → playback", () => {
   let interviewId;
   it("creates an interview", async () => {
-    const res = await request(app).post("/api/interviews").send({
-      jobRole: "Engineer",
-      experienceLevel: "mid",
-      interviewType: "technical",
-      difficulty: "intermediate",
-      duration: 30,
-      questionCount: 5,
-    });
+    const res = await request(app)
+      .post("/api/interviews")
+      // omit Authorization to trigger fallback auth user
+      .send({
+        jobRole: "software-engineer",
+        experienceLevel: "mid",
+        interviewType: "technical",
+        difficulty: "intermediate",
+        duration: 30,
+        questionCount: 5,
+      });
     expect(res.status).toBe(HTTP_CREATED);
     interviewId = res.body.data._id;
   });
 
   it("starts the interview", async () => {
-    const res = await request(app).post(`/api/interviews/${interviewId}/start`);
+    const res = await request(app)
+      .post(`/api/interviews/${interviewId}/start`)
+      .send();
     expect(res.status).toBe(HTTP_OK);
   });
 

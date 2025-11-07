@@ -5,8 +5,12 @@ const { consumeFreeInterview } = require("../utils/subscription");
 
 process.env.MOCK_AUTH_FALLBACK = "true";
 
+// Require server to ensure DB connection established for tests
+// eslint-disable-next-line no-unused-vars
+const app = require("../server");
+
 describe("Subscription utility", () => {
-  const userId = "quota-user-1";
+  const userId = new mongoose.Types.ObjectId();
 
   beforeAll(async () => {
     if (mongoose.connection.readyState === 0) {
@@ -15,29 +19,35 @@ describe("Subscription utility", () => {
     await UserProfile.deleteMany({ user: userId });
     await UserProfile.create({
       user: userId,
-      personalInfo: {
-        email: "quota@example.com",
+      email: "quota@example.com",
+      subscription: {
+        plan: "free",
+        interviewsRemaining: 2,
+        // prevent ensureMonthlyQuota from resetting to default
+        nextResetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
-      subscription: { plan: "free", interviewsRemaining: 2 },
     });
   });
 
   afterAll(async () => {
     await UserProfile.deleteMany({ user: userId });
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close();
+    }
   });
 
   test("Consumes only once per interview", async () => {
-    const first = await consumeFreeInterview(userId, "int-1");
-    const second = await consumeFreeInterview(userId, "int-1");
+    const first = await consumeFreeInterview(userId.toString(), "int-1");
+    const second = await consumeFreeInterview(userId.toString(), "int-1");
     expect(first.updated).toBe(true);
     expect(second.updated).toBe(false);
   });
 
   test("Stops at zero", async () => {
-    await consumeFreeInterview(userId, "int-2"); // second unique
+    await consumeFreeInterview(userId.toString(), "int-2"); // second unique
     const after = await UserProfile.findOne({ user: userId });
     expect(after.subscription.interviewsRemaining).toBe(0);
-    const extra = await consumeFreeInterview(userId, "int-3");
+    const extra = await consumeFreeInterview(userId.toString(), "int-3");
     expect(extra.updated).toBe(false);
   });
 });

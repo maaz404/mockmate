@@ -7,14 +7,14 @@ const UserProfile = require("../models/UserProfile");
 process.env.MOCK_AUTH_FALLBACK = "true";
 
 // Helper to ensure a profile exists for test user
-async function ensureProfile(userId = "test-user-123") {
+async function ensureProfile(userId = "000000000000000000000001") {
   let doc = await UserProfile.findOne({ user: userId });
   if (!doc) {
     doc = await UserProfile.create({
       user: userId,
-      personalInfo: {
-        email: `${userId}@example.com`,
-      },
+      email: `${userId}@example.com`,
+      onboardingCompleted: true,
+      subscription: { plan: "free", interviewsRemaining: 5 },
     });
   }
   return doc;
@@ -49,7 +49,7 @@ describe("API Integration Smoke", () => {
 
   test("Create interview + start + answer first question", async () => {
     const createRes = await request(app).post("/api/interviews").send({
-      jobRole: "Backend Engineer",
+      jobRole: "backend-developer",
       experienceLevel: "mid",
       interviewType: "technical",
       difficulty: "intermediate",

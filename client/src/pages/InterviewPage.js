@@ -175,7 +175,7 @@ const InterviewPage = () => {
       }
       return 0;
     } catch (e) {
-      // Non-blocking: log and continue
+      // Non-blocking: log and allow progression even on validation errors
       // eslint-disable-next-line no-console
       console.warn(
         "Failed to submit answer for question",
@@ -184,9 +184,18 @@ const InterviewPage = () => {
       );
       const code = e?.response?.data?.code;
       if (code === "EMPTY_ANSWER" || code === "ANSWER_TOO_SHORT") {
-        setValidationError(e?.response?.data?.message || "Validation error");
-        return 0; // treat as no follow-ups
+        const errorMsg = e?.response?.data?.message || "Validation error";
+        setValidationError(errorMsg);
+        // Show warning toast but don't block
+        toast.warning(`${errorMsg} - Continuing anyway`, {
+          duration: 3000,
+        });
+        return 0; // treat as no follow-ups, but don't throw
       }
+      // For other errors, show toast but continue
+      toast.error(e?.response?.data?.message || "Failed to submit answer", {
+        duration: 3000,
+      });
       return 0;
     } finally {
       setSubmittingAnswer(false);
@@ -410,12 +419,15 @@ const InterviewPage = () => {
     const hasFollowUps =
       fuCount > 0 || (followUps[currentQuestionIndex]?.length || 0) > 0;
     const acked = !!followUpsAck[currentQuestionIndex];
+
+    // Show toast if follow-ups exist but aren't acknowledged, but don't block progression
     if (hasFollowUps && !acked) {
-      toast("Please review the follow-ups and mark them as reviewed.", {
-        icon: "📝",
+      toast("Note: Follow-up questions are available for review", {
+        icon: "�",
+        duration: 2000,
       });
-      return;
     }
+
     const targetCount =
       interview?.config?.questionCount || interview.questions.length;
     if (currentQuestionIndex < interview.questions.length - 1) {
