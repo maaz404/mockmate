@@ -48,16 +48,16 @@ module.exports = {
 
   MODELS: {
     gemini: {
-      default: "gemini-pro",
-      evaluation: "gemini-pro",
-      questions: "gemini-pro",
-      analytics: "gemini-pro",
+      default: "gemini-1.5-flash", // Updated from deprecated gemini-pro
+      evaluation: "gemini-1.5-flash",
+      questions: "gemini-1.5-flash",
+      analytics: "gemini-1.5-flash",
     },
     groq: {
-      default: "mixtral-8x7b-32768",
-      chatbot: "mixtral-8x7b-32768",
-      fast: "llama3-8b-8192",
-      balanced: "llama3-70b-8192",
+      default: "llama-3.1-70b-versatile", // Updated from decommissioned mixtral-8x7b-32768
+      chatbot: "llama-3.1-70b-versatile",
+      fast: "llama-3.1-8b-instant",
+      balanced: "llama-3.1-70b-versatile",
     },
     grok: {
       default: "grok-beta",

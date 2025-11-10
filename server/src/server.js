@@ -50,6 +50,9 @@ const app = express();
 const requestId = require("./middleware/requestId");
 app.use(requestId);
 
+// Disable ETag generation to avoid 304 Not Modified responses on dynamic JSON
+app.set("etag", false);
+
 // Response time + structured log middleware (lightweight)
 app.use((req, res, next) => {
   const start = process.hrtime.bigint();
@@ -228,7 +231,8 @@ if (morganSetting !== "off") {
 }
 
 // Body parser middleware
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "50mb" })); // Increased for facial metrics and transcripts
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Sessions & Passport (Google OAuth)

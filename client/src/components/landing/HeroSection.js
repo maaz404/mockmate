@@ -83,7 +83,7 @@ const HeroSection = () => {
           className="mt-10 flex items-center justify-center gap-4"
         >
           <Link
-            to="/register"
+            to="/dashboard"
             className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-[16px] text-white shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-200 hover-lift hover-press bg-gradient-primary group"
             aria-label="Get started with MockMate"
           >

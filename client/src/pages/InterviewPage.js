@@ -423,69 +423,17 @@ const InterviewPage = () => {
     // Show toast if follow-ups exist but aren't acknowledged, but don't block progression
     if (hasFollowUps && !acked) {
       toast("Note: Follow-up questions are available for review", {
-        icon: "�",
+        icon: "ℹ️",
         duration: 2000,
       });
     }
 
-    const targetCount =
-      interview?.config?.questionCount || interview.questions.length;
+    // Check if we can move to next question
     if (currentQuestionIndex < interview.questions.length - 1) {
       setCurrentQuestionIndex((idx) => idx + 1);
       setQuestionStartTime(Date.now());
-    } else if (
-      // At the end of current list
-      interview?.config?.adaptiveDifficulty?.enabled &&
-      interview.questions.length < targetCount
-    ) {
-      try {
-        // Fetch next adaptive question from server and append
-        const resp = await apiService.post(
-          `/interviews/${interviewId}/adaptive-question`
-        );
-        const adaptiveData = resp?.data;
-        const newQ = adaptiveData?.question;
-        const adaptiveInfo = adaptiveData
-          ? {
-              currentDifficulty: adaptiveData.difficulty,
-              previousDifficulty: adaptiveData.previousDifficulty,
-              difficultyChanged:
-                adaptiveData.difficulty !== adaptiveData.previousDifficulty,
-            }
-          : undefined;
-        if (newQ) {
-          // Normalize to client shape
-          const normalized = {
-            questionId: newQ.id || newQ.questionId,
-            questionText: newQ.text || newQ.questionText,
-            category: newQ.category,
-            difficulty: newQ.difficulty,
-            timeAllocated: newQ.timeAllocated || 300,
-          };
-          setInterview((prev) => ({
-            ...prev,
-            questions: [...(prev.questions || []), normalized],
-          }));
-          setCurrentQuestionIndex((idx) => idx + 1);
-          setQuestionStartTime(Date.now());
-          if (
-            adaptiveInfo?.difficultyChanged &&
-            adaptiveInfo?.currentDifficulty
-          ) {
-            toast(`Difficulty changed to ${adaptiveInfo.currentDifficulty}`, {
-              icon: "🎯",
-            });
-          }
-          toast.success(`Next ${normalized.difficulty || ""} question ready`);
-        } else {
-          // If no question returned, end gracefully
-          handleEndInterview();
-        }
-      } catch (_) {
-        // On failure, end interview
-        handleEndInterview();
-      }
     } else {
+      // Reached the end - complete the interview
       handleEndInterview();
     }
   };
@@ -741,11 +689,9 @@ const InterviewPage = () => {
   const currentQuestion = interview.questions[currentQuestionIndex] || {};
   const targetCount =
     interview?.config?.questionCount || interview.questions.length;
-  const isAdaptive = !!interview?.config?.adaptiveDifficulty?.enabled;
-  const isLastQuestion = !isAdaptive
-    ? currentQuestionIndex >= interview.questions.length - 1
-    : currentQuestionIndex >=
-      Math.min(interview.questions.length - 1, Math.max(0, targetCount - 1));
+  // Simplified: since we now pre-generate all questions even in adaptive mode,
+  // isLastQuestion is simply when we've reached the last question in the array
+  const isLastQuestion = currentQuestionIndex >= interview.questions.length - 1;
   const progress = ((currentQuestionIndex + 1) / targetCount) * 100;
 
   return (

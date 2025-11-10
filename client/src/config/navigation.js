@@ -1,6 +1,19 @@
 // Central navigation configuration for sidebar & potentially other nav components
 // Each section contains items with: name, path, icon (React node), optional flags
 import React from "react";
+import {
+  Settings as SettingsIcon,
+  Presentation as PresentationIcon,
+  BookOpen as BookOpenIcon,
+  LineChart,
+  HelpCircle,
+  LayoutDashboard,
+  Mic,
+  CalendarClock,
+  History,
+  Code2,
+  Video,
+} from "lucide-react";
 
 // Reusable icon helpers (inline to avoid extra deps)
 const icon = (d) => (
@@ -21,22 +34,28 @@ export const navigationConfig = [
       {
         name: "Dashboard",
         path: "/dashboard",
-        icon: icon("M4 4h16v4H4V4zm0 6h16v10H4V10zm8 2v6"),
+        icon: (
+          <LayoutDashboard
+            className="w-5 h-5"
+            aria-label="Dashboard"
+            role="img"
+          />
+        ),
       },
       {
         name: "Mock Interview",
         path: "/interview/create",
-        icon: icon("M12 17v-6m0 0l-3 3m3-3l3 3M6 7h12"),
+        icon: <Mic size={20} />,
       },
       {
         name: "Scheduled Sessions",
         path: "/scheduled",
-        icon: icon("M8 7V3m8 4V3M5 11h14M5 19h14M9 15h6"),
+        icon: <CalendarClock size={20} />,
       },
       {
         name: "Interview History",
         path: "/interviews",
-        icon: icon("M8 7v10M16 7v10M12 11v6M4 4h16v16H4V4z"),
+        icon: <History size={20} />,
       },
     ],
   },
@@ -51,14 +70,12 @@ export const navigationConfig = [
       {
         name: "Coding Demo",
         path: "/coding-demo",
-        icon: icon("M16 18l6-6-6-6M8 6l-6 6 6 6"),
+        icon: <Code2 size={20} />,
       },
       {
         name: "Video Demo",
         path: "/video-demo",
-        icon: icon(
-          "M15 10l4.5-2.5A1 1 0 0121 8.6v6.8a1 1 0 01-1.5.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-        ),
+        icon: <Video size={20} />,
       },
     ],
   },
@@ -72,7 +89,11 @@ export const navigationConfig = [
           "M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"
         ),
       },
-      { name: "Hybrid Demo", path: "/demo", icon: icon("M12 6v6l4 2") },
+      {
+        name: "Hybrid Demo",
+        path: "/demo",
+        icon: <PresentationIcon className="w-5 h-5" aria-label="Hybrid Demo" />,
+      },
     ],
   },
   {
@@ -81,13 +102,19 @@ export const navigationConfig = [
       {
         name: "Learning Materials",
         path: "/resources",
-        icon: icon("M12 4v16m8-8H4"),
+        icon: (
+          <BookOpenIcon
+            className="w-5 h-5"
+            aria-label="Learning Materials"
+            role="img"
+          />
+        ),
       },
       {
         name: "Reports & Analytics",
         path: "/reports",
-        icon: icon(
-          "M3 17v-6a2 2 0 012-2h2a2 2 0 012 2v6m6 0v-4a2 2 0 012-2h2a2 2 0 012 2v4"
+        icon: (
+          <LineChart size={20} aria-label="Reports & Analytics" role="img" />
         ),
       },
     ],
@@ -98,17 +125,18 @@ export const navigationConfig = [
       {
         name: "Settings",
         path: "/settings",
-        icon: icon(
-          // Gear icon (settings)
-          "M12 2a2 2 0 012 2v1.09a7.001 7.001 0 013.09.9l.77-.77a2 2 0 112.83 2.83l-.77.77a7.001 7.001 0 01.9 3.09H20a2 2 0 012 2v0a2 2 0 01-2 2h-1.09a7.001 7.001 0 01-.9 3.09l.77.77a2 2 0 11-2.83 2.83l-.77-.77a7.001 7.001 0 01-3.09.9V20a2 2 0 01-2 2v0a2 2 0 01-2-2v-1.09a7.001 7.001 0 01-3.09-.9l-.77.77a2 2 0 11-2.83-2.83l.77-.77a7.001 7.001 0 01-.9-3.09H4a2 2 0 01-2-2v0a2 2 0 012-2h1.09a7.001 7.001 0 01.9-3.09l-.77-.77a2 2 0 112.83-2.83l.77.77a7.001 7.001 0 013.09-.9V4a2 2 0 012-2z"
-        ),
+        icon: <SettingsIcon className="w-5 h-5" aria-label="Settings" />,
       },
       {
         name: "Help & Support",
         path: "/support",
-        icon: icon(
-          // Life ring icon (support)
-          "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3a7 7 0 017 7c0 1.61-.51 3.09-1.38 4.29l-1.42-1.42A5.007 5.007 0 0012 7a5.007 5.007 0 00-4.2 2.87l-1.42-1.42A7.003 7.003 0 0112 5zm0 14a7 7 0 01-7-7c0-1.61.51-3.09 1.38-4.29l1.42 1.42A5.007 5.007 0 0012 17a5.007 5.007 0 004.2-2.87l1.42 1.42A7.003 7.003 0 0112 19z"
+        icon: (
+          <HelpCircle
+            size={20}
+            className="w-5 h-5"
+            aria-label="Help & Support"
+            role="img"
+          />
         ),
       },
     ],

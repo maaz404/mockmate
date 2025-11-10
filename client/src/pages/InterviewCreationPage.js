@@ -15,7 +15,7 @@ const InterviewCreationPage = () => {
     duration: 30,
     difficulty: "medium",
     focusAreas: [],
-    adaptiveDifficultyEnabled: true,
+    adaptiveDifficultyEnabled: false,
     includeCodingChallenges: false,
     codingChallengeCount: 2,
     codingDifficulty: "mixed",
@@ -165,7 +165,9 @@ const InterviewCreationPage = () => {
           difficulty:
             difficultyMapping[formData.difficulty] || formData.difficulty,
           adaptiveDifficulty: { enabled: !!formData.adaptiveDifficultyEnabled },
-          questionCount: Math.floor(formData.duration / 3), // Roughly 3 minutes per question
+          // Always use 10 questions by default, regardless of duration
+          // Duration is for time limit, not question count
+          questionCount: 10,
           coding: formData.includeCodingChallenges
             ? {
                 challengeCount: formData.codingChallengeCount,

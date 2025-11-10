@@ -83,7 +83,9 @@ router.post("/", requireAuth, ensureUserProfile, dbReady, async (req, res) => {
 });
 
 // @desc    Get user interviews
+// Add no-store to avoid client/proxy caching for this frequently-changing list
 router.get("/", requireAuth, ensureUserProfile, dbReady, (req, res) => {
+  res.set("Cache-Control", "no-store");
   return req.useInMemory
     ? wrap(inMem.getUserInterviews)(req, res)
     : wrap(getUserInterviews)(req, res);

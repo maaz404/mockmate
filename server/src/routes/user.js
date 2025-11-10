@@ -29,6 +29,7 @@ const {
   getDashboardSummary,
   getDashboardRecommendation,
   getDashboardMetrics,
+  streamDashboard,
 } = require("../controllers/userController");
 
 // ============================================
@@ -255,6 +256,9 @@ router.get(
 
 // Dashboard metrics
 router.get("/dashboard/metrics", requireAuth, getDashboardMetrics);
+
+// Dashboard real-time stream (SSE)
+router.get("/dashboard/stream", requireAuth, streamDashboard);
 
 // ============================================
 // SCHEDULED SESSIONS ROUTES

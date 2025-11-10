@@ -4,6 +4,7 @@ const UserProfile = require("../models/UserProfile");
 const Interview = require("../models/Interview");
 const ScheduledSession = require("../models/ScheduledSession");
 const { ok, fail } = require("../utils/responder");
+const { verifyToken } = require("../config/jwt");
 
 // Upgrade user to premium (unlimited interviews)
 const upgradeToPremium = async (req, res) => {
@@ -981,7 +982,8 @@ const getDashboardSummary = async (req, res) => {
       })
         .sort({ completedAt: -1 })
         .select(
-          "jobTitle overallScore completedAt duration answers results feedback"
+          // Use nested fields that actually exist in the schema
+          "jobTitle completedAt results timing questions feedback"
         )
         .lean(),
       ScheduledSession.find({
@@ -1039,8 +1041,10 @@ const getDashboardSummary = async (req, res) => {
     const averageScore =
       totalInterviews > 0
         ? Math.round(
-            allInterviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
-              totalInterviews
+            allInterviews.reduce(
+              (sum, i) => sum + (i.results?.overallScore || 0),
+              0
+            ) / totalInterviews
           )
         : 0;
 
@@ -1059,14 +1063,14 @@ const getDashboardSummary = async (req, res) => {
     const currentWeekAvg =
       currentWeekInterviews.length > 0
         ? currentWeekInterviews.reduce(
-            (sum, i) => sum + (i.overallScore || 0),
+            (sum, i) => sum + (i.results?.overallScore || 0),
             0
           ) / currentWeekInterviews.length
         : 0;
     const previousWeekAvg =
       previousWeekInterviews.length > 0
         ? previousWeekInterviews.reduce(
-            (sum, i) => sum + (i.overallScore || 0),
+            (sum, i) => sum + (i.results?.overallScore || 0),
             0
           ) / previousWeekInterviews.length
         : 0;
@@ -1080,13 +1084,20 @@ const getDashboardSummary = async (req, res) => {
         : 0;
 
     // Calculate practice time (hours this month)
-    const practiceTime =
-      currentMonthInterviews.reduce((sum, i) => sum + (i.duration || 0), 0) /
-      60; // Convert minutes to hours
+    // Practice time in hours: prefer timing.totalDuration (seconds), fallback to sum of per-question timeSpent (seconds)
+    const totalSecondsThisMonth = currentMonthInterviews.reduce((sum, i) => {
+      const sec = i.timing?.totalDuration || 0;
+      if (sec && Number.isFinite(sec)) return sum + sec;
+      const qSum = Array.isArray(i.questions)
+        ? i.questions.reduce((s, q) => s + (q.timeSpent || 0), 0)
+        : 0;
+      return sum + qSum;
+    }, 0);
+    const practiceTime = totalSecondsThisMonth / 3600; // seconds -> hours
 
     // Calculate success rate (>= 70% score)
     const successfulInterviews = currentWeekInterviews.filter(
-      (i) => (i.overallScore || 0) >= 70
+      (i) => (i.results?.overallScore || 0) >= 70
     ).length;
     const successRate =
       currentWeekInterviews.length > 0
@@ -1097,7 +1108,7 @@ const getDashboardSummary = async (req, res) => {
 
     // Previous week success rate for comparison
     const prevSuccessful = previousWeekInterviews.filter(
-      (i) => (i.overallScore || 0) >= 70
+      (i) => (i.results?.overallScore || 0) >= 70
     ).length;
     const prevSuccessRate =
       previousWeekInterviews.length > 0
@@ -1111,13 +1122,18 @@ const getDashboardSummary = async (req, res) => {
         : 0;
 
     // Recent interviews (last 5)
-    const recentInterviews = allInterviews.slice(0, 5).map((interview) => ({
-      id: interview._id,
-      jobTitle: interview.jobTitle,
-      score: Math.round(interview.overallScore || 0),
-      questionsAnswered: interview.answers?.length || 0,
-      completedAt: interview.completedAt,
-    }));
+    const recentInterviews = allInterviews.slice(0, 5).map((interview) => {
+      const answeredCount = Array.isArray(interview.questions)
+        ? interview.questions.filter((q) => q.response || q.skipped).length
+        : 0;
+      return {
+        id: interview._id,
+        jobTitle: interview.jobTitle,
+        score: Math.round(interview.results?.overallScore || 0),
+        questionsAnswered: answeredCount,
+        completedAt: interview.completedAt,
+      };
+    });
 
     // Upcoming session
     const upcomingSession =
@@ -1186,7 +1202,7 @@ const getDashboardMetrics = async (req, res) => {
         completedAt: { $gte: startDate },
       })
         .sort({ completedAt: -1 })
-        .select("overallScore completedAt results feedback answers questions")
+        .select("completedAt results timing questions feedback")
         .lean(),
     ]);
 
@@ -1218,14 +1234,14 @@ const getDashboardMetrics = async (req, res) => {
     interviews.forEach((interview) => {
       if (interview.results?.breakdown) {
         const breakdown = interview.results.breakdown;
-        if (breakdown.technical)
-          performanceBreakdown.technical.push(breakdown.technical);
-        if (breakdown.behavioral)
-          performanceBreakdown.behavioral.push(breakdown.behavioral);
-        if (breakdown.communication)
-          performanceBreakdown.communication.push(breakdown.communication);
-        if (breakdown.problemSolving)
-          performanceBreakdown.problemSolving.push(breakdown.problemSolving);
+        [
+          ["technical", performanceBreakdown.technical],
+          ["behavioral", performanceBreakdown.behavioral],
+          ["communication", performanceBreakdown.communication],
+          ["problemSolving", performanceBreakdown.problemSolving],
+        ].forEach(([key, arr]) => {
+          if (typeof breakdown[key] === "number") arr.push(breakdown[key]);
+        });
       }
     });
 
@@ -1252,8 +1268,10 @@ const getDashboardMetrics = async (req, res) => {
         averageScore:
           interviews.length > 0
             ? Math.round(
-                interviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
-                  interviews.length
+                interviews.reduce(
+                  (sum, i) => sum + (i.results?.overallScore || 0),
+                  0
+                ) / interviews.length
               )
             : 0,
         improvementRate,
@@ -1290,7 +1308,7 @@ const getDashboardRecommendation = async (req, res) => {
       Interview.find({ user: userId, status: "completed" })
         .sort({ completedAt: -1 })
         .limit(10)
-        .select("overallScore results feedback questions")
+        .select("results feedback questions completedAt")
         .lean(),
     ]);
 
@@ -1323,8 +1341,10 @@ const getDashboardRecommendation = async (req, res) => {
     const totalInterviews = recentInterviews.length;
     const avgScore =
       totalInterviews > 0
-        ? recentInterviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
-          totalInterviews
+        ? recentInterviews.reduce(
+            (sum, i) => sum + (i.results?.overallScore || 0),
+            0
+          ) / totalInterviews
         : 0;
 
     let recommendation;
@@ -1561,8 +1581,10 @@ function calculatePerformanceTrend(interviews, days) {
 
     const avgScore =
       dayInterviews.length > 0
-        ? dayInterviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
-          dayInterviews.length
+        ? dayInterviews.reduce(
+            (sum, i) => sum + (i.results?.overallScore || 0),
+            0
+          ) / dayInterviews.length
         : 0;
 
     trend.push({
@@ -1620,8 +1642,10 @@ function calculateDetailedTrend(interviews, days) {
 
     if (periodInterviews.length > 0) {
       const avgScore =
-        periodInterviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
-        periodInterviews.length;
+        periodInterviews.reduce(
+          (sum, i) => sum + (i.results?.overallScore || 0),
+          0
+        ) / periodInterviews.length;
       trend.push({
         period: groupByWeek ? `Week ${i + 1}` : `Day ${i + 1}`,
         score: Math.round(avgScore),
@@ -1668,15 +1692,16 @@ function calculateResponseTimeStats(interviews) {
   const times = [];
 
   interviews.forEach((interview) => {
-    interview.answers?.forEach((answer) => {
-      if (answer.timeSpent) {
-        times.push(answer.timeSpent);
+    (interview.questions || []).forEach((q) => {
+      if (Number.isFinite(q.timeSpent) && q.timeSpent > 0) {
+        times.push(q.timeSpent);
       }
     });
   });
 
-  if (times.length === 0)
+  if (times.length === 0) {
     return { average: 0, median: 0, fastest: 0, slowest: 0 };
+  }
 
   times.sort((a, b) => a - b);
   const average = times.reduce((sum, t) => sum + t, 0) / times.length;
@@ -1698,10 +1723,10 @@ function calculateImprovementRate(interviews) {
   const secondHalf = interviews.slice(0, midpoint);
 
   const firstAvg =
-    firstHalf.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
+    firstHalf.reduce((sum, i) => sum + (i.results?.overallScore || 0), 0) /
     firstHalf.length;
   const secondAvg =
-    secondHalf.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
+    secondHalf.reduce((sum, i) => sum + (i.results?.overallScore || 0), 0) /
     secondHalf.length;
 
   return firstAvg > 0
@@ -1713,7 +1738,7 @@ function calculateRecentTrend(interviews) {
   if (interviews.length < 3) return { isImproving: false, isDecreasing: false };
 
   const recent3 = interviews.slice(0, 3);
-  const scores = recent3.map((i) => i.overallScore || 0);
+  const scores = recent3.map((i) => i.results?.overallScore || 0);
 
   const isImproving = scores[0] > scores[1] && scores[1] > scores[2];
   const isDecreasing = scores[0] < scores[1] && scores[1] < scores[2];
@@ -1722,6 +1747,82 @@ function calculateRecentTrend(interviews) {
 }
 
 // Export all functions
+// Real-time dashboard stream using Server-Sent Events (SSE)
+// Sends periodic summary updates; future enhancement could hook into Mongo change streams.
+const streamDashboard = async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.writeHead(401);
+    res.write("event: error\n" + "data: Unauthorized\n\n");
+    return res.end();
+  }
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.write("retry: 10000\n\n");
+
+  let closed = false;
+  req.on("close", () => {
+    closed = true;
+    clearInterval(intervalId);
+  });
+
+  async function push() {
+    if (closed) return;
+    try {
+      // Reuse core summary logic with lightweight query (last 30 days)
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const interviews = await Interview.find({
+        user: userId,
+        status: "completed",
+        completedAt: { $gte: since },
+      })
+        .sort({ completedAt: -1 })
+        .limit(25)
+        .select("completedAt results timing questions")
+        .lean();
+
+      const total = interviews.length;
+      const avg =
+        total > 0
+          ? Math.round(
+              interviews.reduce(
+                (s, i) => s + (i.results?.overallScore || 0),
+                0
+              ) / total
+            )
+          : 0;
+      const practiceSeconds = interviews.reduce((sum, i) => {
+        const sec = i.timing?.totalDuration || 0;
+        if (sec && Number.isFinite(sec)) return sum + sec;
+        const qs = Array.isArray(i.questions)
+          ? i.questions.reduce((ss, q) => ss + (q.timeSpent || 0), 0)
+          : 0;
+        return sum + qs;
+      }, 0);
+      const practiceHours = Math.round((practiceSeconds / 3600) * 10) / 10;
+
+      const payload = {
+        totalInterviews: total,
+        averageScore: avg,
+        practiceTimeHours: practiceHours,
+        lastUpdated: new Date().toISOString(),
+      };
+      res.write(`event: update\n` + `data: ${JSON.stringify(payload)}\n\n`);
+    } catch (e) {
+      res.write(
+        "event: error\n" + `data: ${JSON.stringify({ message: e.message })}\n\n`
+      );
+    }
+  }
+
+  // Initial push
+  await push();
+  const intervalId = setInterval(push, 15000); // every 15s
+};
+
 module.exports = {
   upgradeToPremium,
   getProfile,
@@ -1746,4 +1847,5 @@ module.exports = {
   getDashboardSummary,
   getDashboardMetrics,
   getDashboardRecommendation,
+  streamDashboard,
 };

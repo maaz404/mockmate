@@ -187,9 +187,9 @@ const createInterview = async (req, res) => {
       questions: questions
         .slice(
           0,
-          config?.adaptiveDifficulty?.enabled
-            ? C.ADAPTIVE_SEED_COUNT
-            : config.questionCount || C.DEFAULT_QUESTION_COUNT
+          // Always store full question count - adaptive mode will manage which questions
+          // are shown/skipped dynamically, but we need all questions available upfront
+          config.questionCount || C.DEFAULT_QUESTION_COUNT
         )
         .map((q) => ({
           questionId: q._id,
@@ -202,9 +202,9 @@ const createInterview = async (req, res) => {
       status: "scheduled",
     });
 
-    // --- Auto-inject a lightweight coding question when requested ---
+    // --- Auto-inject coding questions when requested ---
     // Reason: Current hybrid generation does not produce 'coding' category items.
-    // We add a single coding challenge to enable CodingAnswerUI in mixed/coding-enabled sessions.
+    // We add coding challenges to enable CodingAnswerUI in mixed/coding-enabled sessions.
     const wantsCoding =
       Boolean(config.coding) || config.interviewType === "mixed";
     const hasCodingAlready = interview.questions.some(
@@ -212,30 +212,124 @@ const createInterview = async (req, res) => {
         (q.category || "").toLowerCase() === "coding" ||
         (q.type || "").toLowerCase() === "coding"
     );
+
     if (wantsCoding && !hasCodingAlready && FEATURES.codingChallenges) {
       try {
-        const codingDifficulty = mapDifficulty(
-          config.difficulty || "intermediate"
+        // Determine how many coding questions to add
+        const requestedCodingCount = config.coding?.challengeCount || 1;
+        const totalQuestionCount = interview.questions.length;
+
+        // Don't exceed total question count - replace some questions instead
+        const codingCount = Math.min(
+          requestedCodingCount,
+          Math.floor(totalQuestionCount / 2)
         );
-        interview.questions.push({
-          questionId: new mongoose.Types.ObjectId(),
-          questionText: "Implement a function that reverses a string.",
-          category: "coding", // signals frontend to render coding UI
-          difficulty: codingDifficulty,
-          timeAllocated: 600, // 10 minutes
-          hasVideo: false,
-          // Optional inline examples used by CodingAnswerUI to form test cases
-          examples: [
-            { input: "hello", output: "olleh" },
-            { input: "Interview", output: "weivretnI" },
-          ],
+
+        const codingDifficulty = mapDifficulty(
+          config.coding?.difficulty || config.difficulty || "intermediate"
+        );
+
+        // Pool of coding questions to randomly select from
+        const codingQuestionPool = [
+          {
+            questionText: "Implement a function that reverses a string.",
+            examples: [
+              { input: "hello", output: "olleh" },
+              { input: "Interview", output: "weivretnI" },
+            ],
+          },
+          {
+            questionText:
+              "Write a function to check if a string is a palindrome.",
+            examples: [
+              { input: "racecar", output: "true" },
+              { input: "hello", output: "false" },
+            ],
+          },
+          {
+            questionText:
+              "Implement a function that finds the maximum number in an array.",
+            examples: [
+              { input: "[1, 5, 3, 9, 2]", output: "9" },
+              { input: "[10, 20, 15]", output: "20" },
+            ],
+          },
+          {
+            questionText:
+              "Write a function to remove duplicates from an array.",
+            examples: [
+              { input: "[1, 2, 2, 3, 4, 4, 5]", output: "[1, 2, 3, 4, 5]" },
+              { input: "[1, 1, 1]", output: "[1]" },
+            ],
+          },
+          {
+            questionText:
+              "Implement a function that checks if two strings are anagrams.",
+            examples: [
+              { input: "listen, silent", output: "true" },
+              { input: "hello, world", output: "false" },
+            ],
+          },
+          {
+            questionText:
+              "Write a function to find the first non-repeating character in a string.",
+            examples: [
+              { input: "leetcode", output: "l" },
+              { input: "loveleetcode", output: "v" },
+            ],
+          },
+          {
+            questionText:
+              "Implement a function to find the sum of all numbers in an array.",
+            examples: [
+              { input: "[1, 2, 3, 4, 5]", output: "15" },
+              { input: "[10, -5, 20]", output: "25" },
+            ],
+          },
+          {
+            questionText:
+              "Write a function that returns the factorial of a number.",
+            examples: [
+              { input: "5", output: "120" },
+              { input: "3", output: "6" },
+            ],
+          },
+        ];
+
+        // Select random questions from the pool
+        const selectedQuestions = [];
+        const poolCopy = [...codingQuestionPool];
+        const numToAdd = Math.min(codingCount, poolCopy.length);
+
+        for (let i = 0; i < numToAdd; i++) {
+          const randomIndex = Math.floor(Math.random() * poolCopy.length);
+          selectedQuestions.push(poolCopy[randomIndex]);
+          poolCopy.splice(randomIndex, 1); // Remove to avoid duplicates
+        }
+
+        // Replace last N questions with coding questions to maintain total count
+        // Remove the last N non-coding questions
+        interview.questions.splice(-numToAdd, numToAdd);
+
+        // Add the selected coding questions
+        selectedQuestions.forEach((q) => {
+          interview.questions.push({
+            questionId: new mongoose.Types.ObjectId(),
+            questionText: q.questionText,
+            category: "coding", // signals frontend to render coding UI
+            difficulty: codingDifficulty,
+            timeAllocated: 600, // 10 minutes per coding question
+            hasVideo: false,
+            examples: q.examples,
+          });
         });
+
         Logger.info(
-          "[createInterview] Injected coding question stub for session"
+          `[createInterview] Injected ${selectedQuestions.length} coding question(s) for session (replaced last ${numToAdd} questions)`
         );
       } catch (injectErr) {
         Logger.warn(
-          "[createInterview] Failed to inject coding question:",
+          "[createInterview] Failed to inject coding questions:",
           injectErr
         );
       }
@@ -834,7 +928,7 @@ const deleteInterview = async (req, res) => {
   }
 };
 
-// Get all user interviews
+// Get all user interviews (optimized for list view)
 const getUserInterviews = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -846,29 +940,40 @@ const getUserInterviews = async (req, res) => {
       order = "desc",
     } = req.query;
 
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const perPage = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+    const skip = (pageNum - 1) * perPage;
+    const sortField = ["createdAt", "updatedAt", "status"].includes(sortBy)
+      ? sortBy
+      : "createdAt";
+    const sortOrder = order === "asc" ? 1 : -1;
+
     const filter = { user: userId };
     if (status) filter.status = status;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const sortOrder = order === "asc" ? 1 : -1;
+    // Minimal fields for list view to avoid large payloads and timeouts
+    const projection =
+      "config.jobRole config.interviewType status createdAt timing.completedAt results.overallScore";
 
     const [interviews, total] = await Promise.all([
       Interview.find(filter)
-        .sort({ [sortBy]: sortOrder })
+        .sort({ [sortField]: sortOrder })
         .skip(skip)
-        .limit(parseInt(limit))
-        .select("-questions.response -questions.feedback"),
+        .limit(perPage)
+        .select(projection)
+        .lean()
+        .maxTimeMS(10000),
       Interview.countDocuments(filter),
     ]);
 
     return ok(res, {
       interviews,
       pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / parseInt(limit)),
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / perPage),
         total,
-        hasNextPage: parseInt(page) < Math.ceil(total / parseInt(limit)),
-        hasPrevPage: parseInt(page) > 1,
+        hasNextPage: pageNum < Math.ceil(total / perPage),
+        hasPrevPage: pageNum > 1,
       },
     });
   } catch (error) {
@@ -928,7 +1033,7 @@ const completeInterview = async (req, res) => {
   try {
     const userId = req.user?.id;
     const interviewId = req.params.interviewId || req.params.id;
-    const { transcript, facialMetrics } = req.body;
+    let { transcript, facialMetrics } = req.body;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -946,6 +1051,53 @@ const completeInterview = async (req, res) => {
       (interview.timing.completedAt - interview.timing.startedAt) / 1000
     );
 
+    // Trim excessively large data to prevent payload errors
+    // Keep only summary statistics for facial metrics instead of full time series
+    if (facialMetrics && Array.isArray(facialMetrics)) {
+      Logger.info(
+        `[completeInterview] Facial metrics array length: ${facialMetrics.length}`
+      );
+
+      // If more than 100 data points, calculate summary and discard detailed data
+      if (facialMetrics.length > 100) {
+        const summary = {
+          count: facialMetrics.length,
+          averages: {
+            eyeContact:
+              facialMetrics.reduce((sum, m) => sum + (m.eyeContact || 0), 0) /
+              facialMetrics.length,
+            smilePercentage:
+              facialMetrics.reduce(
+                (sum, m) => sum + (m.smilePercentage || 0),
+                0
+              ) / facialMetrics.length,
+            headSteadiness:
+              facialMetrics.reduce(
+                (sum, m) => sum + (m.headSteadiness || 0),
+                0
+              ) / facialMetrics.length,
+            confidenceScore:
+              facialMetrics.reduce(
+                (sum, m) => sum + (m.confidenceScore || 0),
+                0
+              ) / facialMetrics.length,
+          },
+          firstTimestamp: facialMetrics[0]?.timestamp,
+          lastTimestamp: facialMetrics[facialMetrics.length - 1]?.timestamp,
+        };
+        facialMetrics = summary;
+        Logger.info(`[completeInterview] Trimmed facial metrics to summary`);
+      }
+    }
+
+    // Trim transcript if too long (keep first 50000 chars)
+    if (transcript && transcript.length > 50000) {
+      Logger.info(
+        `[completeInterview] Trimming transcript from ${transcript.length} to 50000 chars`
+      );
+      transcript = transcript.substring(0, 50000) + "... (truncated)";
+    }
+
     // Store session enrichment data if provided
     if (transcript || facialMetrics) {
       interview.sessionEnrichment = {
@@ -962,11 +1114,58 @@ const completeInterview = async (req, res) => {
     const totalQuestions = interview.questions.length;
     const completionRate = (answeredQuestions.length / totalQuestions) * 100;
 
+    // Calculate average score from questions that have scores
     const scores = interview.questions
-      .filter((q) => q.score?.overall)
+      .filter((q) => q.score?.overall != null)
       .map((q) => q.score.overall);
     const averageScore =
       scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+
+    // Calculate breakdown by category/type
+    // Questions can have category as job role (e.g., "Software Engineer") or type field
+    // We need to normalize and group properly
+    const categoryScores = {};
+
+    // Normalize categories to standard ones
+    const normalizeCategory = (q) => {
+      const cat = (q.category || "").toLowerCase();
+      const type = (q.type || "").toLowerCase();
+
+      // Check for coding questions
+      if (cat === "coding" || type === "coding") return "technical";
+
+      // Check type field first (more specific)
+      if (type === "behavioral") return "behavioral";
+      if (type === "technical") return "technical";
+      if (type === "system-design") return "problemSolving";
+
+      // Check category field for keywords
+      if (cat.includes("communication")) return "communication";
+      if (cat.includes("behavioral") || cat.includes("behavior"))
+        return "behavioral";
+      if (cat.includes("technical") || cat.includes("tech")) return "technical";
+      if (
+        cat.includes("system") ||
+        cat.includes("design") ||
+        cat.includes("problem")
+      )
+        return "problemSolving";
+
+      // Default to technical for unrecognized categories
+      return "technical";
+    };
+
+    // Group questions by normalized category and calculate averages
+    interview.questions.forEach((q) => {
+      if (q.score?.overall != null) {
+        const normalizedCat = normalizeCategory(q);
+        if (!categoryScores[normalizedCat]) {
+          categoryScores[normalizedCat] = { sum: 0, count: 0 };
+        }
+        categoryScores[normalizedCat].sum += q.score.overall;
+        categoryScores[normalizedCat].count += 1;
+      }
+    });
 
     interview.results = {
       overallScore: Math.round(averageScore),
@@ -975,10 +1174,28 @@ const completeInterview = async (req, res) => {
       questionsSkipped: interview.questions.filter((q) => q.skipped).length,
       totalQuestions,
       breakdown: {
-        technical: calculateCategoryAverage(interview, "technical"),
-        communication: calculateCategoryAverage(interview, "communication"),
-        problemSolving: calculateCategoryAverage(interview, "problemSolving"),
-        behavioral: calculateCategoryAverage(interview, "behavioral"),
+        technical: categoryScores.technical
+          ? Math.round(
+              categoryScores.technical.sum / categoryScores.technical.count
+            )
+          : 0,
+        communication: categoryScores.communication
+          ? Math.round(
+              categoryScores.communication.sum /
+                categoryScores.communication.count
+            )
+          : 0,
+        problemSolving: categoryScores.problemSolving
+          ? Math.round(
+              categoryScores.problemSolving.sum /
+                categoryScores.problemSolving.count
+            )
+          : 0,
+        behavioral: categoryScores.behavioral
+          ? Math.round(
+              categoryScores.behavioral.sum / categoryScores.behavioral.count
+            )
+          : 0,
       },
     };
 
@@ -1088,23 +1305,203 @@ const getInterviewResults = async (req, res) => {
     if (interview.status !== "completed")
       return fail(res, 400, "NOT_COMPLETED", "Interview not completed");
 
-    return ok(
-      res,
-      {
-        results: interview.results,
+    // Generate recommendations based on performance
+    const generateRecommendations = (results, questions) => {
+      const recommendations = [];
+      const overallScore = results?.overallScore || 0;
+      const breakdown = results?.breakdown || {};
+
+      // Overall performance recommendation
+      if (overallScore < 60) {
+        recommendations.push(
+          "Focus on fundamentals - review core concepts in your field"
+        );
+      } else if (overallScore < 80) {
+        recommendations.push(
+          "Good foundation - practice more complex scenarios to improve"
+        );
+      } else {
+        recommendations.push(
+          "Excellent performance - maintain this level of preparation"
+        );
+      }
+
+      // Category-specific recommendations
+      if (breakdown.technical < 70) {
+        recommendations.push(
+          "Strengthen technical knowledge - review algorithms, data structures, and system design"
+        );
+      }
+      if (breakdown.communication < 70) {
+        recommendations.push(
+          "Work on communication skills - practice explaining complex concepts clearly"
+        );
+      }
+      if (breakdown.problemSolving < 70) {
+        recommendations.push(
+          "Enhance problem-solving abilities - practice breaking down complex problems"
+        );
+      }
+
+      // Time management
+      const avgTimeSpent =
+        questions
+          .filter((q) => q.timeSpent)
+          .reduce((sum, q) => sum + q.timeSpent, 0) /
+          questions.filter((q) => q.timeSpent).length || 0;
+      const avgTimeAlloc =
+        questions
+          .filter((q) => q.timeAllocated)
+          .reduce((sum, q) => sum + q.timeAllocated, 0) /
+          questions.filter((q) => q.timeAllocated).length || 0;
+      if (avgTimeSpent > avgTimeAlloc * 1.2) {
+        recommendations.push(
+          "Improve time management - practice answering questions within time constraints"
+        );
+      }
+
+      return recommendations;
+    };
+
+    // Generate focus areas based on weak points
+    const generateFocusAreas = (results, _questions) => {
+      const focusAreas = [];
+      const breakdown = results?.breakdown || {};
+
+      const categories = [
+        { key: "technical", label: "Technical Skills" },
+        { key: "communication", label: "Communication" },
+        { key: "problemSolving", label: "Problem Solving" },
+        { key: "behavioral", label: "Behavioral Skills" },
+      ];
+
+      categories.forEach((cat) => {
+        const score = breakdown[cat.key] || 0;
+        if (score > 0) {
+          // Only include categories that were tested
+          focusAreas.push({
+            skill: cat.label,
+            currentLevel:
+              score >= 80 ? "Strong" : score >= 60 ? "Moderate" : "Needs Work",
+            priority: score < 60 ? "high" : score < 80 ? "medium" : "low",
+          });
+        }
+      });
+
+      // Sort by priority
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      return focusAreas.sort(
+        (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
+      );
+    };
+
+    // Collect all strengths and improvements from questions
+    const collectFeedback = (questions) => {
+      const allStrengths = [];
+      const allImprovements = [];
+
+      questions.forEach((q) => {
+        if (q.feedback?.strengths) {
+          allStrengths.push(...q.feedback.strengths);
+        }
+        if (q.feedback?.improvements) {
+          allImprovements.push(...q.feedback.improvements);
+        }
+      });
+
+      // Remove duplicates and limit to top items
+      return {
+        strengths: [...new Set(allStrengths)].slice(0, 5),
+        improvements: [...new Set(allImprovements)].slice(0, 5),
+      };
+    };
+
+    const collectedFeedback = collectFeedback(interview.questions);
+    const recommendations = generateRecommendations(
+      interview.results,
+      interview.questions
+    );
+    const focusAreas = generateFocusAreas(
+      interview.results,
+      interview.questions
+    );
+
+    // Transform data to match frontend expectations
+    // Frontend expects: { interview, analysis }
+    const response = {
+      interview: {
+        _id: interview._id,
+        jobRole: interview.config?.jobRole,
+        interviewType: interview.config?.interviewType,
+        experienceLevel: interview.config?.experienceLevel,
+        difficulty: interview.config?.difficulty,
+        status: interview.status,
+        config: interview.config,
         timing: interview.timing,
+        // Add duration and completedAt at root level for backward compatibility
+        duration: interview.timing?.totalDuration || 0,
+        completedAt: interview.timing?.completedAt,
+        sessionEnrichment: interview.sessionEnrichment,
+        // Map questions with all necessary data
         questions: interview.questions.map((q) => ({
           questionText: q.questionText,
           category: q.category,
+          type: q.type,
           difficulty: q.difficulty,
+          response: q.response,
           score: q.score,
           feedback: q.feedback,
           timeSpent: q.timeSpent,
+          timeAllocated: q.timeAllocated,
           skipped: q.skipped,
+          followUpQuestions: q.followUpQuestions,
         })),
       },
-      "Interview results retrieved"
-    );
+      analysis: {
+        // Map results to analysis format
+        overallScore: interview.results?.overallScore || 0,
+        technicalScore: interview.results?.breakdown?.technical || 0,
+        communicationScore: interview.results?.breakdown?.communication || 0,
+        problemSolvingScore: interview.results?.breakdown?.problemSolving || 0,
+        behavioralScore: interview.results?.breakdown?.behavioral || 0,
+        completionRate: interview.results?.completionRate || 0,
+        // Additional metrics
+        totalQuestions:
+          interview.results?.totalQuestions || interview.questions.length,
+        questionsAnswered: interview.results?.questionsAnswered || 0,
+        questionsSkipped: interview.results?.questionsSkipped || 0,
+        // Feedback and recommendations
+        feedback: {
+          summary: interview.results?.feedback?.summary || "",
+          strengths: collectedFeedback.strengths,
+          improvements: collectedFeedback.improvements,
+          recommendations: interview.results?.feedback?.recommendations || [],
+        },
+        recommendations,
+        focusAreas,
+        // Question-by-question analysis for the UI
+        questionAnalysis: interview.questions.map((q, idx) => ({
+          questionNumber: idx + 1,
+          question: q.questionText,
+          type: q.type || q.category || "general",
+          category: q.category,
+          difficulty: q.difficulty,
+          userAnswer: q.response?.text || "",
+          userNotes: q.response?.notes || "",
+          score: q.score || { overall: 0, rubricScores: {} },
+          timeSpent: q.timeSpent || 0,
+          timeAllocated: q.timeAllocated || 0,
+          skipped: q.skipped || false,
+          feedback: q.feedback || {
+            strengths: [],
+            improvements: [],
+            suggestions: "",
+          },
+        })),
+      },
+    };
+
+    return ok(res, response, "Interview results retrieved");
   } catch (error) {
     Logger.error("Get interview results error:", error);
     return fail(res, 500, "RESULTS_FAILED", "Failed to fetch results");
@@ -1265,6 +1662,9 @@ async function getQuestionsForInterview(config, userProfile) {
       count: config.questionCount || C.DEFAULT_QUESTION_COUNT,
       focusAreas: config.focusAreas || [],
       skillsToImprove: userProfile?.professionalInfo?.skillsToImprove || [],
+      // Skip cache in development for fresh questions each time
+      // In production, set to false to improve performance
+      skipCache: config.skipCache ?? process.env.NODE_ENV !== "production",
     };
 
     const result = await hybridQuestionService.generateQuestions(
@@ -1308,17 +1708,6 @@ function getNextDifficultyLevel(score, currentDifficulty) {
 }
 
 // Helper to calculate category average
-function calculateCategoryAverage(interview, category) {
-  const categoryQuestions = interview.questions.filter(
-    (q) => q.category === category && q.score?.overall
-  );
-
-  if (categoryQuestions.length === 0) return 0;
-
-  const sum = categoryQuestions.reduce((acc, q) => acc + q.score.overall, 0);
-  return Math.round(sum / categoryQuestions.length);
-}
-
 module.exports = {
   createInterview,
   getUserInterviews,

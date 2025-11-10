@@ -67,33 +67,39 @@ class HybridQuestionService {
    */
   async generateHybridQuestions(config) {
     const safeConfig = this.sanitizeConfig(config);
-    const { questionCount: requestedCount, category } = safeConfig; // optional category filter
+    const { questionCount: requestedCount, category, skipCache } = safeConfig; // optional category filter
     // eslint-disable-next-line no-magic-numbers
     const questionCount = requestedCount || 10;
 
     try {
-      // Check cache first
-      const cachedQuestions = await this.getCachedQuestions(safeConfig);
-      if (cachedQuestions) {
-        Logger.debug("Using cached questions for interview");
-        await cachedQuestions.markUsed();
-        // Sanitize any legacy '(variant X)' suffixes from cache
-        const sanitizedFromCache = [...cachedQuestions.questions].map((q) => ({
-          ...q,
-          text: this.stripVariantSuffix(q.text),
-        }));
-        // Ensure padding in case older cache stored fewer than requested
-        const padded = await this.ensureQuestionCountAsync(
-          sanitizedFromCache,
-          questionCount,
-          safeConfig
-        );
-        if (padded.length !== cachedQuestions.questions.length) {
-          Logger.warn(
-            `Padded cached question set from ${cachedQuestions.questions.length} to ${padded.length}`
+      // Check cache first (unless skipCache is true)
+      if (!skipCache) {
+        const cachedQuestions = await this.getCachedQuestions(safeConfig);
+        if (cachedQuestions) {
+          Logger.debug("Using cached questions for interview");
+          await cachedQuestions.markUsed();
+          // Sanitize any legacy '(variant X)' suffixes from cache
+          const sanitizedFromCache = [...cachedQuestions.questions].map(
+            (q) => ({
+              ...q,
+              text: this.stripVariantSuffix(q.text),
+            })
           );
+          // Ensure padding in case older cache stored fewer than requested
+          const padded = await this.ensureQuestionCountAsync(
+            sanitizedFromCache,
+            questionCount,
+            safeConfig
+          );
+          if (padded.length !== cachedQuestions.questions.length) {
+            Logger.warn(
+              `Padded cached question set from ${cachedQuestions.questions.length} to ${padded.length}`
+            );
+          }
+          return padded;
         }
-        return padded;
+      } else {
+        Logger.info("Skipping cache, generating fresh questions");
       }
 
       // Generate new hybrid question set
@@ -518,6 +524,52 @@ class HybridQuestionService {
       "ml engineer": "machine-learning-engineer",
       "network engineer": "network-engineer",
       networking: "network-engineer",
+      // Generic software/dev synonyms
+      "software developer": "software-engineer",
+      developer: "software-engineer",
+      programmer: "software-engineer",
+      engineer: "software-engineer",
+      coder: "software-engineer",
+      "frontend engineer": "frontend-developer",
+      "frontend developer": "frontend-developer",
+      "front-end engineer": "frontend-developer",
+      "front-end developer": "frontend-developer",
+      "backend engineer": "backend-developer",
+      "back-end engineer": "backend-developer",
+      "backend developer": "backend-developer",
+      "back-end developer": "backend-developer",
+      "full stack engineer": "full-stack-developer",
+      "fullstack engineer": "full-stack-developer",
+      "full-stack engineer": "full-stack-developer",
+      "web developer": "full-stack-developer",
+      "web engineer": "full-stack-developer",
+      "javascript developer": "full-stack-developer",
+      "node developer": "backend-developer",
+      "node.js developer": "backend-developer",
+      "react developer": "frontend-developer",
+      "react engineer": "frontend-developer",
+      "vue developer": "frontend-developer",
+      "angular developer": "frontend-developer",
+      "golang developer": "backend-developer",
+      "go developer": "backend-developer",
+      "python developer": "backend-developer",
+      "java developer": "backend-developer",
+      "c# developer": "backend-developer",
+      "dotnet developer": "backend-developer",
+      devops: "site-reliability-engineer",
+      "dev ops": "site-reliability-engineer",
+      ops: "site-reliability-engineer",
+      reliability: "site-reliability-engineer",
+      observability: "site-reliability-engineer",
+      monitoring: "site-reliability-engineer",
+      "network administrator": "network-engineer",
+      designer: "ui-ux-designer",
+      "product analyst": "product-manager",
+      analyst: "data-analyst",
+      "data analyst": "data-analyst",
+      "ml scientist": "machine-learning-engineer",
+      "ml researcher": "machine-learning-engineer",
+      researcher: "machine-learning-engineer",
     };
     return aliases[roleKey] || roleKey;
   }
@@ -531,62 +583,206 @@ class HybridQuestionService {
   classifyUnknownRole(roleKey) {
     if (!this.templates) return "software-engineer";
     if (this.templates[roleKey]) return roleKey; // already known
-    const keywordMap = [
+    // Ordered clusters: earlier entries more specific; each cluster has: patterns (regex or substrings), target fallback role
+    const clusters = [
       {
-        keywords: ["devops", "reliab", "sre", "ops"],
         target: "site-reliability-engineer",
+        patterns: [
+          "devops",
+          "sre",
+          "reliab",
+          "observability",
+          "monitoring",
+          "incident",
+          "oncall",
+          "on-call",
+        ],
       },
-      { keywords: ["cloud", "aws", "azure", "gcp"], target: "cloud-architect" },
       {
-        keywords: ["frontend", "ui", "react", "css"],
+        target: "cloud-architect",
+        patterns: [
+          "cloud",
+          "aws",
+          "azure",
+          "gcp",
+          "kubernetes",
+          "terraform",
+          "iac",
+        ],
+      },
+      {
         target: "frontend-developer",
+        patterns: [
+          "frontend",
+          "front-end",
+          "react",
+          "vue",
+          "angular",
+          "css",
+          "html",
+          "ui engineer",
+        ],
       },
       {
-        keywords: ["backend", "api", "server", "microservice"],
         target: "backend-developer",
+        patterns: [
+          "backend",
+          "back-end",
+          "api",
+          "microservice",
+          "server",
+          "distributed",
+          "scalab",
+          "node",
+          "golang",
+          "go ",
+          "python",
+          "java",
+          "spring",
+          "express",
+        ],
       },
-      { keywords: ["data", "etl", "pipeline"], target: "data-engineer" },
       {
-        keywords: ["analysis", "analytics", "insight"],
+        target: "full-stack-developer",
+        patterns: [
+          "fullstack",
+          "full-stack",
+          "web developer",
+          "mern",
+          "stack engineer",
+        ],
+      },
+      {
+        target: "data-engineer",
+        patterns: [
+          "data engineer",
+          "etl",
+          "pipeline",
+          "data pipeline",
+          "spark",
+          "hadoop",
+          "warehouse",
+          "airflow",
+        ],
+      },
+      {
         target: "data-analyst",
+        patterns: [
+          "data analyst",
+          "analysis",
+          "analytics",
+          "insight",
+          "dashboard",
+          "reporting",
+          "bi ",
+        ],
       },
       {
-        keywords: ["security", "cyber", "threat"],
-        target: "cybersecurity-analyst",
-      },
-      {
-        keywords: ["support", "helpdesk", "ticket"],
-        target: "it-support-specialist",
-      },
-      {
-        keywords: ["system admin", "sysadmin"],
-        target: "system-administrator",
-      },
-      { keywords: ["mobile", "android", "ios"], target: "mobile-developer" },
-      {
-        keywords: ["product", "roadmap", "stakeholder"],
-        target: "product-manager",
-      },
-      { keywords: ["scrum", "agile", "ceremony"], target: "scrum-master" },
-      {
-        keywords: ["design", "ux", "ui", "wireframe"],
-        target: "ui-ux-designer",
-      },
-      {
-        keywords: ["machine learning", "ml", "model", "training"],
         target: "machine-learning-engineer",
+        patterns: [
+          "machine learning",
+          "ml ",
+          "ml-",
+          " ml",
+          "model",
+          "training",
+          "inference",
+          "feature engineering",
+          "mlops",
+        ],
       },
       {
-        keywords: ["network", "routing", "switch"],
+        target: "cybersecurity-analyst",
+        patterns: [
+          "security",
+          "cyber",
+          "threat",
+          "vulnerability",
+          "pentest",
+          "penetration",
+        ],
+      },
+      {
+        target: "it-support-specialist",
+        patterns: ["support", "helpdesk", "ticket", "service desk"],
+      },
+      {
+        target: "system-administrator",
+        patterns: ["system admin", "sysadmin", "windows admin", "linux admin"],
+      },
+      {
+        target: "mobile-developer",
+        patterns: [
+          "mobile",
+          "android",
+          "ios",
+          "swift",
+          "kotlin",
+          "react native",
+          "flutter",
+        ],
+      },
+      {
+        target: "product-manager",
+        patterns: [
+          "product",
+          "roadmap",
+          "stakeholder",
+          "product owner",
+          "backlog",
+          "prioritization",
+        ],
+      },
+      {
+        target: "scrum-master",
+        patterns: [
+          "scrum",
+          "agile",
+          "ceremony",
+          "standup",
+          "retrospective",
+          "kanban",
+        ],
+      },
+      {
+        target: "ui-ux-designer",
+        patterns: [
+          "design",
+          "ux",
+          "wireframe",
+          "prototype",
+          "figma",
+          "user research",
+          "usability",
+        ],
+      },
+      {
         target: "network-engineer",
+        patterns: [
+          "network",
+          "routing",
+          "switch",
+          "firewall",
+          "vpn",
+          "lan",
+          "wan",
+        ],
+      },
+      // Broad generic: falls through if nothing else matched
+      {
+        target: "software-engineer",
+        patterns: ["developer", "engineer", "programmer", "software", "code"],
       },
     ];
-    for (const { keywords, target } of keywordMap) {
-      if (keywords.some((k) => roleKey.includes(k))) {
-        return target in this.templates ? target : "software-engineer";
+    for (const cluster of clusters) {
+      if (
+        cluster.target in this.templates &&
+        cluster.patterns.some((p) => roleKey.includes(p))
+      ) {
+        return cluster.target;
       }
     }
-    return "software-engineer"; // final fallback
+    return "software-engineer"; // final safety fallback
   }
 
   /**
