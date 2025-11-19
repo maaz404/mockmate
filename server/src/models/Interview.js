@@ -231,6 +231,8 @@ const interviewSchema = new mongoose.Schema(
       default: "scheduled",
       index: true,
     },
+    // Root-level completedAt for easier dashboard queries (duplicates timing.completedAt)
+    completedAt: { type: Date, index: true },
     recording: { type: AssetSchema },
     snapshots: { type: [AssetSchema], default: [] },
     transcript: { type: AssetSchema },

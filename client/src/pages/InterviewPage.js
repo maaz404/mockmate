@@ -5,15 +5,122 @@ import { apiService } from "../services/api";
 import SpokenQuestionUI from "../components/interview/SpokenQuestionUI";
 import CodingQuestionUI from "../components/interview/CodingQuestionUI";
 
-// Simple language templates for empty editors
+// Professional code templates with better structure
 const CODE_TEMPLATES = {
-  javascript: `// Write your solution here\nfunction solve() {\n  // TODO\n  return null;\n}\n\nconsole.log(solve());\n`,
-  typescript: `// Write your solution here\nfunction solve(): any {\n  // TODO\n  return null;\n}\n\nconsole.log(solve());\n`,
-  python: `# Write your solution here\ndef solve():\n    # TODO\n    return None\n\nprint(solve())\n`,
-  java: `// Write your solution here\nclass Main {\n  static Object solve() {\n    // TODO\n    return null;\n  }\n  public static void main(String[] args) {\n    System.out.println(solve());\n  }\n}\n`,
-  cpp: `// Write your solution here\n#include <bits/stdc++.h>\nusing namespace std;\nint main(){\n  // TODO\n  cout << "Hello" << endl;\n  return 0;\n}\n`,
-  c: `// Write your solution here\n#include <stdio.h>\nint main(){\n  // TODO\n  printf("Hello\\n");\n  return 0;\n}\n`,
-  csharp: `// Write your solution here\nusing System;\nclass Program {\n  static object Solve() {\n    // TODO\n    return null;\n  }\n  static void Main(){\n    Console.WriteLine(Solve());\n  }\n}\n`,
+  javascript: `/**
+ * @param {any} input - Your input parameter
+ * @return {any} - Your return value
+ */
+function solution(input) {
+    // Write your code here
+    
+    return null;
+}
+
+// Test your solution
+console.log(solution());
+`,
+  typescript: `/**
+ * @param {any} input - Your input parameter
+ * @return {any} - Your return value
+ */
+function solution(input: any): any {
+    // Write your code here
+    
+    return null;
+}
+
+// Test your solution
+console.log(solution());
+`,
+  python: `"""
+Solution function
+Args:
+    input: Your input parameter
+Returns:
+    Your return value
+"""
+def solution(input):
+    # Write your code here
+    
+    return None
+
+# Test your solution
+if __name__ == "__main__":
+    result = solution()
+    print(result)
+`,
+  java: `public class Solution {
+    /**
+     * Your solution method
+     * @param input Your input parameter
+     * @return Your return value
+     */
+    public static Object solution(Object input) {
+        // Write your code here
+        
+        return null;
+    }
+    
+    public static void main(String[] args) {
+        Object result = solution(null);
+        System.out.println(result);
+    }
+}
+`,
+  cpp: `#include <iostream>
+#include <vector>
+#include <string>
+using namespace std;
+
+/**
+ * Your solution function
+ */
+void solution() {
+    // Write your code here
+    
+}
+
+int main() {
+    solution();
+    return 0;
+}
+`,
+  c: `#include <stdio.h>
+#include <stdlib.h>
+
+/**
+ * Your solution function
+ */
+void solution() {
+    // Write your code here
+    
+}
+
+int main() {
+    solution();
+    return 0;
+}
+`,
+  csharp: `using System;
+using System.Collections.Generic;
+
+class Solution {
+    /**
+     * Your solution method
+     */
+    public static object SolutionMethod(object input) {
+        // Write your code here
+        
+        return null;
+    }
+    
+    static void Main(string[] args) {
+        var result = SolutionMethod(null);
+        Console.WriteLine(result);
+    }
+}
+`,
 };
 
 // Build a starter template augmented with category/difficulty header
@@ -25,67 +132,46 @@ function getCommentPrefix(language) {
 
 function getStarterTemplate(language, question) {
   const base = CODE_TEMPLATES[language] || CODE_TEMPLATES.javascript;
-  const difficulty = (question?.difficulty || "-").toString();
-  const category = (question?.category || "-").toString();
+  const title = question?.title || "Coding Challenge";
+  const difficulty = (question?.difficulty || "intermediate").toString();
+  const category = (question?.category || "coding").toString();
   const prefix = getCommentPrefix(language);
-  const header = `${prefix} Category: ${category}  |  Difficulty: ${difficulty}\n`;
 
-  // Add a tiny language-aware scaffold based on category/difficulty and examples
-  const scaffold = buildScaffold(language, question, prefix);
-  return `${header}${scaffold}${base}`;
-}
+  // Build professional header with problem details
+  const header = `${prefix}${"=".repeat(
+    60
+  )}\n${prefix} ${title}\n${prefix} Difficulty: ${difficulty.toUpperCase()} | Category: ${category}\n${prefix}${"=".repeat(
+    60
+  )}\n\n`;
 
-// Create a small guiding scaffold that doesn't interfere with the base template
-function buildScaffold(language, question, prefix) {
-  try {
-    const cat = (question?.category || "").toLowerCase();
-    const diff = (question?.difficulty || "").toLowerCase();
-    const ex =
-      Array.isArray(question?.examples) && question.examples.length
-        ? question.examples[0]
-        : null;
-    const exIn = typeof ex?.input !== "undefined" ? String(ex.input) : null;
-    const exOut = typeof ex?.output !== "undefined" ? String(ex.output) : null;
-
-    const exampleLines = ex
-      ? `${prefix} Example Input: ${exIn}\n${prefix} Example Output: ${exOut}\n`
-      : "";
-
-    // Provide a minimal function signature suggestion for scripting langs
-    if (language === "javascript") {
-      const hintName = cat.includes("array")
-        ? "processArray"
-        : cat.includes("string")
-        ? "processString"
-        : "solve";
-      return `${prefix} Suggested signature (edit as needed):\n${prefix} function ${hintName}(input) {\n${prefix}   // TODO: implement\n${prefix}   return null;\n${prefix} }\n${exampleLines}`;
+  // Add problem description excerpt if available
+  let problemDesc = "";
+  if (question?.questionText) {
+    const firstLine = question.questionText.split("\\n")[0];
+    if (firstLine && firstLine.length < 100) {
+      problemDesc = `${prefix} Problem: ${firstLine}\n${prefix}\n`;
     }
-    if (language === "typescript") {
-      const hintName = cat.includes("array")
-        ? "processArray"
-        : cat.includes("string")
-        ? "processString"
-        : "solve";
-      return `${prefix} Suggested signature (edit as needed):\n${prefix} function ${hintName}(input: any): any {\n${prefix}   // TODO: implement\n${prefix}   return null;\n${prefix} }\n${exampleLines}`;
-    }
-    if (language === "python") {
-      const hintName = cat.includes("array")
-        ? "process_array"
-        : cat.includes("string")
-        ? "process_string"
-        : "solve";
-      return `${prefix} Suggested signature (edit as needed):\n${prefix} def ${hintName}(input):\n${prefix}     # TODO: implement\n${prefix}     return None\n${exampleLines}`;
-    }
-
-    // For compiled langs, keep guidance in comments only
-    const advNote =
-      diff === "advanced"
-        ? `${prefix} Hint: focus on complexity (time/space); write clean I/O.\n`
-        : "";
-    return `${prefix} Guidance: implement core logic inside main/entry and print results.\n${advNote}${exampleLines}`;
-  } catch (_) {
-    return "";
   }
+
+  // Add examples as comments
+  let examplesSection = "";
+  if (Array.isArray(question?.examples) && question.examples.length > 0) {
+    examplesSection = `${prefix} Examples:\n`;
+    question.examples.slice(0, 2).forEach((ex, i) => {
+      examplesSection += `${prefix}   ${i + 1}. Input: ${ex.input || "N/A"}\n`;
+      if (ex.output) {
+        examplesSection += `${prefix}      Output: ${ex.output}\n`;
+      }
+    });
+    examplesSection += `${prefix}\n`;
+  }
+
+  // Add complexity requirements
+  const complexityNote = `${prefix} Time Complexity: O(?)\n${prefix} Space Complexity: O(?)\n${prefix}${"=".repeat(
+    60
+  )}\n\n`;
+
+  return header + problemDesc + examplesSection + complexityNote + base;
 }
 
 const InterviewPage = () => {

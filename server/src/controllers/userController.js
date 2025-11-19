@@ -979,8 +979,13 @@ const getDashboardSummary = async (req, res) => {
       Interview.find({
         user: userId,
         status: "completed",
+        $or: [
+          { completedAt: { $exists: true } },
+          { "timing.completedAt": { $exists: true } },
+        ],
       })
-        .sort({ completedAt: -1 })
+        .sort({ completedAt: -1, "timing.completedAt": -1 })
+        .limit(100) // Limit to 100 most recent interviews for performance
         .select(
           // Use nested fields that actually exist in the schema
           "jobTitle completedAt results timing questions feedback"
@@ -1002,12 +1007,20 @@ const getDashboardSummary = async (req, res) => {
       upcomingSessionsCount: upcomingSessions.length,
     });
 
+    console.log("🔍 UserProfile analytics field:", {
+      analytics: userProfile?.analytics,
+      totalInterviews: userProfile?.analytics?.totalInterviews,
+      completedInterviews: userProfile?.analytics?.completedInterviews,
+      averageScore: userProfile?.analytics?.averageScore,
+    });
+
     // If no profile exists, create a basic one or return default stats
     if (!userProfile) {
       console.log("⚠️ No profile found, returning default empty stats");
       return ok(res, {
         stats: {
           totalInterviews: 0,
+          completedInterviews: 0,
           averageScore: 0,
           practiceTime: 0,
           successRate: 0,
@@ -1024,29 +1037,51 @@ const getDashboardSummary = async (req, res) => {
       });
     }
 
+    // Helper to get completedAt from either location
+    const getCompletedAt = (interview) => {
+      return interview.completedAt || interview.timing?.completedAt || null;
+    };
+
     // Filter interviews by time periods
-    const currentWeekInterviews = allInterviews.filter(
-      (i) => new Date(i.completedAt) >= lastWeek
-    );
+    const currentWeekInterviews = allInterviews.filter((i) => {
+      const completed = getCompletedAt(i);
+      return completed && new Date(completed) >= lastWeek;
+    });
     const previousWeekInterviews = allInterviews.filter((i) => {
-      const date = new Date(i.completedAt);
+      const completed = getCompletedAt(i);
+      if (!completed) return false;
+      const date = new Date(completed);
       return date >= twoWeeksAgo && date < lastWeek;
     });
-    const currentMonthInterviews = allInterviews.filter(
-      (i) => new Date(i.completedAt) >= lastMonth
-    );
+    const currentMonthInterviews = allInterviews.filter((i) => {
+      const completed = getCompletedAt(i);
+      return completed && new Date(completed) >= lastMonth;
+    });
 
     // Calculate core stats
-    const totalInterviews = allInterviews.length;
+    // Use analytics data from UserProfile for accurate totals
+    const totalInterviews =
+      userProfile.analytics?.totalInterviews || allInterviews.length;
+    const completedInterviews =
+      userProfile.analytics?.completedInterviews || allInterviews.length;
     const averageScore =
-      totalInterviews > 0
+      userProfile.analytics?.averageScore ||
+      (totalInterviews > 0
         ? Math.round(
             allInterviews.reduce(
               (sum, i) => sum + (i.results?.overallScore || 0),
               0
             ) / totalInterviews
           )
-        : 0;
+        : 0);
+
+    console.log("📊 Stats being returned:", {
+      totalInterviews,
+      completedInterviews,
+      averageScore,
+      analyticsData: userProfile.analytics,
+      interviewsFromQuery: allInterviews.length,
+    });
 
     // Calculate changes (week-over-week)
     const interviewChange =
@@ -1131,7 +1166,7 @@ const getDashboardSummary = async (req, res) => {
         jobTitle: interview.jobTitle,
         score: Math.round(interview.results?.overallScore || 0),
         questionsAnswered: answeredCount,
-        completedAt: interview.completedAt,
+        completedAt: getCompletedAt(interview),
       };
     });
 
@@ -1161,6 +1196,7 @@ const getDashboardSummary = async (req, res) => {
     return ok(res, {
       stats: {
         totalInterviews,
+        completedInterviews,
         averageScore,
         practiceTime: Math.round(practiceTime * 10) / 10,
         successRate,
@@ -1199,9 +1235,12 @@ const getDashboardMetrics = async (req, res) => {
       Interview.find({
         user: userId,
         status: "completed",
-        completedAt: { $gte: startDate },
+        $or: [
+          { completedAt: { $gte: startDate } },
+          { "timing.completedAt": { $gte: startDate } },
+        ],
       })
-        .sort({ completedAt: -1 })
+        .sort({ completedAt: -1, "timing.completedAt": -1 })
         .select("completedAt results timing questions feedback")
         .lean(),
     ]);
@@ -1305,10 +1344,17 @@ const getDashboardRecommendation = async (req, res) => {
 
     const [userProfile, recentInterviews] = await Promise.all([
       UserProfile.findOne({ user: userId }).lean(),
-      Interview.find({ user: userId, status: "completed" })
-        .sort({ completedAt: -1 })
+      Interview.find({
+        user: userId,
+        status: "completed",
+        $or: [
+          { completedAt: { $exists: true } },
+          { "timing.completedAt": { $exists: true } },
+        ],
+      })
+        .sort({ completedAt: -1, "timing.completedAt": -1 })
         .limit(10)
-        .select("results feedback questions completedAt")
+        .select("results feedback questions completedAt timing")
         .lean(),
     ]);
 
@@ -1504,6 +1550,12 @@ const getDashboardRecommendation = async (req, res) => {
 };
 
 // ========== Helper Functions ==========
+
+// Helper to normalize completedAt access (handles both root and timing.completedAt)
+function getInterviewCompletedAt(interview) {
+  return interview.completedAt || interview.timing?.completedAt || null;
+}
+
 function calculateSkillProgress(interviews) {
   const skills = {};
 
@@ -1575,7 +1627,9 @@ function calculatePerformanceTrend(interviews, days) {
     nextDate.setDate(nextDate.getDate() + 1);
 
     const dayInterviews = interviews.filter((interview) => {
-      const completedDate = new Date(interview.completedAt);
+      const completed = getInterviewCompletedAt(interview);
+      if (!completed) return false;
+      const completedDate = new Date(completed);
       return completedDate >= date && completedDate < nextDate;
     });
 
@@ -1629,8 +1683,10 @@ function calculateDetailedTrend(interviews, days) {
 
   for (let i = 0; i < periods; i++) {
     const periodInterviews = interviews.filter((interview) => {
+      const completed = getInterviewCompletedAt(interview);
+      if (!completed) return false;
       const daysDiff = Math.floor(
-        (new Date() - new Date(interview.completedAt)) / (1000 * 60 * 60 * 24)
+        (new Date() - new Date(completed)) / (1000 * 60 * 60 * 24)
       );
       if (groupByWeek) {
         const weekStart = i * 7;

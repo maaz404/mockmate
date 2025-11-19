@@ -26,13 +26,6 @@ export const PLANS = Object.freeze({
       "Priority AI generation",
     ],
   },
-  enterprise: {
-    key: "enterprise",
-    label: "Enterprise",
-    interviews: null,
-    unlimited: true,
-    features: ["Everything in Premium", "Team collaboration", "Org analytics"],
-  },
 });
 
 export function getPlan(key) {

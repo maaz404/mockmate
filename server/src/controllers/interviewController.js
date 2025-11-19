@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const aiQuestionService = require("../services/aiQuestionService");
 const hybridQuestionService = require("../services/hybridQuestionService");
 const evaluationService = require("../services/evaluationService");
+const advancedFeedbackService = require("../services/advancedFeedbackService");
 const aiProviderManager = require("../services/aiProviders");
 const { destroyByPrefix } = require("./uploadController");
 const C = require("../utils/constants");
@@ -13,6 +14,56 @@ const { ok, fail, created } = require("../utils/responder");
 const { consumeFreeInterview } = require("../utils/subscription");
 const { mapDifficulty } = require("../utils/questionNormalization");
 const FEATURES = require("../config/features");
+
+// Helper function to update user analytics after interview completion
+async function updateUserAnalytics(userId) {
+  try {
+    const UserProfile = require("../models/UserProfile");
+
+    const userProfile = await UserProfile.findOne({ user: userId });
+    if (!userProfile) {
+      Logger.warn(
+        `[updateUserAnalytics] UserProfile not found for user ${userId}`
+      );
+      return;
+    }
+
+    // Recalculate analytics from all interviews
+    const allInterviews = await Interview.find({ user: userId });
+    const completedInterviews = allInterviews.filter(
+      (i) => i.status === "completed"
+    );
+
+    // Calculate average score from completed interviews
+    const scores = completedInterviews
+      .filter((i) => i.results?.overallScore != null)
+      .map((i) => i.results.overallScore);
+    const avgScore =
+      scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+
+    // Update analytics
+    userProfile.analytics = userProfile.analytics || {};
+    userProfile.analytics.totalInterviews = allInterviews.length;
+    userProfile.analytics.completedInterviews = completedInterviews.length;
+    userProfile.analytics.averageScore = Math.round(avgScore);
+    userProfile.analytics.lastCalculated = new Date();
+
+    userProfile.markModified("analytics");
+    await userProfile.save({ validateModifiedOnly: true });
+
+    Logger.info(`[updateUserAnalytics] Updated analytics for user ${userId}`, {
+      totalInterviews: allInterviews.length,
+      completedInterviews: completedInterviews.length,
+      averageScore: Math.round(avgScore),
+    });
+  } catch (error) {
+    // Don't fail the request if analytics update fails
+    Logger.error("[updateUserAnalytics] Failed to update analytics", {
+      error: error.message,
+      userId,
+    });
+  }
+}
 
 // Create new interview session
 const createInterview = async (req, res) => {
@@ -213,7 +264,8 @@ const createInterview = async (req, res) => {
         (q.type || "").toLowerCase() === "coding"
     );
 
-    if (wantsCoding && !hasCodingAlready && FEATURES.codingChallenges) {
+    // Use backend feature flag name (CODING_CHALLENGES) instead of frontend alias
+    if (wantsCoding && !hasCodingAlready && FEATURES.CODING_CHALLENGES) {
       try {
         // Determine how many coding questions to add
         const requestedCodingCount = config.coding?.challengeCount || 1;
@@ -229,72 +281,355 @@ const createInterview = async (req, res) => {
           config.coding?.difficulty || config.difficulty || "intermediate"
         );
 
-        // Pool of coding questions to randomly select from
-        const codingQuestionPool = [
-          {
-            questionText: "Implement a function that reverses a string.",
-            examples: [
-              { input: "hello", output: "olleh" },
-              { input: "Interview", output: "weivretnI" },
-            ],
-          },
-          {
-            questionText:
-              "Write a function to check if a string is a palindrome.",
-            examples: [
-              { input: "racecar", output: "true" },
-              { input: "hello", output: "false" },
-            ],
-          },
-          {
-            questionText:
-              "Implement a function that finds the maximum number in an array.",
-            examples: [
-              { input: "[1, 5, 3, 9, 2]", output: "9" },
-              { input: "[10, 20, 15]", output: "20" },
-            ],
-          },
-          {
-            questionText:
-              "Write a function to remove duplicates from an array.",
-            examples: [
-              { input: "[1, 2, 2, 3, 4, 4, 5]", output: "[1, 2, 3, 4, 5]" },
-              { input: "[1, 1, 1]", output: "[1]" },
-            ],
-          },
-          {
-            questionText:
-              "Implement a function that checks if two strings are anagrams.",
-            examples: [
-              { input: "listen, silent", output: "true" },
-              { input: "hello, world", output: "false" },
-            ],
-          },
-          {
-            questionText:
-              "Write a function to find the first non-repeating character in a string.",
-            examples: [
-              { input: "leetcode", output: "l" },
-              { input: "loveleetcode", output: "v" },
-            ],
-          },
-          {
-            questionText:
-              "Implement a function to find the sum of all numbers in an array.",
-            examples: [
-              { input: "[1, 2, 3, 4, 5]", output: "15" },
-              { input: "[10, -5, 20]", output: "25" },
-            ],
-          },
-          {
-            questionText:
-              "Write a function that returns the factorial of a number.",
-            examples: [
-              { input: "5", output: "120" },
-              { input: "3", output: "6" },
-            ],
-          },
-        ];
+        // Professional coding question pools organized by difficulty
+        const questionsByDifficulty = {
+          beginner: [
+            {
+              title: "Array Element Removal",
+              questionText: `Write a function to remove duplicates from an array and return the unique elements in their original order.
+
+**Problem Statement:**
+Given an array that may contain duplicate values, create a function that returns a new array with only the unique elements, preserving the order of their first appearance.
+
+**Constraints:**
+• Array length: 0 ≤ n ≤ 10,000
+• Elements can be numbers or strings
+• Time Complexity: O(n)
+• Space Complexity: O(n)
+
+**Function Signature:**
+\`\`\`javascript
+function removeDuplicates(arr)
+\`\`\`
+
+**Hint:** Consider using a Set or an object to track seen elements.`,
+              examples: [
+                { input: "[1, 2, 2, 3, 4, 4, 5]", output: "[1, 2, 3, 4, 5]" },
+                { input: "[1, 1, 1]", output: "[1]" },
+                { input: "['a', 'b', 'a', 'c']", output: "['a', 'b', 'c']" },
+              ],
+              tags: ["arrays", "hash-table"],
+            },
+            {
+              title: "String Reversal",
+              questionText: `Implement a function that reverses a string without using built-in reverse methods.
+
+**Problem Statement:**
+Write a function that takes a string as input and returns it reversed. You should implement this using basic string manipulation.
+
+**Constraints:**
+• String length: 0 ≤ n ≤ 10,000
+• Can contain letters, numbers, spaces, and special characters
+• Time Complexity: O(n)
+• Space Complexity: O(n)
+
+**Function Signature:**
+\`\`\`javascript
+function reverseString(str)
+\`\`\`
+
+**Hint:** You can iterate from the end to the beginning, or use array methods.`,
+              examples: [
+                { input: "'hello'", output: "'olleh'" },
+                { input: "'Interview'", output: "'weivretnI'" },
+                {
+                  input: "'A man, a plan, a canal: Panama'",
+                  output: "'amanaP :lanac a ,nalp a ,nam A'",
+                },
+              ],
+              tags: ["string", "two-pointers"],
+            },
+            {
+              title: "Palindrome Checker",
+              questionText: `Write a function to check if a given string is a palindrome.
+
+**Problem Statement:**
+A palindrome is a string that reads the same forward and backward (ignoring spaces, punctuation, and case). Determine if the input string is a palindrome.
+
+**Constraints:**
+• String length: 0 ≤ n ≤ 10,000
+• Consider only alphanumeric characters
+• Ignore cases
+• Time Complexity: O(n)
+• Space Complexity: O(1)
+
+**Function Signature:**
+\`\`\`javascript
+function isPalindrome(str)
+\`\`\`
+
+**Hint:** Clean the string first, then use two pointers from both ends.`,
+              examples: [
+                { input: "'racecar'", output: "true" },
+                { input: "'A man, a plan, a canal: Panama'", output: "true" },
+                { input: "'hello'", output: "false" },
+              ],
+              tags: ["string", "two-pointers"],
+            },
+            {
+              title: "Find Maximum in Array",
+              questionText: `Implement a function that finds the maximum number in an array without using built-in Math.max().
+
+**Problem Statement:**
+Given an array of numbers, find and return the largest value. Handle edge cases like empty arrays.
+
+**Constraints:**
+• Array length: 0 ≤ n ≤ 10,000
+• Numbers can be positive, negative, or zero
+• Return -Infinity for empty arrays
+• Time Complexity: O(n)
+• Space Complexity: O(1)
+
+**Function Signature:**
+\`\`\`javascript
+function findMax(arr)
+\`\`\`
+
+**Hint:** Initialize with the first element and compare with each subsequent element.`,
+              examples: [
+                { input: "[1, 5, 3, 9, 2]", output: "9" },
+                { input: "[10, 20, 15]", output: "20" },
+                { input: "[-5, -2, -10, -1]", output: "-1" },
+              ],
+              tags: ["arrays", "math"],
+            },
+          ],
+          intermediate: [
+            {
+              title: "Two Sum Problem",
+              questionText: `Given an array of integers and a target sum, find two numbers that add up to the target.
+
+**Problem Statement:**
+Return the indices of the two numbers such that they add up to the target. You may assume that each input has exactly one solution, and you cannot use the same element twice.
+
+**Constraints:**
+• Array length: 2 ≤ n ≤ 10,000
+• -10^9 ≤ arr[i] ≤ 10^9
+• -10^9 ≤ target ≤ 10^9
+• Exactly one solution exists
+• Time Complexity: O(n)
+• Space Complexity: O(n)
+
+**Function Signature:**
+\`\`\`javascript
+function twoSum(nums, target)
+\`\`\`
+
+**Hint:** Use a hash map to store values you've seen and their indices.`,
+              examples: [
+                {
+                  input: "nums = [2, 7, 11, 15], target = 9",
+                  output: "[0, 1]",
+                },
+                { input: "nums = [3, 2, 4], target = 6", output: "[1, 2]" },
+                { input: "nums = [3, 3], target = 6", output: "[0, 1]" },
+              ],
+              tags: ["arrays", "hash-table"],
+            },
+            {
+              title: "Valid Anagram",
+              questionText: `Determine if two strings are anagrams of each other.
+
+**Problem Statement:**
+Two strings are anagrams if they contain the same characters with the same frequencies. Write a function to check if two given strings are anagrams.
+
+**Constraints:**
+• String length: 0 ≤ n ≤ 50,000
+• Strings contain only lowercase English letters
+• Case-sensitive comparison
+• Time Complexity: O(n)
+• Space Complexity: O(1) - fixed alphabet size
+
+**Function Signature:**
+\`\`\`javascript
+function isAnagram(s, t)
+\`\`\`
+
+**Hint:** Count character frequencies or sort both strings.`,
+              examples: [
+                { input: "s = 'listen', t = 'silent'", output: "true" },
+                { input: "s = 'anagram', t = 'nagaram'", output: "true" },
+                { input: "s = 'rat', t = 'car'", output: "false" },
+              ],
+              tags: ["string", "hash-table", "sorting"],
+            },
+            {
+              title: "First Non-Repeating Character",
+              questionText: `Find the first character in a string that doesn't repeat.
+
+**Problem Statement:**
+Given a string, find the first non-repeating character and return its index. If all characters repeat, return -1.
+
+**Constraints:**
+• String length: 1 ≤ n ≤ 100,000
+• String contains only lowercase English letters
+• Time Complexity: O(n)
+• Space Complexity: O(1) - fixed alphabet size
+
+**Function Signature:**
+\`\`\`javascript
+function firstUniqChar(s)
+\`\`\`
+
+**Hint:** Make two passes - first to count frequencies, second to find the first unique character.`,
+              examples: [
+                { input: "'leetcode'", output: "0 (character 'l')" },
+                { input: "'loveleetcode'", output: "2 (character 'v')" },
+                { input: "'aabb'", output: "-1" },
+              ],
+              tags: ["string", "hash-table", "queue"],
+            },
+            {
+              title: "Array Rotation",
+              questionText: `Rotate an array to the right by k steps.
+
+**Problem Statement:**
+Given an array, rotate it to the right by k steps, where k is non-negative. Implement this in-place with O(1) extra space.
+
+**Constraints:**
+• Array length: 1 ≤ n ≤ 100,000
+• 0 ≤ k ≤ 100,000
+• -2^31 ≤ arr[i] ≤ 2^31 - 1
+• Time Complexity: O(n)
+• Space Complexity: O(1)
+
+**Function Signature:**
+\`\`\`javascript
+function rotate(nums, k)
+\`\`\`
+
+**Hint:** Use array reversal technique - reverse entire array, then reverse first k and last n-k elements.`,
+              examples: [
+                {
+                  input: "nums = [1,2,3,4,5,6,7], k = 3",
+                  output: "[5,6,7,1,2,3,4]",
+                },
+                {
+                  input: "nums = [-1,-100,3,99], k = 2",
+                  output: "[3,99,-1,-100]",
+                },
+              ],
+              tags: ["arrays", "math", "two-pointers"],
+            },
+          ],
+          advanced: [
+            {
+              title: "Longest Substring Without Repeating Characters",
+              questionText: `Find the length of the longest substring without repeating characters.
+
+**Problem Statement:**
+Given a string, find the length of the longest substring that contains all unique characters. Use the sliding window technique for optimal performance.
+
+**Constraints:**
+• String length: 0 ≤ n ≤ 50,000
+• String consists of English letters, digits, symbols and spaces
+• Time Complexity: O(n)
+• Space Complexity: O(min(m, n)) where m is charset size
+
+**Function Signature:**
+\`\`\`javascript
+function lengthOfLongestSubstring(s)
+\`\`\`
+
+**Hint:** Use sliding window with a hash set to track characters in current window.`,
+              examples: [
+                { input: "'abcabcbb'", output: "3 (substring: 'abc')" },
+                { input: "'bbbbb'", output: "1 (substring: 'b')" },
+                { input: "'pwwkew'", output: "3 (substring: 'wke')" },
+              ],
+              tags: ["string", "hash-table", "sliding-window"],
+            },
+            {
+              title: "Container With Most Water",
+              questionText: `Find two lines that together with the x-axis form a container that holds the most water.
+
+**Problem Statement:**
+You are given an array of heights where each element represents a vertical line. Find two lines that form a container with the maximum area of water it can hold.
+
+**Constraints:**
+• Array length: 2 ≤ n ≤ 100,000
+• 0 ≤ height[i] ≤ 10,000
+• Time Complexity: O(n)
+• Space Complexity: O(1)
+
+**Function Signature:**
+\`\`\`javascript
+function maxArea(height)
+\`\`\`
+
+**Hint:** Use two pointers starting from both ends, move the pointer with smaller height.`,
+              examples: [
+                { input: "[1,8,6,2,5,4,8,3,7]", output: "49" },
+                { input: "[1,1]", output: "1" },
+                { input: "[4,3,2,1,4]", output: "16" },
+              ],
+              tags: ["arrays", "two-pointers", "greedy"],
+            },
+            {
+              title: "Valid Parentheses",
+              questionText: `Determine if a string containing brackets is valid.
+
+**Problem Statement:**
+Given a string containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid. An input string is valid if:
+1. Open brackets are closed by the same type of brackets
+2. Open brackets are closed in the correct order
+3. Every close bracket has a corresponding open bracket
+
+**Constraints:**
+• String length: 1 ≤ n ≤ 10,000
+• Time Complexity: O(n)
+• Space Complexity: O(n)
+
+**Function Signature:**
+\`\`\`javascript
+function isValid(s)
+\`\`\`
+
+**Hint:** Use a stack to track opening brackets.`,
+              examples: [
+                { input: "'()'", output: "true" },
+                { input: "'()[{}]'", output: "true" },
+                { input: "'(]'", output: "false" },
+                { input: "'([)]'", output: "false" },
+              ],
+              tags: ["string", "stack"],
+            },
+            {
+              title: "Merge Intervals",
+              questionText: `Merge all overlapping intervals.
+
+**Problem Statement:**
+Given an array of intervals where intervals[i] = [start_i, end_i], merge all overlapping intervals and return an array of the non-overlapping intervals.
+
+**Constraints:**
+• 1 ≤ intervals.length ≤ 10,000
+• intervals[i].length == 2
+• 0 ≤ start_i ≤ end_i ≤ 10,000
+• Time Complexity: O(n log n)
+• Space Complexity: O(n)
+
+**Function Signature:**
+\`\`\`javascript
+function merge(intervals)
+\`\`\`
+
+**Hint:** Sort intervals by start time, then merge overlapping ones.`,
+              examples: [
+                {
+                  input: "[[1,3],[2,6],[8,10],[15,18]]",
+                  output: "[[1,6],[8,10],[15,18]]",
+                },
+                { input: "[[1,4],[4,5]]", output: "[[1,5]]" },
+              ],
+              tags: ["arrays", "sorting"],
+            },
+          ],
+        };
+
+        // Select questions based on difficulty
+        const codingQuestionPool =
+          questionsByDifficulty[codingDifficulty] ||
+          questionsByDifficulty.intermediate;
 
         // Select random questions from the pool
         const selectedQuestions = [];
@@ -311,16 +646,25 @@ const createInterview = async (req, res) => {
         // Remove the last N non-coding questions
         interview.questions.splice(-numToAdd, numToAdd);
 
-        // Add the selected coding questions
-        selectedQuestions.forEach((q) => {
+        // Add the selected coding questions with professional formatting
+        selectedQuestions.forEach((q, idx) => {
           interview.questions.push({
             questionId: new mongoose.Types.ObjectId(),
+            title: q.title || `Challenge #${idx + 1}`,
             questionText: q.questionText,
             category: "coding", // signals frontend to render coding UI
+            type: "coding", // explicit type for future checks
             difficulty: codingDifficulty,
-            timeAllocated: 600, // 10 minutes per coding question
+            timeAllocated:
+              codingDifficulty === "beginner"
+                ? 600
+                : codingDifficulty === "intermediate"
+                ? 900
+                : 1200, // 10/15/20 min based on difficulty
             hasVideo: false,
             examples: q.examples,
+            tags: q.tags || ["coding"],
+            hints: q.hints,
           });
         });
 
@@ -493,105 +837,62 @@ const submitAnswer = async (req, res) => {
       }
     }
 
+    // Always store a basic score immediately (fast, non-AI, fallback)
     let evaluation;
-    try {
-      Logger.info("Evaluating answer with AI for question:", qIndex);
-
-      const questionObj = {
-        text: interview.questions[qIndex].questionText,
-        questionText: interview.questions[qIndex].questionText,
-        category: interview.questions[qIndex].category,
-        type: interview.questions[qIndex].type || "general",
-        difficulty: interview.questions[qIndex].difficulty,
-        tags: interview.questions[qIndex].tags || [],
-      };
-
-      const answerObj = {
-        text: answer,
-        answerText: answer,
-      };
-
-      // Try AI evaluation first (new AI provider manager)
-      if (FEATURES.AI_QUESTIONS) {
-        evaluation = await aiProviderManager.evaluateAnswer(
-          questionObj,
-          answer,
-          interview.config
-        );
-        Logger.info("AI evaluation completed:", evaluation);
-      } else {
-        // Use simplified keyword-based evaluation
-        Logger.info("Using simplified evaluation (AI disabled)");
-        const simpleEval = await evaluationService.evaluateAnswer(
-          questionObj,
-          answerObj
-        );
-
-        // Convert to expected format
-        evaluation = {
-          score: simpleEval.score,
-          rubricScores: {
-            relevance: Math.ceil((simpleEval.score / 100) * 5),
-            clarity: Math.ceil((simpleEval.score / 100) * 5),
-            depth: Math.ceil((simpleEval.score / 100) * 5),
-            structure: Math.ceil((simpleEval.score / 100) * 5),
-          },
-          breakdown: simpleEval.breakdown || {},
-          strengths: simpleEval.feedback?.strengths || [],
-          improvements: simpleEval.feedback?.improvements || [],
-          feedback: simpleEval.feedback?.overall || "",
-          modelAnswer: "",
-        };
-      }
-    } catch (error) {
-      Logger.warn("Evaluation failed, using simplified scoring:", error);
-      const questionObj = {
-        questionText: interview.questions[qIndex].questionText,
-        text: interview.questions[qIndex].questionText,
-        category: interview.questions[qIndex].category,
-        type: interview.questions[qIndex].type || "general",
-        difficulty: interview.questions[qIndex].difficulty,
-        tags: interview.questions[qIndex].tags || [],
-      };
-      const answerObj = {
-        text: answer,
-        answerText: answer,
-      };
-
-      // Use our simplified evaluation service as fallback
-      const simpleEval = await evaluationService.evaluateAnswer(
-        questionObj,
-        answerObj
-      );
-
-      evaluation = {
-        score: simpleEval.score,
-        rubricScores: {
-          relevance: Math.ceil((simpleEval.score / 100) * 5),
-          clarity: Math.ceil((simpleEval.score / 100) * 5),
-          depth: Math.ceil((simpleEval.score / 100) * 5),
-          structure: Math.ceil((simpleEval.score / 100) * 5),
-        },
-        breakdown: simpleEval.breakdown || {},
-        strengths: simpleEval.feedback?.strengths || [],
-        improvements: simpleEval.feedback?.improvements || [],
-        feedback: simpleEval.feedback?.overall || "",
-        modelAnswer: "",
-      };
-    }
+    const questionObj = {
+      text: interview.questions[qIndex].questionText,
+      questionText: interview.questions[qIndex].questionText,
+      category: interview.questions[qIndex].category,
+      type: interview.questions[qIndex].type || "general",
+      difficulty: interview.questions[qIndex].difficulty,
+      tags: interview.questions[qIndex].tags || [],
+    };
+    const answerObj = {
+      text: answer,
+      answerText: answer,
+    };
+    // Use simplified evaluation for immediate feedback
+    const simpleEval = await evaluationService.evaluateAnswer(
+      questionObj,
+      answerObj
+    );
+    evaluation = {
+      score: simpleEval.score,
+      rubricScores: {
+        relevance: Math.ceil((simpleEval.score / 100) * 5),
+        clarity: Math.ceil((simpleEval.score / 100) * 5),
+        depth: Math.ceil((simpleEval.score / 100) * 5),
+        structure: Math.ceil((simpleEval.score / 100) * 5),
+      },
+      breakdown: simpleEval.breakdown || {},
+      strengths: simpleEval.feedback?.strengths || [],
+      improvements: simpleEval.feedback?.improvements || [],
+      feedback: simpleEval.feedback?.overall || "",
+      modelAnswer: "",
+    };
 
     interview.questions[qIndex].score = {
       overall: evaluation.score,
       rubricScores: evaluation.rubricScores || {},
       breakdown: evaluation.breakdown || {},
     };
-
     interview.questions[qIndex].feedback = {
       strengths: evaluation.strengths || [],
       improvements: evaluation.improvements || [],
       suggestions: evaluation.feedback || "",
       modelAnswer: evaluation.modelAnswer || "",
     };
+
+    // Enqueue AI evaluation job for background processing
+    try {
+      const aiEvaluationQueue = require("../services/queue/aiEvaluationQueue");
+      aiEvaluationQueue.enqueue({
+        interviewId: interview._id.toString(),
+        questionIndex: qIndex,
+      });
+    } catch (err) {
+      Logger.warn("Failed to enqueue AI evaluation job:", err.message);
+    }
 
     if (interview.config.adaptiveDifficulty?.enabled) {
       const currentDifficulty =
@@ -644,6 +945,9 @@ const submitAnswer = async (req, res) => {
           interview.timing.totalDuration = Math.round(
             (now - interview.timing.startedAt) / 1000
           );
+          // Update analytics when auto-completing
+          await interview.save();
+          await updateUserAnalytics(userId);
         }
       }
     }
@@ -891,6 +1195,9 @@ const endInterview = async (req, res) => {
 
     await interview.save();
 
+    // Update user analytics after ending interview
+    await updateUserAnalytics(userId);
+
     return ok(res, interview, "Interview ended successfully");
   } catch (error) {
     Logger.error("End interview error:", error);
@@ -1018,6 +1325,8 @@ const getInterviewDetails = async (req, res) => {
           (now - interview.timing.startedAt) / 1000
         );
         await interview.save();
+        // Update analytics when auto-completing
+        await updateUserAnalytics(userId);
       }
     }
 
@@ -1040,71 +1349,95 @@ const completeInterview = async (req, res) => {
       user: userId,
     });
 
-    if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
-    if (interview.status === "completed")
+    if (!interview) {
+      Logger.error("[completeInterview] Interview not found", { interviewId });
+      return fail(res, 404, "NOT_FOUND", "Interview not found");
+    }
+    if (interview.status === "completed") {
+      Logger.warn("[completeInterview] Interview already completed", {
+        interviewId,
+      });
       return fail(res, 400, "ALREADY_COMPLETED", "Interview already completed");
+    }
 
-    interview.status = "completed";
-    if (!interview.timing) interview.timing = {};
-    interview.timing.completedAt = new Date();
-    interview.timing.totalDuration = Math.round(
-      (interview.timing.completedAt - interview.timing.startedAt) / 1000
-    );
-
-    // Trim excessively large data to prevent payload errors
-    // Keep only summary statistics for facial metrics instead of full time series
-    if (facialMetrics && Array.isArray(facialMetrics)) {
-      Logger.info(
-        `[completeInterview] Facial metrics array length: ${facialMetrics.length}`
+    try {
+      interview.status = "completed";
+      if (!interview.timing) interview.timing = {};
+      const completedTime = new Date();
+      interview.timing.completedAt = completedTime;
+      // CRITICAL: Also set completedAt at root level for dashboard queries
+      interview.completedAt = completedTime;
+      interview.timing.totalDuration = Math.round(
+        (interview.timing.completedAt - interview.timing.startedAt) / 1000
       );
 
-      // If more than 100 data points, calculate summary and discard detailed data
-      if (facialMetrics.length > 100) {
-        const summary = {
-          count: facialMetrics.length,
-          averages: {
-            eyeContact:
-              facialMetrics.reduce((sum, m) => sum + (m.eyeContact || 0), 0) /
-              facialMetrics.length,
-            smilePercentage:
-              facialMetrics.reduce(
-                (sum, m) => sum + (m.smilePercentage || 0),
-                0
-              ) / facialMetrics.length,
-            headSteadiness:
-              facialMetrics.reduce(
-                (sum, m) => sum + (m.headSteadiness || 0),
-                0
-              ) / facialMetrics.length,
-            confidenceScore:
-              facialMetrics.reduce(
-                (sum, m) => sum + (m.confidenceScore || 0),
-                0
-              ) / facialMetrics.length,
-          },
-          firstTimestamp: facialMetrics[0]?.timestamp,
-          lastTimestamp: facialMetrics[facialMetrics.length - 1]?.timestamp,
-        };
-        facialMetrics = summary;
-        Logger.info(`[completeInterview] Trimmed facial metrics to summary`);
+      // Defensive: ensure facialMetrics is an array if present
+      if (facialMetrics && Array.isArray(facialMetrics)) {
+        Logger.info(
+          `[completeInterview] Facial metrics array length: ${facialMetrics.length}`
+        );
+        if (facialMetrics.length > 100) {
+          const summary = {
+            count: facialMetrics.length,
+            averages: {
+              eyeContact:
+                facialMetrics.reduce((sum, m) => sum + (m.eyeContact || 0), 0) /
+                facialMetrics.length,
+              smilePercentage:
+                facialMetrics.reduce(
+                  (sum, m) => sum + (m.smilePercentage || 0),
+                  0
+                ) / facialMetrics.length,
+              headSteadiness:
+                facialMetrics.reduce(
+                  (sum, m) => sum + (m.headSteadiness || 0),
+                  0
+                ) / facialMetrics.length,
+              confidenceScore:
+                facialMetrics.reduce(
+                  (sum, m) => sum + (m.confidenceScore || 0),
+                  0
+                ) / facialMetrics.length,
+            },
+            firstTimestamp: facialMetrics[0]?.timestamp,
+            lastTimestamp: facialMetrics[facialMetrics.length - 1]?.timestamp,
+          };
+          facialMetrics = summary;
+          Logger.info(`[completeInterview] Trimmed facial metrics to summary`);
+        }
       }
-    }
 
-    // Trim transcript if too long (keep first 50000 chars)
-    if (transcript && transcript.length > 50000) {
-      Logger.info(
-        `[completeInterview] Trimming transcript from ${transcript.length} to 50000 chars`
+      // Trim transcript if too long (keep first 50000 chars)
+      if (
+        transcript &&
+        typeof transcript === "string" &&
+        transcript.length > 50000
+      ) {
+        Logger.info(
+          `[completeInterview] Trimming transcript from ${transcript.length} to 50000 chars`
+        );
+        transcript = transcript.substring(0, 50000) + "... (truncated)";
+      }
+
+      // Store session enrichment data if provided
+      if ((transcript && typeof transcript === "string") || facialMetrics) {
+        interview.sessionEnrichment = {
+          transcript: transcript || undefined,
+          facialMetrics: facialMetrics || undefined,
+          enrichedAt: new Date(),
+        };
+      }
+    } catch (err) {
+      Logger.error("[completeInterview] Data processing error", {
+        error: err.message,
+        stack: err.stack,
+      });
+      return fail(
+        res,
+        400,
+        "COMPLETE_DATA_ERROR",
+        err.message || "Invalid data"
       );
-      transcript = transcript.substring(0, 50000) + "... (truncated)";
-    }
-
-    // Store session enrichment data if provided
-    if (transcript || facialMetrics) {
-      interview.sessionEnrichment = {
-        transcript: transcript || undefined,
-        facialMetrics: facialMetrics || undefined,
-        enrichedAt: new Date(),
-      };
     }
 
     // Calculate overall results
@@ -1200,6 +1533,9 @@ const completeInterview = async (req, res) => {
     };
 
     await interview.save();
+
+    // Update user analytics after completing interview
+    await updateUserAnalytics(interview.user);
 
     return ok(res, interview, "Interview completed successfully");
   } catch (error) {
@@ -1428,6 +1764,17 @@ const getInterviewResults = async (req, res) => {
 
     // Transform data to match frontend expectations
     // Frontend expects: { interview, analysis }
+    // Generate advanced feedback (non-blocking style handled with try/catch)
+    let advancedFeedback = null;
+    try {
+      advancedFeedback = await advancedFeedbackService.generateAdvancedFeedback(
+        interview
+      );
+    } catch (err) {
+      Logger.warn("Advanced feedback generation failed:", err?.message || err);
+      advancedFeedback = null;
+    }
+
     const response = {
       interview: {
         _id: interview._id,
@@ -1499,6 +1846,7 @@ const getInterviewResults = async (req, res) => {
           },
         })),
       },
+      advancedFeedback,
     };
 
     return ok(res, response, "Interview results retrieved");

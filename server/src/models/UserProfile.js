@@ -223,7 +223,7 @@ const UserProfileSchema = new mongoose.Schema(
     subscription: {
       plan: {
         type: String,
-        enum: ["free", "premium", "enterprise"],
+        enum: ["free", "premium"],
         default: "free",
       },
       status: {

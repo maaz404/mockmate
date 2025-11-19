@@ -208,20 +208,41 @@ router.get(
   async (req, res) => {
     try {
       const { ok } = require("../utils/responder");
+      const { getMonthlyQuota } = require("../config/plans");
       const profile = req.userProfile;
+
+      // Check if monthly reset is needed
+      const now = new Date();
+      const lastReset = new Date(profile.subscription.lastInterviewReset);
+      const daysSinceReset = Math.floor(
+        (now - lastReset) / (1000 * 60 * 60 * 24)
+      );
+
+      // Reset if 30 days have passed
+      if (daysSinceReset >= 30 && !profile.hasUnlimitedInterviews()) {
+        profile.subscription.interviewsUsedThisMonth = 0;
+        profile.subscription.lastInterviewReset = now;
+        await profile.save();
+      }
+
+      const monthlyQuota = getMonthlyQuota(profile.subscription.plan);
+      const remaining = profile.hasUnlimitedInterviews()
+        ? null
+        : Math.max(
+            0,
+            monthlyQuota - profile.subscription.interviewsUsedThisMonth
+          );
 
       const subscriptionInfo = {
         plan: profile.subscription.plan,
         status: profile.subscription.status,
         hasUnlimited: profile.hasUnlimitedInterviews(),
-        interviewsRemaining: profile.hasUnlimitedInterviews()
-          ? null
-          : profile.subscription.interviewsRemaining -
-            profile.subscription.interviewsUsedThisMonth,
+        interviewsRemaining: remaining,
         interviewsUsed: profile.subscription.interviewsUsedThisMonth,
-        interviewsLimit: profile.subscription.interviewsRemaining,
+        interviewsLimit: monthlyQuota === Infinity ? null : monthlyQuota,
         periodStart: profile.subscription.periodStart,
         periodEnd: profile.subscription.periodEnd,
+        lastReset: profile.subscription.lastInterviewReset,
         cancelAtPeriodEnd: profile.subscription.cancelAtPeriodEnd,
       };
 

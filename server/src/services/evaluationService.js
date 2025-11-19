@@ -1,17 +1,97 @@
 /* eslint-disable no-magic-numbers */
 const FEATURES = require("../config/features");
 const Logger = require("../utils/logger");
+const aiProviderManager = require("./aiProviders");
 
 class EvaluationService {
   async evaluateAnswer(question, answer) {
+    // Backwards compatible basic evaluation
     return this.basicEvaluation(question, answer);
   }
 
-  async evaluateAnswerWithAI(question, answer) {
-    if (FEATURES.USE_PYTHON_SERVICE) {
-      Logger.warn("Python service disabled");
+  /**
+   * Try to evaluate answer using configured AI providers. Falls back
+   * to the basic keyword evaluator if providers are unavailable or fail.
+   */
+  async evaluateAnswerWithAI(question, answer, config = {}) {
+    try {
+      if (!FEATURES.AI_QUESTIONS && !FEATURES.ADVANCED_ANALYTICS) {
+        Logger.info(
+          "AI evaluation disabled via feature flags, using basic evaluator"
+        );
+        return this.basicEvaluation(question, answer);
+      }
+
+      // If AI providers are configured, use the manager to evaluate
+      if (aiProviderManager) {
+        Logger.info("Calling AI provider manager for evaluation");
+        const aiResponse = await aiProviderManager.evaluateAnswer(
+          question,
+          answer,
+          config
+        );
+
+        // aiResponse may already be structured or be the provider's parsed JSON
+        // Normalize to our internal shape
+        const normalized = {
+          score: Number(aiResponse.score) || 0,
+          rubricScores: aiResponse.rubricScores || {
+            relevance: Math.min(
+              5,
+              Math.max(1, Math.round((aiResponse.score || 0) / 20))
+            ),
+            clarity: Math.min(
+              5,
+              Math.max(1, Math.round((aiResponse.score || 0) / 20))
+            ),
+            depth: Math.min(
+              5,
+              Math.max(1, Math.round((aiResponse.score || 0) / 20))
+            ),
+            structure: Math.min(
+              5,
+              Math.max(1, Math.round((aiResponse.score || 0) / 20))
+            ),
+          },
+          strengths: aiResponse.strengths || [],
+          improvements: aiResponse.improvements || [],
+          feedback:
+            aiResponse.feedback ||
+            aiResponse.detailedFeedback ||
+            aiResponse.overall ||
+            "",
+          modelAnswer:
+            aiResponse.modelAnswer || aiResponse.suggestedAnswer || "",
+          raw: aiResponse,
+          evaluation_method: aiResponse.evaluation_method || "ai-provider",
+        };
+
+        return normalized;
+      }
+
+      // If manager not available, fallback
+      Logger.warn(
+        "AI provider manager unavailable, falling back to basic evaluation"
+      );
+      return this.basicEvaluation(question, answer);
+    } catch (error) {
+      Logger.error(
+        "AI evaluation failed, falling back to basic evaluator:",
+        error
+      );
+      try {
+        return this.basicEvaluation(question, answer);
+      } catch (e) {
+        // As a last resort
+        return {
+          score: 0,
+          feedback: { overall: "Evaluation unavailable" },
+          strengths: [],
+          improvements: [],
+          evaluation_method: "none",
+        };
+      }
     }
-    return this.basicEvaluation(question, answer);
   }
 
   basicEvaluation(question, answer) {

@@ -144,6 +144,7 @@ const VideoRecorder = ({
   }, [hasCamera, cameraError, onPermissionChange]);
 
   // Start recording session when component mounts
+  // Prevent infinite loop: only depend on hasCamera and sessionStarted
   useEffect(() => {
     if (hasCamera && !sessionStarted) {
       // eslint-disable-next-line no-console
@@ -153,7 +154,8 @@ const VideoRecorder = ({
       );
       startSession();
     }
-  }, [hasCamera, sessionStarted, startSession, interviewId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCamera, sessionStarted]);
 
   // Handle start recording
   const beginRecording = useCallback(async () => {

@@ -11,35 +11,30 @@ const { getMonthlyQuota, isUnlimited } = require("../config/plans");
 async function ensureMonthlyQuota(profile) {
   try {
     if (!profile || !profile.subscription) return false;
-    const { plan, nextResetDate } = profile.subscription;
+    const { plan, lastInterviewReset, interviewsUsedThisMonth } =
+      profile.subscription;
     if (isUnlimited(plan)) return false; // unlimited plans don't reset
 
     const now = new Date();
-    let shouldReset = false;
-    if (!nextResetDate) shouldReset = true;
-    else if (new Date(nextResetDate) <= now) shouldReset = true;
-
-    if (!shouldReset) return false;
-    const quota = getMonthlyQuota(plan);
-    profile.subscription.interviewsRemaining =
-      quota === Infinity ? null : quota;
-    // Set next reset ~30 days from now (simplistic rolling window)
-    const DAYS_IN_CYCLE = 30; // eslint-disable-line no-magic-numbers
-    const HOURS_PER_DAY = 24; // eslint-disable-line no-magic-numbers
-    const MINUTES_PER_HOUR = 60; // eslint-disable-line no-magic-numbers
-    const SECONDS_PER_MINUTE = 60; // eslint-disable-line no-magic-numbers
-    const MS_PER_SECOND = 1000; // eslint-disable-line no-magic-numbers
-    const next = new Date(
-      now.getTime() +
-        DAYS_IN_CYCLE *
-          HOURS_PER_DAY *
-          MINUTES_PER_HOUR *
-          SECONDS_PER_MINUTE *
-          MS_PER_SECOND
+    const lastReset = lastInterviewReset
+      ? new Date(lastInterviewReset)
+      : new Date(0);
+    const daysSinceReset = Math.floor(
+      (now - lastReset) / (1000 * 60 * 60 * 24)
     );
-    profile.subscription.nextResetDate = next;
-    await profile.save();
-    return true;
+
+    // Reset if 30 days have passed
+    if (daysSinceReset >= 30) {
+      profile.subscription.interviewsUsedThisMonth = 0;
+      profile.subscription.lastInterviewReset = now;
+      await profile.save();
+      Logger.info(
+        `Monthly quota reset for user ${profile.user} (plan: ${plan})`
+      );
+      return true;
+    }
+
+    return false;
   } catch (e) {
     Logger.warn("ensureMonthlyQuota failure", e);
     return false;
@@ -60,31 +55,36 @@ async function consumeFreeInterview(userId, interviewId) {
     if (!profile) return { updated: false, remaining: 0 };
     await ensureMonthlyQuota(profile); // opportunistic reset
 
-    const { plan } = profile.subscription;
+    const { plan, interviewsUsedThisMonth } = profile.subscription;
     if (isUnlimited(plan)) {
       return { updated: false, remaining: null };
     }
 
     // Idempotency guard
     if (profile.subscription.lastConsumedInterviewId === interviewId) {
+      const quota = getMonthlyQuota(plan);
+      const remaining = Math.max(0, quota - interviewsUsedThisMonth);
       return {
         updated: false,
-        remaining: profile.subscription.interviewsRemaining,
+        remaining,
       };
     }
 
-    if (profile.subscription.interviewsRemaining > 0) {
-      profile.subscription.interviewsRemaining -= 1; // eslint-disable-line no-plusplus
+    const quota = getMonthlyQuota(plan);
+    const remaining = Math.max(0, quota - interviewsUsedThisMonth);
+
+    if (remaining > 0) {
+      profile.subscription.interviewsUsedThisMonth += 1;
       profile.subscription.lastConsumedInterviewId = interviewId;
       await profile.save();
       return {
         updated: true,
-        remaining: profile.subscription.interviewsRemaining,
+        remaining: remaining - 1,
       };
     }
     return {
       updated: false,
-      remaining: profile.subscription.interviewsRemaining,
+      remaining: 0,
     };
   } catch (err) {
     Logger.warn("Failed to consume interview quota", err);
@@ -104,7 +104,13 @@ async function getRemaining(userId) {
     if (!profile) return 0;
     await ensureMonthlyQuota(profile);
     if (isUnlimited(profile.subscription.plan)) return null;
-    return profile.subscription.interviewsRemaining;
+
+    const quota = getMonthlyQuota(profile.subscription.plan);
+    const remaining = Math.max(
+      0,
+      quota - profile.subscription.interviewsUsedThisMonth
+    );
+    return remaining;
   } catch (e) {
     Logger.warn("getRemaining failed", e);
     return 0;

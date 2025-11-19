@@ -388,11 +388,23 @@ Requirements:
         userAnswer,
         2 // Generate 2 follow-up questions
       );
-      return followUps || [];
+      if (Array.isArray(followUps) && followUps.length > 0) {
+        return followUps;
+      }
     } catch (error) {
       Logger.error("Follow-up generation error:", error);
-      return null;
     }
+    // Fallback: always return at least one generic follow-up
+    Logger.warn(
+      "All AI providers failed for followup_questions. Using fallback follow-up."
+    );
+    return [
+      {
+        questionText: "Can you elaborate further on your answer?",
+        reason: "Default fallback - AI unavailable",
+        difficulty: "intermediate",
+      },
+    ];
   }
 
   /**

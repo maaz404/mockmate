@@ -15,40 +15,62 @@ const InterviewResultsPage = () => {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
   const [codingResults, setCodingResults] = useState(null);
-  const [compact, setCompact] = useState(false);
+  const [polling, setPolling] = useState(false);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const defaultOpen = !isMobile; // collapse by default on mobile for density
 
   // Fetch interview + analysis results
-  const fetchResults = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await apiService.get(`/interviews/${interviewId}/results`);
-      // Normalize payload shapes from API
-      const payload =
-        res?.data?.interview || res?.data?.analysis
-          ? res.data
-          : res?.interview || res?.analysis
-          ? res
-          : res?.success && res?.data
-          ? res.data
-          : null;
-      if (payload) setResults(payload);
-      else throw new Error("Results payload malformed");
-    } catch (e) {
-      // eslint-disable-next-line no-alert
-      alert("Failed to load results. Redirecting to dashboard.");
-      navigate("/dashboard");
-    } finally {
-      setLoading(false);
-    }
-  }, [interviewId, navigate]);
+  const fetchResults = useCallback(
+    async (showLoader = true) => {
+      try {
+        if (showLoader) setLoading(true);
+        const res = await apiService.get(`/interviews/${interviewId}/results`);
+        // Normalize payload shapes from API
+        const payload =
+          res?.data?.interview || res?.data?.analysis
+            ? res.data
+            : res?.interview || res?.analysis
+            ? res
+            : res?.success && res?.data
+            ? res.data
+            : null;
+        if (payload) setResults(payload);
+        else throw new Error("Results payload malformed");
+      } catch (e) {
+        // eslint-disable-next-line no-alert
+        alert("Failed to load results. Redirecting to dashboard.");
+        navigate("/dashboard");
+      } finally {
+        if (showLoader) setLoading(false);
+      }
+    },
+    [interviewId, navigate]
+  );
 
   // Initial fetch
   useEffect(() => {
     if (isLoaded && user && interviewId) fetchResults();
   }, [isLoaded, user, interviewId, fetchResults]);
+
+  // Poll for advanced feedback if missing
+  useEffect(() => {
+    if (!results || loading) return;
+    const hasAdvanced =
+      results.analysis?.advancedFeedback || results.advancedFeedback;
+    if (!hasAdvanced) {
+      setPolling(true);
+      const interval = setInterval(async () => {
+        await fetchResults(false);
+      }, 3000);
+      return () => {
+        clearInterval(interval);
+        setPolling(false);
+      };
+    } else {
+      setPolling(false);
+    }
+  }, [results, loading, fetchResults]);
 
   // Fetch coding challenge results after main results load
   useEffect(() => {
@@ -91,6 +113,8 @@ const InterviewResultsPage = () => {
     );
 
   const { interview, analysis } = results || {};
+  const advancedFeedback =
+    analysis?.advancedFeedback || results?.advancedFeedback;
   const facialMetrics = interview?.metrics || {};
   const hasFacial = Object.keys(facialMetrics).some(
     (k) =>
@@ -106,11 +130,7 @@ const InterviewResultsPage = () => {
   );
 
   return (
-    <div
-      className={`min-h-screen bg-surface-50 dark:bg-surface-900 py-6 md:py-8 transition-colors duration-200 ${
-        compact ? "density-compact" : ""
-      }`}
-    >
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-6 md:py-8 transition-colors duration-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Top Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -122,12 +142,6 @@ const InterviewResultsPage = () => {
           </button>
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
             <button
-              onClick={() => setCompact((c) => !c)}
-              className="btn-outline !py-2 !px-4 text-sm"
-            >
-              {compact ? "Comfortable Mode" : "Compact Mode"}
-            </button>
-            <button
               onClick={() => window.print()}
               className="btn-ghost border border-surface-200 dark:border-surface-700 rounded-xl !py-2 !px-4 text-sm"
             >
@@ -135,6 +149,16 @@ const InterviewResultsPage = () => {
             </button>
           </div>
         </div>
+        {/* Pending AI Feedback Indicator */}
+        {polling && (
+          <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg px-4 py-3 my-4 animate-pulse">
+            <span className="text-xl">⏳</span>
+            <span>
+              AI-powered advanced feedback is being generated. This page will
+              update automatically...
+            </span>
+          </div>
+        )}
 
         {/* Header / Hero */}
         <div className="card p-6 md:p-8 relative overflow-hidden card-accent-gradient">
@@ -298,6 +322,54 @@ const InterviewResultsPage = () => {
                 ))}
               </div>
             </Collapsible>
+
+            {advancedFeedback && (
+              <Collapsible
+                title={"🤖 AI Coaching & Advanced Feedback"}
+                defaultOpen={false}
+              >
+                <div className="space-y-3 text-sm">
+                  {advancedFeedback.dimensionalScores && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.entries(advancedFeedback.dimensionalScores).map(
+                        ([k, v]) => (
+                          <div
+                            key={k}
+                            className="p-3 rounded bg-white/70 dark:bg-surface-800/50 border"
+                          >
+                            <div className="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                              {k}
+                            </div>
+                            <div className="text-lg font-semibold">{v}</div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  {advancedFeedback.coachingTip && (
+                    <div className="p-4 rounded bg-surface-50 dark:bg-surface-800 border border-surface-200">
+                      <h5 className="font-medium mb-2">Coaching Tip</h5>
+                      <p className="text-sm text-surface-700 dark:text-surface-300">
+                        {advancedFeedback.coachingTip.recommendation ||
+                          advancedFeedback.coachingTip}
+                      </p>
+                    </div>
+                  )}
+
+                  {advancedFeedback.recommendations && (
+                    <div>
+                      <h5 className="font-medium mb-2">AI Recommendations</h5>
+                      <ul className="list-disc list-inside text-sm text-surface-700 dark:text-surface-300 space-y-1">
+                        {advancedFeedback.recommendations.map((r, i) => (
+                          <li key={i}>{r}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </Collapsible>
+            )}
 
             {hasFacial && (
               <Collapsible

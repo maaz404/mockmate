@@ -28,6 +28,11 @@ import HybridQuestionDemo from "../pages/HybridQuestionDemo";
 import HomePage from "../pages/HomePage";
 import HardwareCheckLobby from "../pages/HardwareCheckLobby";
 
+// Payment Pages
+import PricingPage from "../components/payment/PricingPage";
+import PaymentSuccess from "../components/payment/PaymentSuccess";
+import PaymentCancel from "../components/payment/PaymentCancel";
+
 // Protected Route Wrapper
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuthContext();
@@ -90,6 +95,25 @@ function AppRoutes() {
         }
       />
       <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+
+      {/* Payment Routes - Public route for pricing, protected for success/cancel */}
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route
+        path="/payment/success"
+        element={
+          <ProtectedRoute>
+            <PaymentSuccess />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payment/cancel"
+        element={
+          <ProtectedRoute>
+            <PaymentCancel />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Protected Routes - Sidebar shows on all pages now */}
       <Route

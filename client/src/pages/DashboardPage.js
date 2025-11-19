@@ -14,6 +14,8 @@ import {
   BarChart3,
   RefreshCw,
   ArrowRight,
+  Crown,
+  Star,
 } from "lucide-react";
 
 function DashboardPage() {
@@ -27,6 +29,7 @@ function DashboardPage() {
   // Dashboard data states
   const [dashboardData, setDashboardData] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
 
   // Last update timestamp
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -37,19 +40,28 @@ function DashboardPage() {
       if (showRefreshing) setRefreshing(true);
 
       // Parallel fetch for better performance
-      const [summaryRes, , recommendationRes] = await Promise.all([
-        apiService.get("/users/dashboard/summary"),
-        apiService.get("/users/dashboard/metrics?timeRange=30"),
-        apiService.get("/users/dashboard/recommendation"),
-      ]);
+      const [summaryRes, , recommendationRes, subscriptionRes] =
+        await Promise.all([
+          apiService.get("/users/dashboard/summary"),
+          apiService.get("/users/dashboard/metrics?timeRange=30"),
+          apiService.get("/users/dashboard/recommendation"),
+          apiService.get("/users/subscription"),
+        ]);
 
       // eslint-disable-next-line no-console
       console.log("Summary Response:", summaryRes);
       // eslint-disable-next-line no-console
+      console.log("Summary Response Data:", summaryRes.data);
+      // eslint-disable-next-line no-console
+      console.log("Summary Response Data.data:", summaryRes.data.data);
+      // eslint-disable-next-line no-console
+      console.log("Summary Stats:", summaryRes.data.data?.stats);
+      // eslint-disable-next-line no-console
       console.log("Recommendation Response:", recommendationRes);
 
-      setDashboardData(summaryRes.data.data);
-      setRecommendation(recommendationRes.data.data);
+      setDashboardData(summaryRes.data);
+      setRecommendation(recommendationRes.data);
+      setSubscriptionInfo(subscriptionRes.data);
       setLastUpdated(new Date());
       setError(null);
       setLoading(false);
@@ -279,6 +291,98 @@ function DashboardPage() {
               >
                 Join Now
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Subscription Status Widget */}
+        {subscriptionInfo && (
+          <div className="mb-8 bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-surface-200 dark:border-surface-700 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                    subscriptionInfo.plan === "premium"
+                      ? "bg-gradient-to-br from-primary-500 to-primary-600"
+                      : "bg-surface-100 dark:bg-surface-700"
+                  }`}
+                >
+                  {subscriptionInfo.plan === "premium" ? (
+                    <Crown className="w-7 h-7 text-white" />
+                  ) : (
+                    <Star className="w-7 h-7 text-surface-400" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-bold text-surface-900 dark:text-white">
+                      {subscriptionInfo.plan === "premium" ? "Premium" : "Free"}{" "}
+                      Plan
+                    </h3>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        subscriptionInfo.status === "active"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                      }`}
+                    >
+                      {subscriptionInfo.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {subscriptionInfo.plan === "premium" ? (
+                      <p className="text-surface-600 dark:text-surface-400">
+                        ✨ Unlimited interviews • Advanced AI feedback
+                      </p>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <p className="text-surface-600 dark:text-surface-400">
+                          <span className="font-semibold text-surface-900 dark:text-white">
+                            {subscriptionInfo.interviewsRemaining || 0}
+                          </span>{" "}
+                          of {subscriptionInfo.interviewsLimit || 10} interviews
+                          remaining
+                        </p>
+                        <div className="w-32 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-500 ${
+                              subscriptionInfo.interviewsRemaining <= 2
+                                ? "bg-red-500"
+                                : subscriptionInfo.interviewsRemaining <= 5
+                                ? "bg-yellow-500"
+                                : "bg-green-500"
+                            }`}
+                            style={{
+                              width: `${
+                                ((subscriptionInfo.interviewsRemaining || 0) /
+                                  (subscriptionInfo.interviewsLimit || 10)) *
+                                100
+                              }%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {subscriptionInfo.plan === "free" &&
+                subscriptionInfo.interviewsRemaining <= 5 && (
+                  <button
+                    onClick={() => navigate("/pricing")}
+                    className="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 whitespace-nowrap"
+                  >
+                    Upgrade to Premium
+                  </button>
+                )}
+              {subscriptionInfo.plan === "premium" && (
+                <button
+                  onClick={() => navigate("/pricing")}
+                  className="px-6 py-3 bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 text-surface-700 dark:text-surface-300 font-semibold rounded-lg transition-colors whitespace-nowrap"
+                >
+                  Manage Subscription
+                </button>
+              )}
             </div>
           </div>
         )}

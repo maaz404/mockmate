@@ -127,31 +127,112 @@ const CodingQuestionUI = ({
         }}
       >
         <div className="card">
-          <div className="flex items-start justify-between mb-2">
-            <h2 className="text-lg font-semibold text-primary-600 dark:text-primary-300">
-              {problemTitle}
-            </h2>
-            <div className="text-right text-sm">
-              <div>
-                <span className="text-surface-600 dark:text-surface-400">
-                  Category:{" "}
-                </span>
-                <span className="text-primary-700 dark:text-primary-300">
-                  {category}
-                </span>
+          <div className="mb-4">
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-primary-600 dark:text-primary-300 mb-2">
+                  {problemTitle}
+                </h2>
+                {currentQuestion?.tags && currentQuestion.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {currentQuestion.tags.map((tag, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 text-xs font-medium rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div>
-                <span className="text-surface-600 dark:text-surface-400">
-                  Difficulty:{" "}
-                </span>
-                <span className="text-yellow-700 dark:text-yellow-300">
-                  {difficulty}
-                </span>
+              <div className="text-right text-sm flex-shrink-0">
+                <div className="mb-1">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-300">
+                    {category}
+                  </span>
+                </div>
+                <div>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${
+                      difficulty === "beginner"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                        : difficulty === "intermediate"
+                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                        : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                    }`}
+                  >
+                    {difficulty}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-          <div className="prose prose-invert max-w-none">
-            <p className="whitespace-pre-wrap leading-relaxed">{problemText}</p>
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <div className="whitespace-pre-wrap leading-relaxed text-surface-700 dark:text-surface-200">
+              {problemText.split("\n").map((line, i) => {
+                // Bold text for **text**
+                if (line.includes("**")) {
+                  const parts = line.split("**");
+                  return (
+                    <p key={i} className="mb-2">
+                      {parts.map((part, j) =>
+                        j % 2 === 1 ? (
+                          <strong
+                            key={j}
+                            className="font-semibold text-surface-900 dark:text-surface-100"
+                          >
+                            {part}
+                          </strong>
+                        ) : (
+                          part
+                        )
+                      )}
+                    </p>
+                  );
+                }
+                // Code blocks for ```
+                if (line.includes("```")) {
+                  return null; // Handle separately if needed
+                }
+                // Bullet points
+                if (line.trim().startsWith("•")) {
+                  return (
+                    <li key={i} className="ml-4 mb-1 text-sm">
+                      {line.trim().substring(1).trim()}
+                    </li>
+                  );
+                }
+                // Inline code for `code`
+                if (line.includes("`")) {
+                  const parts = line.split("`");
+                  return (
+                    <p key={i} className="mb-2">
+                      {parts.map((part, j) =>
+                        j % 2 === 1 ? (
+                          <code
+                            key={j}
+                            className="px-1.5 py-0.5 rounded bg-surface-200 dark:bg-surface-800 text-xs font-mono text-primary-600 dark:text-primary-400"
+                          >
+                            {part}
+                          </code>
+                        ) : (
+                          part
+                        )
+                      )}
+                    </p>
+                  );
+                }
+                // Regular paragraphs
+                return line.trim() ? (
+                  <p key={i} className="mb-2">
+                    {line}
+                  </p>
+                ) : (
+                  <br key={i} />
+                );
+              })}
+            </div>
           </div>
           {/* TTS replay button */}
           {onSpeakQuestion && problemText && (
@@ -175,31 +256,84 @@ const CodingQuestionUI = ({
         </div>
         {currentQuestion?.examples?.length ? (
           <div className="card">
-            <h3 className="font-medium mb-2">Examples</h3>
-            <ul className="space-y-2 text-sm">
+            <h3 className="font-semibold text-base mb-3 text-surface-900 dark:text-surface-100">
+              Examples
+            </h3>
+            <div className="space-y-3">
               {currentQuestion.examples.map((ex, i) => (
-                <li key={i} className="p-2 rounded bg-surface-800/40">
-                  <div>
-                    <span className="text-surface-400">Input: </span>
-                    <code>{ex.input}</code>
+                <div
+                  key={i}
+                  className="p-3 rounded-lg bg-surface-100 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700"
+                >
+                  <div className="text-xs font-semibold text-surface-500 dark:text-surface-400 mb-2">
+                    Example {i + 1}
                   </div>
-                  {ex.output && (
+                  <div className="space-y-1.5 text-sm font-mono">
                     <div>
-                      <span className="text-surface-400">Output: </span>
-                      <code>{ex.output}</code>
+                      <span className="text-surface-600 dark:text-surface-400 font-sans text-xs">
+                        Input:{" "}
+                      </span>
+                      <code className="text-primary-700 dark:text-primary-300">
+                        {ex.input}
+                      </code>
                     </div>
-                  )}
-                </li>
+                    {ex.output && (
+                      <div>
+                        <span className="text-surface-600 dark:text-surface-400 font-sans text-xs">
+                          Output:{" "}
+                        </span>
+                        <code className="text-green-700 dark:text-green-300">
+                          {ex.output}
+                        </code>
+                      </div>
+                    )}
+                    {ex.explanation && (
+                      <div className="mt-2 pt-2 border-t border-surface-200 dark:border-surface-700">
+                        <span className="text-surface-600 dark:text-surface-400 font-sans text-xs">
+                          Explanation:{" "}
+                        </span>
+                        <span className="text-surface-700 dark:text-surface-300 font-sans text-xs">
+                          {ex.explanation}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         ) : null}
+
+        {/* Hints section - collapsible */}
+        {currentQuestion?.hints && currentQuestion.hints.length > 0 && (
+          <div className="card">
+            <details className="group">
+              <summary className="cursor-pointer font-semibold text-base flex items-center gap-2 text-surface-900 dark:text-surface-100">
+                <span className="group-open:rotate-90 transition-transform text-primary-600 dark:text-primary-400">
+                  ▶
+                </span>
+                💡 Hints
+              </summary>
+              <div className="mt-3 space-y-2 pl-6">
+                {currentQuestion.hints.map((hint, i) => (
+                  <div
+                    key={i}
+                    className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-900 dark:text-amber-200"
+                  >
+                    <span className="font-medium">Hint {i + 1}: </span>
+                    {hint}
+                  </div>
+                ))}
+              </div>
+            </details>
+          </div>
+        )}
       </div>
 
       {/* Editor + console */}
       <div className="space-y-4 flex-1 relative">
         <div className="card p-4 relative">
-          {/* Optional webcam mini preview */}
+          \{/* Optional webcam mini preview */}
           {settings?.videoRecording && (
             <div className="absolute right-3 top-3 w-44 h-28 rounded-lg overflow-hidden border border-surface-600/50 shadow-lg hidden lg:block bg-black/40">
               <Webcam
@@ -271,7 +405,6 @@ const CodingQuestionUI = ({
               </button>
             </div>
           </div>
-
           <Editor
             height="380px"
             language={language}
@@ -280,7 +413,6 @@ const CodingQuestionUI = ({
             onChange={(val) => onChangeCode?.(val || "")}
             options={{ minimap: { enabled: false }, fontSize: 14 }}
           />
-
           {/* Custom test case input */}
           <div className="mt-4 space-y-2">
             <details className="group">
@@ -322,7 +454,6 @@ const CodingQuestionUI = ({
               )}
             </details>
           </div>
-
           {/* Judge0 not configured banner */}
           {runError && /Judge0 API not configured/i.test(runError) && (
             <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200 dark:bg-yellow-900/30 dark:border-yellow-700 text-sm text-yellow-800 dark:text-yellow-200">
@@ -336,68 +467,104 @@ const CodingQuestionUI = ({
               </p>
             </div>
           )}
-
           {(runOutput || runError) &&
             !/Judge0 API not configured/i.test(runError || "") && (
-              <div className="mt-3 space-y-3">
+              <div className="mt-4 space-y-3">
                 {lastRunInfo && (
-                  <div className="text-[11px] opacity-70">
-                    Last run at {lastRunInfo.timeStr}
-                    {lastRunInfo.dur ? ` • ${lastRunInfo.dur}` : ""}
+                  <div className="flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400">
+                    <span>⏱️</span>
+                    <span>Last run: {lastRunInfo.timeStr}</span>
+                    {lastRunInfo.dur && (
+                      <span className="font-mono">• {lastRunInfo.dur}</span>
+                    )}
                   </div>
                 )}
                 <div>
-                  <div className="text-sm font-medium mb-1">Run Output</div>
+                  <div className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <span>📤</span>
+                    <span>Execution Output</span>
+                  </div>
                   <pre
-                    className={`p-3 rounded-lg border whitespace-pre-wrap break-words ${
+                    className={`p-4 rounded-lg border whitespace-pre-wrap break-words font-mono text-sm ${
                       runError
-                        ? "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200"
-                        : "bg-surface-100 border-surface-300 dark:bg-surface-800/40 dark:border-surface-700 dark:text-surface-100"
+                        ? "bg-red-50 border-red-300 text-red-900 dark:bg-red-900/20 dark:border-red-700 dark:text-red-200"
+                        : "bg-green-50 border-green-300 text-green-900 dark:bg-green-900/20 dark:border-green-700 dark:text-green-200"
                     }`}
                   >
-                    {runError ? runError : runOutput}
+                    {runError
+                      ? `❌ Error:\n${runError}`
+                      : `✅ Success:\n${runOutput}`}
                   </pre>
                 </div>
                 {Array.isArray(runResults) && runResults.length > 1 && (
                   <div>
-                    <div className="text-sm font-medium mb-2">Test Cases</div>
-                    <div className="space-y-2 max-h-48 overflow-auto pr-1">
+                    <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <span>🧪</span>
+                      <span>Test Results</span>
+                      <span className="text-xs font-normal text-surface-500 dark:text-surface-400">
+                        ({runResults.filter((r) => r.pass === true).length}/
+                        {runResults.length} passed)
+                      </span>
+                    </div>
+                    <div className="space-y-2.5 max-h-64 overflow-auto pr-1">
                       {runResults.map((r, i) => {
                         const pass = r.pass;
                         return (
                           <div
                             key={i}
-                            className={`p-2 rounded border text-xs font-mono whitespace-pre-wrap ${
+                            className={`p-3 rounded-lg border text-xs font-mono whitespace-pre-wrap shadow-sm ${
                               pass === true
-                                ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200"
+                                ? "bg-green-50 border-green-300 text-green-900 dark:bg-green-900/20 dark:border-green-700 dark:text-green-200"
                                 : pass === false
-                                ? "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200"
-                                : "bg-surface-100 border-surface-300 dark:bg-surface-800/40 dark:border-surface-700 dark:text-surface-100"
+                                ? "bg-red-50 border-red-300 text-red-900 dark:bg-red-900/20 dark:border-red-700 dark:text-red-200"
+                                : "bg-surface-100 border-surface-300 dark:bg-surface-800/40 dark:border-surface-600 dark:text-surface-100"
                             }`}
                           >
-                            <div className="flex justify-between mb-1">
-                              <span className="font-semibold">
-                                Case {i + 1}
+                            <div className="flex justify-between items-center mb-2 pb-2 border-b border-current opacity-30">
+                              <span className="font-bold text-sm">
+                                Test Case {i + 1}
                               </span>
-                              {pass === true && <span>✅</span>}
-                              {pass === false && <span>❌</span>}
+                              {pass === true && (
+                                <span className="text-lg">✅</span>
+                              )}
+                              {pass === false && (
+                                <span className="text-lg">❌</span>
+                              )}
                             </div>
                             {r.input && (
-                              <div>
-                                <span className="opacity-70">Input: </span>
-                                {r.input}
+                              <div className="mb-1">
+                                <span className="font-semibold opacity-60">
+                                  Input:{" "}
+                                </span>
+                                <span className="text-primary-700 dark:text-primary-300">
+                                  {r.input}
+                                </span>
                               </div>
                             )}
                             {typeof r.expectedOutput !== "undefined" && (
-                              <div>
-                                <span className="opacity-70">Expected: </span>
-                                {r.expectedOutput}
+                              <div className="mb-1">
+                                <span className="font-semibold opacity-60">
+                                  Expected:{" "}
+                                </span>
+                                <span className="text-green-700 dark:text-green-300">
+                                  {r.expectedOutput}
+                                </span>
                               </div>
                             )}
                             {r.output && (
-                              <div>
-                                <span className="opacity-70">Output: </span>
-                                {r.output.trim()}
+                              <div className="mb-1">
+                                <span className="font-semibold opacity-60">
+                                  Output:{" "}
+                                </span>
+                                <span
+                                  className={
+                                    pass
+                                      ? "text-green-700 dark:text-green-300"
+                                      : "text-red-700 dark:text-red-300"
+                                  }
+                                >
+                                  {r.output.trim()}
+                                </span>
                               </div>
                             )}
                             {r.status && (

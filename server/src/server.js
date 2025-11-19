@@ -406,6 +406,17 @@ app.get("/api/bootstrap", async (req, res) => {
     const analyticsData = profile ? profile.analytics || {} : {};
     const subscription = profile ? profile.subscription || null : null;
 
+    // Calculate real-time interviews remaining for free users
+    let interviewsRemaining = null;
+    if (profile && subscription && subscription.plan === "free") {
+      const { getMonthlyQuota } = require("./config/plans");
+      const monthlyQuota = getMonthlyQuota(subscription.plan);
+      interviewsRemaining = Math.max(
+        0,
+        monthlyQuota - (subscription.interviewsUsedThisMonth || 0)
+      );
+    }
+
     const payload = {
       auth: {
         authenticated: true,
@@ -418,6 +429,8 @@ app.get("/api/bootstrap", async (req, res) => {
         email: user.email,
         name: user.name,
         isVerified: user.isVerified,
+        subscription,
+        interviewsRemaining,
       },
       profile,
       analytics: { ...analyticsData, subscription },
@@ -525,6 +538,7 @@ app.post("/api/dev/upgrade-self", requireAuth, async (req, res) => {
 app.use("/api/session", sessionAuthRoutes); // ADD THIS LINE
 app.use("/api/auth", authRoutes); // Custom auth (login, register, etc.)
 app.use("/api/users", userRoutes);
+app.use("/api/payments", require("./routes/payment")); // Stripe payments
 app.use("/api/interviews", interviewRoutes);
 app.use("/api/interviews", interviewMediaRoutes);
 app.use("/api/questions", questionRoutes);

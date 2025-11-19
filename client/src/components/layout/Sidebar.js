@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useSubscription } from "../../hooks/useSubscription";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../../context/AuthContext";
 import DarkModeToggle from "../ui/DarkModeToggle";
 import BrandLogo from "../ui/BrandLogo";
@@ -9,6 +9,7 @@ import { navigationConfig } from "../../config/navigation";
 // Sidebar component with sign out button
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { subscription } = useSubscription();
+  const navigate = useNavigate();
   const [tooltip, setTooltip] = useState({
     visible: false,
     text: "",
@@ -288,7 +289,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                   </div>
                   {subscription.isFree && (
                     <div className="px-2 mt-2">
-                      <button className="w-full text-left px-3 py-2 text-xs text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium">
+                      <button
+                        onClick={() => navigate("/pricing")}
+                        className="w-full text-left px-3 py-2 text-xs text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors font-medium"
+                      >
                         Upgrade to Pro
                       </button>
                     </div>
