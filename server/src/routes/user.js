@@ -209,7 +209,66 @@ router.get(
     try {
       const { ok } = require("../utils/responder");
       const { getMonthlyQuota } = require("../config/plans");
+      const Logger = require("../utils/logger");
+
+      Logger.info("Fetching subscription for user:", req.user?.id);
       const profile = req.userProfile;
+
+      if (!profile) {
+        Logger.error("No user profile found in request");
+        return res.status(500).json({
+          success: false,
+          message: "User profile not found",
+        });
+      }
+
+      Logger.info("Profile found:", {
+        id: profile._id,
+        hasSubscription: !!profile.subscription,
+        hasAnalytics: !!profile.analytics,
+      });
+
+      // Ensure subscription object exists with defaults
+      if (!profile.subscription) {
+        Logger.info("Creating default subscription");
+        profile.subscription = {
+          plan: "free",
+          status: "active",
+          interviewsUsedThisMonth: 0,
+          lastInterviewReset: new Date(),
+          interviewsRemaining: 10,
+          cancelAtPeriodEnd: false,
+        };
+      }
+
+      // Ensure analytics object exists with defaults
+      if (!profile.analytics) {
+        Logger.info("Creating default analytics");
+        profile.analytics = {
+          totalInterviews: 0,
+          completedInterviews: 0,
+          averageScore: 0,
+          strongAreas: [],
+          improvementAreas: [],
+          streak: {
+            current: 0,
+            longest: 0,
+          },
+        };
+      }
+
+      try {
+        await profile.save({ validateModifiedOnly: true });
+        Logger.info("Profile saved successfully");
+      } catch (saveError) {
+        Logger.error("Error saving profile:", saveError);
+        Logger.error("Save error details:", {
+          name: saveError.name,
+          message: saveError.message,
+          errors: saveError.errors,
+        });
+        // Continue anyway - don't fail the request
+      }
 
       // Check if monthly reset is needed
       const now = new Date();
@@ -220,9 +279,14 @@ router.get(
 
       // Reset if 30 days have passed
       if (daysSinceReset >= 30 && !profile.hasUnlimitedInterviews()) {
+        Logger.info("Resetting monthly interview count");
         profile.subscription.interviewsUsedThisMonth = 0;
         profile.subscription.lastInterviewReset = now;
-        await profile.save();
+        try {
+          await profile.save({ validateModifiedOnly: true });
+        } catch (resetError) {
+          Logger.error("Error resetting interview count:", resetError);
+        }
       }
 
       const monthlyQuota = getMonthlyQuota(profile.subscription.plan);
@@ -246,12 +310,22 @@ router.get(
         cancelAtPeriodEnd: profile.subscription.cancelAtPeriodEnd,
       };
 
+      Logger.info("Returning subscription info:", subscriptionInfo);
+
       return ok(res, subscriptionInfo, "Subscription info retrieved");
     } catch (error) {
-      console.error("Get subscription error:", error);
+      const Logger = require("../utils/logger");
+      Logger.error("Get subscription error:", error);
+      Logger.error("Error stack:", error.stack);
+      Logger.error("Error details:", {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+      });
       return res.status(500).json({
         success: false,
         message: "Failed to get subscription info",
+        error: error.message,
       });
     }
   }

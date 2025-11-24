@@ -1,6 +1,7 @@
 const CodingSubmission = require("../models/CodingSubmission");
 const { ok, fail, created } = require("../utils/responder");
 const Logger = require("../utils/logger");
+const codingChallengeService = require("../services/codingChallengeService");
 
 exports.createCodingSession = async (req, res) => {
   try {
@@ -163,6 +164,35 @@ exports.runAdhoc = async (req, res) => {
       error.code || "CODE_RUN_FAILED",
       error.message || "Failed to run code"
     );
+  }
+};
+
+// @desc    Test code against predefined challenge test cases (stateless)
+// @route   POST /api/coding/test
+// @access  Private
+exports.testCode = async (req, res) => {
+  try {
+    const { code, language, challengeId } = req.body;
+    if (!code || !language || !challengeId) {
+      return fail(
+        res,
+        400,
+        "MISSING_FIELDS",
+        "code, language, challengeId required"
+      );
+    }
+    const result = await codingChallengeService.testCode(
+      challengeId,
+      code,
+      language
+    );
+    if (!result.success && result.error) {
+      return fail(res, 400, "CODE_TEST_FAILED", result.error);
+    }
+    return ok(res, result, "Code tested");
+  } catch (error) {
+    Logger.error("Test code error:", error);
+    return fail(res, 500, "CODE_TEST_ERROR", "Failed to test code");
   }
 };
 

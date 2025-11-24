@@ -113,7 +113,10 @@ const ComprehensiveDashboard = () => {
             <div>
               <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
                 Welcome back,{" "}
-                {user.firstName || user.emailAddresses[0]?.emailAddress}!
+                {user.firstName ||
+                  user.emailAddresses?.[0]?.emailAddress ||
+                  "User"}
+                !
               </h1>
               <p className="text-surface-600 dark:text-surface-400 mt-1">
                 {userProfile?.jobRole

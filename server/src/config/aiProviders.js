@@ -54,10 +54,10 @@ module.exports = {
       analytics: "gemini-1.5-flash",
     },
     groq: {
-      default: "llama-3.1-70b-versatile", // Updated from decommissioned mixtral-8x7b-32768
-      chatbot: "llama-3.1-70b-versatile",
+      default: "llama-3.3-70b-versatile", // Updated from deprecated llama-3.1-70b-versatile
+      chatbot: "llama-3.3-70b-versatile",
       fast: "llama-3.1-8b-instant",
-      balanced: "llama-3.1-70b-versatile",
+      balanced: "llama-3.3-70b-versatile",
     },
     grok: {
       default: "grok-beta",

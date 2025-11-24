@@ -1,5 +1,7 @@
 import React from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import VideoRecorder from "../VideoRecorder";
+import RealTimeEmotionDisplay from "../RealTimeEmotionDisplay";
 import { useFacialExpressionAnalysis } from "../../hooks/useFacialExpressionAnalysis";
 import { FEATURES } from "../../config/features";
 
@@ -33,14 +35,15 @@ const SpokenQuestionUI = ({
   targetCount,
   interviewId: _interviewId,
   isLastQuestion,
-  onTranscriptUpdate,
   onFacialMetricsUpdate,
+  onEmotionUpdate,
 }) => {
+  // Translation hook - must be at top before any other hooks that use it
+  const { t } = useLanguage();
+
   // Facial analysis integration
   const facial = useFacialExpressionAnalysis(true);
-  const [autoAppendTranscript, setAutoAppendTranscript] = React.useState(true);
-  const [liveTranscript, setLiveTranscript] = React.useState("");
-  const [interim, setInterim] = React.useState("");
+  const [emotionTimeline, setEmotionTimeline] = React.useState([]);
   const videoElRef = React.useRef(null);
 
   // Calculate total question count for display (target count or current length)
@@ -62,41 +65,10 @@ const SpokenQuestionUI = ({
     [facial]
   );
 
-  // When metrics change, we could add simple threshold-based recommendations display (done below)
-  const handleTranscriptUpdate = ({ transcript, interim: interimText }) => {
-    setLiveTranscript(transcript);
-    setInterim(interimText);
-
-    // Notify parent of transcript updates for persistence
-    if (onTranscriptUpdate && transcript && transcript.trim()) {
-      onTranscriptUpdate(transcript);
-    }
-
-    if (autoAppendTranscript && transcript && transcript.length) {
-      // Append only newly added chunk
-      // naive approach: ensure we don't duplicate by checking current value
-      onResponseChange(
-        ((prev) => {
-          const existing = prev || responses[currentQuestionIndex] || "";
-          if (existing.endsWith(transcript)) return existing; // already appended whole
-          if (transcript.length < 20) return existing; // wait until a bit longer for clarity
-          return existing + (existing ? "\n" : "") + transcript;
-        })(responses[currentQuestionIndex])
-      );
-    }
-  };
+  // Live transcript removed; no transcript handling required.
 
   // Derive quick facial summary badges
-  const badges = React.useMemo(() => {
-    const m = facial.metrics || {};
-    const pct = (val) => `${Math.round(val || 0)}%`;
-    return [
-      { label: "Eye Contact", value: pct(m.eyeContact) },
-      { label: "Smile", value: pct(m.smilePercentage) },
-      { label: "Steadiness", value: pct(m.headSteadiness) },
-      { label: "Confidence", value: pct(m.confidenceScore) },
-    ];
-  }, [facial.metrics]);
+  // Facial engagement display removed during interview.
 
   // Notify parent of facial metrics updates for persistence
   React.useEffect(() => {
@@ -123,8 +95,21 @@ const SpokenQuestionUI = ({
                 onRecordingChange={onRecordingChange}
                 onPermissionChange={onPermissionChange}
                 onWebcamReady={handleWebcamReady}
-                onTranscriptUpdate={handleTranscriptUpdate}
+                onEmotionUpdate={(emotionData) => {
+                  // Update local state for display
+                  if (emotionData?.timeline) {
+                    setEmotionTimeline((prev) => [
+                      ...prev,
+                      ...emotionData.timeline,
+                    ]);
+                  }
+                  // Pass to parent as well
+                  if (onEmotionUpdate) {
+                    onEmotionUpdate(emotionData);
+                  }
+                }}
                 audioEnabled={settings.audioRecording}
+                enableTranscript={false}
                 hideControls={true}
               />
             </div>
@@ -146,104 +131,14 @@ const SpokenQuestionUI = ({
                 </svg>
                 <p className="text-surface-600 dark:text-surface-400">
                   {interview.status === "completed"
-                    ? "Interview completed - video recording disabled"
-                    : "Video recording is disabled"}
+                    ? t("interview_completed")
+                    : t("video_disabled")}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Analytics Row - Facial & Transcript Side by Side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Facial Engagement */}
-            {facial.isInitialized && (
-              <div className="card p-4">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                    <path
-                      fillRule="evenodd"
-                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Facial Engagement
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {badges.map((b) => (
-                    <div
-                      key={b.label}
-                      className="rounded-md px-3 py-2 text-xs bg-surface-100 dark:bg-surface-800/60 flex justify-between items-center border border-surface-200 dark:border-surface-700"
-                    >
-                      <span className="text-surface-600 dark:text-surface-400">
-                        {b.label}
-                      </span>
-                      <span className="font-semibold text-surface-900 dark:text-surface-100">
-                        {b.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Live Transcript */}
-            {settings.videoRecording && FEATURES.videoRecording && (
-              <div className="card p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <svg
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Live Transcript
-                  </h3>
-                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={autoAppendTranscript}
-                      onChange={(e) =>
-                        setAutoAppendTranscript(e.target.checked)
-                      }
-                      className="rounded"
-                    />
-                    <span className="text-surface-600 dark:text-surface-400">
-                      Auto-append
-                    </span>
-                  </label>
-                </div>
-                <div className="text-xs max-h-24 overflow-auto whitespace-pre-wrap bg-surface-50 dark:bg-surface-900/30 rounded p-2.5 border border-surface-200 dark:border-surface-700">
-                  {liveTranscript && (
-                    <span className="text-surface-900 dark:text-surface-100">
-                      {liveTranscript}
-                    </span>
-                  )}
-                  {interim && (
-                    <span className="text-surface-500 dark:text-surface-400 italic">
-                      {" "}
-                      {interim}
-                    </span>
-                  )}
-                  {!liveTranscript && !interim && (
-                    <span className="text-surface-400 dark:text-surface-500 text-xs">
-                      Recording will show live transcription here...
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Analytics row removed (facial engagement and transcript). */}
         </div>
 
         {/* Right Column - Question & Response (2 columns on large screens) */}
@@ -252,7 +147,7 @@ const SpokenQuestionUI = ({
           <div className={`card ${ttsFlash ? "ring-2 ring-primary-500" : ""}`}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-bold text-primary-600 dark:text-primary-400">
-                Current Question
+                {t("current_question")}
               </h2>
               <div className="flex gap-2 text-xs">
                 <span className="px-2 py-1 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
@@ -294,13 +189,13 @@ const SpokenQuestionUI = ({
           {/* Response Notes */}
           <div className="card">
             <h3 className="text-sm font-semibold mb-3 text-surface-900 dark:text-surface-100">
-              Your Response Notes
+              {t("your_response_notes")}
             </h3>
             <textarea
               value={responses[currentQuestionIndex] || ""}
               onChange={(e) => onResponseChange(e.target.value)}
               className="form-input-dark h-28 text-sm"
-              placeholder="Type your answer notes here..."
+              placeholder={t("notes_placeholder")}
             />
             {validationError && (
               <div className="mt-2 text-xs text-red-600 dark:text-red-400">
@@ -311,6 +206,13 @@ const SpokenQuestionUI = ({
               Notes are saved automatically and used for evaluation.
             </p>
           </div>
+
+          {/* Emotion Analysis Display */}
+          {settings.videoRecording &&
+            FEATURES.videoRecording &&
+            emotionTimeline.length > 0 && (
+              <RealTimeEmotionDisplay emotionTimeline={emotionTimeline} />
+            )}
 
           {/* Interview Settings */}
           <div className="card p-4">
@@ -386,9 +288,9 @@ const SpokenQuestionUI = ({
             <p className="text-sm text-surface-600 dark:text-surface-400">
               {settings.videoRecording ? (
                 <>
-                  📹 Record your answer using the camera above, then click{" "}
+                  📹 {t("record_instruction")}{" "}
                   <span className="font-semibold text-primary-600 dark:text-primary-400">
-                    "Submit & Next"
+                    "{t("submit_next")}"
                   </span>{" "}
                   to continue
                 </>
@@ -396,7 +298,7 @@ const SpokenQuestionUI = ({
                 <>
                   ✍️ Type your answer in the notes section, then click{" "}
                   <span className="font-semibold text-primary-600 dark:text-primary-400">
-                    "Submit & Next"
+                    "{t("submit_next")}"
                   </span>
                 </>
               )}
@@ -424,7 +326,7 @@ const SpokenQuestionUI = ({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Previous
+              {t("previous")}
             </button>
 
             {/* Center - Question Counter */}
@@ -461,7 +363,7 @@ const SpokenQuestionUI = ({
                     : "border-amber-400 bg-amber-500 text-white hover:bg-amber-600 hover:border-amber-500"
                 }`}
               >
-                {skipping ? "Skipping..." : "Skip Question"}
+                {skipping ? "Skipping..." : t("skip_question")}
               </button>
 
               <button
@@ -499,7 +401,7 @@ const SpokenQuestionUI = ({
                   <>✓ Finish Interview</>
                 ) : (
                   <>
-                    Submit & Next
+                    {t("submit_next")}
                     <svg
                       className="w-5 h-5"
                       fill="none"

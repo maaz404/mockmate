@@ -191,10 +191,17 @@ const ChatbotWidget = () => {
     process.env.REACT_APP_API_BASE ||
     process.env.REACT_APP_API_BASE_URL ||
     "/api";
-  const buildHeaders = async () => ({
-    "Content-Type": "application/json",
-    Accept: "text/event-stream",
-  });
+  const buildHeaders = async () => {
+    const token = localStorage.getItem("accessToken");
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  };
   const abortStream = () => {
     try {
       controllerRef.current?.abort();
@@ -266,8 +273,8 @@ const ChatbotWidget = () => {
             if (data.requestId) currentRequestId = data.requestId;
             if (data.provider) currentProvider = data.provider;
             if (data.fallback) currentFallback = true;
-            // Strip any leading data artifacts
-            const clean = text.replace(/^data:/, "").replace(/^[\s]+/, "");
+            // Strip any leading data artifacts (only from first chunk to preserve spaces between words)
+            const clean = text.replace(/^data:/, "");
             const snapshotProvider = currentProvider;
             const snapshotRequestId = currentRequestId;
             const snapshotFallback = currentFallback;
@@ -275,9 +282,13 @@ const ChatbotWidget = () => {
               const u = [...prev];
               const i = u.length - 1;
               if (!u[i]) return prev;
+              // Only trim leading spaces if this is the first chunk (empty content)
+              const existingContent = u[i].content || "";
+              const finalChunk =
+                existingContent === "" ? clean.replace(/^[\s]+/, "") : clean;
               u[i] = {
                 ...u[i],
-                content: (u[i].content || "") + clean,
+                content: existingContent + finalChunk,
                 provider:
                   data.provider ||
                   data.source ||
@@ -549,7 +560,7 @@ const ChatbotWidget = () => {
                     </span>
                   </div>
                   <p className="text-[11px] text-teal-50 flex items-center gap-1">
-                    <span>Powered by Ollama</span>
+                    <span>Powered by Groq</span>
                     {process.env.REACT_APP_CHATBOT_APP_ONLY === "true" && (
                       <span className="text-[9px] px-1 py-0.5 rounded bg-white/20">
                         App-only

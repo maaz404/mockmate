@@ -881,7 +881,7 @@
     "beginner": {
       "technical": [
         {"text": "What is an SLO and how does it relate to SLIs and SLAs?", "category": "reliability", "tags": ["System Design", "Performance", "DevOps"], "difficulty": "beginner", "estimatedTime": 300, "type": "technical"},
-        {"text": "Write a Bash script to rotate logs larger than 100MB.", "category": "coding", "tags": ["Backend", "Scripting", "DevOps"], "difficulty": "beginner", "estimatedTime": 420, "type": "technical"}
+        {"text": "Write a Node.js script that rotates log files larger than 100MB (compress & archive with timestamp).", "category": "scripting", "tags": ["Backend", "Scripting", "DevOps", "Node.js"], "difficulty": "beginner", "estimatedTime": 420, "type": "technical"}
       ],
       "behavioral": [
         {"text": "Tell me about a time you participated in an on-call rotation and handled an incident.", "category": "incident-management", "tags": ["Behavioral", "DevOps", "Leadership"], "difficulty": "beginner", "estimatedTime": 300, "type": "behavioral"}
@@ -890,7 +890,7 @@
     "intermediate": {
       "technical": [
         {"text": "Design a blue/green rollout strategy with automated rollback using health checks.", "category": "deployment", "tags": ["System Design", "DevOps", "Performance"], "difficulty": "intermediate", "estimatedTime": 540, "type": "technical"},
-        {"text": "Implement a Python script that tails a log and alerts on 5xx spikes.", "category": "coding", "tags": ["Backend", "Scripting", "Monitoring"], "difficulty": "intermediate", "estimatedTime": 480, "type": "technical"}
+        {"text": "Implement a Node.js script that tails a log file and alerts on 5xx HTTP status spikes (threshold + rolling window).", "category": "scripting", "tags": ["Backend", "Scripting", "Monitoring", "Node.js"], "difficulty": "intermediate", "estimatedTime": 480, "type": "technical"}
       ],
       "behavioral": [
         {"text": "Describe driving reliability improvements after a postmortem.", "category": "leadership", "tags": ["Behavioral", "DevOps", "Leadership"], "difficulty": "intermediate", "estimatedTime": 360, "type": "behavioral"}

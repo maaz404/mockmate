@@ -3,7 +3,6 @@
 import React from "react";
 import {
   Settings as SettingsIcon,
-  Presentation as PresentationIcon,
   BookOpen as BookOpenIcon,
   LineChart,
   HelpCircle,
@@ -76,23 +75,6 @@ export const navigationConfig = [
         name: "Video Demo",
         path: "/video-demo",
         icon: <Video size={20} />,
-      },
-    ],
-  },
-  {
-    section: "Labs",
-    items: [
-      {
-        name: "Comprehensive Dashboard",
-        path: "/comprehensive-dashboard",
-        icon: icon(
-          "M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"
-        ),
-      },
-      {
-        name: "Hybrid Demo",
-        path: "/demo",
-        icon: <PresentationIcon className="w-5 h-5" aria-label="Hybrid Demo" />,
       },
     ],
   },

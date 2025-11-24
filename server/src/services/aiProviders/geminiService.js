@@ -63,15 +63,27 @@ class GeminiService extends BaseAIProvider {
     });
 
     try {
-      // Convert messages to Gemini format
-      const chat = this.model.startChat({
-        history: messages.slice(0, -1).map((msg) => ({
-          role: msg.role === "assistant" ? "model" : "user",
-          parts: [{ text: msg.content }],
-        })),
-      });
+      // Filter out system messages and convert to Gemini format
+      const userMessages = messages.filter((msg) => msg.role !== "system");
 
-      const lastMessage = messages[messages.length - 1];
+      // Build history (all but last message)
+      const history = userMessages.slice(0, -1).map((msg) => ({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: msg.content }],
+      }));
+
+      // Ensure first message is from user role
+      if (history.length > 0 && history[0].role !== "user") {
+        // If first message is model, prepend a dummy user message
+        history.unshift({
+          role: "user",
+          parts: [{ text: "Hello" }],
+        });
+      }
+
+      const chat = this.model.startChat({ history });
+
+      const lastMessage = userMessages[userMessages.length - 1];
       const result = await this._retryWithBackoff(async () => {
         const response = await chat.sendMessage(lastMessage.content);
         return response.response.text();
@@ -130,29 +142,92 @@ class GeminiService extends BaseAIProvider {
    * Evaluate interview answer with structured feedback
    */
   async evaluateAnswer(question, answer, config = {}) {
-    const prompt = `You are an expert interview evaluator. Evaluate this interview answer.
+    if (!this.isAvailable()) {
+      throw new Error("Gemini API key not configured");
+    }
 
-QUESTION: ${question.questionText}
+    const questionText = question.questionText || question.text || question;
+    const answerText = answer.text || answer.answerText || answer;
+    const questionCategory = question.category || "General";
+    const questionDifficulty =
+      question.difficulty || config.experienceLevel || "Intermediate";
 
-ANSWER: ${answer.text || answer.answerText || answer}
+    this._logRequest("evaluateAnswer", {
+      questionLength: questionText.length,
+      answerLength: answerText.length,
+      category: questionCategory,
+      difficulty: questionDifficulty,
+    });
 
-CONTEXT:
-- Job Role: ${config.jobRole || "General"}
-- Experience Level: ${config.experienceLevel || "Intermediate"}
-- Interview Type: ${config.interviewType || "Technical"}
+    const prompt = `You are an expert technical interviewer evaluating a candidate's response. Provide a thorough, specific analysis.
 
-Provide a detailed evaluation with:
-1. Overall score (0-100)
-2. Rubric scores (1-5 scale for each):
-   - Relevance: How well the answer addresses the question
-   - Clarity: How clear and well-structured the answer is
-   - Depth: Level of technical depth and detail
-   - Structure: Organization and flow of the answer
-3. Strengths: What the candidate did well (array of strings)
-4. Improvements: What could be improved (array of strings)
-5. Detailed feedback: Comprehensive assessment
+## QUESTION DETAILS
+Question: ${questionText}
+Category: ${questionCategory}
+Difficulty: ${questionDifficulty}
+Role: ${config.jobRole || "General"}
+Experience Level: ${config.experienceLevel || "Intermediate"}
+Interview Type: ${config.interviewType || "Technical"}
 
-Respond with JSON only.`;
+## CANDIDATE'S ANSWER
+${answerText}
+
+## EVALUATION REQUIREMENTS
+
+Analyze this specific answer in detail. Your evaluation must be:
+1. **Specific to this exact answer** - reference actual points the candidate made
+2. **Actionable** - provide concrete examples of what to improve
+3. **Balanced** - highlight both strengths and areas for growth
+4. **Technical** - use proper terminology relevant to the question
+
+Provide:
+
+1. **Overall Score (0-100)**: Based on completeness, accuracy, depth, and clarity
+
+2. **Rubric Scores (1-5 scale)**:
+   - Relevance: Does the answer directly address the question?
+   - Clarity: Is the explanation clear, well-organized, and easy to follow?
+   - Depth: Does it show deep understanding with examples/details?
+   - Structure: Is the answer logically organized with good flow?
+
+3. **Strengths (3-5 specific points)**: What did the candidate do well? Be specific:
+   - Quote or reference actual parts of their answer
+   - Mention specific concepts they explained correctly
+   - Highlight good examples or insights they provided
+   
+4. **Improvements (3-5 specific points)**: What could be better? Be actionable:
+   - Point out missing concepts or incomplete explanations
+   - Suggest specific topics to elaborate on
+   - Identify technical inaccuracies if any
+   - Recommend better structure or examples
+
+5. **Detailed Feedback (2-3 paragraphs)**: 
+   - First paragraph: Overall assessment of their answer
+   - Second paragraph: Key areas they covered well
+   - Third paragraph: Critical gaps and how to improve
+
+6. **Model Answer (optional)**: If the answer was incomplete, provide a brief ideal response
+
+IMPORTANT: 
+- Make your feedback unique to this answer. Avoid generic statements like "Attempted" or "Good effort". 
+- Reference specific technical concepts from their response.
+- The "feedback" field must contain 2-3 full paragraphs of detailed analysis, NOT just "Excellent!" or one word.
+- Be thorough and specific in your evaluation.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "score": <number 0-100>,
+  "rubricScores": {
+    "relevance": <number 1-5>,
+    "clarity": <number 1-5>,
+    "depth": <number 1-5>,
+    "structure": <number 1-5>
+  },
+  "strengths": [<array of 3-5 specific strength strings>],
+  "improvements": [<array of 3-5 specific improvement strings>],
+  "feedback": "<2-3 paragraph detailed analysis>",
+  "modelAnswer": "<optional ideal answer if needed>"
+}`;
 
     const schema = {
       score: "number (0-100)",
@@ -164,10 +239,26 @@ Respond with JSON only.`;
       },
       strengths: ["string"],
       improvements: ["string"],
-      feedback: "string",
+      feedback: "string (2-3 paragraphs)",
+      modelAnswer: "string (optional)",
     };
 
-    return await this.generateStructuredOutput(prompt, schema);
+    try {
+      const result = await this.generateStructuredOutput(prompt, schema);
+
+      this._logRequest("evaluateAnswer-success", {
+        score: result.score,
+        hasDetailedFeedback: !!result.feedback,
+        feedbackLength: result.feedback?.length || 0,
+        strengthsCount: result.strengths?.length || 0,
+        improvementsCount: result.improvements?.length || 0,
+      });
+
+      return result;
+    } catch (error) {
+      this._logError("evaluateAnswer", error);
+      throw this._handleError(error, "evaluateAnswer");
+    }
   }
 
   /**

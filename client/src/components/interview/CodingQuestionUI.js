@@ -334,16 +334,7 @@ const CodingQuestionUI = ({
       <div className="space-y-4 flex-1 relative">
         <div className="card p-4 relative">
           \{/* Optional webcam mini preview */}
-          {settings?.videoRecording && (
-            <div className="absolute right-3 top-3 w-44 h-28 rounded-lg overflow-hidden border border-surface-600/50 shadow-lg hidden lg:block bg-black/40">
-              <Webcam
-                audio={false}
-                mirrored
-                videoConstraints={{ facingMode: "user" }}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
+          {/* Webcam moved below editor; remove old top-right preview */}
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
               <label className="text-sm text-surface-400">Language</label>
@@ -613,6 +604,23 @@ const CodingQuestionUI = ({
             Next Question
           </button>
         </div>
+
+        {/* Relocated webcam preview (below editor + navigation) */}
+        {settings?.videoRecording && (
+          <div className="mt-4 flex justify-center">
+            <div
+              className="w-full sm:w-80 md:w-96 aspect-video rounded-xl overflow-hidden border border-surface-500/40 shadow-xl bg-black/70 backdrop-blur-sm"
+              aria-label="Webcam preview"
+            >
+              <Webcam
+                audio={false}
+                mirrored
+                videoConstraints={{ facingMode: "user" }}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Draggable Divider (desktop) */}

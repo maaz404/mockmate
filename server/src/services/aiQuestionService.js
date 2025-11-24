@@ -29,6 +29,7 @@ class AIQuestionService {
       // eslint-disable-next-line no-magic-numbers
       questionCount = 5,
       userProfile,
+      language = "en",
     } = params;
 
     try {
@@ -85,6 +86,7 @@ class AIQuestionService {
         difficulty,
         questionCount,
         userProfile,
+        language,
       });
 
       Logger.debug("Generating questions with AI provider manager...");
@@ -100,6 +102,7 @@ class AIQuestionService {
         questionCount,
         userProfile,
         prompt,
+        language,
       });
 
       // If provider returns structured questions, use them
@@ -178,12 +181,25 @@ class AIQuestionService {
       difficulty,
       questionCount,
       userProfile,
+      language,
     } = params;
+
+    // Language name mapping
+    const languageNames = {
+      en: "English",
+      fr: "French",
+      es: "Spanish",
+      de: "German",
+      ur: "Urdu",
+    };
+    const targetLanguage = languageNames[language] || "English";
 
     let prompt = `Generate ${questionCount} interview questions for a ${jobRole} position with ${experienceLevel} experience level.\n\n`;
 
     prompt += `Interview Type: ${interviewType}\n`;
-    prompt += `Difficulty Level: ${difficulty}\n\n`;
+    prompt += `Difficulty Level: ${difficulty}\n`;
+
+    prompt += `\n`;
 
     if (skills.length > 0) {
       prompt += `Relevant Skills/Technologies: ${skills.join(", ")}\n`;

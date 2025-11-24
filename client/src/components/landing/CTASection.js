@@ -126,10 +126,10 @@ const ProjectShowcaseSection = () => {
             const Icon = link.icon;
             const buttonClass =
               link.type === "primary"
-                ? "btn-primary text-lg py-4 px-8 group"
+                ? "btn-primary py-3 px-6 group inline-flex items-center justify-center"
                 : link.type === "secondary"
-                ? "btn-secondary text-lg py-4 px-8"
-                : "btn-outline text-lg py-4 px-8";
+                ? "btn-secondary py-3 px-6 inline-flex items-center justify-center"
+                : "btn-outline py-3 px-6 inline-flex items-center justify-center";
 
             return (
               <motion.div
@@ -142,22 +142,12 @@ const ProjectShowcaseSection = () => {
                 {link.link.startsWith("#") ? (
                   <a href={link.link} className={buttonClass}>
                     <Icon size={20} className="mr-2" />
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{link.title}</span>
-                      <span className="text-sm opacity-75">
-                        {link.description}
-                      </span>
-                    </div>
+                    <span className="font-semibold">{link.title}</span>
                   </a>
                 ) : (
                   <Link to={link.link} className={buttonClass}>
                     <Icon size={20} className="mr-2" />
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{link.title}</span>
-                      <span className="text-sm opacity-75">
-                        {link.description}
-                      </span>
-                    </div>
+                    <span className="font-semibold">{link.title}</span>
                   </Link>
                 )}
               </motion.div>

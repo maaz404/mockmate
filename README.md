@@ -36,102 +36,194 @@ This project has evolved through iterative "batches" of enhancements. Highlights
 
 📖 Related docs: [UI Redesign Summary](UI_REDESIGN_SUMMARY.md) • [Judge0 Setup](JUDGE0_SETUP_GUIDE.md) • [Clerk Setup](CLERK_SETUP_GUIDE.md) • [ADAPTIVE_DIFFICULTY_GUIDE.md](ADAPTIVE_DIFFICULTY_GUIDE.md)
 
-## 🚀 Features
+## 🚀 Core Features
 
-- **AI-Generated Questions**: Personalized interview questions based on role, experience, and industry
-- **Video Practice**: Record yourself with webcam integration for comprehensive practice
-- **Facial Expression Analysis**: Real-time analysis + per-question & session-level metrics
-- **Detailed Feedback**: AI-powered evaluation of responses with actionable insights
-- **Performance Analytics**: Track progress over time with comprehensive reports
-- **Coding Challenges**: In-browser code editor (Monaco) with multi-language support via Judge0; JS local fallback
-- **Multiple Interview Types**: Behavioral, technical, and mixed interview formats
-- **User Management**: Secure authentication and profile management
-- **Adaptive Difficulty**: Dynamic next-question difficulty + manual override endpoint + history visualization
-- **Exportable Insights**: One-click CSV / PDF export of question & facial performance metrics
-- **Follow-Up Generation**: AI-driven contextual follow-up questions per answer
-- **Transcripts Polling**: Fetch incremental transcript segments for multi-modal review
+### 🎯 Interview Experience
+
+- **AI-Generated Questions**: Hybrid question generation combining template-based and AI-powered personalization
+- **Multiple Interview Types**: Behavioral, technical, system design, and mixed interview formats
+- **Adaptive Difficulty**: Dynamic question progression with manual override capability and visual history
+- **Video Practice**: Full webcam integration with recording capabilities
+- **Real-Time Transcription**: Live speech-to-text with incremental polling support
+- **Follow-Up Questions**: Contextual AI-driven follow-ups based on user responses
+
+### 💡 AI & Intelligence
+
+- **Grok AI Chatbot**: Integrated AI assistant providing real-time coaching and feature guidance
+- **Multi-Provider AI**: Support for Anthropic, OpenAI, and xAI with intelligent fallback
+- **RAG System**: Retrieval-Augmented Generation for context-aware responses
+- **Advanced Analysis**: Multi-dimensional performance scoring with strengths/weaknesses identification
+- **Emotion Analysis**: DeepFace-powered facial expression tracking (real-time + session summaries)
+
+### 👨‍💻 Coding Challenges
+
+- **Multi-Language Support**: 70+ languages via Judge0 integration
+- **In-Browser IDE**: Monaco Editor with syntax highlighting
+- **Automated Testing**: Test case validation and execution
+- **Code Review**: AI-powered code quality analysis
+- **Local Fallback**: JavaScript execution without external APIs
+
+### 📊 Analytics & Insights
+
+- **Comprehensive Dashboards**: Progress tracking, skill assessment, and goal management
+- **Performance Reports**: Detailed session summaries with category breakdowns
+- **Facial Metrics**: Per-question and global emotion tracking (eye contact, confidence, head stability)
+- **Export Capabilities**: CSV and PDF reports for sharing with recruiters
+- **Adaptive Sparklines**: Visual difficulty progression tracking
+
+### 💳 Subscription & Monetization
+
+- **Stripe Integration**: Secure payment processing
+- **Tiered Plans**: Free (5 interviews/month) and Premium (unlimited)
+- **Quota Management**: Automatic monthly resets with idempotent consumption
+- **Premium Features**: Advanced analytics, PDF exports, unlimited interviews
+
+### 🔐 Security & Authentication
+
+- **Clerk Integration**: Enterprise-grade authentication with mock dev fallback
+- **Role-Based Access**: User profile management and permissions
+- **Secure Sessions**: JWT-based authentication with refresh tokens
 
 ## 🛠️ Tech Stack
 
 ### Frontend
 
-- **React.js** - Modern JavaScript library for building user interfaces
-- **Tailwind CSS** - Utility-first CSS framework for rapid UI evelopment
-- **React Router** - Declarative routing for React applications
-- **Axios** - HTTP client for API requests
-- **React Hook Form** - Performant forms with easy validation
-- **Framer Motion** - Production-ready motion library for React
-- **react-hot-toast**, **lucide-react** for UI affordances
+- **React.js 18** - Modern UI library with hooks and concurrent features
+- **Tailwind CSS** - Utility-first CSS with dark mode support
+- **React Router v6** - Client-side routing with protected routes
+- **Axios** - Promise-based HTTP client
+- **Framer Motion** - Advanced animations and transitions
+- **Monaco Editor** - VS Code's editor for in-browser coding
+- **Recharts** - Composable charting library for analytics
+- **React Hook Form** - Performant form validation
+- **lucide-react** - Modern icon library
+- **react-hot-toast** - Elegant notifications
 
 ### Backend
 
-- **Node.js** - JavaScript runtime environment
-- **Express.js** - Fast, unopinionated web framework for Node.js
-- **MongoDB** - NoSQL database for flexible data storage
-- **Mongoose** - MongoDB object modeling for Node.js
-- **Clerk** - Authentication (skipped in dev with mock fallback)
-- **OpenAI API** - AI-powered question generation and response evaluation
-- **pdfkit** - Lightweight server-side PDF generation for metrics export
+- **Node.js 16+** - JavaScript runtime
+- **Express.js** - Web application framework
+- **MongoDB** - NoSQL database with Mongoose ODM
+- **Clerk** - Authentication and user management
+- **pdfkit** - Server-side PDF generation
+- **Bull** - Redis-based queue for background jobs
 
-### Additional Tools
+### AI & Machine Learning
 
-- **WebRTC** - Real-time communication for video/audio recording
-- **Face-api.js** - Face detection and expression analysis
-- **Monaco Editor** - Code editor for technical interviews
-- **Judge0 (RapidAPI)** - Sandboxed code execution (multi-language)
-- **Socket.io** - Real-time bidirectional event-based communication
-- **Cloudinary** - Cloud-based media management
-- **Stripe** - Payment processing for subscriptions
+- **Anthropic Claude** - Primary AI provider for question generation
+- **OpenAI GPT** - Secondary AI provider
+- **xAI Grok** - Chatbot and coaching assistance
+- **DeepFace** - Facial emotion recognition (Python microservice)
+- **OpenAI Embeddings** - Vector embeddings for RAG
+
+### External Services
+
+- **Judge0 CE** - Multi-language code execution (70+ languages)
+- **Stripe** - Payment processing and subscription management
+- **Cloudinary** - Video and media storage
+- **RapidAPI** - Judge0 API gateway
+
+### Development Tools
+
+- **Jest** - Testing framework
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
+- **nodemon** - Development auto-reload
 
 ## 📁 Project Structure
 
 ```
 mockmate/
-├── client/                 # React frontend
-│   ├── public/            # Public assets
+├── client/                      # React frontend
+│   ├── public/                 # Static assets
 │   ├── src/
-│   │   ├── components/    # Reusable UI components
-│   │   │   ├── landing/   # 🆕 Landing page sections
-│   │   │   │   ├── HeroSection.js
-│   │   │   │   ├── TrustBarSection.js
-│   │   │   │   ├── FeaturesSection.js
-│   │   │   │   ├── TestimonialsSection.js
-│   │   │   │   ├── PricingSection.js
-│   │   │   │   ├── FAQSection.js
-│   │   │   │   └── CTASection.js
-│   │   │   ├── layout/    # 🔄 Redesigned layout components
-│   │   │   │   ├── Navbar.js (dark theme)
-│   │   │   │   └── Footer.js (professional)
-│   │   │   ├── auth/      # Authentication components
-│   │   │   ├── dashboard/ # Dashboard components
-│   │   │   └── ui/        # Shared UI components
-│   │   ├── pages/         # Page components
-│   │   │   └── HomePage.js # 🆕 Complete redesign
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── context/       # React context providers
-│   │   ├── services/      # API service functions
-│   │   ├── utils/         # Utility functions
-│   │   └── assets/        # Static assets
-│   ├── package.json
-│   ├── tailwind.config.js # 🔄 Enhanced with dark theme
-│   └── index.css         # 🔄 Updated with Inter font
-├── server/                # Node.js backend
+│   │   ├── components/
+│   │   │   ├── landing/        # Landing page sections
+│   │   │   ├── layout/         # Navbar, Footer, Sidebar
+│   │   │   ├── auth/           # Login, Register, Profile
+│   │   │   ├── dashboard/      # Analytics widgets
+│   │   │   ├── calendar/       # Session scheduling
+│   │   │   ├── ui/             # ChatbotWidget, modals
+│   │   │   ├── facial-analysis/ # Emotion tracking UI
+│   │   │   └── common/         # Reusable components
+│   │   ├── pages/
+│   │   │   ├── HomePage.js
+│   │   │   ├── DashboardPage.js
+│   │   │   ├── InterviewPage.js           # Main interview conductor
+│   │   │   ├── InterviewResultsPage.js    # Detailed results
+│   │   │   ├── SessionSummaryPage.js      # Analytics dashboard
+│   │   │   ├── CodingChallengeDemo.js     # Code execution demo
+│   │   │   ├── ScheduledSessionsPage.js   # Calendar integration
+│   │   │   └── QuestionBankPage.js        # Question library
+│   │   ├── services/
+│   │   │   ├── api.js                     # Axios configuration
+│   │   │   ├── interviewService.js        # Interview CRUD
+│   │   │   ├── codingService.js           # Judge0 integration
+│   │   │   ├── stripeService.js           # Payments
+│   │   │   └── emotionService.js          # Facial analysis
+│   │   ├── context/
+│   │   │   ├── AuthContext.js             # User authentication
+│   │   │   └── ThemeContext.js            # Dark/light mode
+│   │   ├── hooks/                         # Custom React hooks
+│   │   ├── utils/                         # Helper functions
+│   │   └── routes/                        # Route configuration
+│   └── package.json
+├── server/                      # Node.js backend
 │   ├── src/
-│   │   ├── controllers/   # Request handlers
-│   │   ├── models/        # Database models
-│   │   ├── routes/        # API routes
-│   │   ├── middleware/    # Custom middleware
-│   │   ├── services/      # Business logic services
-│   │   ├── utils/         # Utility functions
-│   │   └── config/        # Configuration files
-│   ├── package.json
-│   └── .env.example
-├── package.json           # Root package.json for workspace management
-├── README.md
-└── UI_REDESIGN_SUMMARY.md # 🆕 Detailed redesign documentation
+│   │   ├── controllers/
+│   │   │   ├── authController.js
+│   │   │   ├── interviewController.js     # Core interview logic
+│   │   │   ├── codingController.js        # Code execution
+│   │   │   ├── stripeController.js        # Subscription webhooks
+│   │   │   └── chatbotController.js       # Grok AI endpoints
+│   │   ├── models/
+│   │   │   ├── User.js
+│   │   │   ├── Interview.js               # Interview sessions
+│   │   │   ├── CodingSession.js           # Code challenges
+│   │   │   ├── Subscription.js            # Stripe subscriptions
+│   │   │   └── Question.js                # Question templates
+│   │   ├── services/                      # 🔥 Core business logic
+│   │   │   ├── aiProviders/               # Multi-provider AI
+│   │   │   │   ├── anthropicProvider.js
+│   │   │   │   ├── openaiProvider.js
+│   │   │   │   └── xaiProvider.js
+│   │   │   ├── advancedAnalysisService.js # Performance scoring
+│   │   │   ├── advancedFeedbackService.js # Detailed evaluations
+│   │   │   ├── aiQuestionService.js       # AI question generation
+│   │   │   ├── codingChallengeService.js  # Code challenge logic
+│   │   │   ├── codeReviewService.js       # AI code analysis
+│   │   │   ├── embeddingService.js        # Vector embeddings
+│   │   │   ├── emotionService.js          # Emotion aggregation
+│   │   │   ├── evaluationService.js       # Answer scoring
+│   │   │   ├── grokChatbotService.js      # AI chatbot
+│   │   │   ├── hybridQuestionService.js   # Template + AI questions
+│   │   │   ├── judge0Service.js           # Code execution
+│   │   │   ├── pdfGenerationService.js    # PDF reports
+│   │   │   ├── ragService.js              # RAG for chatbot
+│   │   │   ├── sessionSummaryService.js   # Analytics
+│   │   │   ├── stripeService.js           # Payments
+│   │   │   ├── transcriptionService.js    # Speech-to-text
+│   │   │   └── translationService.js      # Multi-language
+│   │   ├── routes/                        # Express routes
+│   │   ├── middleware/
+│   │   │   ├── auth.js                    # JWT validation
+│   │   │   ├── proPlan.js                 # Subscription checks
+│   │   │   └── errorHandler.js
+│   │   ├── data/
+│   │   │   ├── questionTemplates.json     # 19+ role templates
+│   │   │   └── codingChallenges.json      # Predefined challenges
+│   │   ├── scripts/
+│   │   │   └── validateTemplates.js       # Template validator
+│   │   └── config/                        # Environment configs
+│   └── package.json
+├── server/emotion_service/      # 🐍 Python microservice
+│   ├── app.py                   # Flask API for DeepFace
+│   └── requirements.txt         # Python dependencies
+├── subscriptionPlans.json       # Stripe plan configuration
+└── README.md
 ```
 
-🆕 = New files | 🔄 = Recently updated
+🔥 = Critical services | 🐍 = Python microservice
 
 ## 🏃‍♂️ Quick Start
 
@@ -275,79 +367,199 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
    - Add your IP address to whitelist
    - Update MONGODB_URI in .env file
 
-## 🚦 API Endpoints (selected)
+## 🔧 Core Modules
 
-### Health
+### 1. 🎯 Hybrid Question Service
 
-- `GET /api/health` - Server health
-- `GET /api/coding/health` - Judge0 availability and languages
+**File**: `server/src/services/hybridQuestionService.js`
 
-### Authentication
+Intelligent question generation combining template-based and AI-powered approaches:
+
+- 19+ job role templates (software engineer, data analyst, cloud architect, etc.)
+- Role normalization with alias support
+- Difficulty-aware question selection
+- Category balancing (technical, behavioral, system design)
+- Fallback handling for unknown roles
+- Question validation and deduplication
+
+### 2. 🤖 Multi-Provider AI System
+
+**Directory**: `server/src/services/aiProviders/`
+
+- **Anthropic Claude**: Primary provider for question generation and evaluation
+- **OpenAI GPT**: Secondary provider with automatic fallback
+- **xAI Grok**: Specialized for chatbot and real-time coaching
+- Unified interface with error handling
+- Rate limit management
+- Cost tracking per provider
+
+### 3. 💬 Grok AI Chatbot
+
+**File**: `server/src/services/grokChatbotService.js`
+
+Context-aware AI assistant:
+
+- Real-time interview coaching
+- Feature guidance and onboarding
+- User context integration (role, experience, current page)
+- Conversation history management
+- Streaming response support
+- RAG integration for accurate answers
+
+### 4. 🔍 RAG Service (Retrieval-Augmented Generation)
+
+**File**: `server/src/services/ragService.js`
+
+Enhances chatbot accuracy with document retrieval:
+
+- Vector embeddings using OpenAI
+- In-memory vector store (FAISS-like)
+- Cosine similarity search
+- Document chunking and indexing
+- Source citation in responses
+
+### 5. 😊 Emotion Analysis Service
+
+**Files**: `server/emotion_service/app.py` + `server/src/services/emotionService.js`
+
+DeepFace-powered facial expression tracking:
+
+- Real-time emotion detection (Flask microservice)
+- Per-question metrics (eye contact, confidence, smile)
+- Session-level aggregation
+- Emotion timeline generation
+- Premium-gated analytics
+
+### 6. 💻 Coding Challenge Service
+
+**File**: `server/src/services/codingChallengeService.js`
+
+Comprehensive code execution and evaluation:
+
+- 70+ language support via Judge0
+- Test case validation
+- Execution time tracking
+- Memory usage monitoring
+- AI-powered code review
+- Local JavaScript fallback
+
+### 7. 📊 Advanced Analysis Service
+
+**File**: `server/src/services/advancedAnalysisService.js`
+
+Multi-dimensional performance evaluation:
+
+- Skill assessment across categories
+- Time management analysis
+- Difficulty progression tracking
+- Strengths and weaknesses identification
+- Personalized action plans
+- Readiness score calculation
+- Benchmark comparisons
+
+### 8. 📈 Session Summary Service
+
+**File**: `server/src/services/sessionSummaryService.js`
+
+Comprehensive session analytics:
+
+- Aggregate score calculations
+- Category performance breakdown
+- Response time analysis
+- Performance highlights
+- Overall assessment and recommendations
+
+### 9. 💳 Stripe Integration
+
+**File**: `server/src/services/stripeService.js`
+
+Complete subscription management:
+
+- Customer creation and management
+- Subscription lifecycle handling
+- Webhook processing
+- Quota tracking and resets
+- Payment intent creation
+- Invoice management
+
+### 10. 📝 Transcription Service
+
+**File**: `server/src/services/transcriptionService.js`
+
+Real-time speech-to-text:
+
+- Incremental transcript updates
+- Timestamp synchronization
+- Multi-format support
+- Browser-based Web Speech API integration
+- Polling endpoint for live updates
+
+## 🚦 API Endpoints
+
+### Health & Configuration
+
+- `GET /api/health` - Server health check
+- `GET /api/bootstrap` - Client hydration (auth, subscription, analytics)
+- `GET /api/coding/health` - Judge0 status and supported languages
+
+### Authentication (Clerk)
 
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user
+- `GET /api/auth/me` - Get authenticated user
+- `POST /api/auth/logout` - User logout
 
-### Users
+### User Management
 
 - `GET /api/users/profile` - Get user profile
-- `PUT /api/users/profile` - Update user profile
+- `PUT /api/users/profile` - Update profile
+- `POST /api/dev/upgrade-self` - (Dev) Upgrade to premium
 
 ### Interviews
 
 - `POST /api/interviews` - Create interview session
 - `GET /api/interviews` - Get user interviews
 - `GET /api/interviews/:id` - Get specific interview
-- `PUT /api/interviews/:id/start` - Start interview (activates quota decrement & timing)
-- `POST /api/interviews/:id/answer/:questionIndex` - Submit answer or skip. Body:
-  - To answer: `{ answer: string, timeSpent?, notes?, facialMetrics? }`
-  - To skip: `{ skip: true, timeSpent? }` (must NOT include a non-empty `answer`). Returns `{ questionIndex, skipped: true }`.
-  - Validation errors: `EMPTY_ANSWER`, `ANSWER_TOO_SHORT`, `SKIP_WITH_ANSWER`.
-- `POST /api/interviews/:id/followup/:questionIndex` - Generate (or fetch cached) follow-up questions
-- `POST /api/interviews/:id/adaptive-question` - Fetch next adaptive question (when adaptive enabled)
-- `PATCH /api/interviews/:id/adaptive-difficulty` - Explicitly override current adaptive difficulty
-- `POST /api/interviews/:id/complete` - Complete interview & persist global facial metrics snapshot
-- `GET /api/interviews/:id/transcripts` - Poll transcript segments (speech-to-text)
-- `GET /api/interviews/:id/metrics/export` - Export metrics (CSV)
-- `GET /api/interviews/:id/metrics/export?format=pdf` - Export metrics (PDF)
+- `PUT /api/interviews/:id/start` - Start interview (activates quota & timing)
+- `POST /api/interviews/:id/answer/:questionIndex` - Submit answer or skip
+  - Answer: `{ answer: string, timeSpent?, facialMetrics? }`
+  - Skip: `{ skip: true, timeSpent? }`
+- `POST /api/interviews/:id/followup/:questionIndex` - Generate follow-up questions
+- `POST /api/interviews/:id/adaptive-question` - Fetch adaptive question
+- `PATCH /api/interviews/:id/adaptive-difficulty` - Override difficulty
+- `POST /api/interviews/:id/complete` - Complete interview (save metrics)
+- `GET /api/interviews/:id/transcripts` - Poll transcripts
+- `GET /api/interviews/:id/metrics/export` - Export CSV
+- `GET /api/interviews/:id/metrics/export?format=pdf` - Export PDF
 
-### Bootstrap & Subscription
+### Chatbot (Grok AI)
 
-- `GET /api/bootstrap` - Hydrate client with auth/profile/subscription & basic analytics
-- `POST /api/dev/upgrade-self` - (Dev only) Upgrade current mock user to premium
-
-### Adaptive Difficulty (Summary)
-
-Difficulty shifts are automatically recommended based on score thresholds and stored in `config.adaptiveDifficulty.difficultyHistory`. Manual overrides create a synthetic history entry with `score: null`.
+- `POST /api/chatbot/chat` - Send message to AI assistant
+- `GET /api/chatbot/suggestions` - Get contextual suggestions
+- `POST /api/chatbot/feedback` - Submit feedback on responses
 
 ### Questions
 
 - `POST /api/questions/generate` - Generate AI questions
+- `GET /api/questions/templates` - Get role templates
+- `GET /api/questions/bank` - Browse question library
 
-### Reports
+### Coding Challenges
 
-### Coding
+- `POST /api/coding/test` - Test code execution
+- `POST /api/coding/session` - Create coding session
+- `GET /api/coding/session/:id/current` - Get current challenge
+- `POST /api/coding/session/:id/submit` - Submit solution
+- `POST /api/coding/session/:id/next` - Advance to next
+- `GET /api/coding/session/:id/status` - Session progress
+- `POST /api/coding/session/:id/complete` - End session
 
-- `POST /api/coding/test` - Stateless code execution for a predefined challenge
-- `POST /api/coding/session` - Create coding session (scoped to an interview)
-- `GET /api/coding/session/:sessionId/current` - Get current challenge
-- `POST /api/coding/session/:sessionId/submit` - Submit solution
-- `POST /api/coding/session/:sessionId/next` - Advance to next challenge
-- `GET /api/coding/session/:sessionId/status` - Session progress
-- `POST /api/coding/session/:sessionId/complete` - End session
+### Reports & Analytics
 
 - `POST /api/reports/generate` - Generate performance report
 - `GET /api/reports` - Get user reports
-
-### Transcripts & Media
-
-- `GET /api/interviews/:id/transcripts` - Incremental transcript polling
-- (Video upload / playback routes under `/api/video/*`) – See feature docs or code for details
-
-### Exports
-
-- CSV Header Fields: `questionIndex,category,difficulty,score,timeSpent,eyeContact,blinkRate,smilePercentage,headSteadiness,offScreen,confidence`
-- PDF mirrors CSV with a compact pipe-delimited layout.
+- `GET /api/reports/:id/session-summary` - Comprehensive analytics
+- `GET /api/reports/:id/export-pdf` - PDF export (Premium)
 
 ## 🎨 UI Components
 

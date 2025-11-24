@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import StyledSelect from "./StyledSelect";
 import QuestionCard from "../ui/QuestionCard";
 import api from "../../services/api";
@@ -18,6 +19,7 @@ const HybridQuestionGenerator = ({
     questionCount: 10,
   });
   const [questions, setQuestions] = useState([]);
+  const { language, setLanguage, supported, labels } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [metadata, setMetadata] = useState(null);
   const [showQuestions, setShowQuestions] = useState(false);
@@ -47,24 +49,55 @@ const HybridQuestionGenerator = ({
   const handleGenerateQuestions = async () => {
     setLoading(true);
     try {
-      // Use axios instance directly so we can unwrap envelope consistently
-      const { data: envelope } = await api.post("/questions/generate", {
-        config,
-      });
+      // Normalize config to match backend validation schema (flatten + enum mapping)
+      const expMap = {
+        beginner: "entry",
+        intermediate: "mid",
+        advanced: "senior",
+      };
+      const diffMap = {
+        beginner: "easy",
+        intermediate: "medium",
+        advanced: "hard",
+      };
+      const payload = {
+        jobRole: config.jobRole,
+        experienceLevel: expMap[config.experienceLevel] || "mid",
+        interviewType: config.interviewType,
+        count: config.questionCount,
+        difficulty: diffMap[config.difficulty] || "medium",
+        language,
+      };
+
+      const { data: envelope } = await api.post("/questions/generate", payload);
 
       if (envelope && envelope.success) {
-        const newQuestions = envelope.data.questions;
-        const newMetadata = envelope.data.metadata;
+        const newQuestions =
+          envelope.data.questions || envelope.data.data?.questions || [];
+        // Normalize metadata shape to work with legacy & current backend formats
+        const rawMeta =
+          envelope.data.metadata || envelope.data.data?.metadata || {};
+        const newMetadata = {
+          totalQuestions:
+            rawMeta.totalQuestions ||
+            rawMeta.totalGenerated ||
+            rawMeta.count ||
+            newQuestions.length,
+          sourceBreakdown:
+            rawMeta.sourceBreakdown ||
+            (rawMeta.source ? { [rawMeta.source]: newQuestions.length } : {}),
+          tagCoverage: rawMeta.tagCoverage || [],
+          cacheUsed: rawMeta.cacheUsed || rawMeta.fromCache || false,
+          configUsed: rawMeta.config || payload,
+          ...rawMeta,
+        };
         setQuestions(newQuestions);
         setMetadata(newMetadata);
         setShowQuestions(true);
         toast.success(`Generated ${newQuestions.length} questions`);
         if (onQuestionsGenerated) {
           // pass through metadata plus the config used for generation so parent can leverage it
-          onQuestionsGenerated(newQuestions, {
-            ...(newMetadata || {}),
-            configUsed: { ...config },
-          });
+          onQuestionsGenerated(newQuestions, newMetadata);
         }
       } else {
         toast.error(
@@ -94,12 +127,29 @@ const HybridQuestionGenerator = ({
     <div className="space-y-6">
       {/* Configuration Section */}
       <div className="bg-white dark:bg-surface-900 rounded-lg shadow-sm border border-surface-200 dark:border-surface-700 p-6">
-        <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-50 mb-4">
-          Generate Interview Questions
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-50">
+            Generate Interview Questions
+          </h2>
+          <div className="flex items-center gap-2 text-xs bg-surface-100 dark:bg-surface-800 border border-surface-300 dark:border-surface-700 rounded px-2 py-1">
+            <span className="font-medium">Language:</span>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="bg-transparent focus:outline-none"
+            >
+              {supported.map((code) => (
+                <option key={code} value={code}>
+                  {labels[code]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <p className="text-surface-600 dark:text-surface-300 mb-6">
           Configure your interview parameters to generate a mix of
-          template-based and AI-generated questions.
+          template-based and AI-generated questions. The selected language will
+          be applied to generated questions and evaluation feedback.
         </p>
 
         {typeof appendMode === "boolean" &&

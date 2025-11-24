@@ -421,15 +421,14 @@ const SettingsPage = () => {
                         Account Security
                       </h4>
                       <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
-                        Your account is secured through Clerk authentication
-                        with industry-standard security measures.
+                        Your account is secured through JWT authentication with
+                        Google OAuth 2.0 integration and industry-standard
+                        security measures.
                       </p>
                       <div className="flex space-x-4">
                         <div className="flex items-center space-x-2 text-green-600">
                           <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                          <span className="text-sm">
-                            Two-factor authentication available
-                          </span>
+                          <span className="text-sm">Google OAuth security</span>
                         </div>
                         <div className="flex items-center space-x-2 text-green-600">
                           <div className="w-2 h-2 bg-green-600 rounded-full"></div>

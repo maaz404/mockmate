@@ -6,6 +6,8 @@ import { useAuthContext } from "../context/AuthContext";
 import LoginPage from "../pages/auth/LoginPage";
 import RegisterPage from "../pages/auth/RegisterPage";
 import OAuthCallbackPage from "../pages/auth/OAuthCallbackPage";
+import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
 
 // Protected Pages
 import DashboardPage from "../pages/DashboardPage";
@@ -21,6 +23,7 @@ import ReportsPage from "../pages/ReportsPage";
 import ScheduledSessionsPage from "../pages/ScheduledSessionsPage";
 import EnhancedSettingsPage from "../pages/EnhancedSettingsPage";
 import ResourcesPage from "../pages/ResourcesPage";
+import SupportPage from "../pages/SupportPage";
 import CodingChallengeDemo from "../pages/CodingChallengeDemo";
 import VideoRecordingDemo from "../components/VideoRecordingDemo";
 import ComprehensiveDashboard from "../pages/ComprehensiveDashboard";
@@ -91,6 +94,22 @@ function AppRoutes() {
         element={
           <PublicRoute>
             <RegisterPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/request-password-reset"
+        element={
+          <PublicRoute>
+            <ForgotPasswordPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PublicRoute>
+            <ResetPasswordPage />
           </PublicRoute>
         }
       />
@@ -236,6 +255,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ResourcesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/support"
+        element={
+          <ProtectedRoute>
+            <SupportPage />
           </ProtectedRoute>
         }
       />

@@ -163,6 +163,27 @@ router.post(
   codingController.runAdhoc
 );
 
+// @desc    Test code against predefined challenge (stateless)
+// @route   POST /api/coding/test
+// @access  Private
+router.post(
+  "/test",
+  requireAuth,
+  ensureUserProfile,
+  [
+    body("code").isString().notEmpty().withMessage("Code is required"),
+    body("language")
+      .isIn(["javascript", "python", "java"])
+      .withMessage("Invalid language"),
+    body("challengeId")
+      .isString()
+      .notEmpty()
+      .withMessage("Challenge ID required"),
+  ],
+  handleValidationErrors,
+  codingController.testCode
+);
+
 // @desc    Get coding statistics
 // @route   GET /api/coding/stats
 // @access  Private

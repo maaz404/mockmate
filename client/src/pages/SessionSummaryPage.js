@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { apiService } from "../services/api";
+import EmotionIcon from "../components/EmotionIcon";
 
 const SessionSummaryPage = () => {
   const { interviewId } = useParams();
@@ -240,6 +241,43 @@ const SessionSummaryPage = () => {
         ? "Decent foundation. Practice more to boost confidence."
         : "Focus on fundamentals and practice with more mock sessions.";
 
+    // Extract emotion data if available
+    const emotionTimeline = interview?.sessionEnrichment?.emotionTimeline || [];
+    const emotionSummary =
+      emotionTimeline.length > 0
+        ? {
+            totalFrames: emotionTimeline.length,
+            hasData: true,
+            // Calculate dominant emotion
+            dominantEmotion: (() => {
+              const counts = {};
+              emotionTimeline.forEach((e) => {
+                counts[e.emotion] = (counts[e.emotion] || 0) + 1;
+              });
+              return (
+                Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+                "neutral"
+              );
+            })(),
+            // Calculate positive ratio
+            positiveRatio: (() => {
+              const positive = emotionTimeline.filter((e) =>
+                ["happy", "surprise"].includes(e.emotion)
+              ).length;
+              return Math.round((positive / emotionTimeline.length) * 100);
+            })(),
+            // Calculate confidence
+            avgConfidence: Math.round(
+              (emotionTimeline.reduce(
+                (sum, e) => sum + (e.confidence || 0),
+                0
+              ) /
+                emotionTimeline.length) *
+                100
+            ),
+          }
+        : null;
+
     return {
       sessionInfo: {
         jobRole: interview?.jobRole || interview?.config?.jobRole || "",
@@ -278,6 +316,7 @@ const SessionSummaryPage = () => {
             ? { time: times[slowestIdx], score: scores[slowestIdx] }
             : null,
       },
+      emotionSummary,
     };
   }
 
@@ -798,6 +837,58 @@ const SessionSummaryPage = () => {
             )}
           </div>
         </div>
+
+        {/* Emotion Analysis Summary */}
+        {summary.emotionSummary?.hasData && (
+          <div className="mt-8 card p-6">
+            <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-4 flex items-center gap-2">
+              <EmotionIcon emotion="happy" size="sm" />
+              Emotional Intelligence Analysis
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
+                  Dominant Emotion
+                </h4>
+                <p className="text-2xl font-bold text-blue-600 capitalize">
+                  {summary.emotionSummary.dominantEmotion}
+                </p>
+                <p className="text-sm text-surface-600 dark:text-surface-400">
+                  Most frequently detected during interview
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
+                  Positive Engagement
+                </h4>
+                <p className="text-2xl font-bold text-green-600">
+                  {summary.emotionSummary.positiveRatio}%
+                </p>
+                <p className="text-sm text-surface-600 dark:text-surface-400">
+                  Happy and enthusiastic expressions
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
+                  Detection Confidence
+                </h4>
+                <p className="text-2xl font-bold text-purple-600">
+                  {summary.emotionSummary.avgConfidence}%
+                </p>
+                <p className="text-sm text-surface-600 dark:text-surface-400">
+                  Based on {summary.emotionSummary.totalFrames} analyzed frames
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-surface-700 dark:text-surface-300">
+                💡 <strong>Insight:</strong> View detailed emotion timeline and
+                personalized coaching suggestions in the full interview results
+                page.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {showUpgradeModal && <UpgradeModal />}

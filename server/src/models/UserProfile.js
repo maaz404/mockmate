@@ -228,7 +228,16 @@ const UserProfileSchema = new mongoose.Schema(
       },
       status: {
         type: String,
-        enum: ["active", "cancelled", "expired", "trialing"],
+        enum: [
+          "active",
+          "canceled",
+          "incomplete",
+          "incomplete_expired",
+          "past_due",
+          "trialing",
+          "unpaid",
+          "paused",
+        ],
         default: "active",
       },
       stripeCustomerId: String,

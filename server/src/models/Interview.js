@@ -323,6 +323,22 @@ const interviewSchema = new mongoose.Schema(
           offScreenPercentage: Number,
         },
       ],
+      emotionTimeline: [
+        {
+          timestamp: Number,
+          emotion: String,
+          emotions: {
+            angry: Number,
+            disgust: Number,
+            fear: Number,
+            happy: Number,
+            sad: Number,
+            surprise: Number,
+            neutral: Number,
+          },
+          confidence: Number,
+        },
+      ],
       enrichedAt: Date,
     },
     videoSession: {

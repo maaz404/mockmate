@@ -91,11 +91,37 @@ class AIProviderManager {
    * Evaluate interview answer
    */
   async evaluateAnswer(question, answer, config = {}) {
+    console.log("[AIManager] evaluateAnswer called", {
+      hasQuestion: !!question,
+      hasAnswer: !!answer,
+      configKeys: Object.keys(config),
+    });
+
     return await this._executeWithFallback("evaluation", async (provider) => {
+      console.log(
+        `[AIManager] Trying provider: ${provider.providerName} for evaluation`
+      );
+
       if (provider.evaluateAnswer) {
-        return await provider.evaluateAnswer(question, answer, config);
+        console.log(
+          `[AIManager] Provider ${provider.providerName} has evaluateAnswer method`
+        );
+        const result = await provider.evaluateAnswer(question, answer, config);
+        console.log(
+          `[AIManager] Evaluation result from ${provider.providerName}:`,
+          {
+            score: result.score,
+            hasFeedback: !!result.feedback,
+            feedbackLength: result.feedback?.length || 0,
+          }
+        );
+        return result;
       }
+
       // Fallback to generic completion
+      console.log(
+        `[AIManager] Provider ${provider.providerName} doesn't have evaluateAnswer, using generic completion`
+      );
       const prompt = this._buildEvaluationPrompt(question, answer, config);
       const response = await provider.generateStructuredOutput(
         prompt,
@@ -176,9 +202,21 @@ Provide: score (0-100), rubricScores (relevance, clarity, depth, structure 1-5),
 
   /**
    * Chat with assistant
+   * @param {Array} messages - Array of message objects
+   * @param {Object|string} contextOrSystemPrompt - Context object or system prompt string
+   * @returns {Promise<string>} AI response
    */
-  async chat(messages, systemPrompt = null) {
+  async chat(messages, contextOrSystemPrompt = null) {
     return await this._executeWithFallback("chatbot", async (provider) => {
+      // Handle both old string format and new context object
+      let systemPrompt = null;
+      if (typeof contextOrSystemPrompt === "string") {
+        systemPrompt = contextOrSystemPrompt;
+      } else if (contextOrSystemPrompt && contextOrSystemPrompt.ragContext) {
+        // Build system prompt with RAG context
+        systemPrompt = contextOrSystemPrompt.ragContext;
+      }
+
       if (provider.chat) {
         return await provider.chat(messages, systemPrompt);
       }
@@ -192,9 +230,20 @@ Provide: score (0-100), rubricScores (relevance, clarity, depth, structure 1-5),
 
   /**
    * Stream chat (for real-time responses)
+   * @param {Array} messages - Array of message objects
+   * @param {Function} onChunk - Callback for each chunk
+   * @param {Object|string} contextOrSystemPrompt - Context object or system prompt string
    */
-  async streamChat(messages, onChunk, systemPrompt = null) {
+  async streamChat(messages, onChunk, contextOrSystemPrompt = null) {
     return await this._executeWithFallback("chatbot", async (provider) => {
+      // Handle both old string format and new context object
+      let systemPrompt = null;
+      if (typeof contextOrSystemPrompt === "string") {
+        systemPrompt = contextOrSystemPrompt;
+      } else if (contextOrSystemPrompt && contextOrSystemPrompt.ragContext) {
+        systemPrompt = contextOrSystemPrompt.ragContext;
+      }
+
       if (provider.streamChat) {
         return await provider.streamChat(messages, onChunk, systemPrompt);
       }

@@ -24,7 +24,7 @@ const ProjectInfoSection = () => {
       icon: Code,
       title: "Technical Implementation",
       content:
-        "Built using React.js frontend with Node.js/Express backend, MongoDB database, Clerk authentication, and AI API integration for real-time feedback processing.",
+        "Built using React.js frontend with Node.js/Express backend, MongoDB database, JWT with Google OAuth 2.0 authentication, and multiple AI providers (Groq, Gemini, Grok) for real-time feedback processing and emotion analysis.",
       category: "Development Stack",
       color: "accent",
     },

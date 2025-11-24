@@ -1,7 +1,23 @@
-const ragService = require("../src/services/ragService");
-const chatbotKnowledge = require("../src/data/chatbotKnowledge.js");
-const questionTemplates = require("../src/data/questionTemplates.json");
+// Load environment variables FIRST so downstream services (embeddingService) see OPENAI_API_KEY
 require("dotenv").config();
+
+// Validate required env before requiring services that instantiate clients
+if (!process.env.OPENAI_API_KEY) {
+  console.error(
+    "❌ Missing OPENAI_API_KEY. Please add it to server/.env before indexing."
+  );
+  process.exit(1);
+}
+if (!process.env.PINECONE_API_KEY) {
+  console.error(
+    "❌ Missing PINECONE_API_KEY. Please add it to server/.env before indexing."
+  );
+  process.exit(1);
+}
+
+const ragService = require("../services/ragService");
+const chatbotKnowledge = require("../data/chatbotKnowledge.js");
+const questionTemplates = require("../data/questionTemplates.json");
 
 function flattenQuestions(templates) {
   const result = [];

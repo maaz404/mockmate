@@ -57,13 +57,13 @@ const SystemArchitectureSection = () => {
     },
     {
       name: "Authentication",
-      description: "Clerk-based user management and security",
+      description: "JWT-based user management and Google OAuth integration",
       icon: Shield,
       color: "purple",
       technologies: [
-        "Clerk authentication service",
-        "JWT token management",
-        "User session handling",
+        "JWT token-based authentication",
+        "Google OAuth 2.0 integration",
+        "User session management",
         "Role-based access control",
         "Security middleware",
       ],

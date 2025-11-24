@@ -13,6 +13,8 @@ router.get("/health", chatbotController.health);
 
 // Protected routes
 router.post("/chat", requireAuth, chatbotController.chat);
+router.post("/stream", requireAuth, chatbotController.stream);
+router.get("/suggestions", requireAuth, chatbotController.getSuggestions);
 router.get(
   "/history/:interviewId",
   requireAuth,

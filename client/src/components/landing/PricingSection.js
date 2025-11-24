@@ -1,37 +1,35 @@
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
-import { Check, Zap, Crown, ArrowRight } from "lucide-react";
+import { Check, Zap, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const PricingSection = () => {
-  const [isAnnual, setIsAnnual] = useState(false);
-
   const plans = [
     {
-      name: "Starter",
+      name: "Free",
       description: "Perfect for getting started with interview prep",
       price: { monthly: 0, annual: 0 },
       badge: null,
       icon: null,
       features: [
-        "5 AI practice sessions per month",
+        "10 AI practice interviews per month",
         "Basic performance analytics",
         "General interview questions",
         "Email support",
-        "Mobile app access",
+        "Video recording and playback",
+        "Real-time AI feedback",
       ],
       limitations: [
-        "No industry-specific questions",
-        "No video recording",
-        "Limited feedback detail",
+        "Limited to 10 interviews per month",
+        "Basic analytics only",
       ],
       cta: "Get Started Free",
       popular: false,
     },
     {
-      name: "Professional",
-      description: "Most popular choice for serious job seekers",
-      price: { monthly: 29, annual: 24 },
+      name: "Premium",
+      description: "Unlimited interviews and advanced features",
+      price: { monthly: 1500, annual: 1500 },
       badge: "Most Popular",
       icon: Zap,
       features: [
@@ -40,50 +38,20 @@ const PricingSection = () => {
         "Industry-specific question banks",
         "Video recording and playback",
         "Real-time AI feedback",
-        "Personalized learning paths",
-        "Priority email & chat support",
-        "Interview scheduling assistant",
-        "Resume optimization tips",
+        "Emotion analysis during interviews",
+        "Detailed performance reports",
+        "Multi-language support",
+        "Priority support",
+        "Export interview results",
       ],
       limitations: [],
-      cta: "Start Free Trial",
+      cta: "Upgrade to Premium",
       popular: true,
-    },
-    {
-      name: "Enterprise",
-      description: "For teams and organizations",
-      price: { monthly: 99, annual: 79 },
-      badge: "Best Value",
-      icon: Crown,
-      features: [
-        "Everything in Professional",
-        "Team management dashboard",
-        "Custom question creation",
-        "Advanced analytics & reporting",
-        "White-label options",
-        "API access",
-        "Dedicated account manager",
-        "Custom integrations",
-        "24/7 phone support",
-        "Onboarding & training",
-      ],
-      limitations: [],
-      cta: "Contact Sales",
-      popular: false,
     },
   ];
 
   const getPrice = (plan) => {
-    const price = isAnnual ? plan.price.annual : plan.price.monthly;
-    return price === 0 ? "Free" : `$${price}`;
-  };
-
-  const getSavings = (plan) => {
-    if (plan.price.monthly === 0) return null;
-    const monthlyCost = plan.price.monthly * 12;
-    const annualCost = plan.price.annual * 12;
-    const savings = monthlyCost - annualCost;
-    return savings > 0 ? `Save $${savings}/year` : null;
+    return plan.price.monthly === 0 ? "Free" : `Rs ${plan.price.monthly}`;
   };
 
   return (
@@ -108,37 +76,10 @@ const PricingSection = () => {
             Invest in your career with plans designed to help you land your
             dream job faster and with more confidence.
           </p>
-
-          {/* Billing Toggle */}
-          <div className="inline-flex items-center bg-surface-100 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700 rounded-lg p-1">
-            <button
-              onClick={() => setIsAnnual(false)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                !isAnnual
-                  ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
-                  : "text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white"
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setIsAnnual(true)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                isAnnual
-                  ? "bg-white dark:bg-surface-700 text-surface-900 dark:text-white shadow-sm"
-                  : "text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white"
-              }`}
-            >
-              Annual
-              <span className="ml-1 text-xs text-green-600 dark:text-green-400 font-semibold">
-                Save 20%
-              </span>
-            </button>
-          </div>
         </motion.div>
 
         {/* Pricing Cards */}
-        <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             return (
@@ -192,17 +133,10 @@ const PricingSection = () => {
                       </span>
                       {plan.price.monthly > 0 && (
                         <span className="text-surface-600 dark:text-surface-300 text-lg">
-                          /{isAnnual ? "month" : "month"}
+                          /month
                         </span>
                       )}
                     </div>
-
-                    {/* Savings */}
-                    {isAnnual && getSavings(plan) && (
-                      <div className="text-green-600 dark:text-green-400 text-sm font-medium">
-                        {getSavings(plan)}
-                      </div>
-                    )}
                   </div>
 
                   {/* Features */}
@@ -230,7 +164,7 @@ const PricingSection = () => {
                   {/* CTA Button */}
                   <div>
                     <Link
-                      to={plan.name === "Enterprise" ? "/contact" : "/register"}
+                      to={plan.name === "Premium" ? "/pricing" : "/dashboard"}
                       className={`w-full inline-flex items-center justify-center py-3 px-6 rounded-xl font-semibold transition-all duration-200 group ${
                         plan.popular ? "btn-primary" : "btn-secondary"
                       }`}

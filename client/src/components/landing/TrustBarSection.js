@@ -29,7 +29,7 @@ const TechStackSection = () => {
       color: "text-surface-700 dark:text-surface-300",
     },
     {
-      name: "Clerk Auth",
+      name: "JWT + OAuth",
       icon: Shield,
       description: "Authentication",
       color: "text-purple-500",

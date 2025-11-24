@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiService } from "../services/api";
+import { useLanguage } from "../context/LanguageContext";
 
 const InterviewExperiencePage = () => {
   // Route param is /interview/:id/experience
   const { id: interviewId } = useParams();
   const navigate = useNavigate();
+  const { t, language, labels } = useLanguage();
 
   // Interview state
   const [interview, setInterview] = useState(null);
@@ -18,7 +20,7 @@ const InterviewExperiencePage = () => {
 
   const fetchInterview = useCallback(async () => {
     if (!interviewId) {
-      setError("No interview id provided.");
+      setError(t("loading_interview"));
       setLoading(false);
       return;
     }
@@ -64,7 +66,7 @@ const InterviewExperiencePage = () => {
         e?.response?.data || e
       );
       setError(
-        e?.response?.data?.message || e.message || "Failed to load interview"
+        e?.response?.data?.message || e.message || t("loading_interview")
       );
     } finally {
       setLoading(false);
@@ -78,7 +80,7 @@ const InterviewExperiencePage = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="text-surface-600">Loading interview...</div>
+        <div className="text-surface-600">{t("loading_interview")}</div>
       </div>
     );
   }
@@ -88,7 +90,7 @@ const InterviewExperiencePage = () => {
       <div className="flex flex-col items-center justify-center h-[60vh] gap-3">
         <div className="text-red-600">{error}</div>
         <button className="btn-primary" onClick={() => navigate("/dashboard")}>
-          Back to Dashboard
+          ← {t("dashboard_back")}
         </button>
       </div>
     );
@@ -100,9 +102,14 @@ const InterviewExperiencePage = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Interview</h1>
+      <div className="flex items-start justify-between mb-2">
+        <h1 className="text-2xl font-semibold">{t("interview_title")}</h1>
+        <span className="text-xs bg-surface-200 dark:bg-surface-700 px-2 py-1 rounded-full">
+          🌐 {labels[language]}
+        </span>
+      </div>
       <div className="text-sm text-surface-500 mb-2">
-        Status: {interview.status} • Time Remaining:{" "}
+        {t("status_label")}: {interview.status} • {t("time_remaining_label")}:{" "}
         {Math.max(0, Math.floor((timeRemaining ?? 0) / 60))}m
       </div>
 
@@ -119,7 +126,7 @@ const InterviewExperiencePage = () => {
             rows={6}
             value={currentAnswer}
             onChange={(e) => setCurrentAnswer(e.target.value)}
-            placeholder="Type your answer..."
+            placeholder={t("type_answer_placeholder")}
           />
           <div className="flex gap-2">
             <button
@@ -133,18 +140,18 @@ const InterviewExperiencePage = () => {
                 );
               }}
             >
-              Save & Next
+              {t("save_next")}
             </button>
             <button
               className="btn-secondary"
               onClick={() => navigate("/dashboard")}
             >
-              End Session
+              {t("end_session")}
             </button>
           </div>
         </div>
       ) : (
-        <div>No questions found.</div>
+        <div>{t("no_questions_found")}</div>
       )}
     </div>
   );

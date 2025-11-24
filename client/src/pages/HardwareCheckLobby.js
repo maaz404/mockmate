@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Webcam from "react-webcam";
+import { useLanguage } from "../context/LanguageContext";
 
 const HardwareCheckLobby = () => {
   const navigate = useNavigate();
   const { id: interviewId } = useParams();
   const webcamRef = useRef(null);
+  const { t, language, labels } = useLanguage();
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -125,10 +127,17 @@ const HardwareCheckLobby = () => {
       <div className="max-w-4xl w-full bg-white dark:bg-surface-800 rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-8 text-white">
-          <h1 className="text-3xl font-bold mb-2">Hardware Check</h1>
-          <p className="text-primary-100">
-            Let's make sure your camera and microphone are working properly
-          </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                {t("hardware_check_title")}
+              </h1>
+              <p className="text-primary-100">{t("hardware_check_subtitle")}</p>
+            </div>
+            <span className="text-sm bg-primary-500/20 px-3 py-1 rounded-full border border-white/30 font-medium">
+              🌐 {labels[language]}
+            </span>
+          </div>
         </div>
 
         {/* Content */}
@@ -136,7 +145,7 @@ const HardwareCheckLobby = () => {
           {/* Webcam View */}
           <div className="space-y-3">
             <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-50">
-              📹 Camera Preview
+              📹 {t("camera_preview")}
             </h2>
             <div className="relative aspect-video bg-surface-900 rounded-xl overflow-hidden shadow-lg border-4 border-surface-200 dark:border-surface-700">
               {permissionsGranted ? (
@@ -156,7 +165,7 @@ const HardwareCheckLobby = () => {
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-500 mx-auto mb-4"></div>
                     <p className="text-white text-lg">
-                      Requesting permissions...
+                      {t("requesting_permissions")}
                     </p>
                   </div>
                 </div>
@@ -176,7 +185,9 @@ const HardwareCheckLobby = () => {
                         d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                       />
                     </svg>
-                    <p className="text-surface-400 text-lg">No camera access</p>
+                    <p className="text-surface-400 text-lg">
+                      {t("no_camera_access")}
+                    </p>
                   </div>
                 </div>
               )}
@@ -186,10 +197,10 @@ const HardwareCheckLobby = () => {
           {/* Microphone Meter */}
           <div className="space-y-3">
             <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-50 flex items-center gap-2">
-              🎤 Microphone Level
+              🎤 {t("microphone_level")}
               {permissionsGranted && audioLevel > 5 && (
                 <span className="text-sm text-green-600 dark:text-green-400 animate-pulse">
-                  Detecting sound!
+                  {t("detecting_sound")}
                 </span>
               )}
             </h2>
@@ -202,15 +213,15 @@ const HardwareCheckLobby = () => {
                 {!permissionsGranted && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-sm text-surface-500">
-                      Waiting for permission...
+                      {t("waiting_for_permission")}
                     </span>
                   </div>
                 )}
               </div>
               <p className="text-sm text-surface-600 dark:text-surface-400 mt-2">
                 {permissionsGranted
-                  ? "Speak to see the meter move"
-                  : "Grant permissions to test your microphone"}
+                  ? t("speak_to_meter")
+                  : t("grant_permissions_mic")}
               </p>
             </div>
           </div>
@@ -234,7 +245,7 @@ const HardwareCheckLobby = () => {
                 </svg>
                 <div>
                   <h3 className="font-semibold text-red-800 dark:text-red-300 mb-1">
-                    Permission Required
+                    {t("permission_required_title")}
                   </h3>
                   <p className="text-red-700 dark:text-red-400 text-sm">
                     {permissionError}
@@ -263,11 +274,10 @@ const HardwareCheckLobby = () => {
                 </svg>
                 <div>
                   <h3 className="font-semibold text-green-800 dark:text-green-300 mb-1">
-                    All Set!
+                    {t("all_set_title")}
                   </h3>
                   <p className="text-green-700 dark:text-green-400 text-sm">
-                    Your camera and microphone are working properly. You're
-                    ready to begin your interview.
+                    {t("all_set_desc")}
                   </p>
                 </div>
               </div>
@@ -286,8 +296,8 @@ const HardwareCheckLobby = () => {
               }`}
             >
               {permissionsGranted
-                ? "Begin Interview"
-                : "Waiting for Permissions..."}
+                ? t("begin_interview")
+                : t("waiting_for_permissions")}
             </button>
           </div>
         </div>

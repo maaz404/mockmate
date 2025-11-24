@@ -37,6 +37,7 @@ const healthRoutes = require("./routes/health");
 const uploadRoutes = require("./routes/uploads");
 const interviewMediaRoutes = require("./routes/interviewMedia");
 const sessionAuthRoutes = require("./routes/sessionAuth"); // ADD THIS LINE
+const translationRoutes = require("./routes/translation");
 
 // Import middleware
 const errorHandler = require("./middleware/errorHandler");
@@ -547,6 +548,8 @@ app.use("/api/video", videoRoutes);
 app.use("/api/coding", codingRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/translation", translationRoutes);
+app.use("/api/emotion", require("./routes/emotion")); // Emotion analysis
 
 // Error handling middleware (must be last)
 app.use(notFound);

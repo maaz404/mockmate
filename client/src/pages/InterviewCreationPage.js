@@ -3,17 +3,18 @@ import StyledSelect from "../components/ui/StyledSelect";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { apiService } from "../services/api";
+import { useLanguage } from "../context/LanguageContext";
 
 const InterviewCreationPage = () => {
   const navigate = useNavigate();
   const { user, isLoaded } = useAuthContext();
+  const { language, setLanguage, supported, labels, t } = useLanguage();
   const [formData, setFormData] = useState({
     jobRole: "",
     experienceLevel: "intermediate",
     interviewType: "mixed",
     skills: [],
     duration: 30,
-    difficulty: "medium",
     focusAreas: [],
     adaptiveDifficultyEnabled: false,
     includeCodingChallenges: false,
@@ -24,33 +25,34 @@ const InterviewCreationPage = () => {
   });
   const [loading, setLoading] = useState(false);
 
+  // Localized labels - these will update when language changes
   const experienceLevels = [
-    { value: "entry", label: "Entry Level (0-2 years)" },
-    { value: "intermediate", label: "Intermediate (2-5 years)" },
-    { value: "senior", label: "Senior (5-10 years)" },
-    { value: "expert", label: "Expert (10+ years)" },
+    { value: "entry", label: t("experience_entry") },
+    { value: "intermediate", label: t("experience_intermediate") },
+    { value: "senior", label: t("experience_senior") },
+    { value: "expert", label: t("experience_expert") },
   ];
 
   const interviewTypes = [
     {
       value: "technical",
-      label: "Technical Only",
-      description: "Focus on coding and technical skills",
+      label: t("technical_only"),
+      description: t("technical_only_desc"),
     },
     {
       value: "behavioral",
-      label: "Behavioral Only",
-      description: "Focus on soft skills and experiences",
+      label: t("behavioral_only"),
+      description: t("behavioral_only_desc"),
     },
     {
       value: "mixed",
-      label: "Mixed Interview",
-      description: "Combination of technical and behavioral",
+      label: t("mixed_interview"),
+      description: t("mixed_interview_desc"),
     },
     {
       value: "system-design",
-      label: "System Design",
-      description: "Architecture and system design questions",
+      label: t("system_design"),
+      description: t("system_design_desc"),
     },
   ];
 
@@ -148,13 +150,6 @@ const InterviewCreationPage = () => {
         expert: "executive",
       };
 
-      const difficultyMapping = {
-        easy: "beginner",
-        medium: "intermediate",
-        hard: "advanced",
-        mixed: "intermediate",
-      };
-
       // Create interview
       const response = await apiService.post("/interviews", {
         config: {
@@ -162,8 +157,8 @@ const InterviewCreationPage = () => {
           experienceLevel:
             experienceLevelMapping[formData.experienceLevel] ||
             formData.experienceLevel,
-          difficulty:
-            difficultyMapping[formData.difficulty] || formData.difficulty,
+          // No difficulty field - backend will use mixed distribution by default
+          // or adaptive algorithm when adaptiveDifficultyEnabled is true
           adaptiveDifficulty: { enabled: !!formData.adaptiveDifficultyEnabled },
           // Always use 10 questions by default, regardless of duration
           // Duration is for time limit, not question count
@@ -176,6 +171,7 @@ const InterviewCreationPage = () => {
               }
             : undefined,
           videoAnswersEnabled: formData.videoAnswersEnabled,
+          language,
         },
       });
 
@@ -223,13 +219,32 @@ const InterviewCreationPage = () => {
         <div className="bg-white dark:bg-surface-800/60 backdrop-blur-sm rounded-xl shadow-lg dark:shadow-surface-lg border border-surface-200 dark:border-surface-700">
           {/* Header */}
           <div className="px-8 py-6 border-b border-surface-200 dark:border-surface-700">
-            <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
-              Create New Interview
-            </h1>
-            <p className="text-surface-600 dark:text-surface-300 mt-2">
-              Customize your interview practice session based on your goals and
-              preferences.
-            </p>
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="font-heading text-3xl font-bold text-surface-900 dark:text-surface-50">
+                  {t("create_new_interview")}
+                </h1>
+                <p className="text-surface-600 dark:text-surface-300 mt-2">
+                  {t("customize_interview_desc")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-sm bg-surface-100 dark:bg-surface-800 border border-surface-300 dark:border-surface-700 rounded-lg px-3 py-2 shadow-sm">
+                <span className="font-medium text-surface-700 dark:text-surface-300">
+                  {t("language_label")}:
+                </span>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="bg-transparent focus:outline-none text-surface-900 dark:text-surface-100 font-medium cursor-pointer"
+                >
+                  {supported.map((code) => (
+                    <option key={code} value={code}>
+                      {labels[code]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-8">
@@ -240,7 +255,7 @@ const InterviewCreationPage = () => {
                   htmlFor="jobRole"
                   className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2"
                 >
-                  Job Role/Position
+                  {t("job_role_position")}
                 </label>
                 <input
                   type="text"
@@ -248,7 +263,7 @@ const InterviewCreationPage = () => {
                   name="jobRole"
                   value={formData.jobRole}
                   onChange={handleInputChange}
-                  placeholder="e.g., Software Engineer, Product Manager"
+                  placeholder={t("job_role_placeholder")}
                   className="w-full px-4 py-3 bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-surface-900 dark:text-surface-50 placeholder-surface-400 dark:placeholder-surface-400 transition-all duration-200"
                   required
                 />
@@ -259,7 +274,7 @@ const InterviewCreationPage = () => {
                   htmlFor="experienceLevel"
                   className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2"
                 >
-                  Experience Level
+                  {t("experience_level")}
                 </label>
                 <StyledSelect
                   id="experienceLevel"
@@ -294,12 +309,10 @@ const InterviewCreationPage = () => {
                 />
                 <span>
                   <span className="block font-medium text-surface-900 dark:text-surface-50">
-                    Adaptive Difficulty
+                    {t("adaptive_difficulty")}
                   </span>
                   <span className="block text-sm text-surface-600 dark:text-surface-400">
-                    Adjusts the difficulty of upcoming questions based on your
-                    performance. Starts at the selected difficulty and adapts
-                    each question.
+                    {t("adaptive_difficulty_desc")}
                   </span>
                 </span>
               </label>
@@ -308,7 +321,7 @@ const InterviewCreationPage = () => {
             {/* Interview Type */}
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-4">
-                Interview Type
+                {t("interview_type")}
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {interviewTypes.map((type) => (
@@ -468,55 +481,38 @@ const InterviewCreationPage = () => {
               )}
             </div>
 
-            {/* Duration & Difficulty */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label
-                  htmlFor="duration"
-                  className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2"
-                >
-                  Duration (minutes)
-                </label>
-                <StyledSelect
-                  id="duration"
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  ariaLabel="Duration"
-                >
-                  <option value={15}>15 minutes (Quick practice)</option>
-                  <option value={30}>30 minutes (Standard)</option>
-                  <option value={45}>45 minutes (Comprehensive)</option>
-                  <option value={60}>60 minutes (Full interview)</option>
-                </StyledSelect>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="difficulty"
-                  className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2"
-                >
-                  Difficulty Level
-                </label>
-                <StyledSelect
-                  id="difficulty"
-                  name="difficulty"
-                  value={formData.difficulty}
-                  onChange={handleInputChange}
-                  ariaLabel="Difficulty"
-                >
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                  <option value="mixed">Mixed</option>
-                </StyledSelect>
-              </div>
+            {/* Duration */}
+            <div>
+              <label
+                htmlFor="duration"
+                className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2"
+              >
+                {t("duration_minutes")}
+              </label>
+              <StyledSelect
+                id="duration"
+                name="duration"
+                value={formData.duration}
+                onChange={handleInputChange}
+                ariaLabel="Duration"
+              >
+                <option value={15}>{t("duration_15_quick")}</option>
+                <option value={30}>{t("duration_30_standard")}</option>
+                <option value={45}>{t("duration_45_comprehensive")}</option>
+                <option value={60}>{t("duration_60_full")}</option>
+              </StyledSelect>
+              <p className="mt-2 text-xs text-surface-500 dark:text-surface-400">
+                Questions will have a mixed difficulty distribution (beginner,
+                intermediate, advanced).
+                {formData.adaptiveDifficultyEnabled &&
+                  " Adaptive difficulty will adjust based on your performance."}
+              </p>
             </div>
 
             {/* Skills Selection */}
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-4">
-                Relevant Skills & Technologies
+                {t("relevant_skills")}
               </label>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {commonSkills.map((skill) => (
@@ -538,7 +534,7 @@ const InterviewCreationPage = () => {
             {/* Focus Areas */}
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-4">
-                Focus Areas (Optional)
+                {t("focus_areas_optional")}
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {focusAreaOptions.map((area) => (
@@ -572,14 +568,14 @@ const InterviewCreationPage = () => {
                 onClick={() => navigate("/dashboard")}
                 className="px-6 py-3 text-surface-700 dark:text-surface-300 bg-surface-100 dark:bg-surface-800 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Creating Interview..." : "Start Interview"}
+                {loading ? t("creating_interview") : t("start_interview")}
               </button>
             </div>
           </form>

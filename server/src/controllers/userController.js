@@ -1615,39 +1615,60 @@ function calculateSkillTrend(interviews, skillName) {
 }
 
 function calculatePerformanceTrend(interviews, days) {
-  const trend = [];
-  const now = new Date();
-
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    date.setHours(0, 0, 0, 0);
-
-    const nextDate = new Date(date);
-    nextDate.setDate(nextDate.getDate() + 1);
-
-    const dayInterviews = interviews.filter((interview) => {
+  // First, get only completed interviews with scores
+  const completedInterviews = interviews
+    .filter((interview) => {
       const completed = getInterviewCompletedAt(interview);
-      if (!completed) return false;
-      const completedDate = new Date(completed);
-      return completedDate >= date && completedDate < nextDate;
+      return completed && interview.results?.overallScore != null;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(getInterviewCompletedAt(a));
+      const dateB = new Date(getInterviewCompletedAt(b));
+      return dateA - dateB;
     });
 
-    const avgScore =
-      dayInterviews.length > 0
-        ? dayInterviews.reduce(
-            (sum, i) => sum + (i.results?.overallScore || 0),
-            0
-          ) / dayInterviews.length
-        : 0;
-
-    trend.push({
-      date: date.toISOString().split("T")[0],
-      label: date.toLocaleDateString("en-US", { weekday: "short" }),
-      score: Math.round(avgScore),
-      count: dayInterviews.length,
-    });
+  // If no completed interviews, return empty trend
+  if (completedInterviews.length === 0) {
+    return [];
   }
+
+  // Strategy: Show last N completed interviews for better visualization
+  // This ensures we always have data to display instead of empty days
+  const maxDataPoints = Math.min(7, completedInterviews.length);
+  const recentInterviews = completedInterviews.slice(-maxDataPoints);
+
+  const trend = recentInterviews.map((interview, index) => {
+    const completedAt = new Date(getInterviewCompletedAt(interview));
+    const score = interview.results?.overallScore || 0;
+
+    // Create a label based on date or sequence
+    let label;
+    const daysDiff = Math.floor(
+      (new Date() - completedAt) / (1000 * 60 * 60 * 24)
+    );
+
+    if (daysDiff === 0) {
+      label = "Today";
+    } else if (daysDiff === 1) {
+      label = "Yesterday";
+    } else if (daysDiff < 7) {
+      label = completedAt.toLocaleDateString("en-US", { weekday: "short" });
+    } else {
+      label = completedAt.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    return {
+      date: completedAt.toISOString().split("T")[0],
+      label: label,
+      score: Math.round(score),
+      interviewId: interview._id,
+      role: interview.role || "Interview",
+      type: interview.type || "General",
+    };
+  });
 
   return trend;
 }

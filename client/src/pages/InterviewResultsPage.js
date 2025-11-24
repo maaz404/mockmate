@@ -2,14 +2,19 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { apiService } from "../services/api";
-import TranscriptDisplay from "../components/TranscriptDisplay";
+import EmotionRadarAQIChart from "../components/EmotionRadarAQIChart";
+import EmotionSummary from "../components/EmotionSummary";
+import EmotionRadarChart from "../components/EmotionRadarChart";
 import Collapsible from "../components/ui/Collapsible";
 import { scoreFgClass, scoreBgClass, scoreLabel } from "../utils/scoreUtils";
+import { useLanguage } from "../context/LanguageContext";
+import EmotionIcon from "../components/EmotionIcon";
 
 const InterviewResultsPage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
   const { user, isLoaded } = useAuthContext();
+  const { t, language, labels } = useLanguage();
 
   // State
   const [results, setResults] = useState(null);
@@ -101,12 +106,14 @@ const InterviewResultsPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Results not available</h2>
+          <h2 className="text-2xl font-bold mb-4">
+            {t("results_not_available")}
+          </h2>
           <button
             onClick={() => navigate("/dashboard")}
             className="btn-primary px-6 py-3"
           >
-            Return to Dashboard
+            {t("return_dashboard")}
           </button>
         </div>
       </div>
@@ -116,6 +123,9 @@ const InterviewResultsPage = () => {
   const advancedFeedback =
     analysis?.advancedFeedback || results?.advancedFeedback;
   const facialMetrics = interview?.metrics || {};
+  const emotionTimeline = interview?.sessionEnrichment?.emotionTimeline || [];
+  const emotionAnalytics =
+    interview?.sessionEnrichment?.emotionAnalytics || null;
   const hasFacial = Object.keys(facialMetrics).some(
     (k) =>
       [
@@ -128,6 +138,7 @@ const InterviewResultsPage = () => {
         "confidenceScore",
       ].includes(k) && facialMetrics[k] != null
   );
+  const hasEmotionData = emotionTimeline && emotionTimeline.length > 0;
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-900 py-6 md:py-8 transition-colors duration-200">
@@ -138,25 +149,25 @@ const InterviewResultsPage = () => {
             onClick={() => navigate("/dashboard")}
             className="btn-secondary !py-2 !px-4 text-sm w-full sm:w-auto"
           >
-            ← Dashboard
+            ← {t("dashboard_back")}
           </button>
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
             <button
               onClick={() => window.print()}
               className="btn-ghost border border-surface-200 dark:border-surface-700 rounded-xl !py-2 !px-4 text-sm"
             >
-              🖨 Print
+              🖨 {t("print_button")}
             </button>
+            <span className="text-xs bg-surface-200 dark:bg-surface-700 px-2 py-1 rounded-full">
+              🌐 {labels[language]}
+            </span>
           </div>
         </div>
         {/* Pending AI Feedback Indicator */}
         {polling && (
           <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg px-4 py-3 my-4 animate-pulse">
             <span className="text-xl">⏳</span>
-            <span>
-              AI-powered advanced feedback is being generated. This page will
-              update automatically...
-            </span>
+            <span>{t("ai_feedback_pending")}</span>
           </div>
         )}
 
@@ -175,7 +186,7 @@ const InterviewResultsPage = () => {
               <div className="text-6xl">🎉</div>
               <div>
                 <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-50">
-                  Interview Complete!
+                  {t("interview_complete_title")}
                 </h1>
                 <p className="text-surface-600 dark:text-surface-400 mt-2">
                   {interview?.jobRole || interview?.config?.jobRole || ""} •{" "}
@@ -376,6 +387,12 @@ const InterviewResultsPage = () => {
                 title={"🎥 Facial & Delivery Metrics"}
                 defaultOpen={false}
               >
+                {/* Radar Chart Visualization */}
+                <div className="mb-6">
+                  <EmotionRadarChart facialMetrics={facialMetrics} />
+                </div>
+
+                {/* Detailed Metrics Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                   {[
                     ["Eye Contact", facialMetrics.eyeContactScore, "%"],
@@ -417,6 +434,33 @@ const InterviewResultsPage = () => {
               </Collapsible>
             )}
 
+            {hasEmotionData && (
+              <Collapsible
+                title={
+                  <span className="flex items-center gap-2">
+                    <EmotionIcon emotion="happy" size="sm" />
+                    Emotion Analysis
+                  </span>
+                }
+                defaultOpen={false}
+              >
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-surface-50 to-surface-100 dark:from-surface-800 dark:to-surface-900 rounded-xl p-6 border border-surface-200 dark:border-surface-700">
+                    <EmotionRadarAQIChart
+                      emotionTimeline={emotionTimeline}
+                      emotionAnalytics={emotionAnalytics}
+                    />
+                  </div>
+                  <div>
+                    <EmotionSummary
+                      emotionTimeline={emotionTimeline}
+                      emotionAnalytics={emotionAnalytics}
+                    />
+                  </div>
+                </div>
+              </Collapsible>
+            )}
+
             <Collapsible title={"🧩 Question Analysis"} defaultOpen={false}>
               <div className="space-y-6">
                 {(analysis?.questionAnalysis || []).map((qa, index) => {
@@ -439,6 +483,15 @@ const InterviewResultsPage = () => {
                       : "bg-surface-100 text-surface-700 border-surface-200 dark:bg-surface-800/50 dark:text-surface-300 dark:border-surface-700";
                   const scoreVal =
                     typeof qa.score === "object" ? qa.score.overall : qa.score;
+
+                  // Normalize question text - handle both string and object formats
+                  const questionText =
+                    typeof qa.question === "string"
+                      ? qa.question
+                      : qa.question?.questionText ||
+                        qa.question?.text ||
+                        "Question not available";
+
                   return (
                     <div
                       key={index}
@@ -450,7 +503,7 @@ const InterviewResultsPage = () => {
                             Question {index + 1}
                           </h4>
                           <p className="text-surface-700 dark:text-surface-300 text-sm mb-2">
-                            {qa.question}
+                            {questionText}
                           </p>
                           <div className="flex flex-wrap gap-2">
                             <span
@@ -486,27 +539,32 @@ const InterviewResultsPage = () => {
                         <h5 className="font-medium text-surface-900 dark:text-surface-50 mb-2">
                           Your Answer:
                         </h5>
-                        <p className="text-surface-700 dark:text-surface-300 text-sm">
+                        <p className="text-surface-700 dark:text-surface-300 text-sm whitespace-pre-wrap leading-relaxed">
                           {qa.userAnswer}
                         </p>
-                        {qa.userNotes && (
-                          <div className="mt-3 p-3 rounded-lg bg-surface-100 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700">
-                            <div className="text-xs uppercase tracking-wide text-surface-500 dark:text-surface-400 mb-1">
-                              Your Notes
-                            </div>
-                            <p className="text-sm text-surface-700 dark:text-surface-300 whitespace-pre-line">
-                              {qa.userNotes}
-                            </p>
-                          </div>
-                        )}
                       </div>
+
+                      {/* Detailed AI Feedback Section */}
+                      {qa.feedback?.suggestions && (
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-surface-800/50 dark:to-surface-800/30 rounded-lg p-5 border border-blue-200 dark:border-surface-700 mb-4">
+                          <h5 className="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                            <span className="text-xl">💬</span>
+                            <span>Detailed Analysis</span>
+                          </h5>
+                          <p className="text-surface-800 dark:text-surface-200 text-sm leading-relaxed whitespace-pre-wrap">
+                            {qa.feedback.suggestions}
+                          </p>
+                        </div>
+                      )}
+
                       <div className="space-y-4">
                         {qa.score &&
                           typeof qa.score === "object" &&
                           qa.score.rubricScores && (
                             <div className="bg-blue-50 dark:bg-surface-800/50 rounded-lg p-4 border border-blue-100/60 dark:border-surface-700">
-                              <h5 className="font-medium text-blue-900 mb-3 flex items-center">
-                                📊 Rubric Scores (1-5 Scale):
+                              <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                                <span className="text-lg">📊</span>
+                                <span>Rubric Scores (1-5 Scale)</span>
                               </h5>
                               <div className="grid grid-cols-2 gap-3">
                                 {Object.entries(qa.score.rubricScores).map(
@@ -540,26 +598,58 @@ const InterviewResultsPage = () => {
                               </div>
                             </div>
                           )}
-                        <div className="space-y-2">
-                          <div>
-                            <h5 className="font-medium text-green-800 mb-1">
-                              ✅ Strengths:
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="bg-green-50 dark:bg-surface-800/40 rounded-lg p-4 border border-green-200 dark:border-surface-700">
+                            <h5 className="font-semibold text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
+                              <span className="text-xl">✅</span>
+                              <span>Strengths</span>
                             </h5>
-                            <ul className="list-disc list-inside text-sm text-surface-700 dark:text-surface-300 space-y-1">
-                              {qa.feedback.strengths.map((s, i) => (
-                                <li key={i}>{s}</li>
-                              ))}
-                            </ul>
+                            {qa.feedback.strengths &&
+                            qa.feedback.strengths.length > 0 ? (
+                              <ul className="space-y-2">
+                                {qa.feedback.strengths.map((s, i) => (
+                                  <li
+                                    key={i}
+                                    className="flex items-start gap-2 text-sm text-surface-700 dark:text-surface-300"
+                                  >
+                                    <span className="text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0">
+                                      ●
+                                    </span>
+                                    <span className="leading-relaxed">{s}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-surface-600 dark:text-surface-400 italic">
+                                No specific strengths identified
+                              </p>
+                            )}
                           </div>
-                          <div>
-                            <h5 className="font-medium text-red-800 mb-1">
-                              ❌ Areas for Improvement:
+                          <div className="bg-orange-50 dark:bg-surface-800/40 rounded-lg p-4 border border-orange-200 dark:border-surface-700">
+                            <h5 className="font-semibold text-orange-800 dark:text-orange-300 mb-3 flex items-center gap-2">
+                              <span className="text-xl">💡</span>
+                              <span>Areas for Improvement</span>
                             </h5>
-                            <ul className="list-disc list-inside text-sm text-surface-700 dark:text-surface-300 space-y-1">
-                              {qa.feedback.improvements.map((s, i) => (
-                                <li key={i}>{s}</li>
-                              ))}
-                            </ul>
+                            {qa.feedback.improvements &&
+                            qa.feedback.improvements.length > 0 ? (
+                              <ul className="space-y-2">
+                                {qa.feedback.improvements.map((s, i) => (
+                                  <li
+                                    key={i}
+                                    className="flex items-start gap-2 text-sm text-surface-700 dark:text-surface-300"
+                                  >
+                                    <span className="text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0">
+                                      ●
+                                    </span>
+                                    <span className="leading-relaxed">{s}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-surface-600 dark:text-surface-400 italic">
+                                No improvements suggested
+                              </p>
+                            )}
                           </div>
                         </div>
                         {qa.feedback?.modelAnswer && (
@@ -572,13 +662,6 @@ const InterviewResultsPage = () => {
                             </p>
                           </div>
                         )}
-                      </div>
-                      <div className="mt-4">
-                        <TranscriptDisplay
-                          interviewId={interviewId}
-                          questionIndex={index}
-                          className="w-full"
-                        />
                       </div>
                     </div>
                   );

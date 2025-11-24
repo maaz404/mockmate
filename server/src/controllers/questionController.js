@@ -39,11 +39,28 @@ exports.generateQuestions = async (req, res) => {
     }
 
     // Generate questions
-    const questions = await questionService.generateQuestions(config);
-
+    let questions = await questionService.generateQuestions(config);
+    const language = (
+      req.body.language ||
+      req.query.language ||
+      "en"
+    ).toLowerCase();
+    if (language !== "en") {
+      try {
+        const translationService = require("../services/translationService");
+        questions = await translationService.translateQuestions(
+          questions,
+          language
+        );
+      } catch (err) {
+        Logger.warn(
+          `Question translation failed (${language}): ${err.message}`
+        );
+      }
+    }
     return ok(
       res,
-      { questions, count: questions.length },
+      { questions, count: questions.length, language },
       "Questions generated successfully"
     );
   } catch (error) {
@@ -68,14 +85,32 @@ exports.generateQuestionsWithAI = async (req, res) => {
 
     // SIMPLIFIED: Just use database questions (no Python service, no AI calls)
     // This is faster, cheaper, and works reliably
-    const questions = await questionService.generateQuestions(config);
-
+    let questions = await questionService.generateQuestions(config);
+    const language = (
+      req.body.language ||
+      req.query.language ||
+      "en"
+    ).toLowerCase();
+    if (language !== "en") {
+      try {
+        const translationService = require("../services/translationService");
+        questions = await translationService.translateQuestions(
+          questions,
+          language
+        );
+      } catch (err) {
+        Logger.warn(
+          `Question translation failed (${language}): ${err.message}`
+        );
+      }
+    }
     return ok(
       res,
       {
         questions,
         count: questions.length,
         generation_method: "database",
+        language,
       },
       "Questions generated successfully"
     );

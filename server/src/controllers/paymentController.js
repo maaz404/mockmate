@@ -241,6 +241,17 @@ async function handleCheckoutCompleted(session) {
       return;
     }
 
+    // Idempotency check: skip if already premium with same subscription ID
+    if (
+      profile.subscription.plan === "premium" &&
+      profile.subscription.stripeSubscriptionId === session.subscription
+    ) {
+      Logger.info(
+        `[Webhook] Premium already activated for user ${userId}, skipping duplicate`
+      );
+      return;
+    }
+
     profile.subscription.plan = "premium";
     profile.subscription.status = "active";
     profile.subscription.stripeCustomerId = session.customer;
@@ -269,18 +280,29 @@ async function handleSubscriptionUpdate(subscription) {
       return;
     }
 
+    // Update subscription status from Stripe
     profile.subscription.status = subscription.status;
     profile.subscription.currentPeriodEnd = new Date(
       subscription.current_period_end * 1000
     );
 
-    if (subscription.status === "active") {
+    // Only set to premium if subscription is in good standing
+    if (["active", "trialing"].includes(subscription.status)) {
       profile.subscription.plan = "premium";
       profile.subscription.interviewsRemaining = null;
+    } else if (
+      ["canceled", "incomplete_expired", "unpaid"].includes(subscription.status)
+    ) {
+      // Downgrade to free if subscription is terminated
+      profile.subscription.plan = "free";
+      profile.subscription.interviewsRemaining = 10;
     }
+    // For past_due, incomplete, paused - keep current plan but update status
 
     await profile.save();
-    Logger.info(`[Webhook] Subscription updated for user ${userId}`);
+    Logger.info(
+      `[Webhook] Subscription updated for user ${userId}, status: ${subscription.status}`
+    );
   } catch (error) {
     Logger.error("[Webhook] Error in handleSubscriptionUpdate:", error);
   }

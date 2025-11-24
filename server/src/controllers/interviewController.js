@@ -69,6 +69,14 @@ async function updateUserAnalytics(userId) {
 const createInterview = async (req, res) => {
   const userId = req.user?.id; // Keep this one
   const config = { ...(req.body?.config || req.body) };
+  // Multilingual: capture language from request (body, header) with fallback
+  const requestedLang = (
+    req.body.language ||
+    config.language ||
+    req.headers["x-language"] ||
+    "en"
+  ).toLowerCase();
+  config.language = requestedLang;
   const userProfile = req.userProfile;
   Logger.info("[createInterview] config received:", config);
   Logger.info("[createInterview] userProfile:", userProfile);
@@ -99,6 +107,35 @@ const createInterview = async (req, res) => {
 
     if (!userProfile) {
       return fail(res, 404, "PROFILE_NOT_FOUND", "User profile not found");
+    }
+
+    // Ensure subscription object exists with defaults
+    if (!userProfile.subscription) {
+      userProfile.subscription = {
+        plan: "free",
+        status: "active",
+        interviewsUsedThisMonth: 0,
+        lastInterviewReset: new Date(),
+        interviewsRemaining: 10,
+        cancelAtPeriodEnd: false,
+      };
+      await userProfile.save();
+    }
+
+    // Ensure analytics object exists with defaults
+    if (!userProfile.analytics) {
+      userProfile.analytics = {
+        totalInterviews: 0,
+        completedInterviews: 0,
+        averageScore: 0,
+        strongAreas: [],
+        improvementAreas: [],
+        streak: {
+          current: 0,
+          longest: 0,
+        },
+      };
+      await userProfile.save();
     }
 
     if (
@@ -181,9 +218,17 @@ const createInterview = async (req, res) => {
       }
     } else {
       questions = await getQuestionsForInterview(config, userProfile);
+      Logger.info(
+        `[createInterview] Questions received from getQuestionsForInterview (language: ${config.language}):`,
+        questions.map((q) => ({
+          text: q.text?.substring(0, 60),
+          questionText: q.questionText?.substring(0, 60),
+        }))
+      );
+
       if (questions.length === 0) {
         if (process.env.NODE_ENV !== "production") {
-          questions = [
+          const fallbackQuestions = [
             new Question({
               text: `Describe a challenge related to ${config.jobRole}.`,
               category: "communication",
@@ -195,6 +240,27 @@ const createInterview = async (req, res) => {
               status: "active",
             }),
           ];
+
+          // Translate fallback questions if needed
+          if (config.language && config.language !== "en") {
+            try {
+              const translationService = require("../services/translationService");
+              questions = await translationService.translateQuestions(
+                fallbackQuestions,
+                config.language
+              );
+              Logger.info(
+                `[createInterview] Translated fallback question to ${config.language}`
+              );
+            } catch (err) {
+              Logger.warn(
+                `[createInterview] Fallback translation failed: ${err.message}`
+              );
+              questions = fallbackQuestions;
+            }
+          } else {
+            questions = fallbackQuestions;
+          }
         } else {
           return fail(
             res,
@@ -208,6 +274,18 @@ const createInterview = async (req, res) => {
 
     // Remove the duplicate question logic - hybridQuestionService handles this
     // Questions are now properly generated with the right count
+
+    // Log all values before creating interview
+    Logger.info("[createInterview] Creating interview with:");
+    Logger.info("  - userId:", userId);
+    Logger.info("  - userProfile._id:", userProfile._id);
+    Logger.info("  - config.jobRole:", config.jobRole);
+    Logger.info("  - config.experienceLevel:", config.experienceLevel);
+    Logger.info("  - config.interviewType:", config.interviewType);
+    Logger.info("  - config.difficulty:", config.difficulty);
+    Logger.info("  - config.duration:", config.duration);
+    Logger.info("  - config.questionCount:", config.questionCount);
+    Logger.info("  - questions.length:", questions.length);
 
     // CHANGED: userId → user in Interview creation
     const interview = new Interview({
@@ -242,22 +320,26 @@ const createInterview = async (req, res) => {
           // are shown/skipped dynamically, but we need all questions available upfront
           config.questionCount || C.DEFAULT_QUESTION_COUNT
         )
-        .map((q) => ({
-          questionId: q._id,
-          questionText: q.text,
-          category: q.category,
-          difficulty: mapDifficulty(q.difficulty),
-          timeAllocated: q.estimatedTime,
-          hasVideo: false,
-        })),
+        .map((q) => {
+          // Ensure question has an _id (create one if missing)
+          const questionId = q._id || new mongoose.Types.ObjectId();
+
+          return {
+            questionId: questionId,
+            questionText: q.questionText || q.text,
+            category: q.category,
+            difficulty: mapDifficulty(q.difficulty),
+            timeAllocated: q.estimatedTime,
+            hasVideo: false,
+          };
+        }),
       status: "scheduled",
     });
 
-    // --- Auto-inject coding questions when requested ---
-    // Reason: Current hybrid generation does not produce 'coding' category items.
-    // We add coding challenges to enable CodingAnswerUI in mixed/coding-enabled sessions.
-    const wantsCoding =
-      Boolean(config.coding) || config.interviewType === "mixed";
+    // --- Auto-inject coding questions when explicitly requested ---
+    // Only inject coding challenges when user explicitly enables them in interview setup
+    // config.coding will be present with challengeCount, difficulty, language when enabled
+    const wantsCoding = Boolean(config.coding);
     const hasCodingAlready = interview.questions.some(
       (q) =>
         (q.category || "").toLowerCase() === "coding" ||
@@ -642,12 +724,49 @@ function merge(intervals)
           poolCopy.splice(randomIndex, 1); // Remove to avoid duplicates
         }
 
+        // Translate coding questions if language is not English
+        let translatedCodingQuestions = selectedQuestions;
+        const codingLang = (requestedLang || "en").toLowerCase();
+        if (codingLang !== "en" && selectedQuestions.length > 0) {
+          try {
+            const translationService = require("../services/translationService");
+
+            // Extract text fields for translation
+            const titles = selectedQuestions.map((q) => q.title || "");
+            const questionTexts = selectedQuestions.map(
+              (q) => q.questionText || ""
+            );
+
+            // Translate in batches
+            const [translatedTitles, translatedTexts] = await Promise.all([
+              translationService.translateArray(titles, codingLang),
+              translationService.translateArray(questionTexts, codingLang),
+            ]);
+
+            // Reconstruct questions with translations
+            translatedCodingQuestions = selectedQuestions.map((q, i) => ({
+              ...q,
+              title: translatedTitles[i] || q.title,
+              questionText: translatedTexts[i] || q.questionText,
+            }));
+
+            Logger.info(
+              `[createInterview] Translated ${selectedQuestions.length} coding questions to ${codingLang}`
+            );
+          } catch (transErr) {
+            Logger.warn(
+              `[createInterview] Coding question translation failed: ${transErr.message}`
+            );
+            // Continue with original English questions
+          }
+        }
+
         // Replace last N questions with coding questions to maintain total count
         // Remove the last N non-coding questions
         interview.questions.splice(-numToAdd, numToAdd);
 
         // Add the selected coding questions with professional formatting
-        selectedQuestions.forEach((q, idx) => {
+        translatedCodingQuestions.forEach((q, idx) => {
           interview.questions.push({
             questionId: new mongoose.Types.ObjectId(),
             title: q.title || `Challenge #${idx + 1}`,
@@ -669,7 +788,7 @@ function merge(intervals)
         });
 
         Logger.info(
-          `[createInterview] Injected ${selectedQuestions.length} coding question(s) for session (replaced last ${numToAdd} questions)`
+          `[createInterview] Injected ${translatedCodingQuestions.length} coding question(s) for session (replaced last ${numToAdd} questions)`
         );
       } catch (injectErr) {
         Logger.warn(
@@ -682,13 +801,39 @@ function merge(intervals)
     await interview.save();
     return created(res, interview, "Interview created successfully");
   } catch (error) {
-    Logger.error("Create interview error:", error);
+    Logger.error("============================================");
+    Logger.error("CREATE INTERVIEW ERROR:");
+    Logger.error("Error name:", error.name);
+    Logger.error("Error message:", error.message);
+    Logger.error("Error stack:", error.stack);
+    Logger.error("============================================");
+
     const meta = {};
     if (process.env.NODE_ENV !== "production") {
       meta.detail = error?.message;
-      meta.stack = error?.stack?.split("\n").slice(0, 5).join("\n");
+      meta.errorName = error?.name;
+      meta.stack = error?.stack?.split("\n").slice(0, 10).join("\n");
       meta.configReceived = req.body?.config || req.body;
+      meta.userProfile = req.userProfile
+        ? {
+            id: req.userProfile._id,
+            hasSubscription: !!req.userProfile.subscription,
+            hasAnalytics: !!req.userProfile.analytics,
+            subscriptionPlan: req.userProfile.subscription?.plan,
+          }
+        : null;
       meta.dbConnected = require("../config/database").isDbConnected?.();
+
+      // If validation error, include validation details
+      if (error.name === "ValidationError") {
+        meta.validationErrors = Object.keys(error.errors || {}).reduce(
+          (acc, key) => {
+            acc[key] = error.errors[key].message;
+            return acc;
+          },
+          {}
+        );
+      }
     }
     return fail(
       res,
@@ -837,7 +982,7 @@ const submitAnswer = async (req, res) => {
       }
     }
 
-    // Always store a basic score immediately (fast, non-AI, fallback)
+    // Use AI-powered evaluation with full context
     let evaluation;
     const questionObj = {
       text: interview.questions[qIndex].questionText,
@@ -851,25 +996,89 @@ const submitAnswer = async (req, res) => {
       text: answer,
       answerText: answer,
     };
-    // Use simplified evaluation for immediate feedback
-    const simpleEval = await evaluationService.evaluateAnswer(
-      questionObj,
-      answerObj
-    );
-    evaluation = {
-      score: simpleEval.score,
-      rubricScores: {
-        relevance: Math.ceil((simpleEval.score / 100) * 5),
-        clarity: Math.ceil((simpleEval.score / 100) * 5),
-        depth: Math.ceil((simpleEval.score / 100) * 5),
-        structure: Math.ceil((simpleEval.score / 100) * 5),
-      },
-      breakdown: simpleEval.breakdown || {},
-      strengths: simpleEval.feedback?.strengths || [],
-      improvements: simpleEval.feedback?.improvements || [],
-      feedback: simpleEval.feedback?.overall || "",
-      modelAnswer: "",
+
+    // Prepare evaluation context with job role and interview details
+    const evalConfig = {
+      jobRole: interview.config.jobRole || "General",
+      experienceLevel: interview.config.experienceLevel || "Intermediate",
+      interviewType: interview.config.interviewType || "Technical",
+      questionNumber: qIndex + 1,
+      totalQuestions: interview.questions.length,
     };
+
+    // Use AI evaluation with robust error handling
+    let aiEval;
+    try {
+      Logger.info(`[submitAnswer] Starting AI evaluation for Q${qIndex + 1}`, {
+        interviewId,
+        questionIndex: qIndex,
+        answerLength: answer.length,
+        config: evalConfig,
+      });
+
+      aiEval = await evaluationService.evaluateAnswerWithAI(
+        questionObj,
+        answerObj,
+        evalConfig
+      );
+
+      Logger.info(`[submitAnswer] AI evaluation completed for Q${qIndex + 1}`, {
+        score: aiEval.score,
+        method: aiEval.evaluation_method,
+        hasFeedback: !!aiEval.feedback,
+        feedbackLength: aiEval.feedback?.length || 0,
+      });
+    } catch (evalError) {
+      Logger.error(`[submitAnswer] AI evaluation failed for Q${qIndex + 1}:`, {
+        error: evalError.message,
+        stack: evalError.stack,
+        interviewId,
+        questionIndex: qIndex,
+      });
+
+      // Fallback to basic evaluation if AI fails
+      Logger.warn(
+        `[submitAnswer] Using basic fallback evaluation for Q${qIndex + 1}`
+      );
+      aiEval = await evaluationService.basicEvaluation(questionObj, answerObj);
+    }
+    evaluation = {
+      score: aiEval.score || 0,
+      rubricScores: aiEval.rubricScores || {
+        relevance: Math.ceil((aiEval.score / 100) * 5),
+        clarity: Math.ceil((aiEval.score / 100) * 5),
+        depth: Math.ceil((aiEval.score / 100) * 5),
+        structure: Math.ceil((aiEval.score / 100) * 5),
+      },
+      breakdown: aiEval.breakdown || {},
+      strengths: Array.isArray(aiEval.strengths) ? aiEval.strengths : [],
+      improvements: Array.isArray(aiEval.improvements)
+        ? aiEval.improvements
+        : [],
+      feedback: aiEval.feedback || aiEval.detailedFeedback || "",
+      modelAnswer: aiEval.modelAnswer || "",
+      evaluationMethod: aiEval.evaluation_method || "ai",
+    };
+    const language = (
+      req.body.language ||
+      req.query.language ||
+      req.headers["x-language"] ||
+      interview.config?.language ||
+      "en"
+    ).toLowerCase();
+    if (language !== "en") {
+      try {
+        const translationService = require("../services/translationService");
+        evaluation = await translationService.translateEvaluation(
+          evaluation,
+          language
+        );
+      } catch (err) {
+        Logger.warn(
+          `Evaluation translation failed (${language}): ${err.message}`
+        );
+      }
+    }
 
     interview.questions[qIndex].score = {
       overall: evaluation.score,
@@ -1033,8 +1242,19 @@ const submitAnswer = async (req, res) => {
 
     return ok(res, responseData, "Answer submitted successfully");
   } catch (error) {
-    Logger.error("Submit answer error:", error);
-    return fail(res, 500, "ANSWER_SUBMIT_FAILED", "Failed to submit answer");
+    Logger.error("[submitAnswer] Fatal error:", {
+      error: error.message,
+      stack: error.stack,
+      interviewId,
+      questionIndex: qIndex,
+      phase: "unknown",
+    });
+    return fail(
+      res,
+      500,
+      "ANSWER_SUBMIT_FAILED",
+      `Failed to submit answer: ${error.message}`
+    );
   }
 };
 
@@ -1302,6 +1522,72 @@ const getInterviewDetails = async (req, res) => {
 
     if (!interview) return fail(res, 404, "NOT_FOUND", "Interview not found");
 
+    // Fallback translation: if interview language != en and questions appear un-translated (basic Latin only), translate now.
+    const targetLang = (interview.config?.language || "en").toLowerCase();
+    if (targetLang !== "en") {
+      try {
+        const needsTranslation = interview.questions.some((q) => {
+          const qt = q.questionText || "";
+          // Urdu script regex; if absent and contains common English words, consider un-translated
+          const hasUrdu = /[\u0621-\u064A]/.test(qt);
+          const hasEnglishWords =
+            /\b(describe|explain|provide|time|team|member|challenge|write|function|implement|create)\b/i.test(
+              qt
+            );
+          return !hasUrdu && hasEnglishWords;
+        });
+
+        if (needsTranslation) {
+          const translationService = require("../services/translationService");
+          const originalSample = (
+            interview.questions[0]?.questionText || ""
+          ).substring(0, 80);
+          Logger.info(
+            `[getInterviewDetails] 🔄 Detected un-translated questions for lang=${targetLang}. Applying fallback translation. Sample before: "${originalSample}"`
+          );
+          const translated = await translationService.translateQuestions(
+            interview.questions.map((q) => ({
+              text: q.questionText || q.text,
+              questionText: q.questionText || q.text,
+              evaluationCriteria: q.feedback?.evaluationCriteria || "",
+              hints: [],
+            })),
+            targetLang
+          );
+          translated.forEach((tq, idx) => {
+            interview.questions[idx].questionText = tq.questionText || tq.text;
+          });
+          const afterSample = (
+            interview.questions[0]?.questionText || ""
+          ).substring(0, 80);
+          Logger.info(
+            `[getInterviewDetails] ✅ Fallback translation complete. Sample after: "${afterSample}"`
+          );
+
+          // Save translated questions to database
+          try {
+            await interview.save();
+            Logger.info(
+              `[getInterviewDetails] Saved translated questions to database`
+            );
+          } catch (saveErr) {
+            Logger.warn(
+              `[getInterviewDetails] Failed to save translated questions: ${saveErr.message}`
+            );
+          }
+        } else {
+          Logger.debug(
+            `[getInterviewDetails] Questions already appear translated for ${targetLang}`
+          );
+        }
+      } catch (fallbackErr) {
+        Logger.error(
+          `[getInterviewDetails] ❌ Fallback translation failed: ${fallbackErr.message}`,
+          fallbackErr.stack
+        );
+      }
+    }
+
     // Calculate current remaining time if interview is in-progress
     if (interview.status === "in-progress" && interview.timing) {
       const now = new Date();
@@ -1342,7 +1628,7 @@ const completeInterview = async (req, res) => {
   try {
     const userId = req.user?.id;
     const interviewId = req.params.interviewId || req.params.id;
-    let { transcript, facialMetrics } = req.body;
+    let { transcript, facialMetrics, emotionTimeline } = req.body;
 
     const interview = await Interview.findOne({
       _id: interviewId,
@@ -1419,11 +1705,64 @@ const completeInterview = async (req, res) => {
         transcript = transcript.substring(0, 50000) + "... (truncated)";
       }
 
+      // Derive emotion analytics (raw & smoothed) if timeline provided
+      let emotionAnalytics = undefined;
+      if (Array.isArray(emotionTimeline) && emotionTimeline.length > 0) {
+        const rawAccum = {};
+        const smoothAccum = {};
+        let frameCount = 0;
+        emotionTimeline.forEach((e) => {
+          const raw = e.rawEmotions || e.raw_emotions || null;
+          const smoothed = e.emotions || null;
+          if (raw && typeof raw === "object") {
+            Object.entries(raw).forEach(([k, v]) => {
+              if (typeof v === "number") {
+                rawAccum[k] = (rawAccum[k] || 0) + v;
+              }
+            });
+          }
+          if (smoothed && typeof smoothed === "object") {
+            Object.entries(smoothed).forEach(([k, v]) => {
+              if (typeof v === "number") {
+                smoothAccum[k] = (smoothAccum[k] || 0) + v;
+              }
+            });
+          }
+          frameCount += 1;
+        });
+        const rawAverages = {};
+        const smoothAverages = {};
+        if (frameCount > 0) {
+          Object.entries(rawAccum).forEach(([k, v]) => {
+            rawAverages[k] = +(v / frameCount).toFixed(4);
+          });
+          Object.entries(smoothAccum).forEach(([k, v]) => {
+            smoothAverages[k] = +(v / frameCount).toFixed(4);
+          });
+        }
+        emotionAnalytics = {
+          frameCount,
+          rawAverages,
+          smoothAverages,
+          dominantSmoothed: Object.keys(smoothAverages).reduce(
+            (best, key) =>
+              smoothAverages[key] > (smoothAverages[best] || 0) ? key : best,
+            "neutral"
+          ),
+        };
+      }
+
       // Store session enrichment data if provided
-      if ((transcript && typeof transcript === "string") || facialMetrics) {
+      if (
+        (transcript && typeof transcript === "string") ||
+        facialMetrics ||
+        emotionTimeline
+      ) {
         interview.sessionEnrichment = {
           transcript: transcript || undefined,
           facialMetrics: facialMetrics || undefined,
+          emotionTimeline: emotionTimeline || undefined,
+          emotionAnalytics: emotionAnalytics || undefined,
           enrichedAt: new Date(),
         };
       }
@@ -1775,6 +2114,23 @@ const getInterviewResults = async (req, res) => {
       advancedFeedback = null;
     }
 
+    // Generate comprehensive advanced analysis
+    let advancedAnalysis = null;
+    try {
+      const advancedAnalysisService = require("../services/advancedAnalysisService");
+      const userProfile = await require("../models/UserProfile").findOne({
+        user: userId,
+      });
+      advancedAnalysis =
+        await advancedAnalysisService.generateComprehensiveAnalysis(
+          interview,
+          userProfile
+        );
+    } catch (err) {
+      Logger.warn("Advanced analysis generation failed:", err?.message || err);
+      advancedAnalysis = null;
+    }
+
     const response = {
       interview: {
         _id: interview._id,
@@ -1782,6 +2138,7 @@ const getInterviewResults = async (req, res) => {
         interviewType: interview.config?.interviewType,
         experienceLevel: interview.config?.experienceLevel,
         difficulty: interview.config?.difficulty,
+        language: interview.config?.language || "en",
         status: interview.status,
         config: interview.config,
         timing: interview.timing,
@@ -1847,7 +2204,154 @@ const getInterviewResults = async (req, res) => {
         })),
       },
       advancedFeedback,
+      advancedAnalysis,
     };
+
+    // Translate results if language is not English
+    const resultsLang = (interview.config?.language || "en").toLowerCase();
+    if (resultsLang !== "en") {
+      try {
+        const translationService = require("../services/translationService");
+
+        // Translate question texts in the interview
+        Logger.info(
+          `[getInterviewResults] Translating ${response.interview.questions.length} question texts to ${resultsLang}`
+        );
+        const questionTexts = response.interview.questions.map(
+          (q) => q.questionText || ""
+        );
+        const translatedQuestionTexts = await translationService.translateArray(
+          questionTexts,
+          resultsLang
+        );
+        response.interview.questions.forEach((q, i) => {
+          q.questionText = translatedQuestionTexts[i] || q.questionText;
+        });
+
+        // Also translate in questionAnalysis
+        const analysisQuestionTexts = response.analysis.questionAnalysis.map(
+          (qa) => qa.question || ""
+        );
+        const translatedAnalysisTexts = await translationService.translateArray(
+          analysisQuestionTexts,
+          resultsLang
+        );
+        response.analysis.questionAnalysis.forEach((qa, i) => {
+          qa.question = translatedAnalysisTexts[i] || qa.question;
+        });
+
+        // Translate recommendations
+        if (response.analysis.recommendations.length > 0) {
+          response.analysis.recommendations =
+            await translationService.translateArray(
+              response.analysis.recommendations,
+              resultsLang
+            );
+        }
+
+        // Translate feedback summary, strengths, improvements
+        if (response.analysis.feedback.summary) {
+          response.analysis.feedback.summary =
+            await translationService.translateText(
+              response.analysis.feedback.summary,
+              resultsLang
+            );
+        }
+        if (response.analysis.feedback.strengths.length > 0) {
+          response.analysis.feedback.strengths =
+            await translationService.translateArray(
+              response.analysis.feedback.strengths,
+              resultsLang
+            );
+        }
+        if (response.analysis.feedback.improvements.length > 0) {
+          response.analysis.feedback.improvements =
+            await translationService.translateArray(
+              response.analysis.feedback.improvements,
+              resultsLang
+            );
+        }
+        if (response.analysis.feedback.recommendations.length > 0) {
+          response.analysis.feedback.recommendations =
+            await translationService.translateArray(
+              response.analysis.feedback.recommendations,
+              resultsLang
+            );
+        }
+
+        // Translate focus areas
+        if (response.analysis.focusAreas.length > 0) {
+          const skillNames = response.analysis.focusAreas.map((fa) => fa.skill);
+          const currentLevels = response.analysis.focusAreas.map(
+            (fa) => fa.currentLevel
+          );
+          const [translatedSkills, translatedLevels] = await Promise.all([
+            translationService.translateArray(skillNames, resultsLang),
+            translationService.translateArray(currentLevels, resultsLang),
+          ]);
+          response.analysis.focusAreas.forEach((fa, i) => {
+            fa.skill = translatedSkills[i] || fa.skill;
+            fa.currentLevel = translatedLevels[i] || fa.currentLevel;
+          });
+        }
+
+        // Translate question feedback
+        for (const qa of response.analysis.questionAnalysis) {
+          if (qa.feedback.strengths.length > 0) {
+            qa.feedback.strengths = await translationService.translateArray(
+              qa.feedback.strengths,
+              resultsLang
+            );
+          }
+          if (qa.feedback.improvements.length > 0) {
+            qa.feedback.improvements = await translationService.translateArray(
+              qa.feedback.improvements,
+              resultsLang
+            );
+          }
+          if (qa.feedback.suggestions) {
+            qa.feedback.suggestions = await translationService.translateText(
+              qa.feedback.suggestions,
+              resultsLang
+            );
+          }
+        }
+
+        // Translate advanced feedback if present
+        if (advancedFeedback) {
+          if (advancedFeedback.strengths?.length > 0) {
+            advancedFeedback.strengths =
+              await translationService.translateArray(
+                advancedFeedback.strengths,
+                resultsLang
+              );
+          }
+          if (advancedFeedback.improvements?.length > 0) {
+            advancedFeedback.improvements =
+              await translationService.translateArray(
+                advancedFeedback.improvements,
+                resultsLang
+              );
+          }
+          if (advancedFeedback.detailedAnalysis) {
+            advancedFeedback.detailedAnalysis =
+              await translationService.translateText(
+                advancedFeedback.detailedAnalysis,
+                resultsLang
+              );
+          }
+        }
+
+        Logger.info(
+          `[getInterviewResults] Translated results to ${resultsLang}`
+        );
+      } catch (transErr) {
+        Logger.warn(
+          `[getInterviewResults] Results translation failed: ${transErr.message}`
+        );
+        // Continue with original English results
+      }
+    }
 
     return ok(res, response, "Interview results retrieved");
   } catch (error) {
@@ -2010,9 +2514,12 @@ async function getQuestionsForInterview(config, userProfile) {
       count: config.questionCount || C.DEFAULT_QUESTION_COUNT,
       focusAreas: config.focusAreas || [],
       skillsToImprove: userProfile?.professionalInfo?.skillsToImprove || [],
+      language: config.language || "en",
       // Skip cache in development for fresh questions each time
       // In production, set to false to improve performance
       skipCache: config.skipCache ?? process.env.NODE_ENV !== "production",
+      // Pass adaptiveDifficulty block so hybrid service can generate mixed levels
+      adaptiveDifficulty: config.adaptiveDifficulty, // { enabled: true } triggers progressive distribution
     };
 
     const result = await hybridQuestionService.generateQuestions(
@@ -2023,6 +2530,53 @@ async function getQuestionsForInterview(config, userProfile) {
       Logger.info(
         `[getQuestionsForInterview] Generated ${result.questions.length} questions`
       );
+
+      const lang = (questionConfig.language || "en").toLowerCase();
+
+      // ALWAYS translate questions if language is not English - don't rely on AI
+      if (lang !== "en") {
+        Logger.info(
+          `[getQuestionsForInterview] 🌐 Translating ${result.questions.length} questions to ${lang}`
+        );
+        Logger.info(
+          `[getQuestionsForInterview] Sample question BEFORE translation: "${
+            result.questions[0]?.questionText?.substring(0, 100) ||
+            result.questions[0]?.text?.substring(0, 100)
+          }..."`
+        );
+
+        try {
+          const translationService = require("../services/translationService");
+          const translatedQuestions =
+            await translationService.translateQuestions(result.questions, lang);
+
+          // Verify translation worked
+          const translatedSample =
+            translatedQuestions[0]?.questionText ||
+            translatedQuestions[0]?.text ||
+            "";
+          Logger.info(
+            `[getQuestionsForInterview] ✅ Translation complete. Sample AFTER translation: "${translatedSample.substring(
+              0,
+              100
+            )}..."`
+          );
+
+          return translatedQuestions;
+        } catch (err) {
+          Logger.error(
+            `[getQuestionsForInterview] ❌ Translation FAILED for ${lang}:`,
+            err.message,
+            err.stack
+          );
+          // Return original questions as fallback
+          Logger.warn(
+            "[getQuestionsForInterview] Returning UNTRANSLATED questions as fallback"
+          );
+          return result.questions;
+        }
+      }
+
       return result.questions;
     }
 
@@ -2038,13 +2592,23 @@ async function getQuestionsForInterview(config, userProfile) {
 
 // Helper function to determine next difficulty level
 function getNextDifficultyLevel(score, currentDifficulty) {
-  const difficulties = ["easy", "intermediate", "hard", "expert"];
-  const currentIndex = difficulties.indexOf(currentDifficulty);
+  // Canonical difficulty ladder used across templates & UI
+  const difficulties = ["beginner", "intermediate", "advanced"];
+  const normalizedCurrent = (() => {
+    if (!currentDifficulty) return "intermediate";
+    const c = currentDifficulty.toLowerCase();
+    if (c === "easy") return "beginner";
+    if (c === "hard" || c === "expert") return "advanced";
+    return difficulties.includes(c) ? c : "intermediate";
+  })();
+  const currentIndex = difficulties.indexOf(normalizedCurrent);
 
+  // Move down if performance below threshold and not already at lowest
   if (score < C.SCORE_EASIER_DOWN_THRESHOLD && currentIndex > 0) {
     return difficulties[currentIndex - 1];
   }
 
+  // Move up if performance meets upward threshold and not already at highest
   if (
     score >= C.SCORE_HARDER_UP_THRESHOLD &&
     currentIndex < difficulties.length - 1
@@ -2052,7 +2616,7 @@ function getNextDifficultyLevel(score, currentDifficulty) {
     return difficulties[currentIndex + 1];
   }
 
-  return currentDifficulty;
+  return normalizedCurrent;
 }
 
 // Helper to calculate category average

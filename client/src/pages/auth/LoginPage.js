@@ -136,6 +136,16 @@ const LoginPage = () => {
               Don't have an account? Sign up
             </Link>
           </div>
+
+          <div className="mt-4 text-center">
+            <Link
+              to="/request-password-reset"
+              className="text-sm text-primary-600 hover:text-primary-500"
+              onClick={() => console.log("Forgot password link clicked")}
+            >
+              Forgot password?
+            </Link>
+          </div>
         </form>
       </div>
     </div>

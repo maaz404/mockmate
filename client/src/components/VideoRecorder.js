@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import Webcam from "react-webcam";
 import { useVideoRecording } from "../hooks/useVideoRecording";
+import useEmotionCapture from "../hooks/useEmotionCapture";
 import toast from "react-hot-toast";
 
 const VideoRecorder = ({
@@ -11,6 +12,7 @@ const VideoRecorder = ({
   onPermissionChange,
   onWebcamReady,
   onTranscriptUpdate,
+  onEmotionUpdate,
   audioEnabled = true,
   className = "",
   maxDuration = 180, // seconds (auto-stop)
@@ -32,7 +34,6 @@ const VideoRecorder = ({
     height: 720,
     facingMode: "user",
   });
-  const [audioLevel, setAudioLevel] = useState(0);
   const [countdown, setCountdown] = useState(null); // null | number
   const [preparing, setPreparing] = useState(false);
   const audioCtxRef = useRef(null);
@@ -40,11 +41,13 @@ const VideoRecorder = ({
   const rafRef = useRef(null);
   const canvasRef = useRef(null);
   const speechRecognitionRef = useRef(null);
-  const waveXRef = useRef(0);
+  const transcriptRestartCountRef = useRef(0);
+  const lastRestartTimeRef = useRef(0);
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [transcriptConfidence, setTranscriptConfidence] = useState(100);
   const autoStartedRef = useRef(false);
 
   const {
@@ -63,6 +66,27 @@ const VideoRecorder = ({
     clearRecording,
   } = useVideoRecording(interviewId);
 
+  // Emotion capture hook
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const {
+    error: emotionError,
+    startCapture,
+    stopCapture,
+    getEmotionSummary,
+  } = useEmotionCapture(
+    webcamRef,
+    interviewId,
+    currentQuestionIndex,
+    onEmotionUpdate
+      ? (dataPoint) => {
+          // Send individual data point to parent immediately
+          if (onEmotionUpdate) {
+            onEmotionUpdate({ timeline: [dataPoint] });
+          }
+        }
+      : null
+  );
+
   // Check camera access on mount
   useEffect(() => {
     const checkCamera = async () => {
@@ -73,6 +97,7 @@ const VideoRecorder = ({
           return;
         }
 
+        // Request camera/mic access to check permissions
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
@@ -121,6 +146,7 @@ const VideoRecorder = ({
         const audioIn = list.filter((d) => d.kind === "audioinput");
         const videoIn = list.filter((d) => d.kind === "videoinput");
         setDevices({ audioIn, videoIn });
+
         if (videoIn.length && selectedDevice.video === "default") {
           setSelectedDevice((s) => ({ ...s, video: videoIn[0].deviceId }));
           setVideoConstraints((vc) => ({
@@ -128,8 +154,17 @@ const VideoRecorder = ({
             deviceId: { exact: videoIn[0].deviceId },
           }));
         }
+
         if (audioIn.length && selectedDevice.audio === "default") {
-          setSelectedDevice((s) => ({ ...s, audio: audioIn[0].deviceId }));
+          // Try to find a device with "default" in its label (case-insensitive)
+          const defaultDevice = audioIn.find((d) =>
+            d.label.toLowerCase().includes("default")
+          );
+          const selectedAudioDevice = defaultDevice || audioIn[0];
+          setSelectedDevice((s) => ({
+            ...s,
+            audio: selectedAudioDevice.deviceId,
+          }));
         }
       } catch (_) {}
     };
@@ -165,6 +200,10 @@ const VideoRecorder = ({
     }
     try {
       await startRecording(webcamRef.current.stream);
+
+      // Start emotion capture
+      startCapture();
+
       // Setup audio meter after recording starts
       if (audioEnabled) {
         try {
@@ -174,20 +213,20 @@ const VideoRecorder = ({
             webcamRef.current.stream
           );
           const analyser = audioCtxRef.current.createAnalyser();
-          analyser.fftSize = 256;
+          analyser.fftSize = 512; // Increased for better frequency resolution
+          analyser.smoothingTimeConstant = 0.8; // Smoother transitions
           source.connect(analyser);
           analyserRef.current = analyser;
           const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const freqDataArray = new Uint8Array(analyser.frequencyBinCount);
+
+          // Store previous bar heights for smooth interpolation
+          const prevBarHeights = new Array(32).fill(0);
+
           const update = () => {
             analyser.getByteTimeDomainData(dataArray);
-            // Compute RMS
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-              const v = (dataArray[i] - 128) / 128;
-              sum += v * v;
-            }
-            const rms = Math.sqrt(sum / dataArray.length);
-            setAudioLevel(rms);
+            analyser.getByteFrequencyData(freqDataArray);
+
             if (canvasRef.current) {
               try {
                 const canvas = canvasRef.current;
@@ -195,38 +234,120 @@ const VideoRecorder = ({
                 const rect = canvas.getBoundingClientRect();
                 const w = rect.width;
                 const h = rect.height;
-                if (canvas.width !== w || canvas.height !== h) {
-                  canvas.width = w;
-                  canvas.height = h;
-                  waveXRef.current = 0;
-                  ctx.fillStyle = "#111827";
-                  ctx.fillRect(0, 0, w, h);
+
+                // Clear canvas with gradient background
+                const bgGradient = ctx.createLinearGradient(0, 0, 0, h);
+                bgGradient.addColorStop(0, "rgba(17, 24, 39, 0.95)");
+                bgGradient.addColorStop(0.5, "rgba(31, 41, 55, 0.95)");
+                bgGradient.addColorStop(1, "rgba(17, 24, 39, 0.95)");
+                ctx.fillStyle = bgGradient;
+                ctx.fillRect(0, 0, w, h);
+
+                // Draw frequency spectrum bars (modern visualization)
+                const numBars = 32;
+                const barWidth = w / numBars;
+                const barGap = barWidth * 0.2;
+                const actualBarWidth = barWidth - barGap;
+
+                for (let i = 0; i < numBars; i++) {
+                  // Sample frequency data (focus on lower-mid frequencies for voice)
+                  const freqIndex = Math.floor(
+                    (i / numBars) * (freqDataArray.length * 0.4)
+                  );
+                  const value = freqDataArray[freqIndex] / 255;
+
+                  // Smooth interpolation
+                  const targetHeight = value * h * 0.85;
+                  prevBarHeights[i] =
+                    prevBarHeights[i] * 0.7 + targetHeight * 0.3;
+                  const barHeight = Math.max(2, prevBarHeights[i]);
+
+                  const x = i * barWidth + barGap / 2;
+                  const y = h - barHeight;
+
+                  // Create gradient for each bar based on intensity
+                  const barGradient = ctx.createLinearGradient(x, y, x, h);
+
+                  if (value > 0.7) {
+                    // High intensity - cyan to blue
+                    barGradient.addColorStop(0, "rgba(6, 182, 212, 1)");
+                    barGradient.addColorStop(0.5, "rgba(14, 165, 233, 0.9)");
+                    barGradient.addColorStop(1, "rgba(59, 130, 246, 0.6)");
+                  } else if (value > 0.4) {
+                    // Medium intensity - emerald to cyan
+                    barGradient.addColorStop(0, "rgba(16, 185, 129, 1)");
+                    barGradient.addColorStop(0.5, "rgba(6, 182, 212, 0.8)");
+                    barGradient.addColorStop(1, "rgba(6, 182, 212, 0.4)");
+                  } else {
+                    // Low intensity - emerald
+                    barGradient.addColorStop(0, "rgba(16, 185, 129, 0.8)");
+                    barGradient.addColorStop(0.5, "rgba(16, 185, 129, 0.5)");
+                    barGradient.addColorStop(1, "rgba(16, 185, 129, 0.2)");
+                  }
+
+                  ctx.fillStyle = barGradient;
+
+                  // Draw rounded rectangle bars
+                  const radius = actualBarWidth / 3;
+                  ctx.beginPath();
+                  ctx.moveTo(x + radius, y);
+                  ctx.lineTo(x + actualBarWidth - radius, y);
+                  ctx.quadraticCurveTo(
+                    x + actualBarWidth,
+                    y,
+                    x + actualBarWidth,
+                    y + radius
+                  );
+                  ctx.lineTo(x + actualBarWidth, h - radius);
+                  ctx.quadraticCurveTo(
+                    x + actualBarWidth,
+                    h,
+                    x + actualBarWidth - radius,
+                    h
+                  );
+                  ctx.lineTo(x + radius, h);
+                  ctx.quadraticCurveTo(x, h, x, h - radius);
+                  ctx.lineTo(x, y + radius);
+                  ctx.quadraticCurveTo(x, y, x + radius, y);
+                  ctx.closePath();
+                  ctx.fill();
+
+                  // Add glow effect for high values
+                  if (value > 0.6) {
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor =
+                      value > 0.8
+                        ? "rgba(6, 182, 212, 0.6)"
+                        : "rgba(16, 185, 129, 0.4)";
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                  }
+
+                  // Add reflection effect at bottom
+                  const reflectionGradient = ctx.createLinearGradient(
+                    x,
+                    h,
+                    x,
+                    h - 3
+                  );
+                  reflectionGradient.addColorStop(
+                    0,
+                    "rgba(255, 255, 255, 0.05)"
+                  );
+                  reflectionGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+                  ctx.fillStyle = reflectionGradient;
+                  ctx.fillRect(x, h - 3, actualBarWidth, 3);
                 }
-                const amp = rms;
-                const mid = h / 2;
-                const colWidth = 2;
-                // fade old trail slightly where we draw next
-                ctx.fillStyle = "rgba(17,24,39,0.15)";
-                ctx.fillRect(waveXRef.current, 0, colWidth, h);
-                const lineHeight = Math.max(2, amp * h * 0.9);
-                ctx.strokeStyle = amp > 0.85 ? "#ef4444" : "#10b981";
-                ctx.lineWidth = colWidth;
+
+                // Draw center line
+                ctx.strokeStyle = "rgba(100, 116, 139, 0.3)";
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
                 ctx.beginPath();
-                ctx.moveTo(
-                  waveXRef.current + colWidth / 2,
-                  mid - lineHeight / 2
-                );
-                ctx.lineTo(
-                  waveXRef.current + colWidth / 2,
-                  mid + lineHeight / 2
-                );
+                ctx.moveTo(0, h / 2);
+                ctx.lineTo(w, h / 2);
                 ctx.stroke();
-                waveXRef.current += colWidth;
-                if (waveXRef.current >= w) {
-                  waveXRef.current = 0;
-                  ctx.fillStyle = "#111827";
-                  ctx.fillRect(0, 0, w, h);
-                }
+                ctx.setLineDash([]);
               } catch (_) {
                 /* ignore */
               }
@@ -241,7 +362,7 @@ const VideoRecorder = ({
     } catch (e) {
       setCameraError("Failed to start recording");
     }
-  }, [audioEnabled, startRecording]);
+  }, [audioEnabled, startRecording, startCapture]);
 
   const handleStartRecording = async () => {
     if (preparing || isRecording) return;
@@ -272,9 +393,18 @@ const VideoRecorder = ({
   // Handle stop recording
   const handleStopRecording = useCallback(() => {
     stopRecording();
-  }, [stopRecording]);
 
-  // Setup waveform canvas scaling
+    // Stop emotion capture
+    stopCapture();
+
+    // Get emotion summary and send to parent
+    const summary = getEmotionSummary();
+    if (summary && onEmotionUpdate) {
+      onEmotionUpdate(summary);
+    }
+  }, [stopRecording, stopCapture, getEmotionSummary, onEmotionUpdate]);
+
+  // Setup waveform canvas scaling with gradient background
   useEffect(() => {
     if (!enableWaveform) return;
     const canvas = canvasRef.current;
@@ -286,8 +416,13 @@ const VideoRecorder = ({
       canvas.height = rect.height * dpr;
       const ctx = canvas.getContext("2d");
       ctx.scale(dpr, dpr);
-      ctx.fillStyle = "rgba(16,185,129,0.08)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Create gradient background
+      const gradient = ctx.createLinearGradient(0, 0, 0, rect.height);
+      gradient.addColorStop(0, "rgba(6, 182, 212, 0.03)");
+      gradient.addColorStop(0.5, "rgba(6, 182, 212, 0.08)");
+      gradient.addColorStop(1, "rgba(6, 182, 212, 0.03)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, rect.width, rect.height);
     };
     resize();
     window.addEventListener("resize", resize);
@@ -323,7 +458,7 @@ const VideoRecorder = ({
     };
   }, [hideControls, isRecording, stopRecording]);
 
-  // Live transcript via Web Speech API (best-effort)
+  // Enhanced Live transcript via Web Speech API with improved accuracy and reliability
   useEffect(() => {
     if (!enableTranscript) return;
     if (!isRecording) {
@@ -336,6 +471,7 @@ const VideoRecorder = ({
       }
       setInterimTranscript("");
       setIsListening(false);
+      transcriptRestartCountRef.current = 0;
       return;
     }
 
@@ -348,144 +484,228 @@ const VideoRecorder = ({
       // eslint-disable-next-line no-console
       console.warn("[VideoRecorder] Speech Recognition API not supported");
       toast.error(
-        "Speech recognition not supported in this browser. Use Chrome or Edge."
+        "Speech recognition not supported in this browser. Use Chrome or Edge.",
+        { duration: 5000 }
       );
       return;
     }
-    try {
-      const rec = new SpeechRecognition();
-      rec.continuous = true;
-      rec.interimResults = true;
 
-      // Improved settings for better accuracy
-      rec.lang = "en-US"; // You can make this configurable if needed
-      rec.maxAlternatives = 3; // Get top 3 alternatives for better accuracy
+    const startRecognition = () => {
+      try {
+        const rec = new SpeechRecognition();
+        rec.continuous = true;
+        rec.interimResults = true;
 
-      // These are browser-specific optimizations
-      if ("grammars" in rec) {
-        // Grammar hints can improve accuracy for specific vocabulary
-        rec.grammars = null; // Use default grammar
-      }
+        // Enhanced settings for maximum accuracy
+        rec.lang = "en-US"; // Primary language
+        rec.maxAlternatives = 5; // Get top 5 alternatives for better accuracy
 
-      rec.onresult = (event) => {
-        let interim = "";
-        const finalAdditions = [];
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const res = event.results[i];
-          if (res.isFinal) {
-            // Use the most confident alternative (res[0] is highest confidence)
-            // Check confidence score if available
-            let bestTranscript = res[0].transcript.trim();
-            let bestConfidence = res[0].confidence || 1;
+        // Grammar hints for better accuracy (if supported)
+        if ("grammars" in rec) {
+          rec.grammars = null; // Use default grammar
+        }
 
-            // Compare with alternatives if confidence is low
-            if (bestConfidence < 0.8 && res.length > 1) {
-              for (let j = 1; j < Math.min(res.length, 3); j++) {
-                if (res[j].confidence > bestConfidence) {
-                  bestTranscript = res[j].transcript.trim();
-                  bestConfidence = res[j].confidence;
+        rec.onresult = (event) => {
+          let interim = "";
+          const finalAdditions = [];
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const res = event.results[i];
+
+            if (res.isFinal) {
+              // Smart selection from alternatives based on confidence
+              let bestTranscript = res[0].transcript.trim();
+              let bestConfidence = res[0].confidence || 1;
+
+              // Check all alternatives and pick the best one
+              for (let j = 1; j < Math.min(res.length, 5); j++) {
+                const altConfidence = res[j].confidence || 0;
+                const altTranscript = res[j].transcript.trim();
+
+                // Prefer longer, more complete phrases if confidence is similar
+                if (
+                  altConfidence > bestConfidence * 0.9 &&
+                  altTranscript.length > bestTranscript.length
+                ) {
+                  bestTranscript = altTranscript;
+                  bestConfidence = altConfidence;
+                } else if (altConfidence > bestConfidence) {
+                  bestTranscript = altTranscript;
+                  bestConfidence = altConfidence;
                 }
               }
-            }
 
-            if (bestTranscript) {
-              finalAdditions.push(bestTranscript);
-              // Log confidence for debugging
-              // eslint-disable-next-line no-console
-              console.log(
-                `[Transcript] Confidence: ${(bestConfidence * 100).toFixed(
-                  1
-                )}% - "${bestTranscript}"`
-              );
+              if (bestTranscript) {
+                // Add punctuation if missing at end
+                if (!/[.!?]$/.test(bestTranscript)) {
+                  bestTranscript += ".";
+                }
+
+                finalAdditions.push(bestTranscript);
+
+                // Update confidence display
+                setTranscriptConfidence(Math.round(bestConfidence * 100));
+
+                // Log for debugging
+                // eslint-disable-next-line no-console
+                console.log(
+                  `[Transcript] ${(bestConfidence * 100).toFixed(
+                    1
+                  )}% - "${bestTranscript}"`
+                );
+              }
+            } else {
+              // For interim results, show the top result
+              interim += res[0].transcript;
             }
-          } else {
-            // For interim results, just use the top result
-            interim += res[0].transcript;
           }
-        }
-        if (finalAdditions.length) {
-          setTranscript((t) => {
-            const newText = finalAdditions.join(" ");
-            return t ? `${t} ${newText}` : newText;
-          });
-        }
-        setInterimTranscript(interim);
-      };
 
-      rec.onerror = (event) => {
-        // eslint-disable-next-line no-console
-        console.warn("[VideoRecorder] Speech recognition error:", event.error);
+          if (finalAdditions.length) {
+            setTranscript((t) => {
+              const newText = finalAdditions.join(" ");
+              return t ? `${t} ${newText}` : newText;
+            });
+          }
+          setInterimTranscript(interim);
+        };
 
-        if (
-          event.error === "not-allowed" ||
-          event.error === "service-not-allowed"
-        ) {
-          toast.error(
-            "Microphone permission denied. Please allow microphone access."
+        rec.onerror = (event) => {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[VideoRecorder] Speech recognition error:",
+            event.error
           );
-          setIsListening(false);
-        } else if (event.error === "no-speech") {
-          // This is normal, just means pause in speech - don't show error
-        } else if (event.error === "audio-capture") {
-          toast.error("No microphone detected. Please connect a microphone.");
-          setIsListening(false);
-        } else if (event.error === "network") {
+
+          if (
+            event.error === "not-allowed" ||
+            event.error === "service-not-allowed"
+          ) {
+            toast.error(
+              "Microphone permission denied. Please allow microphone access.",
+              { duration: 5000 }
+            );
+            setIsListening(false);
+          } else if (event.error === "no-speech") {
+            // Normal pause - don't show error, auto-restart will handle
+            // eslint-disable-next-line no-console
+            console.log("[VideoRecorder] No speech detected, will restart");
+          } else if (event.error === "audio-capture") {
+            toast.error(
+              "No microphone detected. Please connect a microphone.",
+              { duration: 5000 }
+            );
+            setIsListening(false);
+          } else if (event.error === "network") {
+            // eslint-disable-next-line no-console
+            console.log(
+              "[VideoRecorder] Network error, will auto-restart in 1s"
+            );
+          } else if (event.error === "aborted") {
+            // Normal when stopping/restarting
+            // eslint-disable-next-line no-console
+            console.log("[VideoRecorder] Recognition aborted, will restart");
+          }
+        };
+
+        rec.onstart = () => {
+          // eslint-disable-next-line no-console
+          console.log("[VideoRecorder] Speech recognition started");
+          setIsListening(true);
+          lastRestartTimeRef.current = Date.now();
+        };
+
+        rec.onend = () => {
           // eslint-disable-next-line no-console
           console.log(
-            "[VideoRecorder] Network error in speech recognition, will auto-restart"
+            "[VideoRecorder] Speech recognition ended, isRecording:",
+            isRecording
           );
-        }
-      };
+          setIsListening(false);
 
-      rec.onstart = () => {
-        // eslint-disable-next-line no-console
-        console.log("[VideoRecorder] Speech recognition started");
-        setIsListening(true);
-      };
+          // Auto-restart while recording with smart backoff
+          if (isRecording && speechRecognitionRef.current === rec) {
+            const timeSinceLastRestart =
+              Date.now() - lastRestartTimeRef.current;
+            const restartDelay = timeSinceLastRestart < 1000 ? 500 : 100;
 
-      rec.onend = () => {
-        // eslint-disable-next-line no-console
-        console.log(
-          "[VideoRecorder] Speech recognition ended, isRecording:",
-          isRecording
-        );
-        setIsListening(false);
+            // Prevent infinite restart loops
+            if (transcriptRestartCountRef.current < 50) {
+              transcriptRestartCountRef.current++;
 
-        // Auto-restart while recording
-        if (isRecording && speechRecognitionRef.current === rec) {
-          try {
-            // eslint-disable-next-line no-console
-            console.log("[VideoRecorder] Restarting speech recognition");
-            setTimeout(() => {
-              try {
-                rec.start();
-              } catch (restartErr) {
-                // eslint-disable-next-line no-console
-                console.error("[VideoRecorder] Restart failed:", restartErr);
-              }
-            }, 100); // Small delay before restart
-          } catch (err) {
-            // eslint-disable-next-line no-console
-            console.error(
-              "[VideoRecorder] Failed to restart speech recognition:",
-              err
-            );
+              // eslint-disable-next-line no-console
+              console.log(
+                `[VideoRecorder] Auto-restarting (${transcriptRestartCountRef.current}) in ${restartDelay}ms`
+              );
+
+              setTimeout(() => {
+                if (isRecording && speechRecognitionRef.current === rec) {
+                  try {
+                    rec.start();
+                  } catch (restartErr) {
+                    // eslint-disable-next-line no-console
+                    console.error(
+                      "[VideoRecorder] Restart failed:",
+                      restartErr.message
+                    );
+                    // Try again after longer delay
+                    if (transcriptRestartCountRef.current < 50) {
+                      setTimeout(() => {
+                        try {
+                          if (
+                            isRecording &&
+                            speechRecognitionRef.current === rec
+                          ) {
+                            rec.start();
+                          }
+                        } catch (_) {}
+                      }, 1000);
+                    }
+                  }
+                }
+              }, restartDelay);
+            } else {
+              // eslint-disable-next-line no-console
+              console.warn(
+                "[VideoRecorder] Too many restarts, stopping auto-restart"
+              );
+              toast.error(
+                "Speech recognition stopped. Please refresh if needed.",
+                { duration: 3000 }
+              );
+            }
           }
-        }
-      };
+        };
 
-      speechRecognitionRef.current = rec;
-      // eslint-disable-next-line no-console
-      console.log("[VideoRecorder] Starting speech recognition");
-      rec.start();
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(
-        "[VideoRecorder] Failed to initialize speech recognition:",
-        err
-      );
-      toast.error("Failed to start speech recognition");
-    }
+        speechRecognitionRef.current = rec;
+        transcriptRestartCountRef.current = 0;
+
+        // eslint-disable-next-line no-console
+        console.log("[VideoRecorder] Starting speech recognition");
+        rec.start();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(
+          "[VideoRecorder] Failed to initialize speech recognition:",
+          err
+        );
+        toast.error(`Failed to start speech recognition: ${err.message}`, {
+          duration: 5000,
+        });
+      }
+    };
+
+    // Start recognition
+    startRecognition();
+
+    // Cleanup
+    return () => {
+      if (speechRecognitionRef.current) {
+        try {
+          speechRecognitionRef.current.stop();
+        } catch (_) {}
+        speechRecognitionRef.current = null;
+      }
+    };
   }, [isRecording, enableTranscript]);
 
   // Notify parent of transcript updates (both interim and final)
@@ -516,7 +736,7 @@ const VideoRecorder = ({
       analyserRef.current = null;
       audioCtxRef.current = null;
       rafRef.current = null;
-      setAudioLevel(0);
+      // audio level state removed
     }
   }, [isRecording]);
 
@@ -543,15 +763,6 @@ const VideoRecorder = ({
     } else {
       toast.error("Failed to upload video. Please try again.");
     }
-  };
-
-  // Format duration as MM:SS
-  const formatDuration = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
   };
 
   // Show error states
@@ -600,7 +811,7 @@ const VideoRecorder = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Video Display */}
-      <div className="relative group rounded-lg overflow-hidden aspect-video bg-surface-900 border border-surface-700 shadow-inner">
+      <div className="relative group rounded-lg overflow-hidden aspect-video bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-700 shadow-inner">
         {/* Live video */}
         {hasCamera ? (
           <Webcam
@@ -656,7 +867,7 @@ const VideoRecorder = ({
         <div className="absolute inset-0 pointer-events-none">
           {/* Uploading overlay */}
           {isUploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-surface-900/70 backdrop-blur-sm z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-surface-900/70 backdrop-blur-sm z-10">
               <div className="flex flex-col items-center gap-3 text-white">
                 <LargeSpinner />
                 <div className="text-sm opacity-90">Uploading your video…</div>
@@ -665,7 +876,7 @@ const VideoRecorder = ({
           )}
           {/* Countdown */}
           {preparing && countdown != null && (
-            <div className="absolute inset-0 flex items-center justify-center bg-surface-900/70 backdrop-blur-sm">
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-surface-900/70 backdrop-blur-sm">
               <div className="text-center">
                 <div className="text-7xl font-bold text-white tracking-tight animate-scale-in">
                   {countdown}
@@ -676,49 +887,17 @@ const VideoRecorder = ({
               </div>
             </div>
           )}
-          {/* Recording indicator */}
+
+          {/* Live tag (replaces Audio meter) */}
           {isRecording && (
-            <div className="absolute top-3 left-3 flex items-center gap-2 bg-red-600/90 backdrop-blur px-3 py-1.5 rounded-full shadow">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white" />
+            <div className="absolute top-3 right-3 flex items-center gap-2 bg-white/90 dark:bg-surface-900/80 backdrop-blur px-3 py-1.5 rounded-full border border-surface-300 dark:border-surface-600">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
-              <span className="text-white text-xs font-semibold tracking-wide">
-                REC {formatDuration(recordingDuration)}
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">
+                Live
               </span>
-            </div>
-          )}
-          {hasRecorded && !isRecording && (
-            <div className="absolute top-3 left-3 bg-green-600/90 backdrop-blur px-3 py-1.5 rounded-full shadow text-white text-xs font-medium">
-              {`Recorded ${formatDuration(recordingDuration)}`}
-            </div>
-          )}
-          {/* Audio meter */}
-          {audioEnabled && (isRecording || preparing) && (
-            <div className="absolute top-3 right-3 flex items-center gap-2 bg-surface-800/80 backdrop-blur px-3 py-1.5 rounded-full border border-surface-600 text-surface-200">
-              <span className="text-[11px] uppercase tracking-wide">Audio</span>
-              <div className="flex items-end gap-0.5 h-5">
-                {Array.from({ length: 12 }).map((_, i) => {
-                  const threshold = (i + 1) / 12;
-                  const active = audioLevel > threshold - 0.08; // smoothing
-                  const danger = threshold > 0.85;
-                  return (
-                    <div
-                      key={i}
-                      className={`w-1 rounded-sm transition-all duration-150 ${
-                        active
-                          ? danger
-                            ? "bg-red-500 h-full"
-                            : "bg-green-400 h-full"
-                          : "bg-surface-600 h-1"
-                      }`}
-                      style={{
-                        height: active ? `${((i + 1) / 12) * 100}%` : undefined,
-                      }}
-                    />
-                  );
-                })}
-              </div>
             </div>
           )}
           {/* Max duration progress ring (corner) */}
@@ -731,7 +910,7 @@ const VideoRecorder = ({
         {/* Control Bar */}
         {!hideControls && (
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-4 flex justify-center">
-            <div className="pointer-events-auto flex items-center gap-4 bg-surface-900/70 backdrop-blur-md px-5 py-3 rounded-full border border-surface-700 shadow-lg">
+            <div className="pointer-events-auto flex items-center gap-4 bg-white/90 dark:bg-surface-900/70 backdrop-blur-md px-5 py-3 rounded-full border border-surface-300 dark:border-surface-700 shadow-lg">
               {demoMode && (
                 <span className="hidden md:inline text-[10px] tracking-wide px-2 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
                   DEMO
@@ -807,78 +986,214 @@ const VideoRecorder = ({
       {(enableWaveform || enableTranscript) && (
         <div className="space-y-3">
           {enableWaveform && (
-            <div className="bg-surface-900/70 border border-surface-700 rounded-md p-2">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] uppercase tracking-wide text-surface-400">
-                  Waveform
-                </span>
-                <span className="text-[10px] text-surface-500">
-                  {isRecording
-                    ? "Live"
-                    : hasRecorded
-                    ? "Recorded snapshot"
-                    : "Idle"}
-                </span>
+            <div className="bg-gradient-to-br from-surface-50 via-surface-100 to-surface-200 dark:from-surface-900/90 dark:via-surface-900/80 dark:to-surface-800/90 border border-surface-300 dark:border-surface-700/50 rounded-xl p-3 sm:p-4 backdrop-blur-sm shadow-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1 h-1 rounded-full bg-cyan-500 animate-pulse"></div>
+                    <div
+                      className="w-1 h-1 rounded-full bg-cyan-500 animate-pulse"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                    <div
+                      className="w-1 h-1 rounded-full bg-cyan-500 animate-pulse"
+                      style={{ animationDelay: "0.4s" }}
+                    ></div>
+                  </div>
+                  <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-cyan-400">
+                    Audio Spectrum
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isRecording && (
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] text-red-400 font-semibold uppercase tracking-wide">
+                        Live
+                      </span>
+                    </span>
+                  )}
+                  {!isRecording && hasRecorded && (
+                    <span className="text-[9px] sm:text-[10px] text-cyan-500 font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">
+                      Captured
+                    </span>
+                  )}
+                  {!isRecording && !hasRecorded && (
+                    <span className="text-[9px] sm:text-[10px] text-surface-500 font-medium uppercase tracking-wide">
+                      Idle
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="h-16 w-full relative overflow-hidden rounded-sm bg-surface-800">
+              <div className="h-20 sm:h-24 w-full relative overflow-hidden rounded-lg bg-gradient-to-b from-surface-50 via-surface-100 to-surface-50 dark:from-surface-900 dark:via-surface-800 dark:to-surface-900 border border-surface-300 dark:border-surface-700/30 shadow-inner">
                 <canvas
                   ref={canvasRef}
                   className="absolute inset-0 w-full h-full"
                 />
                 {!isRecording && !hasRecorded && (
-                  <div className="absolute inset-0 flex items-center justify-center text-surface-600 text-xs">
-                    Waveform will appear when recording starts
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <div className="flex gap-1 mb-2">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-1 bg-surface-600 rounded-full animate-pulse"
+                          style={{
+                            height: `${20 + Math.random() * 20}px`,
+                            animationDelay: `${i * 0.15}s`,
+                          }}
+                        ></div>
+                      ))}
+                    </div>
+                    <span className="text-surface-500 text-xs sm:text-sm font-medium">
+                      Audio spectrum will appear when recording starts
+                    </span>
                   </div>
                 )}
               </div>
+              {isRecording && (
+                <div className="mt-2 flex items-center justify-between text-[10px] text-surface-500">
+                  <span className="flex items-center gap-1">
+                    <span className="text-cyan-400">●</span>
+                    Voice detected
+                  </span>
+                  <span className="text-surface-600">32 bands • 512 FFT</span>
+                </div>
+              )}
             </div>
           )}
           {enableTranscript && showTranscript && (
-            <div className="bg-surface-900/70 border border-surface-700 rounded-md p-3 space-y-2">
+            <div className="bg-gradient-to-br from-surface-900/90 via-surface-900/80 to-surface-800/90 border border-surface-700/50 rounded-xl p-3 sm:p-4 backdrop-blur-sm shadow-lg space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] uppercase tracking-wide text-surface-400">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-1.5">
+                    {isListening ? (
+                      <>
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-green-400 font-semibold uppercase tracking-wide">
+                          Listening
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] sm:text-xs text-surface-500 font-medium uppercase tracking-wide">
+                        Paused
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-surface-400">
                     Live Transcript
                   </span>
-                  {isListening && (
-                    <span className="flex items-center gap-1">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span className="text-[9px] text-green-400 uppercase tracking-wide">
-                        Listening
-                      </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Emotion error indicator */}
+                  {emotionError && (
+                    <span className="text-[9px] sm:text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+                      Emotion Error
                     </span>
                   )}
+                  {transcriptConfidence > 0 && transcript && (
+                    <span
+                      className={`text-[9px] sm:text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                        transcriptConfidence >= 80
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : transcriptConfidence >= 60
+                          ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                          : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                      }`}
+                    >
+                      {transcriptConfidence}% confident
+                    </span>
+                  )}
+                  {transcript && (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `${transcript}${
+                            interimTranscript ? ` ${interimTranscript}` : ""
+                          }`
+                        );
+                        toast.success("Transcript copied!", { duration: 2000 });
+                      }}
+                      className="text-[10px] sm:text-xs text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
+                      title="Copy transcript"
+                    >
+                      Copy
+                    </button>
+                  )}
                 </div>
-                {!(
-                  "SpeechRecognition" in window ||
-                  "webkitSpeechRecognition" in window
-                ) && (
-                  <span className="text-[10px] text-red-400">
-                    Not Supported - Use Chrome/Edge
-                  </span>
-                )}
               </div>
-              <div className="max-h-40 overflow-auto text-sm whitespace-pre-wrap leading-relaxed">
+
+              {!(
+                "SpeechRecognition" in window ||
+                "webkitSpeechRecognition" in window
+              ) && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2">
+                  <span className="text-xs sm:text-sm text-red-400 font-medium">
+                    ⚠️ Speech recognition not supported. Use Chrome, Edge, or
+                    Safari.
+                  </span>
+                </div>
+              )}
+
+              <div
+                className="max-h-48 sm:max-h-56 overflow-auto text-sm sm:text-base whitespace-pre-wrap leading-relaxed bg-surface-900/50 rounded-lg p-3 border border-surface-700/30 scroll-smooth"
+                id="transcript-container"
+              >
                 {transcript || interimTranscript ? (
                   <>
-                    <span className="text-surface-200">{transcript}</span>{" "}
+                    <span className="text-surface-100 font-medium">
+                      {transcript}
+                    </span>
                     {interimTranscript && (
-                      <span className="text-surface-400 italic">
-                        {interimTranscript}
-                      </span>
+                      <>
+                        {transcript && " "}
+                        <span className="text-surface-400 italic opacity-80">
+                          {interimTranscript}
+                        </span>
+                      </>
                     )}
                   </>
                 ) : (
-                  <span className="text-surface-500 text-xs">
-                    {isListening
-                      ? "Listening... Start speaking in English."
-                      : "Transcript will appear as you speak (English)."}
-                  </span>
+                  <div className="flex flex-col items-center justify-center py-4 text-center">
+                    <div className="flex gap-1 mb-3">
+                      {[...Array(4)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-1 h-4 bg-cyan-500/30 rounded-full animate-pulse"
+                          style={{
+                            animationDelay: `${i * 0.15}s`,
+                          }}
+                        ></div>
+                      ))}
+                    </div>
+                    <span className="text-surface-500 text-xs sm:text-sm font-medium">
+                      {isListening
+                        ? "Listening for your voice..."
+                        : "Transcript will appear as you speak (English)"}
+                    </span>
+                    <span className="text-surface-600 text-[10px] sm:text-xs mt-1">
+                      Speak clearly for best results
+                    </span>
+                  </div>
                 )}
               </div>
+
+              {isRecording && (
+                <div className="flex items-center justify-between text-[10px] text-surface-500">
+                  <span className="flex items-center gap-1">
+                    <span className="text-cyan-400">●</span>
+                    {transcript
+                      ? `${transcript.split(" ").length} words captured`
+                      : "Ready to capture"}
+                  </span>
+                  <span className="text-surface-600">Auto-restart enabled</span>
+                </div>
+              )}
             </div>
           )}
         </div>

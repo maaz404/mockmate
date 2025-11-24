@@ -12,6 +12,8 @@ const {
 const requireAuth = require("../middleware/auth");
 const { ok, fail } = require("../utils/responder");
 const Logger = require("../utils/logger");
+const crypto = require("crypto");
+const { sendMail } = require("../utils/mailer");
 
 const router = express.Router();
 
@@ -235,10 +237,10 @@ router.post(
         return fail(res, 409, "USER_EXISTS", "User already exists");
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // Pass plain password, let pre-save hook hash it
       const user = await User.create({
         email,
-        password: hashedPassword,
+        password,
         name: name || email.split("@")[0],
       });
 
@@ -440,5 +442,156 @@ router.get("/me", requireAuth, async (req, res) => {
     return fail(res, 500, "USER_FETCH_FAILED", "Failed to get user");
   }
 });
+
+/**
+ * @desc    Request password reset
+ * @route   POST /api/auth/request-password-reset
+ * @access  Public
+ */
+router.post(
+  "/request-password-reset",
+  [body("email").isEmail().normalizeEmail()],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return fail(res, 400, "VALIDATION_FAILED", "Validation failed", {
+          details: errors.array(),
+        });
+      }
+      const { email } = req.body;
+      Logger.info(`Password reset requested for email: ${email}`);
+
+      const user = await User.findOne({ email });
+      if (!user) {
+        Logger.info(`No user found with email: ${email}`);
+        // For security, always return success
+        return ok(res, {}, "If that email exists, a reset link has been sent");
+      }
+
+      Logger.info(`User found: ${user._id}, generating reset token`);
+
+      // Generate token
+      const token = crypto.randomBytes(32).toString("hex");
+      const resetExpires = Date.now() + 1000 * 60 * 30; // 30 min
+
+      // Use updateOne to bypass validation
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            passwordResetToken: token,
+            passwordResetExpires: resetExpires,
+          },
+        }
+      );
+
+      Logger.info(`Token saved for user ${user._id}, sending email`);
+
+      // Send email
+      const resetUrl = `${
+        process.env.FRONTEND_URL || "http://localhost:3000"
+      }/reset-password?token=${token}`;
+
+      await sendMail({
+        to: user.email,
+        subject: "MockMate Password Reset",
+        html: `<p>You requested a password reset.</p><p><a href="${resetUrl}">Click here to reset your password</a></p><p>This link expires in 30 minutes.</p>`,
+      });
+
+      Logger.info(`Password reset email sent successfully to ${user.email}`);
+
+      return ok(res, {}, "If that email exists, a reset link has been sent");
+    } catch (error) {
+      Logger.error("Request password reset error:", error);
+      Logger.error("Error stack:", error.stack);
+      return fail(
+        res,
+        500,
+        "RESET_REQUEST_FAILED",
+        "Could not process password reset request"
+      );
+    }
+  }
+);
+
+/**
+ * @desc    Verify password reset token
+ * @route   GET /api/auth/verify-password-reset
+ * @access  Public
+ */
+router.get("/verify-password-reset", async (req, res) => {
+  try {
+    const { token } = req.query;
+    Logger.info(`Verifying password reset token: ${token}`);
+
+    if (!token) return fail(res, 400, "TOKEN_REQUIRED", "Token required");
+
+    const user = await User.findOne({ passwordResetToken: token });
+    Logger.info(`User found for token: ${user ? user._id : "NONE"}`);
+
+    if (!user) {
+      Logger.warn(`No user found with token: ${token}`);
+      return fail(res, 400, "TOKEN_INVALID", "Invalid or expired token");
+    }
+
+    if (!user.passwordResetExpires) {
+      Logger.warn(`User ${user._id} has no passwordResetExpires`);
+      return fail(res, 400, "TOKEN_INVALID", "Invalid or expired token");
+    }
+
+    if (user.passwordResetExpires < Date.now()) {
+      Logger.warn(
+        `Token expired for user ${user._id}. Expires: ${
+          user.passwordResetExpires
+        }, Now: ${Date.now()}`
+      );
+      return fail(res, 400, "TOKEN_INVALID", "Invalid or expired token");
+    }
+
+    Logger.info(`Token valid for user ${user._id}`);
+    return ok(res, {}, "Token valid");
+  } catch (error) {
+    Logger.error("Verify password reset error:", error);
+    return fail(res, 500, "VERIFY_FAILED", "Could not verify token");
+  }
+});
+
+/**
+ * @desc    Reset password
+ * @route   POST /api/auth/reset-password
+ * @access  Public
+ */
+router.post(
+  "/reset-password",
+  [body("token").exists(), body("password").isLength({ min: 6 })],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return fail(res, 400, "VALIDATION_FAILED", "Validation failed", {
+          details: errors.array(),
+        });
+      }
+      const { token, password } = req.body;
+      const user = await User.findOne({ passwordResetToken: token });
+      if (
+        !user ||
+        !user.passwordResetExpires ||
+        user.passwordResetExpires < Date.now()
+      ) {
+        return fail(res, 400, "TOKEN_INVALID", "Invalid or expired token");
+      }
+      user.password = password; // Will be hashed by pre-save hook
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
+      return ok(res, {}, "Password reset successful");
+    } catch (error) {
+      Logger.error("Reset password error:", error);
+      return fail(res, 500, "RESET_FAILED", "Could not reset password");
+    }
+  }
+);
 
 module.exports = router;

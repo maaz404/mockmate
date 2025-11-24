@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { useLanguage } from "../context/LanguageContext";
 import HybridQuestionGenerator from "../components/ui/HybridQuestionGenerator";
 import StyledSelect from "../components/ui/StyledSelect";
 import QuestionCard from "../components/ui/QuestionCard";
@@ -37,6 +38,7 @@ const QuestionBankPage = () => {
   const selectedExperience = "intermediate";
 
   const location = useLocation();
+  const { language } = useLanguage();
 
   // Helper to normalize category strings to slug form
   const normalizeCategory = (val) =>
@@ -146,6 +148,35 @@ const QuestionBankPage = () => {
         const base = appendMode ? [...prev, ...questions] : [...questions];
         return dedupeQuestions(base);
       });
+      // If a category filter is active but none of the new questions match it, auto-clear the filter
+      try {
+        if (categoryFilter !== "all") {
+          const matchCount = questions.filter((q) => {
+            const cNorm = normalizeCategory(q.category || q.type || "");
+            return cNorm === categoryFilter;
+          }).length;
+          if (matchCount === 0) {
+            setCategoryFilter("all");
+            toast(
+              (t) => (
+                <span>
+                  Category filter cleared (no generated questions matched).
+                  <button
+                    onClick={() => {
+                      toast.dismiss(t.id);
+                      setShowGenerator(true);
+                    }}
+                    className="ml-2 underline"
+                  >
+                    Regenerate
+                  </button>
+                </span>
+              ),
+              { icon: "🔄" }
+            );
+          }
+        }
+      } catch (_) {}
       // Track generation info
       setLastGenerationInfo({
         append: appendMode,
@@ -431,6 +462,7 @@ const QuestionBankPage = () => {
         duration: Math.min(60, Math.max(15, generatedQuestions.length * 5)),
         questionCount: generatedQuestions.length,
         adaptiveDifficulty: { enabled: false },
+        language,
       };
       toast.loading("Creating interview...", { id: "start-int" });
       const payloadQuestions = generatedQuestions.map((q, i) => ({
@@ -444,6 +476,7 @@ const QuestionBankPage = () => {
       const { data: envelope } = await api.post("/interviews", {
         config,
         questions: payloadQuestions,
+        language,
       });
       if (!envelope?.success) {
         throw new Error(envelope?.message || "Create failed");
@@ -607,8 +640,10 @@ const QuestionBankPage = () => {
                 tabIndex={0}
                 onClick={() => {
                   setCategoryFilter(category.slug);
-                  // route-based page for full browsing
-                  navigate(`/questions/${category.slug}`);
+                  // Update URL with category query parameter
+                  navigate(`/questions?category=${category.slug}`, {
+                    replace: true,
+                  });
                   // If user hasn't generated yet, prompt them & open generator
                   if (generatedQuestions.length === 0) {
                     setShowGenerator(true);

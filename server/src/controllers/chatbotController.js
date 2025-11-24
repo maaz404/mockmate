@@ -4,6 +4,51 @@ const grokChatbotService = require("../services/grokChatbotService");
 const UserProfile = require("../models/UserProfile");
 const Logger = require("../utils/logger");
 const { ok, fail } = require("../utils/responder");
+const ChatConversation = require("../models/ChatConversation");
+
+/**
+ * Persist chat messages (append) with size cap
+ */
+async function persistConversation(userId, interviewId, newMessages = []) {
+  try {
+    if (!userId || !Array.isArray(newMessages) || newMessages.length === 0)
+      return;
+    const convo = await ChatConversation.findOne({ user: userId, interviewId });
+    if (!convo) {
+      await ChatConversation.create({
+        user: userId,
+        interviewId,
+        messages: newMessages.slice(-200),
+        lastInteractionAt: new Date(),
+      });
+      return;
+    }
+    convo.messages.push(...newMessages);
+    if (convo.messages.length > 200) {
+      convo.messages = convo.messages.slice(-200);
+    }
+    convo.lastInteractionAt = new Date();
+    await convo.save();
+  } catch (e) {
+    Logger.warn("Conversation persistence failed:", e.message);
+  }
+}
+
+/**
+ * Load recent messages for personalization
+ */
+async function loadRecentConversation(userId, limit = 8) {
+  try {
+    if (!userId) return [];
+    const convo = await ChatConversation.findOne({ user: userId })
+      .sort({ lastInteractionAt: -1 })
+      .lean();
+    if (!convo) return [];
+    return convo.messages.slice(-limit);
+  } catch (e) {
+    return [];
+  }
+}
 
 /**
  * Health check for chatbot service
@@ -178,6 +223,11 @@ exports.chat = async (req, res) => {
         "Grok API is unavailable due to insufficient credits or access. Please add credits on xAI console."
       );
     }
+    // Persist conversation (best-effort) on error fallback avoided
+    try {
+      await persistConversation(userId, context?.interviewId, messages);
+    } catch {}
+
     return fail(
       res,
       500,
@@ -210,13 +260,35 @@ exports.getSuggestions = async (req, res) => {
       );
     }
 
-    // Context-aware suggestions
+    // Base suggestions
     const suggestions = [
       "How can I improve my interview performance?",
       "What are common mistakes in technical interviews?",
       "Tips for answering behavioral questions",
       "How do I prepare for system design interviews?",
     ];
+
+    // Personalization from recent conversation topics
+    const recent = await loadRecentConversation(userId, 6);
+    const recentText = recent
+      .map((m) => m.content)
+      .join(" \n ")
+      .toLowerCase();
+    if (recentText.includes("star") || recentText.includes("behavioral")) {
+      suggestions.unshift("Can you review my behavioral answers?");
+    }
+    if (recentText.includes("system design")) {
+      suggestions.unshift("Give me a system design practice flow");
+    }
+    if (
+      recentText.includes("algorithm") ||
+      recentText.includes("data structure")
+    ) {
+      suggestions.unshift("Generate a medium difficulty coding question");
+    }
+    if (recentText.includes("resume")) {
+      suggestions.unshift("How can I improve my resume for my target role?");
+    }
 
     // Add personalized suggestions based on user profile
     if (userProfile?.professionalInfo?.currentRole) {
@@ -258,9 +330,12 @@ exports.getChatHistory = async (req, res) => {
       return fail(res, 400, "MISSING_INTERVIEW_ID", "Interview ID is required");
     }
 
-    // TODO: Implement chat history storage/retrieval
-    // For now, return empty array as placeholder
-    const history = [];
+    // Load from ChatConversation
+    const convo = await ChatConversation.findOne({
+      user: userId,
+      interviewId,
+    }).lean();
+    const history = convo ? convo.messages : [];
 
     return ok(res, {
       history,
@@ -295,10 +370,11 @@ exports.clearChatHistory = async (req, res) => {
       return fail(res, 400, "MISSING_INTERVIEW_ID", "Interview ID is required");
     }
 
-    // TODO: Implement chat history clearing
-    // For now, return success
+    await ChatConversation.deleteMany({ user: userId, interviewId });
     Logger.info(
-      `Clearing chat history for interview ${interviewId}, user ${userId}`
+      `Cleared chat history for interview ${
+        interviewId || "none"
+      }, user ${userId}`
     );
 
     return ok(

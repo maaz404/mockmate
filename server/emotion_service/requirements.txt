@@ -1,0 +1,22 @@
+# DeepFace Emotion Analysis Service Requirements
+# Install: pip install -r requirements.txt
+
+# Core dependencies
+Flask
+flask-cors
+
+# DeepFace and dependencies
+deepface
+tf-keras
+tensorflow
+
+# Computer vision
+opencv-python
+opencv-contrib-python
+
+# Image processing
+Pillow
+numpy
+
+# Additional utilities
+requests

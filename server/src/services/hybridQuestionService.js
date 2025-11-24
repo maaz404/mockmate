@@ -33,9 +33,15 @@ class HybridQuestionService {
       sanitized.experienceLevel = difficultyToExperienceMap[lower] || "entry"; // default lowest tier
     }
     // Ensure difficulty is valid (beginner|intermediate|advanced)
-    sanitized.difficulty = mapDifficulty(
-      sanitized.difficulty || "intermediate"
-    );
+    // BUT skip default override when adaptive mode enabled to preserve mixed distribution
+    if (!sanitized.adaptiveDifficulty?.enabled) {
+      sanitized.difficulty = mapDifficulty(
+        sanitized.difficulty || "intermediate"
+      );
+    } else if (sanitized.difficulty) {
+      // Normalize explicitly provided difficulty even in adaptive mode (for initial level)
+      sanitized.difficulty = mapDifficulty(sanitized.difficulty);
+    }
     // Normalize question count for caching schema
     const countRaw = sanitized.questionCount ?? sanitized.count;
     const parsed = Number(countRaw);
@@ -160,43 +166,188 @@ class HybridQuestionService {
    * @returns {Promise<Array>} Array of questions
    */
   async generateNewQuestionSet(config) {
-    const { questionCount, category } = config;
+    const { questionCount, category, adaptiveDifficulty } = config;
 
     await this.loadTemplates();
 
-    // Calculate question distribution (70% templates, 30% AI)
-    // Distribution constants
-    const TEMPLATE_RATIO = 0.7; // 70% templates
-    const templateCount = Math.ceil(questionCount * TEMPLATE_RATIO);
-    const aiCount = questionCount - templateCount;
+    // If adaptive difficulty is enabled, generate a mix of difficulty levels
+    // starting from easier questions and progressing to harder ones (sorted)
+    const isAdaptive = adaptiveDifficulty && adaptiveDifficulty.enabled;
+
+    if (isAdaptive) {
+      Logger.info(
+        "[HybridQuestionService] Generating adaptive difficulty question set (progressive)"
+      );
+      return await this.generateAdaptiveDifficultyQuestions(config);
+    }
+
+    // ALWAYS use mixed difficulty distribution by default
+    // This ensures every interview has variety: 40% beginner, 35% intermediate, 25% advanced
+    Logger.info(
+      "[HybridQuestionService] Generating mixed difficulty question set (shuffled)"
+    );
+    return await this.generateMixedDifficultyQuestions(config);
+  }
+
+  /**
+   * Generate questions with adaptive difficulty distribution
+   * Starts with easier questions and progressively increases difficulty
+   * @param {Object} config - Interview configuration
+   * @returns {Promise<Array>} Questions with mixed difficulties
+   */
+  async generateAdaptiveDifficultyQuestions(config) {
+    const { questionCount } = config;
+
+    // Adaptive difficulty distribution: 40% beginner, 35% intermediate, 25% advanced
+    const beginnerCount = Math.ceil(questionCount * 0.4);
+    const intermediateCount = Math.ceil(questionCount * 0.35);
+    const advancedCount = questionCount - beginnerCount - intermediateCount;
+
+    Logger.info(
+      `[Adaptive] Generating ${beginnerCount} beginner, ${intermediateCount} intermediate, ${advancedCount} advanced questions`
+    );
+
+    const allQuestions = [];
+
+    // Generate beginner questions
+    if (beginnerCount > 0) {
+      const beginnerConfig = { ...config, difficulty: "beginner" };
+      const beginnerQuestions = await this.generateQuestionsForDifficulty(
+        beginnerConfig,
+        beginnerCount
+      );
+      allQuestions.push(...beginnerQuestions);
+    }
+
+    // Generate intermediate questions
+    if (intermediateCount > 0) {
+      const intermediateConfig = { ...config, difficulty: "intermediate" };
+      const intermediateQuestions = await this.generateQuestionsForDifficulty(
+        intermediateConfig,
+        intermediateCount
+      );
+      allQuestions.push(...intermediateQuestions);
+    }
+
+    // Generate advanced questions
+    if (advancedCount > 0) {
+      const advancedConfig = { ...config, difficulty: "advanced" };
+      const advancedQuestions = await this.generateQuestionsForDifficulty(
+        advancedConfig,
+        advancedCount
+      );
+      allQuestions.push(...advancedQuestions);
+    }
+
+    // Sort questions by difficulty (beginner -> intermediate -> advanced)
+    // This ensures progressive difficulty
+    const difficultyOrder = { beginner: 1, intermediate: 2, advanced: 3 };
+    allQuestions.sort((a, b) => {
+      const aDiff = difficultyOrder[a.difficulty] || 2;
+      const bDiff = difficultyOrder[b.difficulty] || 2;
+      return aDiff - bDiff;
+    });
+
+    Logger.success(
+      `[Adaptive] Generated ${allQuestions.length} questions with progressive difficulty`
+    );
+
+    return allQuestions;
+  }
+
+  /**
+   * Generate questions with mixed difficulty distribution (shuffled)
+   * Unlike adaptive mode, this shuffles questions instead of sorting them
+   * @param {Object} config - Interview configuration
+   * @returns {Promise<Array>} Questions with mixed difficulties (shuffled)
+   */
+  async generateMixedDifficultyQuestions(config) {
+    const { questionCount } = config;
+
+    // Same distribution as adaptive: 40% beginner, 35% intermediate, 25% advanced
+    const beginnerCount = Math.ceil(questionCount * 0.4);
+    const intermediateCount = Math.ceil(questionCount * 0.35);
+    const advancedCount = questionCount - beginnerCount - intermediateCount;
+
+    Logger.info(
+      `[Mixed] Generating ${beginnerCount} beginner, ${intermediateCount} intermediate, ${advancedCount} advanced questions`
+    );
+
+    const allQuestions = [];
+
+    // Generate beginner questions
+    if (beginnerCount > 0) {
+      const beginnerConfig = { ...config, difficulty: "beginner" };
+      const beginnerQuestions = await this.generateQuestionsForDifficulty(
+        beginnerConfig,
+        beginnerCount
+      );
+      allQuestions.push(...beginnerQuestions);
+    }
+
+    // Generate intermediate questions
+    if (intermediateCount > 0) {
+      const intermediateConfig = { ...config, difficulty: "intermediate" };
+      const intermediateQuestions = await this.generateQuestionsForDifficulty(
+        intermediateConfig,
+        intermediateCount
+      );
+      allQuestions.push(...intermediateQuestions);
+    }
+
+    // Generate advanced questions
+    if (advancedCount > 0) {
+      const advancedConfig = { ...config, difficulty: "advanced" };
+      const advancedQuestions = await this.generateQuestionsForDifficulty(
+        advancedConfig,
+        advancedCount
+      );
+      allQuestions.push(...advancedQuestions);
+    }
+
+    // Shuffle questions for variety (unlike adaptive mode which sorts them)
+    const shuffled = this.shuffleArray(allQuestions);
+
+    Logger.success(
+      `[Mixed] Generated ${shuffled.length} questions with mixed difficulty (shuffled)`
+    );
+
+    return shuffled;
+  }
+
+  /**
+   * Generate questions for a specific difficulty level
+   * @param {Object} config - Interview configuration with difficulty set
+   * @param {Number} count - Number of questions to generate
+   * @returns {Promise<Array>} Questions at specified difficulty
+   */
+  async generateQuestionsForDifficulty(config, count) {
+    const TEMPLATE_RATIO = 0.7; // 70% templates, 30% AI
+    const templateCount = Math.ceil(count * TEMPLATE_RATIO);
+    const aiCount = count - templateCount;
 
     let questions = [];
 
-    // 1. Get template-based questions (70%)
+    // Get template-based questions
     const templateQuestions = await this.getTemplateQuestions(
       config,
       templateCount
     );
     questions = questions.concat(templateQuestions);
 
-    // 2. Generate AI questions for remaining slots (30%)
+    // Generate AI questions
     if (aiCount > 0) {
-      const aiQuestions = await this.generateAIQuestions(
-        config,
-        aiCount,
-        category
-      );
+      const aiQuestions = await this.generateAIQuestions(config, aiCount);
       questions = questions.concat(aiQuestions);
     }
 
-    // 3. Ensure balanced coverage of tags
-    questions = this.balanceQuestionTags(questions, questionCount);
+    // Ensure all questions have the correct difficulty
+    questions = questions.map((q) => ({
+      ...q,
+      difficulty: config.difficulty,
+    }));
 
-    // 4. Shuffle questions for variety
-    questions = this.shuffleArray(questions);
-
-    const sliced = questions.slice(0, questionCount);
-    return this.ensureQuestionCountAsync(sliced, questionCount, config);
+    return questions.slice(0, count);
   }
 
   /**
@@ -427,7 +578,7 @@ class HybridQuestionService {
    */
   async getTemplateQuestions(config, count) {
     await this.loadTemplates();
-    const { jobRole, interviewType, difficulty } = config;
+    const { jobRole, interviewType, difficulty, coding } = config;
     const requestedRole = (jobRole || "software-engineer").toLowerCase();
     const normalized = this.normalizeRole(requestedRole);
     const roleKey = this.templates?.[normalized]
@@ -451,20 +602,42 @@ class HybridQuestionService {
         levelTemplates["system-design"] || []
       );
       const behavioralBucket = levelTemplates.behavioral || [];
+
+      // Filter out coding questions if coding challenges are not enabled
+      const codingEnabled = Boolean(coding);
+      const filteredTechBucket = codingEnabled
+        ? techBucket
+        : techBucket.filter(
+            (q) =>
+              (q.category || "").toLowerCase() !== "coding" &&
+              (q.type || "").toLowerCase() !== "coding"
+          );
+
       const techCount = Math.min(
-        techBucket.length,
+        filteredTechBucket.length,
         Math.ceil(safeCount * TECH_RATIO)
       );
       const behavioralCount = Math.max(0, safeCount - techCount);
       templateQuestions = templateQuestions.concat(
-        this.selectRandomQuestions(techBucket, techCount),
+        this.selectRandomQuestions(filteredTechBucket, techCount),
         this.selectRandomQuestions(behavioralBucket, behavioralCount)
       );
     } else {
       const typeKey =
         interviewType === "system-design" ? "system-design" : interviewType;
       const bucket = levelTemplates[typeKey] || [];
-      templateQuestions = this.selectRandomQuestions(bucket, safeCount);
+
+      // Filter out coding questions if coding challenges are not enabled
+      const codingEnabled = Boolean(coding);
+      const filteredBucket = codingEnabled
+        ? bucket
+        : bucket.filter(
+            (q) =>
+              (q.category || "").toLowerCase() !== "coding" &&
+              (q.type || "").toLowerCase() !== "coding"
+          );
+
+      templateQuestions = this.selectRandomQuestions(filteredBucket, safeCount);
     }
 
     const RADIX = 36; // eslint-disable-line no-magic-numbers
@@ -805,6 +978,7 @@ class HybridQuestionService {
         const newQuestions = await aiQuestionService.generateQuestions({
           ...config,
           questionCount: newAICount,
+          language: config.language || "en",
         });
 
         aiQuestions = aiQuestions.concat(

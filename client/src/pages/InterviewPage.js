@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { apiService } from "../services/api";
 import SpokenQuestionUI from "../components/interview/SpokenQuestionUI";
 import CodingQuestionUI from "../components/interview/CodingQuestionUI";
+import { useLanguage } from "../context/LanguageContext";
 
 // Professional code templates with better structure
 const CODE_TEMPLATES = {
@@ -184,6 +185,7 @@ const InterviewPage = () => {
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [skipping, setSkipping] = useState(false);
   const [validationError, setValidationError] = useState(null); // Holds backend validation errors for current question
+  const { language, setLanguage, labels, t } = useLanguage();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState({});
@@ -209,6 +211,7 @@ const InterviewPage = () => {
   // Session-level enrichment data
   const [sessionTranscript, setSessionTranscript] = useState("");
   const [sessionFacialMetrics, setSessionFacialMetrics] = useState([]);
+  const [sessionEmotionTimeline, setSessionEmotionTimeline] = useState([]);
 
   // Submit current answer helper
   const submitCurrentAnswer = useCallback(async () => {
@@ -233,7 +236,12 @@ const InterviewPage = () => {
       );
       const res = await apiService.post(
         `/interviews/${interviewId}/answer/${currentQuestionIndex}`,
-        { answer: answerText, notes: answerText, timeSpent: timeSpentSec }
+        {
+          answer: answerText,
+          notes: answerText,
+          timeSpent: timeSpentSec,
+          language,
+        }
       );
       toast.success("Answer submitted");
       // Request follow-ups if available from response or fetch explicitly
@@ -301,13 +309,16 @@ const InterviewPage = () => {
     try {
       await submitCurrentAnswer();
 
-      // Persist enrichment data (transcript + facial metrics) if available
+      // Persist enrichment data (transcript + facial metrics + emotion timeline) if available
       const enrichmentPayload = {};
       if (sessionTranscript && sessionTranscript.trim()) {
         enrichmentPayload.transcript = sessionTranscript;
       }
       if (sessionFacialMetrics && sessionFacialMetrics.length > 0) {
         enrichmentPayload.facialMetrics = sessionFacialMetrics;
+      }
+      if (sessionEmotionTimeline && sessionEmotionTimeline.length > 0) {
+        enrichmentPayload.emotionTimeline = sessionEmotionTimeline;
       }
 
       await apiService.post(
@@ -325,6 +336,7 @@ const InterviewPage = () => {
     submitCurrentAnswer,
     sessionTranscript,
     sessionFacialMetrics,
+    sessionEmotionTimeline,
   ]);
 
   // Fetch interview data on component mount
@@ -336,7 +348,30 @@ const InterviewPage = () => {
 
         if (response.success) {
           const interviewData = response.data;
+          // Normalize question objects to always have a stable string `text` field
+          if (Array.isArray(interviewData.questions)) {
+            interviewData.questions = interviewData.questions.map((q) => {
+              if (typeof q === "string") {
+                return { text: q };
+              }
+              if (q && typeof q === "object") {
+                const baseText = q.text || q.questionText || "";
+                // If the object contains a separate reason and no plain text, merge for readability
+                const merged =
+                  !q.text && q.questionText && q.reason
+                    ? `${q.questionText} — ${q.reason}`
+                    : baseText;
+                return { ...q, text: merged };
+              }
+              return { text: "" };
+            });
+          }
           setInterview(interviewData);
+
+          // Set the UI language to match the interview's language
+          if (interviewData.config?.language) {
+            setLanguage(interviewData.config.language);
+          }
 
           // Initialize timer from server's remaining time if available
           // Otherwise fall back to config duration
@@ -384,7 +419,7 @@ const InterviewPage = () => {
     if (interviewId) {
       fetchInterview();
     }
-  }, [interviewId, navigate]);
+  }, [interviewId, navigate, setLanguage]);
 
   // Update questionType when currentQuestionIndex changes
   useEffect(() => {
@@ -537,6 +572,10 @@ const InterviewPage = () => {
       await apiService.post(
         `/interviews/${interviewId}/answer/${currentQuestionIndex}`,
         { skip: true, timeSpent: timeSpentSec }
+      );
+      await apiService.post(
+        `/interviews/${interviewId}/answer/${currentQuestionIndex}`,
+        { skip: true, timeSpent: timeSpentSec, language }
       );
       toast("Question skipped", { icon: "⏭️" });
       setCurrentQuestionIndex((idx) =>
@@ -744,7 +783,7 @@ const InterviewPage = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-surface-700 dark:text-surface-200">
-            Loading interview...
+            {t("loading_interview")}
           </p>
         </div>
       </div>
@@ -764,7 +803,7 @@ const InterviewPage = () => {
             onClick={() => navigate("/dashboard")}
             className="btn-primary"
           >
-            Return to Dashboard
+            {t("return_dashboard")}
           </button>
         </div>
       </div>
@@ -800,6 +839,13 @@ const InterviewPage = () => {
               </span>
               <span className="text-sm text-surface-600 dark:text-surface-400">
                 {formatTime(timeRemaining)}
+              </span>
+              {/* Language indicator */}
+              <span
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-primary-50 text-primary-700 border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-700"
+                title="Interview Language"
+              >
+                🌐 {labels[language] || language.toUpperCase()}
               </span>
               {/* Difficulty chip */}
               {(() => {
@@ -845,30 +891,7 @@ const InterviewPage = () => {
                 ></span>
                 {isRecording ? "Recording" : "Idle"}
               </span>
-              {/* Video uploaded chip */}
-              <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
-                  interview?.questions?.[currentQuestionIndex]?.hasVideo
-                    ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700"
-                    : "bg-surface-100 text-surface-700 border-surface-200 dark:bg-surface-800/50 dark:text-surface-300 dark:border-surface-700"
-                }`}
-                title={
-                  interview?.questions?.[currentQuestionIndex]?.hasVideo
-                    ? "Video uploaded"
-                    : "Video not uploaded"
-                }
-              >
-                <span
-                  className={`w-2 h-2 rounded-full mr-2 ${
-                    interview?.questions?.[currentQuestionIndex]?.hasVideo
-                      ? "bg-green-600"
-                      : "bg-surface-400"
-                  }`}
-                ></span>
-                {interview?.questions?.[currentQuestionIndex]?.hasVideo
-                  ? "Video saved"
-                  : "No upload"}
-              </span>
+              {/* Video upload status chip removed per request */}
               {/* Run indicator chip (coding) */}
               {questionType === "coding" &&
                 runState[currentQuestionIndex]?.hasRun && (
@@ -960,6 +983,12 @@ const InterviewPage = () => {
               setSessionFacialMetrics((prev) => [
                 ...prev,
                 { timestamp: Date.now(), ...metrics },
+              ])
+            }
+            onEmotionUpdate={(emotionSummary) =>
+              setSessionEmotionTimeline((prev) => [
+                ...prev,
+                ...emotionSummary.timeline,
               ])
             }
           />
